@@ -7,6 +7,10 @@ bin/
 build/
 dist/
 gradle.properties
+release.properties
+**/.settings
+modules/*/bin
+tests/*/bin
 testbin/
 **/Ensemble8/lib/
 **/Ensemble8/src/generated/resources/ensemble/search/index/write.lock
@@ -46,6 +50,7 @@ testbin/
 .idea/jarRepositories.xml
 .idea/modules.xml
 .idea/*.iml
+.idea/misc.xml
 .idea/modules
 *.iml
 *.ipr
