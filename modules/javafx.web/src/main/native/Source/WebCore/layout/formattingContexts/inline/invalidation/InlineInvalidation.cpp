@@ -159,8 +159,7 @@ static const InlineDisplay::Box* leadingContentDisplayForLineIndex(size_t lineIn
 
     for (auto firstContentDisplayBoxIndex = rootInlineBoxIndexOnLine() + 1; firstContentDisplayBoxIndex < displayBoxes.size(); ++firstContentDisplayBoxIndex) {
         auto& displayBox = displayBoxes[firstContentDisplayBoxIndex];
-        if (displayBox.isRootInlineBox())
-            return nullptr;
+        ASSERT(!displayBox.isRootInlineBox());
         if (!displayBox.isNonRootInlineBox() || displayBox.isFirstForLayoutBox())
             return &displayBox;
     }

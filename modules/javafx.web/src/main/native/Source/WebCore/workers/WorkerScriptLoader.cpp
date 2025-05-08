@@ -76,7 +76,6 @@ std::optional<Exception> WorkerScriptLoader::loadSynchronously(ScriptExecutionCo
     m_source = source;
     m_destination = FetchOptions::Destination::Script;
     m_isCOEPEnabled = scriptExecutionContext->settingsValues().crossOriginEmbedderPolicyEnabled;
-    m_advancedPrivacyProtections = scriptExecutionContext->advancedPrivacyProtections();
 
     auto* serviceWorkerGlobalScope = dynamicDowncast<ServiceWorkerGlobalScope>(workerGlobalScope);
     if (serviceWorkerGlobalScope) {
@@ -132,7 +131,6 @@ void WorkerScriptLoader::loadAsynchronously(ScriptExecutionContext& scriptExecut
     m_destination = fetchOptions.destination;
     m_isCOEPEnabled = scriptExecutionContext.settingsValues().crossOriginEmbedderPolicyEnabled;
     m_clientIdentifier = clientIdentifier;
-    m_advancedPrivacyProtections = scriptExecutionContext.advancedPrivacyProtections();
 
     ASSERT(scriptRequest.httpMethod() == "GET"_s);
 

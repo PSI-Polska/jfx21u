@@ -852,32 +852,32 @@ void RenderTreeBuilder::destroyAndCleanUpAnonymousWrappers(RenderObject& rendere
         return *destroyRoot;
     };
 
-    WeakPtr destroyRoot = destroyRootIncludingAnonymous();
+    auto& destroyRoot = destroyRootIncludingAnonymous();
 
     auto clearFloatsAndOutOfFlowPositionedObjects = [&] {
         // Remove floats and out-of-flow positioned objects from their containing block before detaching
         // the renderer from the tree. It includes all the anonymous block descendants that we are about
         // to destroy as well as part of the cleanup process below.
-        WeakPtr destroyRootElement = dynamicDowncast<RenderElement>(destroyRoot.get());
+        auto* destroyRootElement = dynamicDowncast<RenderElement>(destroyRoot);
         if (!destroyRootElement)
             return;
         for (auto& descendant : descendantsOfType<RenderBox>(*destroyRootElement)) {
             if (descendant.isFloatingOrOutOfFlowPositioned())
                 descendant.removeFloatingOrPositionedChildFromBlockLists();
         }
-        if (CheckedPtr box = dynamicDowncast<RenderBox>(destroyRoot.get()); box && box->isFloatingOrOutOfFlowPositioned())
+        if (CheckedPtr box = dynamicDowncast<RenderBox>(destroyRoot); box && box->isFloatingOrOutOfFlowPositioned())
             box->removeFloatingOrPositionedChildFromBlockLists();
     };
     clearFloatsAndOutOfFlowPositionedObjects();
 
     auto collapseAndDestroyAnonymousSiblings = [&] {
         // FIXME: Probably need to handle other table parts here as well.
-        if (CheckedPtr cell = dynamicDowncast<RenderTableCell>(destroyRoot.get())) {
+        if (CheckedPtr cell = dynamicDowncast<RenderTableCell>(destroyRoot)) {
             tableBuilder().collapseAndDestroyAnonymousSiblingCells(*cell);
             return;
         }
 
-        if (CheckedPtr row = dynamicDowncast<RenderTableRow>(destroyRoot.get())) {
+        if (CheckedPtr row = dynamicDowncast<RenderTableRow>(destroyRoot)) {
             tableBuilder().collapseAndDestroyAnonymousSiblingRows(*row);
             return;
         }
@@ -885,15 +885,12 @@ void RenderTreeBuilder::destroyAndCleanUpAnonymousWrappers(RenderObject& rendere
     collapseAndDestroyAnonymousSiblings();
 
     // FIXME: Do not try to collapse/cleanup the anonymous wrappers inside destroy (see webkit.org/b/186746).
-    WeakPtr destroyRootParent = destroyRoot->parent();
-    if (&rendererToDestroy != destroyRoot.get()) {
+    WeakPtr destroyRootParent = *destroyRoot.parent();
+    if (&rendererToDestroy != &destroyRoot) {
         // Destroy the child renderer first, before we start tearing down the anonymous wrapper ancestor chain.
         destroy(rendererToDestroy);
     }
-
-    if (destroyRoot)
-        destroy(*destroyRoot);
-
+    destroy(destroyRoot);
     if (!destroyRootParent)
         return;
     removeAnonymousWrappersForInlineChildrenIfNeeded(*destroyRootParent);

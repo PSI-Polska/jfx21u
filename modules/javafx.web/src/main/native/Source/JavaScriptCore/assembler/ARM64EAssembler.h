@@ -261,12 +261,12 @@ public:
 
     ALWAYS_INLINE void braaz(RegisterID dest)
     {
-        insn(encodeGroup4(Group4Op::BRAAZ, dest));
+        insn(encodeGroup4(Group4Op::BLRAAZ, dest));
     }
 
     ALWAYS_INLINE void brabz(RegisterID dest)
     {
-        insn(encodeGroup4(Group4Op::BRABZ, dest));
+        insn(encodeGroup4(Group4Op::BLRABZ, dest));
     }
 
     ALWAYS_INLINE void blraaz(RegisterID dest)

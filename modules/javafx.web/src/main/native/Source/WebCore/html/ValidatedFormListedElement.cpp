@@ -168,8 +168,9 @@ void ValidatedFormListedElement::focusAndShowValidationMessage(Ref<HTMLElement> 
     // focus() will scroll the element into view and this scroll may happen asynchronously.
     // Because scrolling the view hides the validation message, we need to show the validation
     // message asynchronously as well.
-    if (RefPtr page = validationAnchor->document().page())
-        page->scheduleValidationMessageUpdate(*this, validationAnchor);
+    callOnMainThread([this, protectedThis, validationAnchor] {
+        updateVisibleValidationMessage(validationAnchor);
+    });
 }
 
 void ValidatedFormListedElement::reportNonFocusableControlError()

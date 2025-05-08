@@ -61,7 +61,7 @@ public:
         Certificate,
     };
     struct Stats {
-        double timestamp { 0 };
+        double timestamp;
         Type type;
         String id;
     };

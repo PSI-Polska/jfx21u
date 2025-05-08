@@ -206,7 +206,6 @@ protected:
     void addOutput(unsigned numberOfChannels);
 
     void markNodeForDeletionIfNecessary();
-    void unmarkNodeForDeletionIfNecessary();
     void derefWithLock();
 
     struct DefaultAudioNodeOptions {

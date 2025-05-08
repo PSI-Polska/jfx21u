@@ -1,6 +1,5 @@
 /*
  * Copyright 2005 Frerich Raabe <raabe@kde.org>
- * Copyright (C) 2006-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,17 +28,17 @@
 #include "XPathExpressionNode.h"
 
 namespace WebCore {
-namespace XPath {
+    namespace XPath {
 
-// Variable references are not used with XPathEvaluator.
-class VariableReference : public Expression {
-public:
+        // Variable references are not used with XPathEvaluator.
+        class VariableReference : public Expression {
+        public:
             explicit VariableReference(const String& name);
-private:
+        private:
             Value evaluate() const override;
-    Value::Type resultType() const override { ASSERT_NOT_REACHED(); return Value::Type::Number; }
+            Value::Type resultType() const override { ASSERT_NOT_REACHED(); return Value::NumberValue; }
             String m_name;
-};
+        };
 
-} // namespace XPath
+    } // namespace XPath
 } // namespace WebCore

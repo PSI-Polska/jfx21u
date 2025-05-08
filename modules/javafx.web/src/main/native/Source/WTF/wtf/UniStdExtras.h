@@ -32,7 +32,6 @@
 namespace WTF {
 
 WTF_EXPORT_PRIVATE bool setCloseOnExec(int fileDescriptor);
-WTF_EXPORT_PRIVATE bool unsetCloseOnExec(int fileDescriptor);
 WTF_EXPORT_PRIVATE int dupCloseOnExec(int fileDescriptor);
 
 inline int closeWithRetry(int fileDescriptor)
@@ -58,7 +57,6 @@ WTF_EXPORT_PRIVATE bool setNonBlock(int fileDescriptor);
 using WTF::closeWithRetry;
 using WTF::dupCloseOnExec;
 using WTF::setCloseOnExec;
-using WTF::unsetCloseOnExec;
 using WTF::setNonBlock;
 
 #endif // UniStdExtras_h

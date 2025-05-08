@@ -10354,16 +10354,11 @@ void Document::resetObservationSizeForContainIntrinsicSize(Element& target)
 
 NoiseInjectionPolicy Document::noiseInjectionPolicy() const
 {
-    if (advancedPrivacyProtections().contains(AdvancedPrivacyProtections::FingerprintingProtections))
+    if (RefPtr loader = topDocument().loader()) {
+        if (loader->advancedPrivacyProtections().contains(AdvancedPrivacyProtections::FingerprintingProtections))
             return NoiseInjectionPolicy::Minimal;
+    }
     return NoiseInjectionPolicy::None;
-}
-
-OptionSet<AdvancedPrivacyProtections> Document::advancedPrivacyProtections() const
-{
-    if (RefPtr loader = topDocument().loader())
-        return loader->advancedPrivacyProtections();
-    return { };
 }
 
 std::optional<uint64_t> Document::noiseInjectionHashSalt() const

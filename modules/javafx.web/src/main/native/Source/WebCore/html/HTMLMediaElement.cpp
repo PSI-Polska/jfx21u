@@ -3342,9 +3342,6 @@ void HTMLMediaElement::progressEventTimerFired()
     ASSERT(m_player);
     if (m_networkState != NETWORK_LOADING)
         return;
-
-    updateSleepDisabling();
-
     if (!m_player->supportsProgressMonitoring())
         return;
 
@@ -5091,9 +5088,6 @@ void HTMLMediaElement::updateCaptionContainer()
 void HTMLMediaElement::layoutSizeChanged()
 {
     auto task = [this] {
-        if (isContextStopped())
-            return;
-
             if (auto root = userAgentShadowRoot())
             root->dispatchEvent(Event::create(eventNames().resizeEvent, Event::CanBubble::No, Event::IsCancelable::No));
 

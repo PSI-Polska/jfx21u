@@ -146,7 +146,6 @@
 #include <fenv.h>
 #include <arm/arch.h>
 #endif
-
 #if OS(DARWIN) && PLATFORM(MAC)
 #include <libproc.h>
 #endif
@@ -286,7 +285,6 @@ private:
     SentinelLinkedList<Worker, BasicRawSentinelNode<Worker>> m_workers;
     Deque<String> m_reports;
 };
-
 WTF_MAKE_TZONE_ALLOCATED_IMPL(Workers);
 
 
@@ -418,7 +416,6 @@ static JSC_DECLARE_HOST_FUNCTION(functionDropAllLocks);
 #if ENABLE(FUZZILLI)
 static JSC_DECLARE_HOST_FUNCTION(functionFuzzilli);
 #endif
-
 struct Script {
     enum class StrictMode {
         Strict,
@@ -566,7 +563,6 @@ public:
                 propertyNames.add(propertyName);
         }
     }
-
 private:
     GlobalObject(VM&, Structure*);
 
@@ -581,39 +577,30 @@ private:
             if (result.isNewEntry)
                 m_strings.append(uid);
         }
-
         bool contains(UniquedStringImpl* name) const { return m_names.contains(name); }
         const HashSet<UniquedStringImpl*>& names() const { return m_names; }
-
     private:
         Vector<AtomString> m_strings; // To keep the UniqueStringImpls alive.
         HashSet<UniquedStringImpl*> m_names;
     };
-
     void finishCreation(VM& vm, const Vector<String>& arguments)
     {
         auto& filter = ensurePropertyFilter();
-
         auto addFunction = [&] (VM& vm, ASCIILiteral name, NativeFunction function, unsigned arguments, unsigned attributes = static_cast<unsigned>(PropertyAttribute::DontEnum)) {
             addFunctionImpl(filter, vm, name, function, arguments, attributes);
         };
-
         auto addFunctionToObject = [&] (VM& vm, JSObject* owner, ASCIILiteral name, NativeFunction function, unsigned arguments, unsigned attributes = static_cast<unsigned>(PropertyAttribute::DontEnum)) {
             addFunctionToObjectImpl(filter, vm, owner, name, function, arguments, attributes);
         };
-
         auto putDirect = [&] (VM& vm, PropertyName propertyName, JSValue value, unsigned attributes = 0) -> bool {
             return putDirectImpl(filter, vm, propertyName, value, attributes);
         };
-
         auto putDirectWithoutTransition = [&] (VM& vm, PropertyName propertyName, JSValue value, unsigned attributes) {
             putDirectWithoutTransitionImpl(filter, vm, propertyName, value, attributes);
         };
-
         auto putDirectNativeFunction = [&] (VM& vm, JSGlobalObject* globalObject, const PropertyName& propertyName, unsigned functionLength, NativeFunction nativeFunction, ImplementationVisibility implementationVisibility, Intrinsic intrinsic, unsigned attributes) -> bool {
             return putDirectNativeFunctionImpl(filter, vm, globalObject, propertyName, functionLength, nativeFunction, implementationVisibility, intrinsic, attributes);
         };
-
         Base::finishCreation(vm);
         JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 
@@ -789,12 +776,10 @@ private:
 #if ENABLE(FUZZILLI)
         addFunction(vm, "fuzzilli"_s, functionFuzzilli, 2);
 #endif
-
         if (Options::exposeCustomSettersOnGlobalObjectForTesting()) {
             auto putDirectCustomAccessor = [&] (VM& vm, PropertyName propertyName, JSValue value, unsigned attributes) -> bool {
                 return putDirectCustomAccessorImpl(filter, vm, propertyName, value, attributes);
             };
-
             {
                 CustomGetterSetter* custom = CustomGetterSetter::create(vm, nullptr, testCustomAccessorSetter);
                 Identifier identifier = Identifier::fromString(vm, "testCustomAccessorSetter"_s);
@@ -807,7 +792,6 @@ private:
                 putDirectCustomAccessor(vm, identifier, custom, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::CustomValue);
             }
         }
-
         if (Options::useDollarVM()) {
             // $vm is added in JSGlobalObject but we also want it filtered out. Just add it to the filter here.
             Identifier dollarVMIdentifier = Identifier::fromString(vm, "$vm"_s);
@@ -1209,7 +1193,6 @@ static bool fillBufferWithContentsOfFile(const String& fileName, Vector<char>& b
         fprintf(stderr, "Could not open file: %s\n", fileName.utf8().data());
         return false;
     }
-
     if ((statBuf.st_mode & S_IFMT) != S_IFREG) {
         fprintf(stderr, "Trying to open a non-file: %s\n", fileName.utf8().data());
         return false;
@@ -1356,6 +1339,7 @@ private:
         // bytecode cache, which results in intermittent test failures. As $.agent.start is only
         // a rarely used testing facility, we simply do not cache bytecode on these threads.
         , m_cacheEnabled(Worker::current().isMain() && !!Options::diskCachePath())
+
     {
     }
 
@@ -3248,30 +3232,19 @@ JSC_DEFINE_HOST_FUNCTION(functionDropAllLocks, (JSGlobalObject* globalObject, Ca
     JSLock::DropAllLocks dropAllLocks(globalObject);
     return JSValue::encode(jsUndefined());
 }
-
 #if ENABLE(FUZZILLI)
-
-// We have to assume that the fuzzer will be able to call this function e.g. by
-// enumerating the properties of the global object and eval'ing them. As such
-// this function is implemented in a way that requires passing some magic value
-// as first argument (with the idea being that the fuzzer won't be able to
-// generate this value) which then also acts as a selector for the operation
-// to perform.
 JSC_DEFINE_HOST_FUNCTION(functionFuzzilli, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     if (!callFrame->argument(0).isString()) {
-        // We directly require a string as argument for simplicity.
         return JSValue::encode(jsUndefined());
     }
     auto operation = callFrame->argument(0).toWTFString(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
-
     if (operation == "FUZZILLI_CRASH"_s) {
         int32_t command = callFrame->argument(1).toInt32(globalObject);
         RETURN_IF_EXCEPTION(scope, { });
-
         switch (command) {
         case 0:
             *reinterpret_cast<int32_t*>(0x41414141) = 0x1337;
@@ -3283,18 +3256,14 @@ JSC_DEFINE_HOST_FUNCTION(functionFuzzilli, (JSGlobalObject* globalObject, CallFr
             ASSERT(0);
             break;
         }
-
     } else if (operation == "FUZZILLI_PRINT"_s) {
         String string = callFrame->argument(1).toWTFString(globalObject);
         RETURN_IF_EXCEPTION(scope, { });
-
         Fuzzilli::logFile().println(string);
         Fuzzilli::logFile().flush();
     }
-
     return JSValue::encode(jsUndefined());
 }
-
 #endif // ENABLE(FUZZILLI)
 
 // Use SEH for Release builds only to get rid of the crash report dialog
@@ -3669,7 +3638,6 @@ static void runWithOptions(GlobalObject* globalObject, CommandLine& options, boo
     for (size_t i = 0; i < scripts.size(); i++) {
         JSInternalPromise* promise = nullptr;
         bool isModule = options.m_module || scripts[i].scriptType == Script::ScriptType::Module;
-
         switch (scripts[i].codeSource) {
         case Script::CodeSource::File: {
             fileName = String::fromLatin1(scripts[i].argument);
@@ -4079,7 +4047,6 @@ void CommandLine::parseArguments(int argc, char** argv)
             }
             continue;
         }
-
         // See if the -- option is a JSC VM option.
         if (strstr(arg, "--") == arg) {
             if (!JSC::Options::setOption(&arg[2], /* verify = */ false)) {
@@ -4129,20 +4096,16 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
 
     int result;
     bool success;
-
 #if ENABLE(FUZZILLI)
-    // Let parent know we are ready.
     if (options.m_reprl) {
         Fuzzilli::initializeReprl();
     }
 #endif // ENABLE(FUZZILLI)
-
     do {
 #if ENABLE(FUZZILLI)
         if (options.m_reprl)
             Fuzzilli::waitForCommand();
 #endif // ENABLE(FUZZILLI)
-
         success = true;
     GlobalObject* globalObject = nullptr;
     {
@@ -4157,7 +4120,6 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
     vm.deferredWorkTimer->runRunLoop();
     {
         JSLockHolder locker(vm);
-
             if (!options.m_reprl && options.m_interactive && success)
             runInteractive(globalObject);
     }
@@ -4189,6 +4151,7 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
             printf("JSC OSR EXIT FUZZ: encountered %u static checks.\n", numberOfStaticOSRExitFuzzChecks());
             printf("JSC OSR EXIT FUZZ: encountered %u dynamic checks.\n", numberOfOSRExitFuzzChecks());
         }
+
 
         auto compileTimeStats = JIT::compileTimeStats();
         Vector<CString> compileTimeKeys;
@@ -4233,7 +4196,6 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
         }
 #endif // ENABLE(FUZZILLI)
     } while (options.m_reprl);
-
     vm.codeCache()->write();
 
     if (options.m_destroyVM || isWorker) {

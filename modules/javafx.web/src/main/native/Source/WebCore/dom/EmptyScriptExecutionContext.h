@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "AdvancedPrivacyProtections.h"
 #include "EventLoop.h"
 #include "Microtasks.h"
 #include "ReferrerPolicy.h"
@@ -71,7 +70,6 @@ public:
 
     SecurityOrigin& topOrigin() const final { return m_origin.get(); };
 
-    OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections() const final { return { }; }
     std::optional<uint64_t> noiseInjectionHashSalt() const { return std::nullopt; }
 
     void postTask(Task&&) final { ASSERT_NOT_REACHED(); }

@@ -44,7 +44,6 @@
 #include <wtf/HashSet.h>
 #include <wtf/NativePromise.h>
 #include <wtf/ObjectIdentifier.h>
-#include <wtf/OptionSet.h>
 #include <wtf/URL.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
@@ -85,7 +84,6 @@ class ServiceWorker;
 class ServiceWorkerContainer;
 class SocketProvider;
 class WebCoreOpaqueRoot;
-enum class AdvancedPrivacyProtections : uint16_t;
 enum class LoadedFromOpaqueSource : bool;
 enum class TaskSource : uint8_t;
 
@@ -143,7 +141,6 @@ public:
 
     virtual GraphicsClient* graphicsClient() { return nullptr; }
 
-    virtual OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections() const = 0;
     virtual std::optional<uint64_t> noiseInjectionHashSalt() const = 0;
 
     virtual RefPtr<RTCDataChannelRemoteHandlerConnection> createRTCDataChannelRemoteHandlerConnection();

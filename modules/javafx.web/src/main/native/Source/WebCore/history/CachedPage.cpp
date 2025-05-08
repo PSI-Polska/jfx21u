@@ -116,7 +116,7 @@ public:
     }
 
 private:
-    WeakRef<Page> m_page;
+    SingleThreadWeakRef<Page> m_page;
 };
 
 void CachedPage::restore(Page& page)

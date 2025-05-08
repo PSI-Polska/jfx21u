@@ -257,7 +257,6 @@ public:
     }
 
     void didPopValueFromStack(ExpressionType, String) { --m_stackSize; }
-    bool usesSIMD() { return m_usesSIMD; }
     void notifyFunctionUsesSIMD() { ASSERT(Options::useWebAssemblySIMD()); m_usesSIMD = true; }
 
     PartialResult WARN_UNUSED_RETURN addDrop(ExpressionType);

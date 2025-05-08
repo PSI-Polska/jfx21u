@@ -1063,14 +1063,16 @@ void RTCPeerConnection::updateTransceiversAfterSuccessfulRemoteDescription()
     updateTransceiverTransports();
 }
 
-void RTCPeerConnection::updateSctpBackend(std::unique_ptr<RTCSctpTransportBackend>&& sctpBackend, std::optional<double> maxMessageSize)
+void RTCPeerConnection::updateSctpBackend(std::unique_ptr<RTCSctpTransportBackend>&& sctpBackend)
 {
     if (!sctpBackend) {
         m_sctpTransport = nullptr;
         return;
     }
-
-    if (!m_sctpTransport || m_sctpTransport->backend() != *sctpBackend) {
+    if (m_sctpTransport && m_sctpTransport->backend() == *sctpBackend) {
+        m_sctpTransport->update();
+        return;
+    }
     RefPtr context = scriptExecutionContext();
     if (!context)
         return;
@@ -1079,9 +1081,6 @@ void RTCPeerConnection::updateSctpBackend(std::unique_ptr<RTCSctpTransportBacken
     if (!dtlsTransport)
         return;
     m_sctpTransport = RTCSctpTransport::create(*context, makeUniqueRefFromNonNullUniquePtr(WTFMove(sctpBackend)), dtlsTransport.releaseNonNull());
-    }
-
-    m_sctpTransport->updateMaxMessageSize(maxMessageSize);
 }
 
 #if !RELEASE_LOG_DISABLED

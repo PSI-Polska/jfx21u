@@ -26,7 +26,6 @@
 
 #pragma once
 
-#include "AdvancedPrivacyProtections.h"
 #include "CertificateInfo.h"
 #include "ContentSecurityPolicyResponseHeaders.h"
 #include "CrossOriginEmbedderPolicy.h"
@@ -41,7 +40,6 @@
 #include "ThreadableLoaderClient.h"
 #include <memory>
 #include <wtf/FastMalloc.h>
-#include <wtf/OptionSet.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 #include <wtf/URL.h>
@@ -71,8 +69,6 @@ public:
     void loadAsynchronously(ScriptExecutionContext&, ResourceRequest&&, Source, FetchOptions&&, ContentSecurityPolicyEnforcement, ServiceWorkersMode, WorkerScriptLoaderClient&, String&& taskMode, ScriptExecutionContextIdentifier clientIdentifier = { });
 
     void notifyError();
-
-    OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections() const { return m_advancedPrivacyProtections; }
 
     const ScriptBuffer& script() const { return m_script; }
     const ContentSecurityPolicyResponseHeaders& contentSecurityPolicy() const { return m_contentSecurityPolicy; }
@@ -164,7 +160,6 @@ private:
     RefPtr<ServiceWorkerDataManager> m_serviceWorkerDataManager;
     WeakPtr<ScriptExecutionContext> m_context;
     String m_userAgentForSharedWorker;
-    OptionSet<AdvancedPrivacyProtections> m_advancedPrivacyProtections;
 };
 
 } // namespace WebCore

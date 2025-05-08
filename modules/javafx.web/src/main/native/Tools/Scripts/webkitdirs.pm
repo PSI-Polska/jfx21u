@@ -733,18 +733,11 @@ sub determineNumberOfCPUs
     if (defined($ENV{NUMBER_OF_PROCESSORS})) {
         $numberOfCPUs = $ENV{NUMBER_OF_PROCESSORS};
     } elsif (isLinux()) {
-        use POSIX;
-        $numberOfCPUs = POSIX::sysconf(83); # _SC_NPROCESSORS_ONLN = 83
+        # First try the nproc utility, if it exists. If we get no
+        # results fall back to just interpretting /proc directly.
+        chomp($numberOfCPUs = `nproc --all 2> /dev/null`);
         if ($numberOfCPUs eq "") {
-            $numberOfCPUs = 0;
-            open CPUINFO, "/proc/cpuinfo";
-            while (<CPUINFO>) {
-                if (/[Pp]rocessor\s/) { $numberOfCPUs++; }
-            }
-            close CPUINFO;
-        }
-        if ($numberOfCPUs == 0) {
-            $numberOfCPUs = 1;
+            $numberOfCPUs = (grep /processor/, `cat /proc/cpuinfo`);
         }
     } elsif (isAnyWindows()) {
         # Assumes cygwin

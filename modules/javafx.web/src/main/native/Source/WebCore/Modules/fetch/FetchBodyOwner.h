@@ -120,7 +120,7 @@ private:
         void didReceiveResponse(const ResourceResponse&) final;
         void didReceiveData(const SharedBuffer& buffer) final { owner.blobChunk(buffer); }
         void didFail(const ResourceError&) final;
-        void didSucceed(const NetworkLoadMetrics&) final;
+        void didSucceed(const NetworkLoadMetrics&) final { owner.blobLoadingSucceeded(); }
 
         FetchBodyOwner& owner;
         std::unique_ptr<FetchLoader> loader;

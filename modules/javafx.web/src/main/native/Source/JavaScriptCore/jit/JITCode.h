@@ -72,7 +72,7 @@ enum class JITType : uint8_t {
 static constexpr unsigned widthOfJITType = 3;
 static_assert(WTF::getMSBSetConstexpr(static_cast<std::underlying_type_t<JITType>>(JITType::FTLJIT)) + 1 == widthOfJITType);
 
-#if CPU(ADDRESS64)
+#if USE(JSVALUE64)
 template<typename ByteSizedEnumType>
 class JITConstant {
     static_assert(sizeof(ByteSizedEnumType) == 1);

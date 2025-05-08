@@ -83,14 +83,14 @@ protected:
     }
 
     Status expandCapacity();
-    Status expandCapacity(unsigned newCapacity);
+    Status expandCapacity(int newCapacity);
     JS_EXPORT_PRIVATE Status slowEnsureCapacity(size_t requestedCapacity);
 
     void addMarkSet(JSValue);
 
     JS_EXPORT_PRIVATE Status slowAppend(JSValue);
 
-    EncodedJSValue& slotFor(unsigned item) const
+    EncodedJSValue& slotFor(int item) const
     {
         return m_buffer[item];
     }
@@ -114,8 +114,8 @@ protected:
     void setNeedsOverflowCheck() { }
     void clearNeedsOverflowCheck() { }
 #endif // ASSERT_ENABLED
-    unsigned m_size;
-    unsigned m_capacity;
+    int m_size;
+    int m_capacity;
     EncodedJSValue* m_buffer;
     ListSet* m_markSet;
 };
@@ -136,7 +136,7 @@ public:
         }
     }
 
-    auto at(unsigned i) const -> decltype(auto)
+    auto at(int i) const -> decltype(auto)
     {
         if constexpr (std::is_same_v<T, JSValue>) {
             if (i >= m_size)
@@ -276,13 +276,13 @@ public:
     {
     }
 
-    ArgList(EncodedJSValue* args, unsigned count)
+    ArgList(EncodedJSValue* args, int count)
         : m_args(args)
         , m_argCount(count)
     {
     }
 
-    JSValue at(unsigned i) const
+    JSValue at(int i) const
     {
         if (i >= m_argCount)
             return jsUndefined();
@@ -298,7 +298,7 @@ public:
 
 private:
     EncodedJSValue* m_args { nullptr };
-    unsigned m_argCount { 0 };
+    int m_argCount { 0 };
 };
 
 } // namespace JSC

@@ -49,9 +49,7 @@ namespace JSC {
 
 namespace Wasm {
 
-class CalleeGroup;
-
-Expected<std::unique_ptr<InternalFunction>, String> parseAndCompileB3(CompilationContext&, OptimizingJITCallee&, const FunctionData&, const TypeDefinition&, Vector<UnlinkedWasmToWasmCall>&, CalleeGroup&, const ModuleInformation&, MemoryMode, CompilationMode, uint32_t functionIndex, std::optional<bool> hasExceptionHandlers, uint32_t loopIndexForOSREntry, TierUpCount* = nullptr);
+Expected<std::unique_ptr<InternalFunction>, String> parseAndCompileB3(CompilationContext&, OptimizingJITCallee&, const FunctionData&, const TypeDefinition&, Vector<UnlinkedWasmToWasmCall>&, const ModuleInformation&, MemoryMode, CompilationMode, uint32_t functionIndex, std::optional<bool> hasExceptionHandlers, uint32_t loopIndexForOSREntry, TierUpCount* = nullptr);
 
 } } // namespace JSC::Wasm
 

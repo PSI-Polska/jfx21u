@@ -1388,8 +1388,6 @@ public:
     WEBCORE_EXPORT void exitPointerLock();
 #endif
 
-    OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections() const final;
-
     std::optional<uint64_t> noiseInjectionHashSalt() const final;
     NoiseInjectionPolicy noiseInjectionPolicy() const;
 

@@ -120,11 +120,9 @@ function isArray(array)
 
 @linkTimeConstant
 @visibility=PrivateRecursive
-async function defaultAsyncFromAsyncIterator(iterator, mapFn, thisArg)
+async function defaultAsyncFromAsyncIterator(result, iterator, mapFn, thisArg)
 {
     "use strict";
-
-    var result = this !== @Array && @isConstructor(this) ? new this() : [];
 
     var k = 0;
 
@@ -204,12 +202,14 @@ function fromAsync(asyncItems  /*, mapFn, thisArg */)
             }
         }
 
+        var result = this !== @Array && @isConstructor(this) ? new this() : [];
+
         if (!@isUndefinedOrNull(usingAsyncIterator))
-            return @defaultAsyncFromAsyncIterator.@call(this, usingAsyncIterator.@call(asyncItems), mapFn, thisArg);
+            return @defaultAsyncFromAsyncIterator(result, usingAsyncIterator.@call(asyncItems), mapFn, thisArg);
 
         if (!@isUndefinedOrNull(usingSyncIterator)) {
             var iterator = usingSyncIterator.@call(asyncItems);
-            return @defaultAsyncFromAsyncIterator.@call(this, @createAsyncFromSyncIterator(iterator, iterator.next), mapFn, thisArg);
+            return @defaultAsyncFromAsyncIterator(result, @createAsyncFromSyncIterator(iterator, iterator.next), mapFn, thisArg);
         }
 
         return @defaultAsyncFromAsyncArrayLike.@call(this, asyncItems, mapFn, thisArg);

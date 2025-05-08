@@ -26,7 +26,6 @@
 #include "config.h"
 #include "ServiceWorkerClientData.h"
 
-#include "AdvancedPrivacyProtections.h"
 #include "Document.h"
 #include "DocumentLoader.h"
 #include "FrameDestructionObserverInlines.h"
@@ -60,12 +59,12 @@ static ServiceWorkerClientFrameType toServiceWorkerClientFrameType(ScriptExecuti
 
 ServiceWorkerClientData ServiceWorkerClientData::isolatedCopy() const &
 {
-    return { identifier, type, frameType, url.isolatedCopy(), ownerURL.isolatedCopy(), pageIdentifier, frameIdentifier, lastNavigationWasAppInitiated, advancedPrivacyProtections, isVisible, isFocused, focusOrder, crossThreadCopy(ancestorOrigins) };
+    return { identifier, type, frameType, url.isolatedCopy(), ownerURL.isolatedCopy(), pageIdentifier, frameIdentifier, lastNavigationWasAppInitiated, isVisible, isFocused, focusOrder, crossThreadCopy(ancestorOrigins) };
 }
 
 ServiceWorkerClientData ServiceWorkerClientData::isolatedCopy() &&
 {
-    return { identifier, type, frameType, WTFMove(url).isolatedCopy(), WTFMove(ownerURL).isolatedCopy(), pageIdentifier, frameIdentifier, lastNavigationWasAppInitiated, advancedPrivacyProtections, isVisible, isFocused, focusOrder, crossThreadCopy(WTFMove(ancestorOrigins)) };
+    return { identifier, type, frameType, WTFMove(url).isolatedCopy(), WTFMove(ownerURL).isolatedCopy(), pageIdentifier, frameIdentifier, lastNavigationWasAppInitiated, isVisible, isFocused, focusOrder, crossThreadCopy(WTFMove(ancestorOrigins)) };
 }
 
 ServiceWorkerClientData ServiceWorkerClientData::from(ScriptExecutionContext& context)
@@ -90,7 +89,6 @@ ServiceWorkerClientData ServiceWorkerClientData::from(ScriptExecutionContext& co
             document->pageID(),
             document->frameID(),
             lastNavigationWasAppInitiated,
-            context.advancedPrivacyProtections(),
             !document->hidden(),
             document->hasFocus(),
             0,
@@ -109,7 +107,6 @@ ServiceWorkerClientData ServiceWorkerClientData::from(ScriptExecutionContext& co
         { },
         { },
         LastNavigationWasAppInitiated::No,
-        context.advancedPrivacyProtections(),
         false,
         false,
         0,

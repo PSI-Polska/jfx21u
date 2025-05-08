@@ -4561,10 +4561,7 @@ void EventHandler::defaultBackspaceEventHandler(KeyboardEvent& event)
 
 void EventHandler::stopKeyboardScrolling()
 {
-    RefPtr page = m_frame->page();
-    if (!page)
-        return;
-    if (auto animator = page->currentKeyboardScrollingAnimator())
+    if (auto animator = m_frame->page()->currentKeyboardScrollingAnimator())
         animator->handleKeyUpEvent();
 }
 
