@@ -47,7 +47,7 @@
 #include <stdlib.h>
 #include <wtf/ExportMacros.h>
 
-#if OS(DARWIN) && !PLATFORM(JAVA)
+#if OS(DARWIN) && USE(APPLE_INTERNAL_SDK)
 #include <wtf/spi/darwin/AbortWithReasonSPI.h>
 #endif
 
@@ -68,6 +68,9 @@
 #define _XSTRINGIFY(line) #line
 #define _STRINGIFY(line) _XSTRINGIFY(line)
 
+#if USE(APPLE_INTERNAL_SDK)
+#include <sys/reason.h>
+#endif
 
 /* ASSERT_ENABLED is defined in PlatformEnable.h. */
 
@@ -923,7 +926,7 @@ inline void compilerFenceForCrash()
 
 #endif /* __cplusplus */
 
-#if OS(DARWIN) && !PLATFORM(JAVA)
+#if OS(DARWIN) && USE(APPLE_INTERNAL_SDK)
 #define CRASH_WITH_EXTRA_SECURITY_IMPLICATION_AND_INFO(abortReason, abortMsg, ...) do { \
         if (g_wtfConfig.useSpecialAbortForExtraSecurityImplications) \
             abort_with_reason(OS_REASON_WEBKIT, abortReason, abortMsg, OS_REASON_FLAG_SECURITY_SENSITIVE); \

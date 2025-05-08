@@ -35,16 +35,12 @@ using namespace Inspector;
 
 InspectorWorkerAgent::InspectorWorkerAgent(WebAgentContext& context)
     : InspectorAgentBase("Worker"_s, context)
-    , m_pageChannel(PageChannel::create(*this))
-    , m_frontendDispatcher(makeUniqueRef<Inspector::WorkerFrontendDispatcher>(context.frontendRouter))
+    , m_frontendDispatcher(makeUnique<Inspector::WorkerFrontendDispatcher>(context.frontendRouter))
     , m_backendDispatcher(Inspector::WorkerBackendDispatcher::create(context.backendDispatcher, this))
 {
 }
 
-InspectorWorkerAgent::~InspectorWorkerAgent()
-{
-    m_pageChannel->detachFromParentAgent();
-}
+InspectorWorkerAgent::~InspectorWorkerAgent() = default;
 
 void InspectorWorkerAgent::didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*)
 {
@@ -107,6 +103,10 @@ Inspector::Protocol::ErrorStringOr<void> InspectorWorkerAgent::sendMessageToWork
     return { };
 }
 
+void InspectorWorkerAgent::sendMessageFromWorkerToFrontend(WorkerInspectorProxy& proxy, String&& message)
+{
+    m_frontendDispatcher->dispatchMessageFromWorker(proxy.identifier(), WTFMove(message));
+}
 
 bool InspectorWorkerAgent::shouldWaitForDebuggerOnStart() const
 {
@@ -144,7 +144,7 @@ void InspectorWorkerAgent::disconnectFromAllWorkerInspectorProxies()
 
 void InspectorWorkerAgent::connectToWorkerInspectorProxy(WorkerInspectorProxy& proxy)
 {
-    proxy.connectToWorkerInspectorController(m_pageChannel);
+    proxy.connectToWorkerInspectorController(*this);
 
     m_connectedProxies.set(proxy.identifier(), proxy);
 
@@ -160,23 +160,4 @@ void InspectorWorkerAgent::disconnectFromWorkerInspectorProxy(WorkerInspectorPro
     proxy.disconnectFromWorkerInspectorController();
 }
 
-Ref<InspectorWorkerAgent::PageChannel> InspectorWorkerAgent::PageChannel::create(InspectorWorkerAgent& parentAgent)
-{
-    return adoptRef(*new PageChannel(parentAgent));
-}
-InspectorWorkerAgent::PageChannel::PageChannel(InspectorWorkerAgent& parentAgent)
-    : m_parentAgent(&parentAgent)
-{
-}
-void InspectorWorkerAgent::PageChannel::detachFromParentAgent()
-{
-    Locker locker { m_parentAgentLock };
-    m_parentAgent = nullptr;
-}
-void InspectorWorkerAgent::PageChannel::sendMessageFromWorkerToFrontend(WorkerInspectorProxy& proxy, String&& message)
-{
-    Locker locker { m_parentAgentLock };
-    if (CheckedPtr parentAgent = m_parentAgent)
-        parentAgent->frontendDispatcher().dispatchMessageFromWorker(proxy.identifier(), WTFMove(message));
-}
 } // namespace Inspector

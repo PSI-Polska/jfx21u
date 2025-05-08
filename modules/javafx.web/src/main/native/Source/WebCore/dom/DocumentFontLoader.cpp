@@ -96,7 +96,6 @@ void DocumentFontLoader::loadPendingFonts()
 
 void DocumentFontLoader::fontLoadingTimerFired()
 {
-    Ref protectedThis { *this };
     loadPendingFonts();
 
     // FIXME: Use SubresourceLoader instead.

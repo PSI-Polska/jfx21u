@@ -744,6 +744,7 @@ Document::~Document()
     if (RefPtr window = m_domWindow)
         window->resetUnlessSuspendedForDocumentSuspension();
 
+    m_scriptRunner = nullptr;
     m_moduleLoader = nullptr;
 
     removeAllEventListeners();

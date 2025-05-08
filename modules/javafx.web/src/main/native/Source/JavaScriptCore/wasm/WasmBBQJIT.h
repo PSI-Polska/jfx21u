@@ -2273,10 +2273,6 @@ private:
 
     PCToCodeOriginMapBuilder m_pcToCodeOriginMapBuilder;
     std::unique_ptr<BBQDisassembler> m_disassembler;
-#if ASSERT_ENABLED
-    Vector<Value, 8> m_justPoppedStack;
-    OpType m_prevOpcode;
-#endif
 };
 
 using LocalOrTempIndex = BBQJIT::LocalOrTempIndex;

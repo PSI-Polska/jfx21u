@@ -1861,17 +1861,25 @@ IntRect RenderText::linesBoundingBox() const
     return enclosingIntRect(boundingBox);
 }
 
-auto RenderText::localRectsForRepaint(RepaintOutlineBounds) const -> RepaintRects
+LayoutRect RenderText::clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext context) const
 {
-    LayoutRect overflowRect = linesBoundingBox();
+    RenderObject* rendererToRepaint = containingBlock();
 
     // Do not cross self-painting layer boundaries.
-    // repaint containers. https://bugs.webkit.org/show_bug.cgi?id=23308
-    overflowRect.move(view().frameView().layoutContext().layoutDelta());
+    RenderObject& enclosingLayerRenderer = enclosingLayer()->renderer();
+    if (&enclosingLayerRenderer != rendererToRepaint && !rendererToRepaint->isDescendantOf(&enclosingLayerRenderer))
+        rendererToRepaint = &enclosingLayerRenderer;
 
-    return RepaintRects { overflowRect };
+    // The renderer we chose to repaint may be an ancestor of repaintContainer, but we need to do a repaintContainer-relative repaint.
+    if (repaintContainer && repaintContainer != rendererToRepaint && !rendererToRepaint->isDescendantOf(repaintContainer))
+        return repaintContainer->clippedOverflowRect(repaintContainer, context);
 
+    return rendererToRepaint->clippedOverflowRect(repaintContainer, context);
+}
 
+auto RenderText::rectsForRepaintingAfterLayout(const RenderLayerModelObject* repaintContainer, RepaintOutlineBounds) const -> RepaintRects
+{
+    return { clippedOverflowRect(repaintContainer, visibleRectContextForRepaint()) };
 }
 
 LayoutRect RenderText::collectSelectionGeometriesForLineBoxes(const RenderLayerModelObject* repaintContainer, bool clipToVisibleContent, Vector<FloatQuad>* quads)

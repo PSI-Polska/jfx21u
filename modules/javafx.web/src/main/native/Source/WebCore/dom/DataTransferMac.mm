@@ -29,10 +29,8 @@
 #if PLATFORM(MAC)
 
 #import "CachedImage.h"
-#import "Document.h"
-#import "DragImage.h"
 #import "Element.h"
-#import "FrameDestructionObserverInlines.h"
+#import "DragImage.h"
 
 namespace WebCore {
 
@@ -43,17 +41,17 @@ DragImageRef DataTransfer::createDragImage(IntPoint& location) const
 {
     DragImageRef result = nil;
     if (m_dragImageElement) {
-        if (RefPtr frame = m_dragImageElement->document().frame()) {
+        if (Frame* frame = m_dragImageElement->document().frame()) {
             IntRect imageRect;
             IntRect elementRect;
-            result = createDragImageForImage(*frame, dragImageElement().releaseNonNull(), imageRect, elementRect);
+            result = createDragImageForImage(*frame, *m_dragImageElement, imageRect, elementRect);
             // Client specifies point relative to element, not the whole image, which may include child
             // layers spread out all over the place.
             location.setX(elementRect.x() - imageRect.x() + m_dragLocation.x());
             location.setY(imageRect.height() - (elementRect.y() - imageRect.y() + m_dragLocation.y()));
         }
     } else if (m_dragImage) {
-        result = m_dragImage->protectedImage()->adapter().snapshotNSImage();
+        result = m_dragImage->image()->snapshotNSImage();
 
         location = m_dragLocation;
         location.setY([result size].height - location.y());
