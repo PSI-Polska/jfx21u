@@ -61,16 +61,15 @@ MetadataTable::~MetadataTable()
 
 void MetadataTable::destroy(MetadataTable* table)
 {
+    RefPtr<UnlinkedMetadataTable> unlinkedMetadata = WTFMove(table->linkingData().unlinkedMetadata);
+
+    table->~MetadataTable();
+
     // FIXME: This check should really not be necessary, see https://webkit.org/b/272787
-    if (table->isDestroyed()) {
+    if (UNLIKELY(!unlinkedMetadata)) {
         ASSERT_NOT_REACHED();
         return;
     }
-
-    RefPtr<UnlinkedMetadataTable> unlinkedMetadata = WTFMove(table->linkingData().unlinkedMetadata);
-    ASSERT(table->isDestroyed());
-
-    table->~MetadataTable();
 
     // Since UnlinkedMetadata::unlink frees the underlying memory of MetadataTable.
     // We need to destroy LinkingData before calling it.

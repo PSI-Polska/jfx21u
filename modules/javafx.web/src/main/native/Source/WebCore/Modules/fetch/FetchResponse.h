@@ -59,8 +59,6 @@ public:
         std::optional<FetchHeaders::Init> headers;
     };
 
-    virtual ~FetchResponse();
-
     WEBCORE_EXPORT static Ref<FetchResponse> create(ScriptExecutionContext*, std::optional<FetchBody>&&, FetchHeaders::Guard, ResourceResponse&&);
 
     static ExceptionOr<Ref<FetchResponse>> create(ScriptExecutionContext&, std::optional<FetchBody::Init>&&, Init&&);

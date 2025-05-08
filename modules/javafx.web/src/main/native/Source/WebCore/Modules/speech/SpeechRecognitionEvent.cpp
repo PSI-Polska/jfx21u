@@ -62,6 +62,4 @@ EventInterface SpeechRecognitionEvent::eventInterface() const
     return SpeechRecognitionEventInterfaceType;
 }
 
-SpeechRecognitionEvent::~SpeechRecognitionEvent() = default;
-
 } // namespace WebCore

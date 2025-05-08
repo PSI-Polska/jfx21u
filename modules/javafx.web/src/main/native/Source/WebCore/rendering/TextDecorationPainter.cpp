@@ -140,10 +140,8 @@ static DashArray translateIntersectionPointsToSkipInkBoundaries(const DashArray&
             else
                 intermediateTuples.append(*i);
         }
-    } else {
-        // XXX(274780): A plain assignment or move here makes Clang generate bad code in LTO builds.
-        intermediateTuples.swap(tuples);
-    }
+    } else
+        intermediateTuples = tuples;
 
     // Step 3: Output the space between the ranges, but only if the space warrants an underline.
     float previous = 0;

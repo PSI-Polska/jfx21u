@@ -852,11 +852,12 @@ CodeBlock::~CodeBlock()
         vm.m_perBytecodeProfiler->notifyDestruction(this);
 
     if (LIKELY(!vm.heap.isShuttingDown())) {
-            // FIXME: This check should really not be necessary, see https://webkit.org/b/272787
-        ASSERT(!m_metadata || m_metadata->unlinkedMetadata());
-        if (m_metadata && !m_metadata->isDestroyed()) {
+        if (m_metadata) {
             auto unlinkedMetadata = m_metadata->unlinkedMetadata();
-            if (unlinkedMetadata->didOptimize() == TriState::Indeterminate)
+
+            // FIXME: This check should really not be necessary, see https://webkit.org/b/272787
+            ASSERT(unlinkedMetadata);
+            if (unlinkedMetadata && unlinkedMetadata->didOptimize() == TriState::Indeterminate)
                 unlinkedMetadata->setDidOptimize(TriState::False);
         }
     }

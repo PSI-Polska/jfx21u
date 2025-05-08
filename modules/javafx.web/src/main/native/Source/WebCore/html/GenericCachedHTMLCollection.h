@@ -39,8 +39,6 @@ public:
         return adoptRef(*new GenericCachedHTMLCollection(base, collectionType));
     }
 
-    virtual ~GenericCachedHTMLCollection();
-
     bool elementMatches(Element&) const;
 
 private:

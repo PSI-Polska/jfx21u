@@ -235,8 +235,6 @@ ReplacementFragment::ReplacementFragment(RefPtr<DocumentFragment>&& inputFragmen
     }
 }
 
-ReplaceSelectionCommand::~ReplaceSelectionCommand() = default;
-
 void ReplacementFragment::removeContentsWithSideEffects()
 {
     Vector<Ref<Element>> elementsToRemove;

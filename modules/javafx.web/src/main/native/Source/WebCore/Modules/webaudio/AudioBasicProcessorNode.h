@@ -38,7 +38,6 @@ class AudioBasicProcessorNode : public AudioNode {
     WTF_MAKE_ISO_ALLOCATED(AudioBasicProcessorNode);
 public:
     AudioBasicProcessorNode(BaseAudioContext&, NodeType);
-    virtual ~AudioBasicProcessorNode();
 
     // AudioNode
     void process(size_t framesToProcess) override;

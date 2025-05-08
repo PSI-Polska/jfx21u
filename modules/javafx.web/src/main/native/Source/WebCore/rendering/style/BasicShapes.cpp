@@ -636,8 +636,6 @@ BasicShapePath::BasicShapePath(std::unique_ptr<SVGPathByteStream>&& byteStream, 
 {
 }
 
-BasicShapePath::~BasicShapePath() = default;
-
 Ref<BasicShape> BasicShapePath::clone() const
 {
     std::unique_ptr<SVGPathByteStream> byteStream;

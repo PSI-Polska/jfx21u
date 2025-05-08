@@ -167,8 +167,6 @@ CSSTransformValue::CSSTransformValue(Vector<RefPtr<CSSTransformComponent>>&& tra
 {
 }
 
-CSSTransformValue::~CSSTransformValue() = default;
-
 void CSSTransformValue::serialize(StringBuilder& builder, OptionSet<SerializationArguments>) const
 {
     // https://drafts.css-houdini.org/css-typed-om/#serialize-a-csstransformvalue

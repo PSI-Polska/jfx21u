@@ -46,8 +46,6 @@ WorkerNavigator::WorkerNavigator(ScriptExecutionContext& context, const String& 
 {
 }
 
-WorkerNavigator::~WorkerNavigator() = default;
-
 const String& WorkerNavigator::userAgent() const
 {
     return m_userAgent;
