@@ -37,68 +37,68 @@ public:
 
     constexpr StringParsingBuffer() = default;
 
-    constexpr StringParsingBuffer(std::span<const CharacterType> characters)
-        : m_data { characters }
+    constexpr StringParsingBuffer(const CharacterType* characters, unsigned length)
+        : m_position { characters }
+        , m_end { characters + length }
     {
-        ASSERT(m_data.data() || m_data.empty());
+        ASSERT(characters || !length);
     }
 
-    constexpr auto position() const { return m_data.data(); }
-    constexpr auto end() const { return m_data.data() + m_data.size(); }
+    constexpr StringParsingBuffer(const CharacterType* characters, const CharacterType* end)
+        : m_position { characters }
+        , m_end { end }
+    {
+        ASSERT(characters <= end);
+        ASSERT(!characters == !end);
+        ASSERT(static_cast<size_t>(end - characters) <= std::numeric_limits<unsigned>::max());
+    }
 
-    constexpr bool hasCharactersRemaining() const { return !m_data.empty(); }
-    constexpr bool atEnd() const { return m_data.empty(); }
+    constexpr auto position() const { return m_position; }
+    constexpr auto end() const { return m_end; }
 
-    constexpr size_t lengthRemaining() const { return m_data.size(); }
+    constexpr bool hasCharactersRemaining() const { return m_position < m_end; }
+    constexpr bool atEnd() const { return m_position == m_end; }
+
+    constexpr unsigned lengthRemaining() const { return m_end - m_position; }
 
     constexpr void setPosition(const CharacterType* position)
     {
-        ASSERT(position <= m_data.data() + m_data.size());
-        m_data = { position, m_data.data() + m_data.size() };
+        ASSERT(m_position <= m_end);
+        m_position = position;
     }
 
-    StringView stringViewOfCharactersRemaining() const { return span(); }
+    StringView stringViewOfCharactersRemaining() const { return { m_position, lengthRemaining() }; }
 
     CharacterType consume()
     {
         ASSERT(hasCharactersRemaining());
-        auto character = m_data.front();
-        m_data = m_data.subspan(1);
+        auto character = *m_position;
+        ++m_position;
         return character;
     }
 
-    std::span<const CharacterType> span() const { return m_data; }
-
-    std::span<const CharacterType> consume(size_t count)
-    {
-        ASSERT(count <= lengthRemaining());
-        auto result = m_data;
-        m_data = m_data.subspan(count);
-        return result;
-    }
-
-    CharacterType operator[](size_t i) const
+    CharacterType operator[](unsigned i) const
     {
         ASSERT(i < lengthRemaining());
-        return m_data[i];
+        return m_position[i];
     }
 
     constexpr CharacterType operator*() const
     {
         ASSERT(hasCharactersRemaining());
-        return m_data.front();
+        return *m_position;
     }
 
     constexpr void advance()
     {
         ASSERT(hasCharactersRemaining());
-        m_data = m_data.subspan(1);
+        ++m_position;
     }
 
-    constexpr void advanceBy(size_t places)
+    constexpr void advanceBy(unsigned places)
     {
         ASSERT(places <= lengthRemaining());
-        m_data = m_data.subspan(places);
+        m_position += places;
     }
 
     constexpr StringParsingBuffer& operator++()
@@ -121,14 +121,15 @@ public:
     }
 
 private:
-    std::span<const CharacterType> m_data;
+    const CharacterType* m_position { nullptr };
+    const CharacterType* m_end { nullptr };
 };
 
 template<typename StringType, typename Function> decltype(auto) readCharactersForParsing(StringType&& string, Function&& functor)
 {
     if (string.is8Bit())
-        return functor(StringParsingBuffer { string.span8() });
-    return functor(StringParsingBuffer { string.span16() });
+        return functor(StringParsingBuffer { string.characters8(), string.length() });
+    return functor(StringParsingBuffer { string.characters16(), string.length() });
 }
 
 } // namespace WTF

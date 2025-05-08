@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
- * Copyright (C) 2015-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -32,7 +32,6 @@
 #include "ChildListMutationScope.h"
 #include "ElementInlines.h"
 #include "ElementTraversal.h"
-#include "GetHTMLOptions.h"
 #include "HTMLSlotElement.h"
 #if ENABLE(PICTURE_IN_PICTURE_API)
 #include "NotImplemented.h"
@@ -42,16 +41,15 @@
 #include "StyleResolver.h"
 #include "StyleScope.h"
 #include "StyleSheetList.h"
-#include "TrustedType.h"
 #include "WebAnimation.h"
 #include "markup.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ShadowRoot);
+WTF_MAKE_ISO_ALLOCATED_IMPL(ShadowRoot);
 
-struct SameSizeAsShadowRoot : public DocumentFragment, public TreeScope {
+struct SameSizeAsShadowRoot : public DocumentFragment, public CanMakeCheckedPtr, public TreeScope {
     uint8_t flagsAndModes[3];
     WeakPtr<Element, WeakPtrImplWithEventTargetData> host;
     void* styleSheetList;
@@ -65,12 +63,11 @@ static_assert(sizeof(ShadowRoot) == sizeof(SameSizeAsShadowRoot), "shadowroot sh
 static_assert(sizeof(WeakPtr<Element, WeakPtrImplWithEventTargetData>) == sizeof(void*), "WeakPtr should be same size as raw pointer");
 #endif
 
-ShadowRoot::ShadowRoot(Document& document, ShadowRootMode mode, SlotAssignmentMode assignmentMode, DelegatesFocus delegatesFocus, Clonable clonable, Serializable serializable, AvailableToElementInternals availableToElementInternals)
+ShadowRoot::ShadowRoot(Document& document, ShadowRootMode mode, SlotAssignmentMode assignmentMode, DelegatesFocus delegatesFocus, Clonable clonable, AvailableToElementInternals availableToElementInternals)
     : DocumentFragment(document, TypeFlag::IsShadowRoot)
     , TreeScope(*this, document)
     , m_delegatesFocus(delegatesFocus == DelegatesFocus::Yes)
     , m_isClonable(clonable == Clonable::Yes)
-    , m_serializable(serializable == Serializable::Yes)
     , m_availableToElementInternals(availableToElementInternals == AvailableToElementInternals::Yes)
     , m_mode(mode)
     , m_slotAssignmentMode(assignmentMode)
@@ -207,19 +204,9 @@ ExceptionOr<void> ShadowRoot::replaceChildrenWithMarkup(const String& markup, Op
     return replaceChildrenWithFragment(*this, fragment.releaseReturnValue());
 }
 
-ExceptionOr<void> ShadowRoot::setHTMLUnsafe(std::variant<RefPtr<TrustedHTML>, String>&& html)
+ExceptionOr<void> ShadowRoot::setHTMLUnsafe(const String& html)
 {
-    auto stringValueHolder = trustedTypeCompliantString(*document().scriptExecutionContext(), WTFMove(html), "ShadowRoot setHTMLUnsafe"_s);
-
-    if (stringValueHolder.hasException())
-        return stringValueHolder.releaseException();
-
-    return replaceChildrenWithMarkup(stringValueHolder.releaseReturnValue(), { ParserContentPolicy::AllowDeclarativeShadowRoots, ParserContentPolicy::AlwaysParseAsHTML });
-}
-
-String ShadowRoot::getHTML(GetHTMLOptions&& options) const
-{
-    return serializeFragment(*this, SerializedNodes::SubtreesOfChildren, nullptr, ResolveURLs::NoExcludingURLsForPrivacy, SerializationSyntax::HTML, options.serializableShadowRoots ? SerializeShadowRoots::Serializable : SerializeShadowRoots::Explicit, WTFMove(options.shadowRoots));
+    return replaceChildrenWithMarkup(html, { ParserContentPolicy::AllowDeclarativeShadowRoots, ParserContentPolicy::AlwaysParseAsHTML });
 }
 
 String ShadowRoot::innerHTML() const
@@ -227,14 +214,9 @@ String ShadowRoot::innerHTML() const
     return serializeFragment(*this, SerializedNodes::SubtreesOfChildren, nullptr, ResolveURLs::NoExcludingURLsForPrivacy);
 }
 
-ExceptionOr<void> ShadowRoot::setInnerHTML(std::variant<RefPtr<TrustedHTML>, String>&& html)
+ExceptionOr<void> ShadowRoot::setInnerHTML(const String& markup)
 {
-    auto stringValueHolder = trustedTypeCompliantString(*document().scriptExecutionContext(), WTFMove(html), "ShadowRoot innerHTML"_s);
-
-    if (stringValueHolder.hasException())
-        return stringValueHolder.releaseException();
-
-    return replaceChildrenWithMarkup(stringValueHolder.releaseReturnValue(), { });
+    return replaceChildrenWithMarkup(markup, { });
 }
 
 bool ShadowRoot::childTypeAllowed(NodeType type) const
@@ -254,14 +236,10 @@ bool ShadowRoot::childTypeAllowed(NodeType type) const
 Ref<Node> ShadowRoot::cloneNodeInternal(Document& targetDocument, CloningOperation type)
 {
     RELEASE_ASSERT(m_mode != ShadowRootMode::UserAgent);
-    ASSERT(m_isClonable);
     switch (type) {
     case CloningOperation::SelfWithTemplateContent:
-        return create(targetDocument, m_mode, m_slotAssignmentMode,
-            m_delegatesFocus ? DelegatesFocus::Yes : DelegatesFocus::No,
-            Clonable::Yes,
-            m_serializable ? Serializable::Yes : Serializable::No,
-            m_availableToElementInternals ? AvailableToElementInternals::Yes : AvailableToElementInternals::No);
+        return create(targetDocument, m_mode, m_slotAssignmentMode, m_delegatesFocus ? DelegatesFocus::Yes : DelegatesFocus::No,
+            m_isClonable ? Clonable::Yes : Clonable::No, m_availableToElementInternals ? AvailableToElementInternals::Yes : AvailableToElementInternals::No);
     case CloningOperation::OnlySelf:
     case CloningOperation::Everything:
         break;
@@ -431,7 +409,7 @@ Vector<Ref<ShadowRoot>> assignedShadowRootsIfSlotted(const Node& node)
 }
 
 #if ENABLE(PICTURE_IN_PICTURE_API)
-Element* ShadowRoot::pictureInPictureElement() const
+HTMLVideoElement* ShadowRoot::pictureInPictureElement() const
 {
     notImplemented();
     return nullptr;

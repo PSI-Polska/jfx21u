@@ -25,6 +25,7 @@
 #include "config.h"
 #include "RenderSVGContainer.h"
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "GraphicsContext.h"
 #include "HitTestRequest.h"
 #include "HitTestResult.h"
@@ -35,14 +36,13 @@
 #include "RenderView.h"
 #include "SVGContainerLayout.h"
 #include "SVGLayerTransformUpdater.h"
-#include "SVGVisitedRendererTracking.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/SetForScope.h>
 #include <wtf/StackStats.h>
-#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderSVGContainer);
+WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGContainer);
 
 RenderSVGContainer::RenderSVGContainer(Type type, Document& document, RenderStyle&& style, OptionSet<SVGModelObjectFlag> svgFlags)
     : RenderSVGModelObject(type, document, WTFMove(style), svgFlags | SVGModelObjectFlag::IsContainer)
@@ -61,8 +61,7 @@ void RenderSVGContainer::layout()
     StackStats::LayoutCheckPoint layoutCheckPoint;
     ASSERT(needsLayout());
 
-    auto checkForRepaintOverride = isRenderSVGResourceMarker() ? std::make_optional(LayoutRepainter::CheckForRepaint::No) : std::nullopt;
-    LayoutRepainter repainter(*this, checkForRepaintOverride);
+    LayoutRepainter repainter(*this, checkForRepaintDuringLayout() && !isRenderSVGResourceMarker(), RepaintOutlineBounds::No);
 
     // Update layer transform before laying out children (SVG needs access to the transform matrices during layout for on-screen text font-size calculations).
     // Eventually re-update if the transform reference box, relevant for transform-origin, has changed during layout.
@@ -137,7 +136,8 @@ void RenderSVGContainer::paint(PaintInfo& paintInfo, const LayoutPoint& paintOff
         return;
 
     if (paintInfo.phase == PaintPhase::Outline || paintInfo.phase == PaintPhase::SelfOutline) {
-        paintSVGOutline(paintInfo, adjustedPaintOffset);
+        // FIXME: [LBSE] Upstream outline painting
+        // paintSVGOutline(paintInfo, adjustedPaintOffset);
         return;
     }
 
@@ -153,30 +153,22 @@ bool RenderSVGContainer::nodeAtPoint(const HitTestRequest& request, HitTestResul
     if (!locationInContainer.intersects(visualOverflowRect))
         return false;
 
-    static NeverDestroyed<SVGVisitedRendererTracking::VisitedSet> s_visitedSet;
-
-    SVGVisitedRendererTracking recursionTracking(s_visitedSet);
-    if (recursionTracking.isVisiting(*this))
-        return false;
-
-    SVGVisitedRendererTracking::Scope recursionScope(recursionTracking, *this);
-
     auto localPoint = locationInContainer.point();
     auto coordinateSystemOriginTranslation = nominalSVGLayoutLocation() - adjustedLocation;
     localPoint.move(coordinateSystemOriginTranslation);
 
-    if (!pointInSVGClippingArea(localPoint))
+    if (!SVGRenderSupport::pointInClippingArea(*this, localPoint))
         return false;
 
     // Give RenderSVGViewportContainer a chance to apply its viewport clip.
     if (!pointIsInsideViewportClip(localPoint))
         return false;
 
-
+    SVGHitTestCycleDetectionScope hitTestScope(*this);
     for (auto* child = lastChild(); child; child = child->previousSibling()) {
         if (!child->hasLayer() && child->nodeAtPoint(request, result, locationInContainer, adjustedLocation, hitTestAction)) {
             updateHitTestResult(result, locationInContainer.point() - toLayoutSize(adjustedLocation));
-            if (result.addNodeToListBasedTestResult(child->protectedNode().get(), request, locationInContainer, visualOverflowRect) == HitTestProgress::Stop)
+            if (result.addNodeToListBasedTestResult(child->node(), request, locationInContainer, visualOverflowRect) == HitTestProgress::Stop)
                 return true;
         }
     }
@@ -184,7 +176,7 @@ bool RenderSVGContainer::nodeAtPoint(const HitTestRequest& request, HitTestResul
     // Accessibility wants to return SVG containers, if appropriate.
     if (request.type() & HitTestRequest::Type::AccessibilityHitTest && m_objectBoundingBox.contains(localPoint)) {
         updateHitTestResult(result, locationInContainer.point() - toLayoutSize(adjustedLocation));
-        if (result.addNodeToListBasedTestResult(protectedNodeForHitTest().get(), request, locationInContainer, visualOverflowRect) == HitTestProgress::Stop)
+        if (result.addNodeToListBasedTestResult(nodeForHitTest(), request, locationInContainer, visualOverflowRect) == HitTestProgress::Stop)
             return true;
     }
 
@@ -195,3 +187,4 @@ bool RenderSVGContainer::nodeAtPoint(const HitTestRequest& request, HitTestResul
 
 }
 
+#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

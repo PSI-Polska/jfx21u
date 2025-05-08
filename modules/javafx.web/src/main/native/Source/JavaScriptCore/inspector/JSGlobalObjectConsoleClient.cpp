@@ -32,7 +32,6 @@
 #include "InspectorScriptProfilerAgent.h"
 #include "ScriptArguments.h"
 #include <wtf/TZoneMallocInlines.h>
-#include <wtf/text/MakeString.h>
 
 namespace Inspector {
 
@@ -224,7 +223,7 @@ void JSGlobalObjectConsoleClient::screenshot(JSGlobalObject*, Ref<ScriptArgument
 
 void JSGlobalObjectConsoleClient::warnUnimplemented(const String& method)
 {
-    auto message = makeString(method, " is currently ignored in JavaScript context inspection."_s);
+    String message = method + " is currently ignored in JavaScript context inspection."_s;
     m_consoleAgent->addMessageToConsole(makeUnique<ConsoleMessage>(MessageSource::ConsoleAPI, MessageType::Log, MessageLevel::Warning, message));
 }
 

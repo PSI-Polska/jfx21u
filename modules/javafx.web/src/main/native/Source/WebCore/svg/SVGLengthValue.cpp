@@ -26,41 +26,40 @@
 #include "SVGElement.h"
 #include "SVGLengthContext.h"
 #include "SVGParserUtilities.h"
-#include <wtf/text/FastCharacterComparison.h>
-#include <wtf/text/MakeString.h>
+#include <wtf/text/StringConcatenateNumbers.h>
 #include <wtf/text/StringParsingBuffer.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
-static inline ASCIILiteral lengthTypeToString(SVGLengthType lengthType)
+static inline const char* lengthTypeToString(SVGLengthType lengthType)
 {
     switch (lengthType) {
     case SVGLengthType::Unknown:
     case SVGLengthType::Number:
-        return ""_s;
+        return "";
     case SVGLengthType::Percentage:
-        return "%"_s;
+        return "%";
     case SVGLengthType::Ems:
-        return "em"_s;
+        return "em";
     case SVGLengthType::Exs:
-        return "ex"_s;
+        return "ex";
     case SVGLengthType::Pixels:
-        return "px"_s;
+        return "px";
     case SVGLengthType::Centimeters:
-        return "cm"_s;
+        return "cm";
     case SVGLengthType::Millimeters:
-        return "mm"_s;
+        return "mm";
     case SVGLengthType::Inches:
-        return "in"_s;
+        return "in";
     case SVGLengthType::Points:
-        return "pt"_s;
+        return "pt";
     case SVGLengthType::Picas:
-        return "pc"_s;
+        return "pc";
     }
 
     ASSERT_NOT_REACHED();
-    return ""_s;
+    return "";
 }
 
 template<typename CharacterType> static inline SVGLengthType parseLengthType(StringParsingBuffer<CharacterType>& buffer)
@@ -68,32 +67,31 @@ template<typename CharacterType> static inline SVGLengthType parseLengthType(Str
     if (buffer.atEnd())
         return SVGLengthType::Number;
 
-    auto firstCharacterPosition = buffer.position();
-    buffer.advance();
+    auto firstChar = *buffer++;
 
     if (buffer.atEnd())
-        return *firstCharacterPosition == '%' ? SVGLengthType::Percentage : SVGLengthType::Unknown;
+        return firstChar == '%' ? SVGLengthType::Percentage : SVGLengthType::Unknown;
 
-    buffer.advance();
+    auto secondChar = *buffer++;
 
     if (!buffer.atEnd())
         return SVGLengthType::Unknown;
 
-    if (compareCharacters(firstCharacterPosition, 'e', 'm'))
+    if (firstChar == 'e' && secondChar == 'm')
         return SVGLengthType::Ems;
-    if (compareCharacters(firstCharacterPosition, 'e', 'x'))
+    if (firstChar == 'e' && secondChar == 'x')
         return SVGLengthType::Exs;
-    if (compareCharacters(firstCharacterPosition, 'p', 'x'))
+    if (firstChar == 'p' && secondChar == 'x')
         return SVGLengthType::Pixels;
-    if (compareCharacters(firstCharacterPosition, 'c', 'm'))
+    if (firstChar == 'c' && secondChar == 'm')
         return SVGLengthType::Centimeters;
-    if (compareCharacters(firstCharacterPosition, 'm', 'm'))
+    if (firstChar == 'm' && secondChar == 'm')
         return SVGLengthType::Millimeters;
-    if (compareCharacters(firstCharacterPosition, 'i', 'n'))
+    if (firstChar == 'i' && secondChar == 'n')
         return SVGLengthType::Inches;
-    if (compareCharacters(firstCharacterPosition, 'p', 't'))
+    if (firstChar == 'p' && secondChar == 't')
         return SVGLengthType::Points;
-    if (compareCharacters(firstCharacterPosition, 'p', 'c'))
+    if (firstChar == 'p' && secondChar == 'c')
         return SVGLengthType::Picas;
 
     return SVGLengthType::Unknown;
@@ -261,8 +259,8 @@ SVGLengthValue SVGLengthValue::fromCSSPrimitiveValue(const CSSPrimitiveValue& va
 
 Ref<CSSPrimitiveValue> SVGLengthValue::toCSSPrimitiveValue(const Element* element) const
 {
-    if (RefPtr svgElement = dynamicDowncast<SVGElement>(element)) {
-        SVGLengthContext context { svgElement.get() };
+    if (auto* svgElement = dynamicDowncast<SVGElement>(element)) {
+        SVGLengthContext context { svgElement };
         auto computedValue = context.convertValueToUserUnits(valueInSpecifiedUnits(), lengthType(), lengthMode());
         if (!computedValue.hasException())
             return CSSPrimitiveValue::create(computedValue.releaseReturnValue(), CSSUnitType::CSS_PX);

@@ -73,11 +73,6 @@ MediaSourcePrivate::AddStatus MockMediaSourcePrivate::addSourceBuffer(const Cont
     return AddStatus::Ok;
 }
 
-RefPtr<MediaPlayerPrivateInterface> MockMediaSourcePrivate::player() const
-{
-    return m_player.get();
-}
-
 void MockMediaSourcePrivate::durationChanged(const MediaTime& duration)
 {
     MediaSourcePrivate::durationChanged(duration);
@@ -109,6 +104,13 @@ void MockMediaSourcePrivate::notifyActiveSourceBuffersChanged()
 {
     if (m_player)
         m_player->notifyActiveSourceBuffersChanged();
+}
+
+MediaTime MockMediaSourcePrivate::currentMediaTime() const
+{
+    if (m_player)
+        return m_player->currentMediaTime();
+    return MediaTime::invalidTime();
 }
 
 std::optional<VideoPlaybackQualityMetrics> MockMediaSourcePrivate::videoPlaybackQualityMetrics()

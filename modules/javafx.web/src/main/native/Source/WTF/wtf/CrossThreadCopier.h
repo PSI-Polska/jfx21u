@@ -177,8 +177,8 @@ template<> struct CrossThreadCopierBase<false, false, WTF::ASCIILiteral> {
     }
 };
 
-template<typename T, typename U, typename V, SupportsObjectIdentifierNullState supportsNullState> struct CrossThreadCopierBase<false, false, ObjectIdentifierGeneric<T, U, V, supportsNullState>> {
-    using Type = ObjectIdentifierGeneric<T, U, V, supportsNullState>;
+template<typename T, typename U> struct CrossThreadCopierBase<false, false, ObjectIdentifierGeneric<T, U>> {
+    using Type = ObjectIdentifierGeneric<T, U>;
     static constexpr bool IsNeeded = false;
     static Type copy(const Type& source)
     {

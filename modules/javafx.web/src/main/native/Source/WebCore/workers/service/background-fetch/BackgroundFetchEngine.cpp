@@ -60,7 +60,7 @@ void BackgroundFetchEngine::startBackgroundFetch(SWServerRegistration& registrat
         return;
     }
 
-    auto result = iterator->value.ensure(backgroundFetchIdentifier, [&]() {
+    auto result = iterator->value.ensure(backgroundFetchIdentifier, [&]() mutable {
         return makeUnique<BackgroundFetch>(registration, backgroundFetchIdentifier, WTFMove(requests), WTFMove(options), Ref { m_store }, [weakThis = WeakPtr { *this }](auto& fetch) {
             if (weakThis)
                 weakThis->notifyBackgroundFetchUpdate(fetch);

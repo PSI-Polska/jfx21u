@@ -234,8 +234,6 @@ public:
             }
         }
 
-        std::sort(asciiMatches.begin(), asciiMatches.end());
-        std::sort(unicodeMatches.begin(), unicodeMatches.end());
         performOp();
     }
 
@@ -364,8 +362,6 @@ public:
             utf32Strings.append(string);
         }
 
-        std::sort(matches.begin(), matches.end());
-        std::sort(matchesUnicode.begin(), matchesUnicode.end());
         performSetOpWithStrings(utf32Strings);
         performSetOpWithMatches(matches, emptyRanges, matchesUnicode, emptyRanges);
     }
@@ -408,10 +404,8 @@ public:
         if (m_compileMode != CompileMode::UnicodeSets)
             return;
 
-        asciiOp(rhsMatches, rhsRanges);
-        Vector<char32_t> rhsSortedMatchesUnicode(rhsMatchesUnicode);
-        std::sort(rhsSortedMatchesUnicode.begin(), rhsSortedMatchesUnicode.end());
-        unicodeOpSorted(rhsSortedMatchesUnicode, rhsRangesUnicode);
+        asciiOpSorted(rhsMatches, rhsRanges);
+        unicodeOpSorted(rhsMatchesUnicode, rhsRangesUnicode);
     }
 
     bool hasInverteStrings()
@@ -668,7 +662,7 @@ private:
         m_mayContainStrings = !m_strings.isEmpty();
     }
 
-    void asciiOp(const Vector<char32_t>& rhsMatches, const Vector<CharacterRange>& rhsRanges)
+    void asciiOpSorted(const Vector<char32_t>& rhsMatches, const Vector<CharacterRange>& rhsRanges)
     {
         Vector<char32_t> resultMatches;
         Vector<CharacterRange> resultRanges;
@@ -2131,7 +2125,7 @@ void indentForNestingLevel(PrintStream& out, unsigned nestingDepth)
 
 void dumpUChar32(PrintStream& out, char32_t c)
 {
-    if (c >= ' ' && c <= 0xff)
+    if (c >= ' '&& c <= 0xff)
         out.printf("'%c'", static_cast<char>(c));
     else
         out.printf("0x%04x", c);

@@ -32,7 +32,7 @@
 #include "InspectorController.h"
 #include "InspectorFrontendClient.h"
 #include "JSDOMExceptionHandling.h"
-#include "JSDOMWindowCustom.h"
+#include "JSLocalDOMWindowCustom.h"
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
 #include "Page.h"

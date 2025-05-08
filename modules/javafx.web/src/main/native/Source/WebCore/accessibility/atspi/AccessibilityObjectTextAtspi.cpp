@@ -38,7 +38,6 @@
 #include "TextIterator.h"
 #include "VisibleUnits.h"
 #include <gio/gio.h>
-#include <wtf/Assertions.h>
 #include <wtf/unicode/CharacterNames.h>
 
 namespace WebCore {
@@ -239,7 +238,7 @@ static Vector<unsigned, 128> offsetMapping(const String& text)
         return { };
 
     Vector<unsigned, 128> offsets;
-    SurrogatePairAwareTextIterator iterator(text.span16(), 0, text.length());
+    SurrogatePairAwareTextIterator iterator(text.characters16(), 0, text.length(), text.length());
     char32_t character;
     unsigned clusterLength = 0;
     unsigned i;
@@ -290,7 +289,7 @@ String AccessibilityObjectAtspi::text() const
     if (!value.isNull())
         return value;
 
-    auto text = m_coreObject->textUnderElement(TextUnderElementMode(TextUnderElementMode::Children::IncludeAllChildren));
+    auto text = m_coreObject->textUnderElement(AccessibilityTextUnderElementMode(AccessibilityTextUnderElementMode::TextUnderElementModeIncludeAllChildren));
     if (auto* renderer = m_coreObject->renderer()) {
         if (is<RenderListItem>(*renderer) && downcast<RenderListItem>(*renderer).markerRenderer()) {
             if (renderer->style().direction() == TextDirection::LTR) {
@@ -316,7 +315,7 @@ unsigned AccessibilityObject::getLengthForTextRange() const
         textLength = downcast<RenderText>(*renderer).text().length();
 
     if (!textLength && allowsTextRanges())
-        textLength = textUnderElement(TextUnderElementMode(TextUnderElementMode::Children::IncludeAllChildren)).length();
+        textLength = textUnderElement(AccessibilityTextUnderElementMode(AccessibilityTextUnderElementMode::TextUnderElementModeIncludeAllChildren)).length();
 
     return textLength;
 }
@@ -702,12 +701,11 @@ bool AccessibilityObjectAtspi::selectionBounds(int& startOffset, int& endOffset)
 
 void AccessibilityObjectAtspi::setSelectedRange(unsigned utf16Offset, unsigned length)
 {
-    auto* axObject = dynamicDowncast<AccessibilityObject>(m_coreObject);
-    if (!axObject)
+    if (!m_coreObject)
         return;
 
-    auto range = axObject->visiblePositionRangeForRange(CharacterRange(utf16Offset, length));
-    axObject->setSelectedVisiblePositionRange(range);
+    auto range = m_coreObject->visiblePositionRangeForRange(CharacterRange(utf16Offset, length));
+    m_coreObject->setSelectedVisiblePositionRange(range);
 }
 
 bool AccessibilityObjectAtspi::selectRange(int startOffset, int endOffset)
@@ -764,9 +762,9 @@ AccessibilityObjectAtspi::TextAttributes AccessibilityObjectAtspi::textAttribute
     if (!m_coreObject || !m_coreObject->renderer())
         return { };
 
-    auto accessibilityTextAttributes = [this](AXCoreObject& axObject, const HashMap<String, String>& defaultAttributes) -> HashMap<String, String> {
+    auto accessibilityTextAttributes = [this](AXCoreObject* axObject, const HashMap<String, String>& defaultAttributes) -> HashMap<String, String> {
         HashMap<String, String> attributes;
-        auto& style = axObject.renderer()->style();
+        auto& style = axObject->renderer()->style();
 
         auto addAttributeIfNeeded = [&](const String& name, const String& value) {
             if (defaultAttributes.isEmpty() || defaultAttributes.get(name) != value)
@@ -786,7 +784,7 @@ AccessibilityObjectAtspi::TextAttributes AccessibilityObjectAtspi::textAttribute
         }
 
         addAttributeIfNeeded("family-name"_s, style.fontCascade().firstFamily());
-        addAttributeIfNeeded("size"_s, makeString(std::round(style.computedFontSize() * 72 / WebCore::fontDPI()), "pt"_s));
+        addAttributeIfNeeded("size"_s, makeString(std::round(style.computedFontSize() * 72 / WebCore::fontDPI()), "pt"));
         addAttributeIfNeeded("weight"_s, makeString(static_cast<float>(style.fontCascade().weight())));
         addAttributeIfNeeded("style"_s, style.fontCascade().italic() ? "italic"_s : "normal"_s);
         addAttributeIfNeeded("strikethrough"_s, style.textDecorationLine() & TextDecorationLine::LineThrough ? "true"_s : "false"_s);
@@ -830,7 +828,7 @@ AccessibilityObjectAtspi::TextAttributes AccessibilityObjectAtspi::textAttribute
         return attributes;
     };
 
-    auto defaultAttributes = accessibilityTextAttributes(*m_coreObject, { });
+    auto defaultAttributes = accessibilityTextAttributes(m_coreObject, { });
     if (!utf16Offset)
         return { WTFMove(defaultAttributes), -1, -1 };
 
@@ -841,10 +839,8 @@ AccessibilityObjectAtspi::TextAttributes AccessibilityObjectAtspi::textAttribute
         return { WTFMove(defaultAttributes), -1, -1 };
 
     if (!*utf16Offset && m_hasListMarkerAtStart) {
-        auto* axObject = m_coreObject->children()[0].get();
-        RELEASE_ASSERT(axObject);
         // Always consider list marker an independent run.
-        auto attributes = accessibilityTextAttributes(*axObject, defaultAttributes);
+        auto attributes = accessibilityTextAttributes(m_coreObject->children()[0].get(), defaultAttributes);
         if (!includeDefault)
             return { WTFMove(attributes), 0, 1 };
 
@@ -866,7 +862,7 @@ AccessibilityObjectAtspi::TextAttributes AccessibilityObjectAtspi::textAttribute
     if (!childAxObject || childAxObject == m_coreObject)
         return { WTFMove(defaultAttributes), -1, -1 };
 
-    auto attributes = accessibilityTextAttributes(*childAxObject, defaultAttributes);
+    auto attributes = accessibilityTextAttributes(childAxObject, defaultAttributes);
     auto firstValidPosition = firstPositionInOrBeforeNode(m_coreObject->node()->firstDescendant());
     auto lastValidPosition = lastPositionInOrAfterNode(m_coreObject->node()->lastDescendant());
 
@@ -876,10 +872,7 @@ AccessibilityObjectAtspi::TextAttributes AccessibilityObjectAtspi::textAttribute
         if (r->firstChildSlow())
             continue;
 
-        auto* axObject = r->document().axObjectCache()->get(r);
-        if (!axObject)
-            continue;
-        auto childAttributes = accessibilityTextAttributes(*axObject, defaultAttributes);
+        auto childAttributes = accessibilityTextAttributes(r->document().axObjectCache()->get(r), defaultAttributes);
         if (childAttributes != attributes)
             break;
 
@@ -893,10 +886,7 @@ AccessibilityObjectAtspi::TextAttributes AccessibilityObjectAtspi::textAttribute
         if (r->firstChildSlow())
             continue;
 
-        auto* axObject = r->document().axObjectCache()->get(r);
-        if (!axObject)
-            continue;
-        auto childAttributes = accessibilityTextAttributes(*axObject, defaultAttributes);
+        auto childAttributes = accessibilityTextAttributes(r->document().axObjectCache()->get(r), defaultAttributes);
         if (childAttributes != attributes)
             break;
 

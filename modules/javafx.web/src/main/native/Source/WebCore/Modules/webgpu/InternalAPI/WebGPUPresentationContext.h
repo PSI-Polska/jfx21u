@@ -34,10 +34,6 @@ namespace WTF {
 class MachSendRight;
 }
 
-namespace WebCore {
-class NativeImage;
-}
-
 namespace WebCore::WebGPU {
 
 struct CanvasConfiguration;
@@ -47,12 +43,10 @@ class PresentationContext : public RefCounted<PresentationContext> {
 public:
     virtual ~PresentationContext() = default;
 
-    WARN_UNUSED_RETURN virtual bool configure(const CanvasConfiguration&) = 0;
+    virtual void configure(const CanvasConfiguration&) = 0;
     virtual void unconfigure() = 0;
-    virtual void present(bool = false) = 0;
 
     virtual RefPtr<Texture> getCurrentTexture() = 0;
-    virtual RefPtr<WebCore::NativeImage> getMetalTextureAsNativeImage(uint32_t bufferIndex) = 0;
 
 protected:
     PresentationContext() = default;

@@ -29,7 +29,6 @@
 #include "JSCJSValueInlines.h"
 #include "JSModuleRecord.h"
 #include "ModuleAnalyzer.h"
-#include <wtf/text/MakeString.h>
 
 namespace JSC {
 

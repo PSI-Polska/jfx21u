@@ -70,7 +70,7 @@ StringView CachedScript::script(ShouldDecodeAsUTF8Only shouldDecodeAsUTF8Only)
     if (m_decodingState == NeverDecoded
         && PAL::TextEncoding(encoding()).isByteBasedEncoding()
         && contiguousData->size()
-        && charactersAreAllASCII(contiguousData->span())) {
+        && charactersAreAllASCII(contiguousData->data(), contiguousData->size())) {
 
         m_decodingState = DataAndDecodedStringHaveSameBytes;
 
@@ -78,21 +78,20 @@ StringView CachedScript::script(ShouldDecodeAsUTF8Only shouldDecodeAsUTF8Only)
         setDecodedSize(0);
         stopDecodedDataDeletionTimer();
 
-        m_scriptHash = StringHasher::computeHashAndMaskTop8Bits(contiguousData->span());
+        m_scriptHash = StringHasher::computeHashAndMaskTop8Bits(contiguousData->data(), contiguousData->size());
     }
 
     if (m_decodingState == DataAndDecodedStringHaveSameBytes)
-        return { contiguousData->span() };
+        return { contiguousData->data(), static_cast<unsigned>(contiguousData->size()) };
 
     bool shouldForceRedecoding = m_wasForceDecodedAsUTF8 != (shouldDecodeAsUTF8Only == ShouldDecodeAsUTF8Only::Yes);
     if (!m_script || shouldForceRedecoding) {
-        ASSERT(contiguousData->span().size() == encodedSize());
         if (shouldDecodeAsUTF8Only == ShouldDecodeAsUTF8Only::Yes) {
             Ref forceUTF8Decoder = TextResourceDecoder::create("text/javascript"_s, PAL::UTF8Encoding());
             forceUTF8Decoder->setAlwaysUseUTF8();
-            m_script = forceUTF8Decoder->decodeAndFlush(contiguousData->span());
+            m_script = forceUTF8Decoder->decodeAndFlush(contiguousData->data(), encodedSize());
         } else
-            m_script = m_decoder->decodeAndFlush(contiguousData->span());
+            m_script = m_decoder->decodeAndFlush(contiguousData->data(), encodedSize());
         if (m_decodingState == NeverDecoded || shouldForceRedecoding)
             m_scriptHash = m_script.hash();
         ASSERT(!m_scriptHash || m_scriptHash == m_script.hash());

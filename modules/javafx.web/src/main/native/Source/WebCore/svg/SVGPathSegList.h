@@ -24,11 +24,10 @@
 #include "SVGPathByteStream.h"
 #include "SVGPathSeg.h"
 #include "SVGPropertyList.h"
-#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
-class SVGPathSegList final : public SVGPropertyList<SVGPathSeg>, public CanMakeSingleThreadWeakPtr<SVGPathSegList> {
+class SVGPathSegList final : public SVGPropertyList<SVGPathSeg> {
     friend class SVGAnimatedPathSegListAnimator;
     friend class SVGPathSegListBuilder;
     friend class SVGPathSegListSource;
@@ -124,16 +123,10 @@ public:
         return { };
     }
 
-    void updateByteStreamData(DataRef<SVGPathByteStream::Data>&& byteStreamData)
+    void updateByteStreamData(const SVGPathByteStream::Data& byteStreamData)
     {
         pathByteStreamWillChange();
-        m_pathByteStream.setData(WTFMove(byteStreamData));
-    }
-
-    void clearByteStreamData()
-    {
-        pathByteStreamWillChange();
-        m_pathByteStream.clear();
+        m_pathByteStream.setData(byteStreamData);
     }
 
     const SVGPathByteStream& existingPathByteStream() const { return m_pathByteStream; }
@@ -215,7 +208,7 @@ private:
         if (m_pathByteStream.isEmpty())
             return;
 
-        Ref pathSegList = SVGPathSegList::create(item.copyRef());
+        Ref<SVGPathSegList> pathSegList = SVGPathSegList::create(item.copyRef());
         SVGPathByteStream pathSegStream;
 
         if (!buildSVGPathByteStreamFromSVGPathSegList(pathSegList, pathSegStream, UnalteredParsing, false))

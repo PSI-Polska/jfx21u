@@ -77,7 +77,7 @@ struct RTCSessionDescriptionInit;
 
 struct RTCRtpTransceiverInit {
     RTCRtpTransceiverDirection direction { RTCRtpTransceiverDirection::Sendrecv };
-    Vector<Ref<MediaStream>> streams;
+    Vector<RefPtr<MediaStream>> streams;
     Vector<RTCRtpEncodingParameters> sendEncodings;
 };
 
@@ -89,10 +89,10 @@ class RTCPeerConnection final
     , private LoggerHelper
 #endif
 {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(RTCPeerConnection, WEBCORE_EXPORT);
+    WTF_MAKE_ISO_ALLOCATED(RTCPeerConnection);
 public:
     static ExceptionOr<Ref<RTCPeerConnection>> create(Document&, RTCConfiguration&&);
-    WEBCORE_EXPORT virtual ~RTCPeerConnection();
+    virtual ~RTCPeerConnection();
 
     using DataChannelInit = RTCDataChannelInit;
 
@@ -152,7 +152,7 @@ public:
     ExceptionOr<void> removeTrack(RTCRtpSender&);
 
     using AddTransceiverTrackOrKind = std::variant<RefPtr<MediaStreamTrack>, String>;
-    ExceptionOr<Ref<RTCRtpTransceiver>> addTransceiver(AddTransceiverTrackOrKind&&, RTCRtpTransceiverInit&&);
+    ExceptionOr<Ref<RTCRtpTransceiver>> addTransceiver(AddTransceiverTrackOrKind&&, const RTCRtpTransceiverInit&);
 
     // 6.1 Peer-to-peer data API
     ExceptionOr<Ref<RTCDataChannel>> createDataChannel(String&&, RTCDataChannelInit&&);
@@ -163,12 +163,11 @@ public:
     WEBCORE_EXPORT void gatherDecoderImplementationName(Function<void(String&&)>&&);
 
     // EventTarget
-    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::RTCPeerConnection; }
+    EventTargetInterface eventTargetInterface() const final { return RTCPeerConnectionEventTargetInterfaceType; }
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
 
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
+    using RefCounted::ref;
+    using RefCounted::deref;
 
     // Used for testing with a mock
     WEBCORE_EXPORT void emulatePlatformEvent(const String& action);
@@ -201,24 +200,18 @@ public:
 
     // EventTarget implementation.
     void dispatchEvent(Event&) final;
-    void dispatchDataChannelEvent(UniqueRef<RTCDataChannelHandler>&&, String&& label, RTCDataChannelInit&&);
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger.get(); }
     const void* logIdentifier() const final { return m_logIdentifier; }
-    ASCIILiteral logClassName() const final { return "RTCPeerConnection"_s; }
+    const char* logClassName() const final { return "RTCPeerConnection"; }
     WTFLogChannel& logChannel() const final;
 #endif
-
-    void startGatheringStatLogs(Function<void(String&&)>&&);
-    void stopGatheringStatLogs();
 
 private:
     RTCPeerConnection(Document&);
 
     ExceptionOr<void> initializeConfiguration(RTCConfiguration&&);
-
-    ExceptionOr<Ref<RTCRtpTransceiver>> addReceiveOnlyTransceiver(String&&);
 
     void registerToController(RTCController&);
     void unregisterFromController();
@@ -232,6 +225,7 @@ private:
 
     // ActiveDOMObject
     WEBCORE_EXPORT void stop() final;
+    const char* activeDOMObjectName() const final;
     void suspend(ReasonForSuspension) final;
     void resume() final;
     bool virtualHasPendingActivity() const final;

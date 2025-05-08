@@ -24,9 +24,7 @@
 #include "ContentSecurityPolicy.h"
 #include "DocumentInlines.h"
 #include "Element.h"
-#include "JSDOMWindow.h"
-#include "JSDOMWindowBase.h"
-#include "JSHTMLElement.h"
+#include "JSNode.h"
 #include "LocalFrame.h"
 #include "QualifiedName.h"
 #include "SVGElement.h"
@@ -39,7 +37,6 @@
 #include <wtf/RefCountedLeakCounter.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/WeakPtr.h>
-#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 using namespace JSC;
@@ -147,7 +144,7 @@ JSObject* JSLazyEventListener::initializeJSFunction(ScriptExecutionContext& exec
     if (UNLIKELY(!isolatedWorld))
         return nullptr;
 
-    auto* globalObject = toJSDOMWindow(*executionContextDocument->protectedFrame(), *isolatedWorld);
+    auto* globalObject = toJSLocalDOMWindow(*executionContextDocument->protectedFrame(), *isolatedWorld);
     if (!globalObject)
         return nullptr;
 
@@ -160,15 +157,12 @@ JSObject* JSLazyEventListener::initializeJSFunction(ScriptExecutionContext& exec
     int functionConstructorParametersEndPosition = functionPrefix->length() + m_functionName.length() + m_functionParameters.length();
     String code = makeString(functionPrefix.get(), m_functionName, m_functionParameters, " {\n"_s, m_code, "\n}"_s);
 
-    bool listenerHasEventHandlerScope = is<HTMLElement>(m_originalNode.get());
-    LexicallyScopedFeatures lexicallyScopedFeatures = listenerHasEventHandlerScope || globalObject->globalScopeExtension() ? TaintedByWithScopeLexicallyScopedFeature : NoLexicallyScopedFeatures;
-
     // We want all errors to refer back to the line on which our attribute was
     // declared, regardless of any newlines in our JavaScript source text.
     int overrideLineNumber = m_sourcePosition.m_line.oneBasedInt();
 
     JSObject* jsFunction = constructFunctionSkippingEvalEnabledCheck(
-        lexicalGlobalObject, WTFMove(code), lexicallyScopedFeatures, Identifier::fromString(vm, m_functionName),
+        lexicalGlobalObject, WTFMove(code), Identifier::fromString(vm, m_functionName),
         SourceOrigin { m_sourceURL, CachedScriptFetcher::create(document->charset()) },
         m_sourceURL.string(), m_sourceTaintedOrigin, m_sourcePosition, overrideLineNumber, functionConstructorParametersEndPosition);
     if (UNLIKELY(scope.exception())) {
@@ -177,6 +171,8 @@ JSObject* JSLazyEventListener::initializeJSFunction(ScriptExecutionContext& exec
         return nullptr;
     }
 
+    JSFunction* listenerAsFunction = jsCast<JSFunction*>(jsFunction);
+
     if (m_originalNode) {
         if (!wrapper()) {
             // Ensure that 'node' has a JavaScript wrapper to mark the event listener we're creating.
@@ -184,12 +180,9 @@ JSObject* JSLazyEventListener::initializeJSFunction(ScriptExecutionContext& exec
             setWrapperWhenInitializingJSFunction(vm, asObject(toJS(lexicalGlobalObject, globalObject, *m_originalNode)));
         }
 
-        if (listenerHasEventHandlerScope) {
-            ASSERT(wrapper()->inherits<JSHTMLElement>());
-            // Add the event's home element to the scope (and the document, and the form - see JSHTMLElement::eventHandlerScope)
-            JSFunction* listenerAsFunction = jsCast<JSFunction*>(jsFunction);
-            listenerAsFunction->setScope(vm, jsCast<JSHTMLElement*>(wrapper())->pushEventHandlerScope(lexicalGlobalObject, listenerAsFunction->scope()));
-        }
+        // Add the event's home element to the scope
+        // (and the document, and the form - see JSHTMLElement::eventHandlerScope)
+        listenerAsFunction->setScope(vm, jsCast<JSNode*>(wrapper())->pushEventHandlerScope(lexicalGlobalObject, listenerAsFunction->scope()));
     }
 
     return jsFunction;
@@ -230,7 +223,7 @@ RefPtr<JSLazyEventListener> JSLazyEventListener::create(LocalDOMWindow& window, 
     ASSERT(window.document());
     auto& document = *window.document();
     ASSERT(document.frame());
-    return create({ attributeName, attributeValue, document, nullptr, toJSDOMWindow(document.frame(), mainThreadNormalWorld()), document.isSVGDocument() });
+    return create({ attributeName, attributeValue, document, nullptr, toJSLocalDOMWindow(document.frame(), mainThreadNormalWorld()), document.isSVGDocument() });
 }
 
 } // namespace WebCore

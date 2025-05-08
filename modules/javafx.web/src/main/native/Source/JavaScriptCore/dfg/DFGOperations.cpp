@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -80,7 +80,6 @@
 #include "RegExpMatchesArray.h"
 #include "RegExpObjectInlines.h"
 #include "Repatch.h"
-#include "ResourceExhaustion.h"
 #include "ScopedArguments.h"
 #include "StringConstructor.h"
 #include "StringPrototypeInlines.h"
@@ -93,7 +92,6 @@
 #include "WeakMapImplInlines.h"
 #include "WeakMapPrototype.h"
 #include "WeakSetPrototype.h"
-#include <wtf/text/MakeString.h>
 
 #if ENABLE(JIT)
 #if ENABLE(DFG_JIT)
@@ -183,9 +181,8 @@ JSC_DEFINE_JIT_OPERATION(operationToThis, EncodedJSValue, (JSGlobalObject* globa
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, JSValue::encode(JSValue::decode(encodedOp).toThis(globalObject, ECMAMode::sloppy())));
+    return JSValue::encode(JSValue::decode(encodedOp).toThis(globalObject, ECMAMode::sloppy()));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationToThisStrict, EncodedJSValue, (JSGlobalObject* globalObject, EncodedJSValue encodedOp))
@@ -193,9 +190,8 @@ JSC_DEFINE_JIT_OPERATION(operationToThisStrict, EncodedJSValue, (JSGlobalObject*
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, JSValue::encode(JSValue::decode(encodedOp).toThis(globalObject, ECMAMode::strict())));
+    return JSValue::encode(JSValue::decode(encodedOp).toThis(globalObject, ECMAMode::strict()));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationObjectKeys, JSArray*, (JSGlobalObject* globalObject, EncodedJSValue encodedObject))
@@ -206,9 +202,9 @@ JSC_DEFINE_JIT_OPERATION(operationObjectKeys, JSArray*, (JSGlobalObject* globalO
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSObject* object = JSValue::decode(encodedObject).toObject(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+    RETURN_IF_EXCEPTION(scope, nullptr);
     scope.release();
-    OPERATION_RETURN(scope, ownPropertyKeys(globalObject, object, PropertyNameMode::Strings, DontEnumPropertiesMode::Exclude));
+    return ownPropertyKeys(globalObject, object, PropertyNameMode::Strings, DontEnumPropertiesMode::Exclude);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationObjectKeysObject, JSArray*, (JSGlobalObject* globalObject, JSObject* object))
@@ -216,8 +212,7 @@ JSC_DEFINE_JIT_OPERATION(operationObjectKeysObject, JSArray*, (JSGlobalObject* g
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    OPERATION_RETURN(scope, ownPropertyKeys(globalObject, object, PropertyNameMode::Strings, DontEnumPropertiesMode::Exclude));
+    return ownPropertyKeys(globalObject, object, PropertyNameMode::Strings, DontEnumPropertiesMode::Exclude);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationObjectGetOwnPropertyNames, JSArray*, (JSGlobalObject* globalObject, EncodedJSValue encodedObject))
@@ -228,9 +223,9 @@ JSC_DEFINE_JIT_OPERATION(operationObjectGetOwnPropertyNames, JSArray*, (JSGlobal
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSObject* object = JSValue::decode(encodedObject).toObject(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+    RETURN_IF_EXCEPTION(scope, nullptr);
     scope.release();
-    OPERATION_RETURN(scope, ownPropertyKeys(globalObject, object, PropertyNameMode::Strings, DontEnumPropertiesMode::Include));
+    return ownPropertyKeys(globalObject, object, PropertyNameMode::Strings, DontEnumPropertiesMode::Include);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationObjectGetOwnPropertyNamesObject, JSArray*, (JSGlobalObject* globalObject, JSObject* object))
@@ -238,8 +233,7 @@ JSC_DEFINE_JIT_OPERATION(operationObjectGetOwnPropertyNamesObject, JSArray*, (JS
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    OPERATION_RETURN(scope, ownPropertyKeys(globalObject, object, PropertyNameMode::Strings, DontEnumPropertiesMode::Include));
+    return ownPropertyKeys(globalObject, object, PropertyNameMode::Strings, DontEnumPropertiesMode::Include);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationObjectGetOwnPropertySymbols, JSArray*, (JSGlobalObject* globalObject, EncodedJSValue encodedObject))
@@ -250,9 +244,9 @@ JSC_DEFINE_JIT_OPERATION(operationObjectGetOwnPropertySymbols, JSArray*, (JSGlob
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSObject* object = JSValue::decode(encodedObject).toObject(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+    RETURN_IF_EXCEPTION(scope, nullptr);
     scope.release();
-    OPERATION_RETURN(scope, ownPropertyKeys(globalObject, object, PropertyNameMode::Symbols, DontEnumPropertiesMode::Include));
+    return ownPropertyKeys(globalObject, object, PropertyNameMode::Symbols, DontEnumPropertiesMode::Include);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationObjectGetOwnPropertySymbolsObject, JSArray*, (JSGlobalObject* globalObject, JSObject* object))
@@ -260,8 +254,7 @@ JSC_DEFINE_JIT_OPERATION(operationObjectGetOwnPropertySymbolsObject, JSArray*, (
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    OPERATION_RETURN(scope, ownPropertyKeys(globalObject, object, PropertyNameMode::Symbols, DontEnumPropertiesMode::Include));
+    return ownPropertyKeys(globalObject, object, PropertyNameMode::Symbols, DontEnumPropertiesMode::Include);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationObjectCreate, JSCell*, (JSGlobalObject* globalObject, EncodedJSValue encodedPrototype))
@@ -275,12 +268,12 @@ JSC_DEFINE_JIT_OPERATION(operationObjectCreate, JSCell*, (JSGlobalObject* global
 
     if (!prototype.isObject() && !prototype.isNull()) {
         throwVMTypeError(globalObject, scope, "Object prototype may only be an Object or null."_s);
-        OPERATION_RETURN(scope, nullptr);
+        return nullptr;
     }
 
     if (prototype.isObject())
-        OPERATION_RETURN(scope, constructEmptyObject(globalObject, asObject(prototype)));
-    OPERATION_RETURN(scope, constructEmptyObject(vm, globalObject->nullPrototypeObjectStructure()));
+        RELEASE_AND_RETURN(scope, constructEmptyObject(globalObject, asObject(prototype)));
+    RELEASE_AND_RETURN(scope, constructEmptyObject(vm, globalObject->nullPrototypeObjectStructure()));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationObjectCreateObject, JSCell*, (JSGlobalObject* globalObject, JSObject* prototype))
@@ -288,8 +281,7 @@ JSC_DEFINE_JIT_OPERATION(operationObjectCreateObject, JSCell*, (JSGlobalObject* 
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    OPERATION_RETURN(scope, constructEmptyObject(globalObject, prototype));
+    return constructEmptyObject(globalObject, prototype);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationObjectAssignObject, void, (JSGlobalObject* globalObject, JSObject* target, JSObject* source))
@@ -304,7 +296,7 @@ JSC_DEFINE_JIT_OPERATION(operationObjectAssignObject, void, (JSGlobalObject* glo
         MarkedArgumentBuffer values;
         if (!source->staticPropertiesReified()) {
             source->reifyAllStaticProperties(globalObject);
-            OPERATION_RETURN_IF_EXCEPTION(scope);
+            RETURN_IF_EXCEPTION(scope, void());
         }
 
             // |source| Structure does not have any getters. And target can perform fast put.
@@ -319,14 +311,13 @@ JSC_DEFINE_JIT_OPERATION(operationObjectAssignObject, void, (JSGlobalObject* glo
 
             // Do not clear since Vector::clear shrinks the backing store.
         bool objectAssignFastSucceeded = objectAssignFast(globalObject, targetObject, source, properties, values);
-        OPERATION_RETURN_IF_EXCEPTION(scope);
+        RETURN_IF_EXCEPTION(scope, void());
         if (objectAssignFastSucceeded)
-            OPERATION_RETURN(scope);
+            return;
         }
 
     scope.release();
     objectAssignGeneric(globalObject, vm, target, source);
-    OPERATION_RETURN(scope);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationObjectAssignUntyped, void, (JSGlobalObject* globalObject, JSObject* target, EncodedJSValue encodedSource))
@@ -338,27 +329,26 @@ JSC_DEFINE_JIT_OPERATION(operationObjectAssignUntyped, void, (JSGlobalObject* gl
 
     JSValue sourceValue = JSValue::decode(encodedSource);
     if (sourceValue.isUndefinedOrNull())
-        OPERATION_RETURN(scope);
+        return;
     JSObject* source = sourceValue.toObject(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope);
+    RETURN_IF_EXCEPTION(scope, void());
 
     if (auto* targetObject = jsDynamicCast<JSFinalObject*>(target); targetObject && targetObject->canPerformFastPutInlineExcludingProto() && targetObject->isStructureExtensible()) {
         if (!source->staticPropertiesReified()) {
             source->reifyAllStaticProperties(globalObject);
-            OPERATION_RETURN_IF_EXCEPTION(scope);
+            RETURN_IF_EXCEPTION(scope, void());
         }
 
             Vector<RefPtr<UniquedStringImpl>, 8> properties;
             MarkedArgumentBuffer values;
         bool objectAssignFastSucceeded = objectAssignFast(globalObject, targetObject, source, properties, values);
-        OPERATION_RETURN_IF_EXCEPTION(scope);
+        RETURN_IF_EXCEPTION(scope, void());
         if (objectAssignFastSucceeded)
-            OPERATION_RETURN(scope);
+            return;
         }
 
     scope.release();
     objectAssignGeneric(globalObject, vm, target, source);
-    OPERATION_RETURN(scope);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationObjectToStringUntyped, JSString*, (JSGlobalObject* globalObject, EncodedJSValue encodedValue))
@@ -366,10 +356,9 @@ JSC_DEFINE_JIT_OPERATION(operationObjectToStringUntyped, JSString*, (JSGlobalObj
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue thisValue = JSValue::decode(encodedValue).toThis(globalObject, ECMAMode::strict());
-    OPERATION_RETURN(scope, objectPrototypeToString(globalObject, thisValue));
+    return objectPrototypeToString(globalObject, thisValue);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationObjectToStringObjectSlow, JSString*, (JSGlobalObject* globalObject, JSObject* object))
@@ -377,10 +366,9 @@ JSC_DEFINE_JIT_OPERATION(operationObjectToStringObjectSlow, JSString*, (JSGlobal
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue thisValue = JSValue(object).toThis(globalObject, ECMAMode::strict());
-    OPERATION_RETURN(scope, objectPrototypeToString(globalObject, thisValue));
+    return objectPrototypeToString(globalObject, thisValue);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationReflectOwnKeys, JSArray*, (JSGlobalObject* globalObject, EncodedJSValue encodedObject))
@@ -393,11 +381,11 @@ JSC_DEFINE_JIT_OPERATION(operationReflectOwnKeys, JSArray*, (JSGlobalObject* glo
     JSObject* object = JSValue::decode(encodedObject).getObject();
     if (UNLIKELY(!object)) {
         throwTypeError(globalObject, scope, ReflectOwnKeysNonObjectArgumentError);
-        OPERATION_RETURN(scope, nullptr);
+        return nullptr;
     }
 
     scope.release();
-    OPERATION_RETURN(scope, ownPropertyKeys(globalObject, object, PropertyNameMode::StringsAndSymbols, DontEnumPropertiesMode::Include));
+    return ownPropertyKeys(globalObject, object, PropertyNameMode::StringsAndSymbols, DontEnumPropertiesMode::Include);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationReflectOwnKeysObject, JSArray*, (JSGlobalObject* globalObject, JSObject* object))
@@ -405,8 +393,7 @@ JSC_DEFINE_JIT_OPERATION(operationReflectOwnKeysObject, JSArray*, (JSGlobalObjec
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    OPERATION_RETURN(scope, ownPropertyKeys(globalObject, object, PropertyNameMode::StringsAndSymbols, DontEnumPropertiesMode::Include));
+    return ownPropertyKeys(globalObject, object, PropertyNameMode::StringsAndSymbols, DontEnumPropertiesMode::Include);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationCreateThis, JSCell*, (JSGlobalObject* globalObject, JSObject* constructor, uint32_t inlineCapacity))
@@ -416,14 +403,12 @@ JSC_DEFINE_JIT_OPERATION(operationCreateThis, JSCell*, (JSGlobalObject* globalOb
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
     if (constructor->type() == JSFunctionType && jsCast<JSFunction*>(constructor)->canUseAllocationProfiles()) {
-        JSObject* result;
-        {
         DeferTermination deferScope(vm);
         auto rareData = jsCast<JSFunction*>(constructor)->ensureRareDataAndObjectAllocationProfile(globalObject, inlineCapacity);
         scope.releaseAssertNoException();
         ObjectAllocationProfileWithPrototype* allocationProfile = rareData->objectAllocationProfile();
         Structure* structure = allocationProfile->structure();
-            result = constructEmptyObject(vm, structure);
+        JSObject* result = constructEmptyObject(vm, structure);
         if (structure->hasPolyProto()) {
             JSObject* prototype = allocationProfile->prototype();
             ASSERT(prototype == jsCast<JSFunction*>(constructor)->prototypeForConstruction(vm, globalObject));
@@ -431,17 +416,16 @@ JSC_DEFINE_JIT_OPERATION(operationCreateThis, JSCell*, (JSGlobalObject* globalOb
             prototype->didBecomePrototype(vm);
             ASSERT_WITH_MESSAGE(!hasIndexedProperties(result->indexingType()), "We rely on JSFinalObject not starting out with an indexing type otherwise we would potentially need to convert to slow put storage");
         }
-        }
-        OPERATION_RETURN(scope, result);
+        return result;
     }
 
     JSValue proto = constructor->get(globalObject, vm.propertyNames->prototype);
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+    RETURN_IF_EXCEPTION(scope, nullptr);
     if (proto.isObject())
-        OPERATION_RETURN(scope, constructEmptyObject(globalObject, asObject(proto)));
+        return constructEmptyObject(globalObject, asObject(proto));
     JSGlobalObject* functionGlobalObject = getFunctionRealm(globalObject, constructor);
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
-    OPERATION_RETURN(scope, constructEmptyObject(functionGlobalObject));
+    RETURN_IF_EXCEPTION(scope, nullptr);
+    return constructEmptyObject(functionGlobalObject);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationCreatePromise, JSCell*, (JSGlobalObject* globalObject, JSObject* constructor))
@@ -451,8 +435,8 @@ JSC_DEFINE_JIT_OPERATION(operationCreatePromise, JSCell*, (JSGlobalObject* globa
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
     Structure* structure = JSC_GET_DERIVED_STRUCTURE(vm, promiseStructure, constructor, globalObject->promiseConstructor());
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
-    OPERATION_RETURN(scope, JSPromise::create(vm, structure));
+    RETURN_IF_EXCEPTION(scope, nullptr);
+    RELEASE_AND_RETURN(scope, JSPromise::create(vm, structure));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationCreateInternalPromise, JSCell*, (JSGlobalObject* globalObject, JSObject* constructor))
@@ -462,8 +446,8 @@ JSC_DEFINE_JIT_OPERATION(operationCreateInternalPromise, JSCell*, (JSGlobalObjec
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
     Structure* structure = JSC_GET_DERIVED_STRUCTURE(vm, internalPromiseStructure, constructor, globalObject->internalPromiseConstructor());
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
-    OPERATION_RETURN(scope, JSInternalPromise::create(vm, structure));
+    RETURN_IF_EXCEPTION(scope, nullptr);
+    RELEASE_AND_RETURN(scope, JSInternalPromise::create(vm, structure));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationCreateGenerator, JSCell*, (JSGlobalObject* globalObject, JSObject* constructor))
@@ -473,8 +457,8 @@ JSC_DEFINE_JIT_OPERATION(operationCreateGenerator, JSCell*, (JSGlobalObject* glo
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
     Structure* structure = InternalFunction::createSubclassStructure(globalObject, constructor, globalObject->generatorStructure());
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
-    OPERATION_RETURN(scope, JSGenerator::create(vm, structure));
+    RETURN_IF_EXCEPTION(scope, nullptr);
+    RELEASE_AND_RETURN(scope, JSGenerator::create(vm, structure));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationCreateAsyncGenerator, JSCell*, (JSGlobalObject* globalObject, JSObject* constructor))
@@ -484,8 +468,8 @@ JSC_DEFINE_JIT_OPERATION(operationCreateAsyncGenerator, JSCell*, (JSGlobalObject
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
     Structure* structure = InternalFunction::createSubclassStructure(globalObject, constructor, globalObject->asyncGeneratorStructure());
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
-    OPERATION_RETURN(scope, JSAsyncGenerator::create(vm, structure));
+    RETURN_IF_EXCEPTION(scope, nullptr);
+    RELEASE_AND_RETURN(scope, JSAsyncGenerator::create(vm, structure));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationCallObjectConstructor, JSCell*, (JSGlobalObject* globalObject, EncodedJSValue encodedTarget))
@@ -493,14 +477,13 @@ JSC_DEFINE_JIT_OPERATION(operationCallObjectConstructor, JSCell*, (JSGlobalObjec
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue value = JSValue::decode(encodedTarget);
     ASSERT(!value.isObject());
 
     if (value.isUndefinedOrNull())
-        OPERATION_RETURN(scope, constructEmptyObject(globalObject, globalObject->objectPrototype()));
-    OPERATION_RETURN(scope, value.toObject(globalObject));
+        return constructEmptyObject(globalObject, globalObject->objectPrototype());
+    return value.toObject(globalObject);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationToObject, JSCell*, (JSGlobalObject* globalObject, EncodedJSValue encodedTarget, UniquedStringImpl* errorMessage))
@@ -516,11 +499,11 @@ JSC_DEFINE_JIT_OPERATION(operationToObject, JSCell*, (JSGlobalObject* globalObje
     if (UNLIKELY(value.isUndefinedOrNull())) {
         if (errorMessage && errorMessage->length()) {
             throwVMTypeError(globalObject, scope, errorMessage);
-            OPERATION_RETURN(scope, nullptr);
+            return nullptr;
         }
     }
 
-    OPERATION_RETURN(scope, value.toObject(globalObject));
+    RELEASE_AND_RETURN(scope, value.toObject(globalObject));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationValueMod, EncodedJSValue, (JSGlobalObject* globalObject, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2))
@@ -528,9 +511,8 @@ JSC_DEFINE_JIT_OPERATION(operationValueMod, EncodedJSValue, (JSGlobalObject* glo
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, JSValue::encode(jsRemainder(globalObject, JSValue::decode(encodedOp1), JSValue::decode(encodedOp2))));
+    return JSValue::encode(jsRemainder(globalObject, JSValue::decode(encodedOp1), JSValue::decode(encodedOp2)));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationInc, EncodedJSValue, (JSGlobalObject* globalObject, EncodedJSValue encodedOp))
@@ -538,9 +520,8 @@ JSC_DEFINE_JIT_OPERATION(operationInc, EncodedJSValue, (JSGlobalObject* globalOb
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, JSValue::encode(jsInc(globalObject, JSValue::decode(encodedOp))));
+    return JSValue::encode(jsInc(globalObject, JSValue::decode(encodedOp)));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationDec, EncodedJSValue, (JSGlobalObject* globalObject, EncodedJSValue encodedOp))
@@ -548,9 +529,8 @@ JSC_DEFINE_JIT_OPERATION(operationDec, EncodedJSValue, (JSGlobalObject* globalOb
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, JSValue::encode(jsDec(globalObject, JSValue::decode(encodedOp))));
+    return JSValue::encode(jsDec(globalObject, JSValue::decode(encodedOp)));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationValueBitNot, EncodedJSValue, (JSGlobalObject* globalObject, EncodedJSValue encodedOp))
@@ -558,9 +538,8 @@ JSC_DEFINE_JIT_OPERATION(operationValueBitNot, EncodedJSValue, (JSGlobalObject* 
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, JSValue::encode(jsBitwiseNot(globalObject, JSValue::decode(encodedOp))));
+    return JSValue::encode(jsBitwiseNot(globalObject, JSValue::decode(encodedOp)));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationValueBitAnd, EncodedJSValue, (JSGlobalObject* globalObject, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2))
@@ -568,9 +547,8 @@ JSC_DEFINE_JIT_OPERATION(operationValueBitAnd, EncodedJSValue, (JSGlobalObject* 
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, JSValue::encode(jsBitwiseAnd(globalObject, JSValue::decode(encodedOp1), JSValue::decode(encodedOp2))));
+    return JSValue::encode(jsBitwiseAnd(globalObject, JSValue::decode(encodedOp1), JSValue::decode(encodedOp2)));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationValueBitOr, EncodedJSValue, (JSGlobalObject* globalObject, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2))
@@ -578,9 +556,8 @@ JSC_DEFINE_JIT_OPERATION(operationValueBitOr, EncodedJSValue, (JSGlobalObject* g
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, JSValue::encode(jsBitwiseOr(globalObject, JSValue::decode(encodedOp1), JSValue::decode(encodedOp2))));
+    return JSValue::encode(jsBitwiseOr(globalObject, JSValue::decode(encodedOp1), JSValue::decode(encodedOp2)));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationValueBitXor, EncodedJSValue, (JSGlobalObject* globalObject, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2))
@@ -588,9 +565,8 @@ JSC_DEFINE_JIT_OPERATION(operationValueBitXor, EncodedJSValue, (JSGlobalObject* 
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, JSValue::encode(jsBitwiseXor(globalObject, JSValue::decode(encodedOp1), JSValue::decode(encodedOp2))));
+    return JSValue::encode(jsBitwiseXor(globalObject, JSValue::decode(encodedOp1), JSValue::decode(encodedOp2)));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationValueBitLShift, EncodedJSValue, (JSGlobalObject* globalObject, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2))
@@ -598,9 +574,8 @@ JSC_DEFINE_JIT_OPERATION(operationValueBitLShift, EncodedJSValue, (JSGlobalObjec
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, JSValue::encode(jsLShift(globalObject, JSValue::decode(encodedOp1), JSValue::decode(encodedOp2))));
+    return JSValue::encode(jsLShift(globalObject, JSValue::decode(encodedOp1), JSValue::decode(encodedOp2)));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationValueBitRShift, EncodedJSValue, (JSGlobalObject* globalObject, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2))
@@ -608,9 +583,8 @@ JSC_DEFINE_JIT_OPERATION(operationValueBitRShift, EncodedJSValue, (JSGlobalObjec
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, JSValue::encode(jsRShift(globalObject, JSValue::decode(encodedOp1), JSValue::decode(encodedOp2))));
+    return JSValue::encode(jsRShift(globalObject, JSValue::decode(encodedOp1), JSValue::decode(encodedOp2)));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationValueBitURShift, EncodedJSValue, (JSGlobalObject* globalObject, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2))
@@ -618,9 +592,8 @@ JSC_DEFINE_JIT_OPERATION(operationValueBitURShift, EncodedJSValue, (JSGlobalObje
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, JSValue::encode(jsURShift(globalObject, JSValue::decode(encodedOp1), JSValue::decode(encodedOp2))));
+    return JSValue::encode(jsURShift(globalObject, JSValue::decode(encodedOp1), JSValue::decode(encodedOp2)));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationValueAddNotNumber, EncodedJSValue, (JSGlobalObject* globalObject, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2))
@@ -628,12 +601,11 @@ JSC_DEFINE_JIT_OPERATION(operationValueAddNotNumber, EncodedJSValue, (JSGlobalOb
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue op1 = JSValue::decode(encodedOp1);
     JSValue op2 = JSValue::decode(encodedOp2);
 
-    OPERATION_RETURN(scope, JSValue::encode(jsAddNonNumber(globalObject, op1, op2)));
+    return JSValue::encode(jsAddNonNumber(globalObject, op1, op2));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationValueDiv, EncodedJSValue, (JSGlobalObject* globalObject, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2))
@@ -641,9 +613,8 @@ JSC_DEFINE_JIT_OPERATION(operationValueDiv, EncodedJSValue, (JSGlobalObject* glo
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, JSValue::encode(jsDiv(globalObject, JSValue::decode(encodedOp1), JSValue::decode(encodedOp2))));
+    return JSValue::encode(jsDiv(globalObject, JSValue::decode(encodedOp1), JSValue::decode(encodedOp2)));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationValuePow, EncodedJSValue, (JSGlobalObject* globalObject, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2))
@@ -651,9 +622,8 @@ JSC_DEFINE_JIT_OPERATION(operationValuePow, EncodedJSValue, (JSGlobalObject* glo
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, JSValue::encode(jsPow(globalObject, JSValue::decode(encodedOp1), JSValue::decode(encodedOp2))));
+    return JSValue::encode(jsPow(globalObject, JSValue::decode(encodedOp1), JSValue::decode(encodedOp2)));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationArithAbs, double, (JSGlobalObject* globalObject, EncodedJSValue encodedOp1))
@@ -665,8 +635,8 @@ JSC_DEFINE_JIT_OPERATION(operationArithAbs, double, (JSGlobalObject* globalObjec
 
     JSValue op1 = JSValue::decode(encodedOp1);
     double a = op1.toNumber(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, PNaN);
-    OPERATION_RETURN(scope, std::abs(a));
+    RETURN_IF_EXCEPTION(scope, PNaN);
+    return std::abs(a);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationArithClz32, UCPUStrictInt32, (JSGlobalObject* globalObject, EncodedJSValue encodedOp1))
@@ -678,8 +648,8 @@ JSC_DEFINE_JIT_OPERATION(operationArithClz32, UCPUStrictInt32, (JSGlobalObject* 
 
     JSValue op1 = JSValue::decode(encodedOp1);
     uint32_t value = op1.toUInt32(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, 0);
-    OPERATION_RETURN(scope, toUCPUStrictInt32(clz(value)));
+    RETURN_IF_EXCEPTION(scope, { });
+    return toUCPUStrictInt32(clz(value));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationArithFRound, double, (JSGlobalObject* globalObject, EncodedJSValue encodedOp1))
@@ -691,21 +661,8 @@ JSC_DEFINE_JIT_OPERATION(operationArithFRound, double, (JSGlobalObject* globalOb
 
     JSValue op1 = JSValue::decode(encodedOp1);
     double a = op1.toNumber(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, PNaN);
-    OPERATION_RETURN(scope, static_cast<float>(a));
-}
-
-JSC_DEFINE_JIT_OPERATION(operationArithF16Round, double, (JSGlobalObject* globalObject, EncodedJSValue encodedOp1))
-{
-    VM& vm = globalObject->vm();
-    CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
-    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-
-    JSValue op1 = JSValue::decode(encodedOp1);
-    double a = op1.toNumber(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, PNaN);
-    OPERATION_RETURN(scope, static_cast<double>(Float16 { a }));
+    RETURN_IF_EXCEPTION(scope, PNaN);
+    return static_cast<float>(a);
 }
 
 #define DFG_ARITH_UNARY(capitalizedName, lowerName) \
@@ -717,8 +674,8 @@ JSC_DEFINE_JIT_OPERATION(operationArith##capitalizedName, double, (JSGlobalObjec
     auto scope = DECLARE_THROW_SCOPE(vm); \
     JSValue op1 = JSValue::decode(encodedOp1); \
     double result = op1.toNumber(globalObject); \
-    OPERATION_RETURN_IF_EXCEPTION(scope, PNaN); \
-    OPERATION_RETURN(scope, JSC::Math::lowerName(result)); \
+    RETURN_IF_EXCEPTION(scope, PNaN); \
+    return JSC::Math::lowerName(result); \
 }
     FOR_EACH_ARITH_UNARY_OP(DFG_ARITH_UNARY)
 #undef DFG_ARITH_UNARY
@@ -732,8 +689,8 @@ JSC_DEFINE_JIT_OPERATION(operationArithSqrt, double, (JSGlobalObject* globalObje
 
     JSValue op1 = JSValue::decode(encodedOp1);
     double a = op1.toNumber(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, PNaN);
-    OPERATION_RETURN(scope, sqrt(a));
+    RETURN_IF_EXCEPTION(scope, PNaN);
+    return sqrt(a);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationArithRound, EncodedJSValue, (JSGlobalObject* globalObject, EncodedJSValue encodedArgument))
@@ -745,8 +702,8 @@ JSC_DEFINE_JIT_OPERATION(operationArithRound, EncodedJSValue, (JSGlobalObject* g
 
     JSValue argument = JSValue::decode(encodedArgument);
     double valueOfArgument = argument.toNumber(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    OPERATION_RETURN(scope, JSValue::encode(jsNumber(Math::roundDouble(valueOfArgument))));
+    RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    return JSValue::encode(jsNumber(Math::roundDouble(valueOfArgument)));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationArithFloor, EncodedJSValue, (JSGlobalObject* globalObject, EncodedJSValue encodedArgument))
@@ -758,8 +715,8 @@ JSC_DEFINE_JIT_OPERATION(operationArithFloor, EncodedJSValue, (JSGlobalObject* g
 
     JSValue argument = JSValue::decode(encodedArgument);
     double valueOfArgument = argument.toNumber(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    OPERATION_RETURN(scope, JSValue::encode(jsNumber(floor(valueOfArgument))));
+    RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    return JSValue::encode(jsNumber(floor(valueOfArgument)));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationArithCeil, EncodedJSValue, (JSGlobalObject* globalObject, EncodedJSValue encodedArgument))
@@ -771,8 +728,8 @@ JSC_DEFINE_JIT_OPERATION(operationArithCeil, EncodedJSValue, (JSGlobalObject* gl
 
     JSValue argument = JSValue::decode(encodedArgument);
     double valueOfArgument = argument.toNumber(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    OPERATION_RETURN(scope, JSValue::encode(jsNumber(ceil(valueOfArgument))));
+    RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    return JSValue::encode(jsNumber(ceil(valueOfArgument)));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationArithTrunc, EncodedJSValue, (JSGlobalObject* globalObject, EncodedJSValue encodedArgument))
@@ -784,38 +741,39 @@ JSC_DEFINE_JIT_OPERATION(operationArithTrunc, EncodedJSValue, (JSGlobalObject* g
 
     JSValue argument = JSValue::decode(encodedArgument);
     double truncatedValueOfArgument = argument.toIntegerPreserveNaN(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    OPERATION_RETURN(scope, JSValue::encode(jsNumber(truncatedValueOfArgument)));
+    RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    return JSValue::encode(jsNumber(truncatedValueOfArgument));
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationArithMinMultipleDouble, double, (const double* buffer, unsigned elementCount))
+JSC_DEFINE_JIT_OPERATION(operationArithMinMultipleDouble, double, (const double* buffer, unsigned elementCount))
 {
-    ASSERT(0 < elementCount);
-    double result = buffer[0];
-    for (unsigned index = 1; index < elementCount; ++index)
-        result = Math::jsMinDouble(result, buffer[index]);
+    double result = +std::numeric_limits<double>::infinity();
+    for (unsigned index = 0; index < elementCount; ++index) {
+        double val = buffer[index];
+        if (std::isnan(val))
+            return PNaN;
+        if (val < result || (!val && !result && std::signbit(val)))
+            result = val;
+    }
     return result;
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationArithMaxMultipleDouble, double, (const double* buffer, unsigned elementCount))
+JSC_DEFINE_JIT_OPERATION(operationArithMaxMultipleDouble, double, (const double* buffer, unsigned elementCount))
 {
-    ASSERT(0 < elementCount);
-    double result = buffer[0];
-    for (unsigned index = 1; index < elementCount; ++index)
-        result = Math::jsMaxDouble(result, buffer[index]);
+    double result = -std::numeric_limits<double>::infinity();
+    for (unsigned index = 0; index < elementCount; ++index) {
+        double val = buffer[index];
+        if (std::isnan(val))
+            return PNaN;
+        if (val > result || (!val && !result && !std::signbit(val)))
+            result = val;
+    }
     return result;
 }
 
 ALWAYS_INLINE EncodedJSValue getByValCellInt(JSGlobalObject* globalObject, VM& vm, JSCell* base, int32_t index)
 {
     if (index < 0) {
-        // When index is negative, -1 is the most common case. Let's handle it separately.
-        if (LIKELY(index == -1)) {
-            if (auto* array = jsDynamicCast<JSArray*>(base); LIKELY(array && array->definitelyNegativeOneMiss()))
-                return JSValue::encode(jsUndefined());
-            return JSValue::encode(JSValue(base).get(globalObject, vm.propertyNames->negativeOneIdentifier));
-        }
-
         // Go the slowest way possible because negative indices don't use indexed storage.
         return JSValue::encode(JSValue(base).get(globalObject, Identifier::from(vm, index)));
     }
@@ -829,9 +787,8 @@ JSC_DEFINE_JIT_OPERATION(operationGetByValObjectInt, EncodedJSValue, (JSGlobalOb
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, getByValCellInt(globalObject, vm, base, index));
+    return getByValCellInt(globalObject, vm, base, index);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationGetByValStringInt, EncodedJSValue, (JSGlobalObject* globalObject, JSString* base, int32_t index))
@@ -839,9 +796,8 @@ JSC_DEFINE_JIT_OPERATION(operationGetByValStringInt, EncodedJSValue, (JSGlobalOb
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, getByValCellInt(globalObject, vm, base, index));
+    return getByValCellInt(globalObject, vm, base, index);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationGetByValObjectString, EncodedJSValue, (JSGlobalObject* globalObject, JSCell* base, JSCell* string))
@@ -853,9 +809,9 @@ JSC_DEFINE_JIT_OPERATION(operationGetByValObjectString, EncodedJSValue, (JSGloba
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     auto propertyName = asString(string)->toIdentifier(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
-    OPERATION_RETURN(scope, JSValue::encode(getByValObject(globalObject, vm, asObject(base), propertyName)));
+    RELEASE_AND_RETURN(scope, JSValue::encode(getByValObject(globalObject, vm, asObject(base), propertyName)));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationGetByValObjectSymbol, EncodedJSValue, (JSGlobalObject* globalObject, JSCell* base, JSCell* symbol))
@@ -863,10 +819,9 @@ JSC_DEFINE_JIT_OPERATION(operationGetByValObjectSymbol, EncodedJSValue, (JSGloba
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     auto propertyName = asSymbol(symbol)->privateName();
-    OPERATION_RETURN(scope, JSValue::encode(getByValObject(globalObject, vm, asObject(base), propertyName)));
+    return JSValue::encode(getByValObject(globalObject, vm, asObject(base), propertyName));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationPutByValCellStringStrict, void, (JSGlobalObject* globalObject, JSCell* cell, JSCell* string, EncodedJSValue encodedValue))
@@ -874,10 +829,8 @@ JSC_DEFINE_JIT_OPERATION(operationPutByValCellStringStrict, void, (JSGlobalObjec
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     putByValCellStringInternal<true, false>(globalObject, vm, cell, asString(string), JSValue::decode(encodedValue));
-    OPERATION_RETURN(scope);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationPutByValCellStringSloppy, void, (JSGlobalObject* globalObject, JSCell* cell, JSCell* string, EncodedJSValue encodedValue))
@@ -885,10 +838,8 @@ JSC_DEFINE_JIT_OPERATION(operationPutByValCellStringSloppy, void, (JSGlobalObjec
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     putByValCellStringInternal<false, false>(globalObject, vm, cell, asString(string), JSValue::decode(encodedValue));
-    OPERATION_RETURN(scope);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationPutByValCellSymbolStrict, void, (JSGlobalObject* globalObject, JSCell* cell, JSCell* symbol, EncodedJSValue encodedValue))
@@ -896,11 +847,9 @@ JSC_DEFINE_JIT_OPERATION(operationPutByValCellSymbolStrict, void, (JSGlobalObjec
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     auto propertyName = asSymbol(symbol)->privateName();
     putByValCellInternal<true, false>(globalObject, vm, cell, propertyName, JSValue::decode(encodedValue));
-    OPERATION_RETURN(scope);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationPutByValCellSymbolSloppy, void, (JSGlobalObject* globalObject, JSCell* cell, JSCell* symbol, EncodedJSValue encodedValue))
@@ -908,11 +857,9 @@ JSC_DEFINE_JIT_OPERATION(operationPutByValCellSymbolSloppy, void, (JSGlobalObjec
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     auto propertyName = asSymbol(symbol)->privateName();
     putByValCellInternal<false, false>(globalObject, vm, cell, propertyName, JSValue::decode(encodedValue));
-    OPERATION_RETURN(scope);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationPutByValBeyondArrayBoundsStrict, void, (JSGlobalObject* globalObject, JSObject* object, int32_t index, EncodedJSValue encodedValue))
@@ -920,17 +867,15 @@ JSC_DEFINE_JIT_OPERATION(operationPutByValBeyondArrayBoundsStrict, void, (JSGlob
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (index >= 0) {
         object->putByIndexInline(globalObject, static_cast<uint32_t>(index), JSValue::decode(encodedValue), true);
-        OPERATION_RETURN(scope);
+        return;
     }
 
     PutPropertySlot slot(object, true);
     object->methodTable()->put(
         object, globalObject, Identifier::from(vm, index), JSValue::decode(encodedValue), slot);
-    OPERATION_RETURN(scope);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationPutByValBeyondArrayBoundsSloppy, void, (JSGlobalObject* globalObject, JSObject* object, int32_t index, EncodedJSValue encodedValue))
@@ -938,17 +883,15 @@ JSC_DEFINE_JIT_OPERATION(operationPutByValBeyondArrayBoundsSloppy, void, (JSGlob
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (index >= 0) {
         object->putByIndexInline(globalObject, static_cast<uint32_t>(index), JSValue::decode(encodedValue), false);
-        OPERATION_RETURN(scope);
+        return;
     }
 
     PutPropertySlot slot(object, false);
     object->methodTable()->put(
         object, globalObject, Identifier::from(vm, index), JSValue::decode(encodedValue), slot);
-    OPERATION_RETURN(scope);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationPutDoubleByValBeyondArrayBoundsStrict, void, (JSGlobalObject* globalObject, JSObject* object, int32_t index, double value))
@@ -956,19 +899,17 @@ JSC_DEFINE_JIT_OPERATION(operationPutDoubleByValBeyondArrayBoundsStrict, void, (
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue jsValue = JSValue(JSValue::EncodeAsDouble, value);
 
     if (index >= 0) {
         object->putByIndexInline(globalObject, static_cast<uint32_t>(index), jsValue, true);
-        OPERATION_RETURN(scope);
+        return;
     }
 
     PutPropertySlot slot(object, true);
     object->methodTable()->put(
         object, globalObject, Identifier::from(vm, index), jsValue, slot);
-    OPERATION_RETURN(scope);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationPutDoubleByValBeyondArrayBoundsSloppy, void, (JSGlobalObject* globalObject, JSObject* object, int32_t index, double value))
@@ -976,19 +917,17 @@ JSC_DEFINE_JIT_OPERATION(operationPutDoubleByValBeyondArrayBoundsSloppy, void, (
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue jsValue = JSValue(JSValue::EncodeAsDouble, value);
 
     if (index >= 0) {
         object->putByIndexInline(globalObject, static_cast<uint32_t>(index), jsValue, false);
-        OPERATION_RETURN(scope);
+        return;
     }
 
     PutPropertySlot slot(object, false);
     object->methodTable()->put(
         object, globalObject, Identifier::from(vm, index), jsValue, slot);
-    OPERATION_RETURN(scope);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationPutDoubleByValDirectBeyondArrayBoundsStrict, void, (JSGlobalObject* globalObject, JSObject* object, int32_t index, double value))
@@ -996,18 +935,16 @@ JSC_DEFINE_JIT_OPERATION(operationPutDoubleByValDirectBeyondArrayBoundsStrict, v
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue jsValue = JSValue(JSValue::EncodeAsDouble, value);
 
     if (index >= 0) {
         object->putDirectIndex(globalObject, static_cast<uint32_t>(index), jsValue, 0, PutDirectIndexShouldThrow);
-        OPERATION_RETURN(scope);
+        return;
     }
 
     PutPropertySlot slot(object, true);
     CommonSlowPaths::putDirectWithReify(vm, globalObject, object, Identifier::from(vm, index), jsValue, slot);
-    OPERATION_RETURN(scope);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationPutDoubleByValDirectBeyondArrayBoundsSloppy, void, (JSGlobalObject* globalObject, JSObject* object, int32_t index, double value))
@@ -1015,18 +952,16 @@ JSC_DEFINE_JIT_OPERATION(operationPutDoubleByValDirectBeyondArrayBoundsSloppy, v
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue jsValue = JSValue(JSValue::EncodeAsDouble, value);
 
     if (index >= 0) {
         object->putDirectIndex(globalObject, static_cast<uint32_t>(index), jsValue);
-        OPERATION_RETURN(scope);
+        return;
     }
 
     PutPropertySlot slot(object, false);
     CommonSlowPaths::putDirectWithReify(vm, globalObject, object, Identifier::from(vm, index), jsValue, slot);
-    OPERATION_RETURN(scope);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationPutByValDirectCellStringStrict, void, (JSGlobalObject* globalObject, JSCell* cell, JSCell* string, EncodedJSValue encodedValue))
@@ -1034,10 +969,8 @@ JSC_DEFINE_JIT_OPERATION(operationPutByValDirectCellStringStrict, void, (JSGloba
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     putByValCellStringInternal<true, true>(globalObject, vm, cell, asString(string), JSValue::decode(encodedValue));
-    OPERATION_RETURN(scope);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationPutByValDirectCellStringSloppy, void, (JSGlobalObject* globalObject, JSCell* cell, JSCell* string, EncodedJSValue encodedValue))
@@ -1045,10 +978,8 @@ JSC_DEFINE_JIT_OPERATION(operationPutByValDirectCellStringSloppy, void, (JSGloba
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     putByValCellStringInternal<false, true>(globalObject, vm, cell, asString(string), JSValue::decode(encodedValue));
-    OPERATION_RETURN(scope);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationPutByValDirectCellSymbolStrict, void, (JSGlobalObject* globalObject, JSCell* cell, JSCell* symbol, EncodedJSValue encodedValue))
@@ -1056,11 +987,9 @@ JSC_DEFINE_JIT_OPERATION(operationPutByValDirectCellSymbolStrict, void, (JSGloba
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     auto propertyName = asSymbol(symbol)->privateName();
     putByValCellInternal<true, true>(globalObject, vm, cell, propertyName, JSValue::decode(encodedValue));
-    OPERATION_RETURN(scope);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationPutByValDirectCellSymbolSloppy, void, (JSGlobalObject* globalObject, JSCell* cell, JSCell* symbol, EncodedJSValue encodedValue))
@@ -1068,11 +997,9 @@ JSC_DEFINE_JIT_OPERATION(operationPutByValDirectCellSymbolSloppy, void, (JSGloba
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     auto propertyName = asSymbol(symbol)->privateName();
     putByValCellInternal<false, true>(globalObject, vm, cell, propertyName, JSValue::decode(encodedValue));
-    OPERATION_RETURN(scope);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationPutByValDirectBeyondArrayBoundsStrict, void, (JSGlobalObject* globalObject, JSObject* object, int32_t index, EncodedJSValue encodedValue))
@@ -1080,15 +1007,13 @@ JSC_DEFINE_JIT_OPERATION(operationPutByValDirectBeyondArrayBoundsStrict, void, (
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
     if (index >= 0) {
         object->putDirectIndex(globalObject, static_cast<uint32_t>(index), JSValue::decode(encodedValue), 0, PutDirectIndexShouldThrow);
-        OPERATION_RETURN(scope);
+        return;
     }
 
     PutPropertySlot slot(object, true);
     CommonSlowPaths::putDirectWithReify(vm, globalObject, object, Identifier::from(vm, index), JSValue::decode(encodedValue), slot);
-    OPERATION_RETURN(scope);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationPutByValDirectBeyondArrayBoundsSloppy, void, (JSGlobalObject* globalObject, JSObject* object, int32_t index, EncodedJSValue encodedValue))
@@ -1096,16 +1021,14 @@ JSC_DEFINE_JIT_OPERATION(operationPutByValDirectBeyondArrayBoundsSloppy, void, (
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (index >= 0) {
         object->putDirectIndex(globalObject, static_cast<uint32_t>(index), JSValue::decode(encodedValue));
-        OPERATION_RETURN(scope);
+        return;
     }
 
     PutPropertySlot slot(object, false);
     CommonSlowPaths::putDirectWithReify(vm, globalObject, object, Identifier::from(vm, index), JSValue::decode(encodedValue), slot);
-    OPERATION_RETURN(scope);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationArrayPush, EncodedJSValue, (JSGlobalObject* globalObject, EncodedJSValue encodedValue, JSArray* array))
@@ -1113,10 +1036,9 @@ JSC_DEFINE_JIT_OPERATION(operationArrayPush, EncodedJSValue, (JSGlobalObject* gl
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     array->pushInline(globalObject, JSValue::decode(encodedValue));
-    OPERATION_RETURN(scope, JSValue::encode(jsNumber(array->length())));
+    return JSValue::encode(jsNumber(array->length()));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationArrayPushDouble, EncodedJSValue, (JSGlobalObject* globalObject, double value, JSArray* array))
@@ -1124,10 +1046,9 @@ JSC_DEFINE_JIT_OPERATION(operationArrayPushDouble, EncodedJSValue, (JSGlobalObje
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     array->pushInline(globalObject, JSValue(JSValue::EncodeAsDouble, value));
-    OPERATION_RETURN(scope, JSValue::encode(jsNumber(array->length())));
+    return JSValue::encode(jsNumber(array->length()));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationArrayPushMultiple, EncodedJSValue, (JSGlobalObject* globalObject, JSArray* array, void* buffer, int32_t elementCount))
@@ -1135,8 +1056,8 @@ JSC_DEFINE_JIT_OPERATION(operationArrayPushMultiple, EncodedJSValue, (JSGlobalOb
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
     ActiveScratchBufferScope activeScratchBufferScope(ScratchBuffer::fromData(buffer), elementCount);
+    auto scope = DECLARE_THROW_SCOPE(vm);
 
 
     // We assume that multiple JSArray::push calls with ArrayWithInt32/ArrayWithContiguous do not cause JS traps.
@@ -1152,9 +1073,9 @@ JSC_DEFINE_JIT_OPERATION(operationArrayPushMultiple, EncodedJSValue, (JSGlobalOb
     EncodedJSValue* values = static_cast<EncodedJSValue*>(buffer);
     for (int32_t i = 0; i < elementCount; ++i) {
         array->pushInline(globalObject, JSValue::decode(values[i]));
-        OPERATION_RETURN_IF_EXCEPTION(scope, encodedJSValue());
+        RETURN_IF_EXCEPTION(scope, encodedJSValue());
     }
-    OPERATION_RETURN(scope, JSValue::encode(jsNumber(array->length())));
+    return JSValue::encode(jsNumber(array->length()));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationArrayPushDoubleMultiple, EncodedJSValue, (JSGlobalObject* globalObject, JSArray* array, void* buffer, int32_t elementCount))
@@ -1174,9 +1095,9 @@ JSC_DEFINE_JIT_OPERATION(operationArrayPushDoubleMultiple, EncodedJSValue, (JSGl
     double* values = static_cast<double*>(buffer);
     for (int32_t i = 0; i < elementCount; ++i) {
         array->pushInline(globalObject, JSValue(JSValue::EncodeAsDouble, values[i]));
-        OPERATION_RETURN_IF_EXCEPTION(scope, encodedJSValue());
+        RETURN_IF_EXCEPTION(scope, encodedJSValue());
     }
-    OPERATION_RETURN(scope, JSValue::encode(jsNumber(array->length())));
+    return JSValue::encode(jsNumber(array->length()));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationArrayPushMultipleSlow, EncodedJSValue, (JSGlobalObject* globalObject, JSArray* array, void* buffer, int32_t elementCount))
@@ -1197,15 +1118,15 @@ JSC_DEFINE_JIT_OPERATION(operationArrayPushMultipleSlow, EncodedJSValue, (JSGlob
 
     if (UNLIKELY(arguments.hasOverflowed())) {
         throwOutOfMemoryError(globalObject, scope);
-        OPERATION_RETURN(scope, encodedJSValue());
+        return { };
     }
 
     for (int32_t i = 0; i < elementCount; ++i) {
         array->pushInline(globalObject, arguments.at(i));
-        OPERATION_RETURN_IF_EXCEPTION(scope, encodedJSValue());
+        RETURN_IF_EXCEPTION(scope, { });
     }
 
-    OPERATION_RETURN(scope, JSValue::encode(jsNumber(array->length())));
+    return JSValue::encode(jsNumber(array->length()));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationArrayPop, EncodedJSValue, (JSGlobalObject* globalObject, JSArray* array))
@@ -1213,9 +1134,8 @@ JSC_DEFINE_JIT_OPERATION(operationArrayPop, EncodedJSValue, (JSGlobalObject* glo
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, JSValue::encode(array->pop(globalObject)));
+    return JSValue::encode(array->pop(globalObject));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationArrayPopAndRecoverLength, EncodedJSValue, (JSGlobalObject* globalObject, JSArray* array))
@@ -1223,11 +1143,10 @@ JSC_DEFINE_JIT_OPERATION(operationArrayPopAndRecoverLength, EncodedJSValue, (JSG
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     array->butterfly()->setPublicLength(array->butterfly()->publicLength() + 1);
 
-    OPERATION_RETURN(scope, JSValue::encode(array->pop(globalObject)));
+    return JSValue::encode(array->pop(globalObject));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationArraySpliceExtract, EncodedJSValue, (JSGlobalObject* globalObject, JSArray* base, int32_t start, int32_t deleteCount, unsigned refCount))
@@ -1257,7 +1176,7 @@ JSC_DEFINE_JIT_OPERATION(operationArraySpliceExtract, EncodedJSValue, (JSGlobalO
     std::pair<SpeciesConstructResult, JSObject*> speciesResult = speciesConstructArray(globalObject, base, actualDeleteCount);
     EXCEPTION_ASSERT(!!scope.exception() == (speciesResult.first == SpeciesConstructResult::Exception));
     if (speciesResult.first == SpeciesConstructResult::Exception)
-        OPERATION_RETURN(scope, encodedJSValue());
+        return { };
 
     JSValue result;
     if (LIKELY(speciesResult.first == SpeciesConstructResult::FastPath)) {
@@ -1299,7 +1218,7 @@ JSC_DEFINE_JIT_OPERATION(operationArraySpliceExtract, EncodedJSValue, (JSGlobalO
             result = jsUndefined();
         else {
             result = JSArray::fastSlice(globalObject, base, actualStart, actualDeleteCount);
-            OPERATION_RETURN_IF_EXCEPTION(scope, encodedJSValue());
+            RETURN_IF_EXCEPTION(scope, { });
         }
     }
 
@@ -1310,35 +1229,35 @@ JSC_DEFINE_JIT_OPERATION(operationArraySpliceExtract, EncodedJSValue, (JSGlobalO
         else {
             if (UNLIKELY(actualDeleteCount > std::numeric_limits<uint32_t>::max())) {
                 throwRangeError(globalObject, scope, LengthExceededTheMaximumArrayLengthError);
-                OPERATION_RETURN(scope, encodedJSValue());
+                return { };
             }
             resultObject = JSArray::tryCreate(vm, globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithUndecided), static_cast<uint32_t>(actualDeleteCount));
             if (UNLIKELY(!resultObject)) {
                 throwOutOfMemoryError(globalObject, scope);
-                OPERATION_RETURN(scope, encodedJSValue());
+                return { };
             }
         }
         for (uint64_t k = 0; k < actualDeleteCount; ++k) {
             JSValue v = getProperty(globalObject, base, k + actualStart);
-            OPERATION_RETURN_IF_EXCEPTION(scope, encodedJSValue());
+            RETURN_IF_EXCEPTION(scope, { });
             if (UNLIKELY(!v))
                 continue;
             resultObject->putDirectIndex(globalObject, k, v, 0, PutDirectIndexShouldThrow);
-            OPERATION_RETURN_IF_EXCEPTION(scope, encodedJSValue());
+            RETURN_IF_EXCEPTION(scope, { });
         }
         setLength(globalObject, vm, resultObject, actualDeleteCount);
-        OPERATION_RETURN_IF_EXCEPTION(scope, encodedJSValue());
+        RETURN_IF_EXCEPTION(scope, { });
         result = resultObject;
     }
 
     if (actualDeleteCount) {
         shift<JSArray::ShiftCountForSplice>(globalObject, base, actualStart, actualDeleteCount, 0, length);
-        OPERATION_RETURN_IF_EXCEPTION(scope, encodedJSValue());
+        RETURN_IF_EXCEPTION(scope, { });
     }
 
     scope.release();
     setLength(globalObject, vm, base, length - actualDeleteCount);
-    OPERATION_RETURN(scope, JSValue::encode(result));
+    return JSValue::encode(result);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationRegExpExecString, EncodedJSValue, (JSGlobalObject* globalObject, RegExpObject* regExpObject, JSString* argument))
@@ -1348,9 +1267,8 @@ JSC_DEFINE_JIT_OPERATION(operationRegExpExecString, EncodedJSValue, (JSGlobalObj
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, JSValue::encode(regExpObject->execInline(globalObject, argument)));
+    return JSValue::encode(regExpObject->execInline(globalObject, argument));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationRegExpExec, EncodedJSValue, (JSGlobalObject* globalObject, RegExpObject* regExpObject, EncodedJSValue encodedArgument))
@@ -1367,8 +1285,8 @@ JSC_DEFINE_JIT_OPERATION(operationRegExpExec, EncodedJSValue, (JSGlobalObject* g
     JSString* input = argument.toStringOrNull(globalObject);
     EXCEPTION_ASSERT(!!scope.exception() == !input);
     if (!input)
-        OPERATION_RETURN(scope, encodedJSValue());
-    OPERATION_RETURN(scope, JSValue::encode(regExpObject->execInline(globalObject, input)));
+        return encodedJSValue();
+    RELEASE_AND_RETURN(scope, JSValue::encode(regExpObject->execInline(globalObject, input)));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationRegExpExecGeneric, EncodedJSValue, (JSGlobalObject* globalObject, EncodedJSValue encodedBase, EncodedJSValue encodedArgument))
@@ -1385,13 +1303,13 @@ JSC_DEFINE_JIT_OPERATION(operationRegExpExecGeneric, EncodedJSValue, (JSGlobalOb
 
     auto* regexp = jsDynamicCast<RegExpObject*>(base);
     if (UNLIKELY(!regexp))
-        OPERATION_RETURN(scope, throwVMTypeError(globalObject, scope, "Builtin RegExp exec can only be called on a RegExp object"_s));
+        return throwVMTypeError(globalObject, scope);
 
     JSString* input = argument.toStringOrNull(globalObject);
     EXCEPTION_ASSERT(!!scope.exception() == !input);
     if (!input)
-        OPERATION_RETURN(scope, JSValue::encode(jsUndefined()));
-    OPERATION_RETURN(scope, JSValue::encode(regexp->exec(globalObject, input)));
+        return JSValue::encode(jsUndefined());
+    RELEASE_AND_RETURN(scope, JSValue::encode(regexp->exec(globalObject, input)));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationRegExpExecNonGlobalOrSticky, EncodedJSValue, (JSGlobalObject* globalObject, RegExp* regExp, JSString* string))
@@ -1404,18 +1322,18 @@ JSC_DEFINE_JIT_OPERATION(operationRegExpExecNonGlobalOrSticky, EncodedJSValue, (
 
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto input = string->value(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    String input = string->value(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
 
     unsigned lastIndex = 0;
     MatchResult result;
     JSArray* array = createRegExpMatchesArray(vm, globalObject, string, input, regExp, lastIndex, result);
-    OPERATION_RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    RETURN_IF_EXCEPTION(scope, { });
     if (!array)
-        OPERATION_RETURN(scope, JSValue::encode(jsNull()));
+        return JSValue::encode(jsNull());
 
     globalObject->regExpGlobalData().recordMatch(vm, globalObject, regExp, string, result);
-    OPERATION_RETURN(scope, JSValue::encode(array));
+    return JSValue::encode(array);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationRegExpMatchFastString, EncodedJSValue, (JSGlobalObject* globalObject, RegExpObject* regExpObject, JSString* argument))
@@ -1425,11 +1343,10 @@ JSC_DEFINE_JIT_OPERATION(operationRegExpMatchFastString, EncodedJSValue, (JSGlob
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (!regExpObject->regExp()->global())
-        OPERATION_RETURN(scope, JSValue::encode(regExpObject->execInline(globalObject, argument)));
-    OPERATION_RETURN(scope, JSValue::encode(regExpObject->matchGlobal(globalObject, argument)));
+        return JSValue::encode(regExpObject->execInline(globalObject, argument));
+    return JSValue::encode(regExpObject->matchGlobal(globalObject, argument));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationRegExpMatchFastGlobalString, EncodedJSValue, (JSGlobalObject* globalObject, RegExp* regExp, JSString* string))
@@ -1444,19 +1361,19 @@ JSC_DEFINE_JIT_OPERATION(operationRegExpMatchFastGlobalString, EncodedJSValue, (
 
     ASSERT(regExp->global());
 
-    auto s = string->value(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    String s = string->value(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
 
     if (regExp->eitherUnicode()) {
-        unsigned stringLength = s->length();
-        OPERATION_RETURN(scope, JSValue::encode(collectMatches(
+        unsigned stringLength = s.length();
+        RELEASE_AND_RETURN(scope, JSValue::encode(collectMatches(
             vm, globalObject, string, s, regExp,
             [&](size_t end) ALWAYS_INLINE_LAMBDA {
                 return advanceStringUnicode(s, stringLength, end);
             })));
     }
 
-    OPERATION_RETURN(scope, JSValue::encode(collectMatches(
+    RELEASE_AND_RETURN(scope, JSValue::encode(collectMatches(
         vm, globalObject, string, s, regExp,
         [](size_t end) ALWAYS_INLINE_LAMBDA {
             return end + 1;
@@ -1468,18 +1385,17 @@ JSC_DEFINE_JIT_OPERATION(operationParseIntGenericNoRadix, EncodedJSValue, (JSGlo
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue value = JSValue::decode(encodedValue);
     if (value.isNumber()) {
         if (auto result = parseIntDouble(value.asNumber()))
-            OPERATION_RETURN(scope, parseIntResult(result.value()));
+            return parseIntResult(result.value());
     }
 
-    OPERATION_RETURN(scope, toStringView(globalObject, value, [&] (StringView view) {
+    return toStringView(globalObject, value, [&] (StringView view) {
         // This version is as if radix was undefined. Hence, undefined.toNumber() === 0.
         return parseIntResult(parseInt(view, 0));
-    }));
+    });
 }
 
 JSC_DEFINE_JIT_OPERATION(operationParseIntStringNoRadix, EncodedJSValue, (JSGlobalObject* globalObject, JSString* string))
@@ -1489,11 +1405,11 @@ JSC_DEFINE_JIT_OPERATION(operationParseIntStringNoRadix, EncodedJSValue, (JSGlob
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto view = string->view(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    auto viewWithString = string->viewWithUnderlyingString(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
 
     // This version is as if radix was undefined. Hence, undefined.toNumber() === 0.
-    OPERATION_RETURN(scope, parseIntResult(parseInt(view, 0)));
+    return parseIntResult(parseInt(viewWithString.view, 0));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationParseIntDoubleNoRadix, EncodedJSValue, (JSGlobalObject* globalObject, double value))
@@ -1501,12 +1417,11 @@ JSC_DEFINE_JIT_OPERATION(operationParseIntDoubleNoRadix, EncodedJSValue, (JSGlob
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (auto result = parseIntDouble(value))
-        OPERATION_RETURN(scope, parseIntResult(result.value()));
+        return parseIntResult(result.value());
 
-    OPERATION_RETURN(scope, parseIntResult(parseInt(String::number(value), 0)));
+    return parseIntResult(parseInt(String::number(value), 0));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationParseIntString, EncodedJSValue, (JSGlobalObject* globalObject, JSString* string, int32_t radix))
@@ -1516,10 +1431,10 @@ JSC_DEFINE_JIT_OPERATION(operationParseIntString, EncodedJSValue, (JSGlobalObjec
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto view = string->view(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    auto viewWithString = string->viewWithUnderlyingString(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
 
-    OPERATION_RETURN(scope, parseIntResult(parseInt(view, radix)));
+    return parseIntResult(parseInt(viewWithString.view, radix));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationParseIntGeneric, EncodedJSValue, (JSGlobalObject* globalObject, EncodedJSValue encodedValue, int32_t radix))
@@ -1527,17 +1442,16 @@ JSC_DEFINE_JIT_OPERATION(operationParseIntGeneric, EncodedJSValue, (JSGlobalObje
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue value = JSValue::decode(encodedValue);
     if (radix == 10 && value.isNumber()) {
         if (auto result = parseIntDouble(value.asNumber()))
-            OPERATION_RETURN(scope, parseIntResult(result.value()));
+            return parseIntResult(result.value());
     }
 
-    OPERATION_RETURN(scope, toStringView(globalObject, value, [&] (StringView view) {
+    return toStringView(globalObject, value, [&] (StringView view) {
         return parseIntResult(parseInt(view, radix));
-    }));
+    });
 }
 
 JSC_DEFINE_JIT_OPERATION(operationParseIntDouble, EncodedJSValue, (JSGlobalObject* globalObject, double value, int32_t radix))
@@ -1545,14 +1459,13 @@ JSC_DEFINE_JIT_OPERATION(operationParseIntDouble, EncodedJSValue, (JSGlobalObjec
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (radix == 10) {
         if (auto result = parseIntDouble(value))
-            OPERATION_RETURN(scope, parseIntResult(result.value()));
+            return parseIntResult(result.value());
     }
 
-    OPERATION_RETURN(scope, parseIntResult(parseInt(String::number(value), radix)));
+    return parseIntResult(parseInt(String::number(value), radix));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationParseIntInt32, EncodedJSValue, (JSGlobalObject* globalObject, int32_t value, int32_t radix))
@@ -1560,12 +1473,11 @@ JSC_DEFINE_JIT_OPERATION(operationParseIntInt32, EncodedJSValue, (JSGlobalObject
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (radix == 10)
-        OPERATION_RETURN(scope, JSValue::encode(jsNumber(value)));
+        return JSValue::encode(jsNumber(value));
 
-    OPERATION_RETURN(scope, parseIntResult(parseInt(String::number(value), radix)));
+    return parseIntResult(parseInt(String::number(value), radix));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationRegExpTestString, size_t, (JSGlobalObject* globalObject, RegExpObject* regExpObject, JSString* input))
@@ -1575,9 +1487,8 @@ JSC_DEFINE_JIT_OPERATION(operationRegExpTestString, size_t, (JSGlobalObject* glo
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, regExpObject->testInline(globalObject, input));
+    return regExpObject->testInline(globalObject, input);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationRegExpTest, size_t, (JSGlobalObject* globalObject, RegExpObject* regExpObject, EncodedJSValue encodedArgument))
@@ -1587,15 +1498,13 @@ JSC_DEFINE_JIT_OPERATION(operationRegExpTest, size_t, (JSGlobalObject* globalObj
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue argument = JSValue::decode(encodedArgument);
 
     JSString* input = argument.toStringOrNull(globalObject);
-    EXCEPTION_ASSERT(!!scope.exception() == !input);
     if (!input)
-        OPERATION_RETURN(scope, false);
-    OPERATION_RETURN(scope, regExpObject->testInline(globalObject, input));
+        return false;
+    return regExpObject->testInline(globalObject, input);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationRegExpTestGeneric, size_t, (JSGlobalObject* globalObject, EncodedJSValue encodedBase, EncodedJSValue encodedArgument))
@@ -1613,14 +1522,14 @@ JSC_DEFINE_JIT_OPERATION(operationRegExpTestGeneric, size_t, (JSGlobalObject* gl
     auto* regexp = jsDynamicCast<RegExpObject*>(base);
     if (UNLIKELY(!regexp)) {
         throwTypeError(globalObject, scope);
-        OPERATION_RETURN(scope, false);
+        return false;
     }
 
     JSString* input = argument.toStringOrNull(globalObject);
     EXCEPTION_ASSERT(!!scope.exception() == !input);
     if (!input)
-        OPERATION_RETURN(scope, false);
-    OPERATION_RETURN(scope, regexp->test(globalObject, input));
+        return false;
+    RELEASE_AND_RETURN(scope, regexp->test(globalObject, input));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationSubHeapBigInt, EncodedJSValue, (JSGlobalObject* globalObject, JSCell* op1, JSCell* op2))
@@ -1628,12 +1537,11 @@ JSC_DEFINE_JIT_OPERATION(operationSubHeapBigInt, EncodedJSValue, (JSGlobalObject
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSBigInt* leftOperand = jsCast<JSBigInt*>(op1);
     JSBigInt* rightOperand = jsCast<JSBigInt*>(op2);
 
-    OPERATION_RETURN(scope, JSValue::encode(JSBigInt::sub(globalObject, leftOperand, rightOperand)));
+    return JSValue::encode(JSBigInt::sub(globalObject, leftOperand, rightOperand));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationBitNotHeapBigInt, EncodedJSValue, (JSGlobalObject* globalObject, JSCell* op1))
@@ -1641,11 +1549,10 @@ JSC_DEFINE_JIT_OPERATION(operationBitNotHeapBigInt, EncodedJSValue, (JSGlobalObj
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSBigInt* operand = jsCast<JSBigInt*>(op1);
 
-    OPERATION_RETURN(scope, JSValue::encode(JSBigInt::bitwiseNot(globalObject, operand)));
+    return JSValue::encode(JSBigInt::bitwiseNot(globalObject, operand));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationMulHeapBigInt, EncodedJSValue, (JSGlobalObject* globalObject, JSCell* op1, JSCell* op2))
@@ -1653,12 +1560,11 @@ JSC_DEFINE_JIT_OPERATION(operationMulHeapBigInt, EncodedJSValue, (JSGlobalObject
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSBigInt* leftOperand = jsCast<JSBigInt*>(op1);
     JSBigInt* rightOperand = jsCast<JSBigInt*>(op2);
 
-    OPERATION_RETURN(scope, JSValue::encode(JSBigInt::multiply(globalObject, leftOperand, rightOperand)));
+    return JSValue::encode(JSBigInt::multiply(globalObject, leftOperand, rightOperand));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationModHeapBigInt, EncodedJSValue, (JSGlobalObject* globalObject, JSCell* op1, JSCell* op2))
@@ -1666,12 +1572,11 @@ JSC_DEFINE_JIT_OPERATION(operationModHeapBigInt, EncodedJSValue, (JSGlobalObject
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSBigInt* leftOperand = jsCast<JSBigInt*>(op1);
     JSBigInt* rightOperand = jsCast<JSBigInt*>(op2);
 
-    OPERATION_RETURN(scope, JSValue::encode(JSBigInt::remainder(globalObject, leftOperand, rightOperand)));
+    return JSValue::encode(JSBigInt::remainder(globalObject, leftOperand, rightOperand));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationDivHeapBigInt, EncodedJSValue, (JSGlobalObject* globalObject, JSCell* op1, JSCell* op2))
@@ -1679,12 +1584,11 @@ JSC_DEFINE_JIT_OPERATION(operationDivHeapBigInt, EncodedJSValue, (JSGlobalObject
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSBigInt* leftOperand = jsCast<JSBigInt*>(op1);
     JSBigInt* rightOperand = jsCast<JSBigInt*>(op2);
 
-    OPERATION_RETURN(scope, JSValue::encode(JSBigInt::divide(globalObject, leftOperand, rightOperand)));
+    return JSValue::encode(JSBigInt::divide(globalObject, leftOperand, rightOperand));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationPowHeapBigInt, EncodedJSValue, (JSGlobalObject* globalObject, JSCell* op1, JSCell* op2))
@@ -1692,12 +1596,11 @@ JSC_DEFINE_JIT_OPERATION(operationPowHeapBigInt, EncodedJSValue, (JSGlobalObject
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSBigInt* leftOperand = jsCast<JSBigInt*>(op1);
     JSBigInt* rightOperand = jsCast<JSBigInt*>(op2);
 
-    OPERATION_RETURN(scope, JSValue::encode(JSBigInt::exponentiate(globalObject, leftOperand, rightOperand)));
+    return JSValue::encode(JSBigInt::exponentiate(globalObject, leftOperand, rightOperand));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationBitAndHeapBigInt, EncodedJSValue, (JSGlobalObject* globalObject, JSCell* op1, JSCell* op2))
@@ -1705,12 +1608,11 @@ JSC_DEFINE_JIT_OPERATION(operationBitAndHeapBigInt, EncodedJSValue, (JSGlobalObj
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSBigInt* leftOperand = jsCast<JSBigInt*>(op1);
     JSBigInt* rightOperand = jsCast<JSBigInt*>(op2);
 
-    OPERATION_RETURN(scope, JSValue::encode(JSBigInt::bitwiseAnd(globalObject, leftOperand, rightOperand)));
+    return JSValue::encode(JSBigInt::bitwiseAnd(globalObject, leftOperand, rightOperand));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationBitLShiftHeapBigInt, EncodedJSValue, (JSGlobalObject* globalObject, JSCell* op1, JSCell* op2))
@@ -1718,12 +1620,11 @@ JSC_DEFINE_JIT_OPERATION(operationBitLShiftHeapBigInt, EncodedJSValue, (JSGlobal
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSBigInt* leftOperand = jsCast<JSBigInt*>(op1);
     JSBigInt* rightOperand = jsCast<JSBigInt*>(op2);
 
-    OPERATION_RETURN(scope, JSValue::encode(JSBigInt::leftShift(globalObject, leftOperand, rightOperand)));
+    return JSValue::encode(JSBigInt::leftShift(globalObject, leftOperand, rightOperand));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationAddHeapBigInt, EncodedJSValue, (JSGlobalObject* globalObject, JSCell* op1, JSCell* op2))
@@ -1731,12 +1632,11 @@ JSC_DEFINE_JIT_OPERATION(operationAddHeapBigInt, EncodedJSValue, (JSGlobalObject
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSBigInt* leftOperand = jsCast<JSBigInt*>(op1);
     JSBigInt* rightOperand = jsCast<JSBigInt*>(op2);
 
-    OPERATION_RETURN(scope, JSValue::encode(JSBigInt::add(globalObject, leftOperand, rightOperand)));
+    return JSValue::encode(JSBigInt::add(globalObject, leftOperand, rightOperand));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationBitRShiftHeapBigInt, EncodedJSValue, (JSGlobalObject* globalObject, JSCell* op1, JSCell* op2))
@@ -1744,12 +1644,11 @@ JSC_DEFINE_JIT_OPERATION(operationBitRShiftHeapBigInt, EncodedJSValue, (JSGlobal
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSBigInt* leftOperand = jsCast<JSBigInt*>(op1);
     JSBigInt* rightOperand = jsCast<JSBigInt*>(op2);
 
-    OPERATION_RETURN(scope, JSValue::encode(JSBigInt::signedRightShift(globalObject, leftOperand, rightOperand)));
+    return JSValue::encode(JSBigInt::signedRightShift(globalObject, leftOperand, rightOperand));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationBitOrHeapBigInt, EncodedJSValue, (JSGlobalObject* globalObject, JSCell* op1, JSCell* op2))
@@ -1757,12 +1656,11 @@ JSC_DEFINE_JIT_OPERATION(operationBitOrHeapBigInt, EncodedJSValue, (JSGlobalObje
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSBigInt* leftOperand = jsCast<JSBigInt*>(op1);
     JSBigInt* rightOperand = jsCast<JSBigInt*>(op2);
 
-    OPERATION_RETURN(scope, JSValue::encode(JSBigInt::bitwiseOr(globalObject, leftOperand, rightOperand)));
+    return JSValue::encode(JSBigInt::bitwiseOr(globalObject, leftOperand, rightOperand));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationBitXorHeapBigInt, EncodedJSValue, (JSGlobalObject* globalObject, JSCell* op1, JSCell* op2))
@@ -1770,22 +1668,20 @@ JSC_DEFINE_JIT_OPERATION(operationBitXorHeapBigInt, EncodedJSValue, (JSGlobalObj
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSBigInt* leftOperand = jsCast<JSBigInt*>(op1);
     JSBigInt* rightOperand = jsCast<JSBigInt*>(op2);
 
-    OPERATION_RETURN(scope, JSValue::encode(JSBigInt::bitwiseXor(globalObject, leftOperand, rightOperand)));
+    return JSValue::encode(JSBigInt::bitwiseXor(globalObject, leftOperand, rightOperand));
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationCompareStrictEqCell, size_t, (JSGlobalObject* globalObject, JSCell* op1, JSCell* op2))
+JSC_DEFINE_JIT_OPERATION(operationCompareStrictEqCell, size_t, (JSGlobalObject* globalObject, JSCell* op1, JSCell* op2))
 {
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, JSValue::strictEqualForCells(globalObject, op1, op2));
+    return JSValue::strictEqualForCells(globalObject, op1, op2);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationSameValue, size_t, (JSGlobalObject* globalObject, EncodedJSValue arg1, EncodedJSValue arg2))
@@ -1793,9 +1689,8 @@ JSC_DEFINE_JIT_OPERATION(operationSameValue, size_t, (JSGlobalObject* globalObje
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, sameValue(globalObject, JSValue::decode(arg1), JSValue::decode(arg2)));
+    return sameValue(globalObject, JSValue::decode(arg1), JSValue::decode(arg2));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationToPrimitive, EncodedJSValue, (JSGlobalObject* globalObject, EncodedJSValue value))
@@ -1803,9 +1698,8 @@ JSC_DEFINE_JIT_OPERATION(operationToPrimitive, EncodedJSValue, (JSGlobalObject* 
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, JSValue::encode(JSValue::decode(value).toPrimitive(globalObject)));
+    return JSValue::encode(JSValue::decode(value).toPrimitive(globalObject));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationToPropertyKey, EncodedJSValue, (JSGlobalObject* globalObject, EncodedJSValue value))
@@ -1813,20 +1707,8 @@ JSC_DEFINE_JIT_OPERATION(operationToPropertyKey, EncodedJSValue, (JSGlobalObject
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, JSValue::encode(JSValue::decode(value).toPropertyKeyValue(globalObject)));
-}
-
-JSC_DEFINE_JIT_OPERATION(operationToPropertyKeyOrNumber, EncodedJSValue, (JSGlobalObject* globalObject, EncodedJSValue value))
-{
-    VM& vm = globalObject->vm();
-    CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
-    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-
-    JSValue jsValue = JSValue::decode(value);
-    OPERATION_RETURN(scope, JSValue::encode(jsValue.isNumber() ? jsValue : jsValue.toPropertyKeyValue(globalObject)));
+    return JSValue::encode(JSValue::decode(value).toPropertyKeyValue(globalObject));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationToNumber, EncodedJSValue, (JSGlobalObject* globalObject, EncodedJSValue value))
@@ -1834,9 +1716,8 @@ JSC_DEFINE_JIT_OPERATION(operationToNumber, EncodedJSValue, (JSGlobalObject* glo
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, JSValue::encode(jsNumber(JSValue::decode(value).toNumber(globalObject))));
+    return JSValue::encode(jsNumber(JSValue::decode(value).toNumber(globalObject)));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationToNumberString, EncodedJSValue, (JSGlobalObject* globalObject, JSString* string))
@@ -1846,29 +1727,29 @@ JSC_DEFINE_JIT_OPERATION(operationToNumberString, EncodedJSValue, (JSGlobalObjec
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto view = string->value(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    String view = string->value(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
 
-    unsigned size = view->length();
+    unsigned size = view.length();
     if (size == 1) {
         UChar c = view[0];
         if (isASCIIDigit(c))
-            OPERATION_RETURN(scope, JSValue::encode(jsNumber(static_cast<int32_t>(c - '0'))));
+            return JSValue::encode(jsNumber(static_cast<int32_t>(c - '0')));
         if (isStrWhiteSpace(c))
-            OPERATION_RETURN(scope, JSValue::encode(jsNumber(0)));
-        OPERATION_RETURN(scope, JSValue::encode(jsNaN()));
+            return JSValue::encode(jsNumber(0));
+        return JSValue::encode(jsNaN());
     }
 
     if (size == 2 && view[0] == '-') {
         UChar c = view[1];
         if (c == '0')
-            OPERATION_RETURN(scope, JSValue::encode(jsNumber(-0.0)));
+            return JSValue::encode(jsNumber(-0.0));
         if (isASCIIDigit(c))
-            OPERATION_RETURN(scope, JSValue::encode(jsNumber(-static_cast<int32_t>(c - '0'))));
-        OPERATION_RETURN(scope, JSValue::encode(jsNaN()));
+            return JSValue::encode(jsNumber(-static_cast<int32_t>(c - '0')));
+        return JSValue::encode(jsNaN());
     }
 
-    OPERATION_RETURN(scope, JSValue::encode(jsNumber(jsToNumber(view))));
+    return JSValue::encode(jsNumber(jsToNumber(view)));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationToNumeric, EncodedJSValue, (JSGlobalObject* globalObject, EncodedJSValue value))
@@ -1876,9 +1757,8 @@ JSC_DEFINE_JIT_OPERATION(operationToNumeric, EncodedJSValue, (JSGlobalObject* gl
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, JSValue::encode(JSValue::decode(value).toNumeric(globalObject)));
+    return JSValue::encode(JSValue::decode(value).toNumeric(globalObject));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationCallNumberConstructor, EncodedJSValue, (JSGlobalObject* globalObject, EncodedJSValue encodedValue))
@@ -1890,11 +1770,11 @@ JSC_DEFINE_JIT_OPERATION(operationCallNumberConstructor, EncodedJSValue, (JSGlob
 
     JSValue value = JSValue::decode(encodedValue);
     JSValue numeric = value.toNumeric(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    RETURN_IF_EXCEPTION(scope, { });
     if (numeric.isNumber())
-        OPERATION_RETURN(scope, JSValue::encode(numeric));
+        return JSValue::encode(numeric);
     ASSERT(numeric.isBigInt());
-    OPERATION_RETURN(scope, JSValue::encode(JSBigInt::toNumber(numeric)));
+    return JSValue::encode(JSBigInt::toNumber(numeric));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationPutByIdWithThisStrict, void, (JSGlobalObject* globalObject, EncodedJSValue encodedBase, EncodedJSValue encodedThis, EncodedJSValue encodedValue, uintptr_t rawCacheableIdentifier))
@@ -1902,13 +1782,11 @@ JSC_DEFINE_JIT_OPERATION(operationPutByIdWithThisStrict, void, (JSGlobalObject* 
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     CacheableIdentifier identifier = CacheableIdentifier::createFromRawBits(rawCacheableIdentifier);
     Identifier ident = Identifier::fromUid(vm, identifier.uid());
 
     putWithThis<true>(globalObject, encodedBase, encodedThis, encodedValue, ident);
-    OPERATION_RETURN(scope);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationPutByIdWithThis, void, (JSGlobalObject* globalObject, EncodedJSValue encodedBase, EncodedJSValue encodedThis, EncodedJSValue encodedValue, uintptr_t rawCacheableIdentifier))
@@ -1916,13 +1794,11 @@ JSC_DEFINE_JIT_OPERATION(operationPutByIdWithThis, void, (JSGlobalObject* global
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     CacheableIdentifier identifier = CacheableIdentifier::createFromRawBits(rawCacheableIdentifier);
     Identifier ident = Identifier::fromUid(vm, identifier.uid());
 
     putWithThis<false>(globalObject, encodedBase, encodedThis, encodedValue, ident);
-    OPERATION_RETURN(scope);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationPutByValWithThisStrict, void, (JSGlobalObject* globalObject, EncodedJSValue encodedBase, EncodedJSValue encodedThis, EncodedJSValue encodedSubscript, EncodedJSValue encodedValue))
@@ -1933,10 +1809,9 @@ JSC_DEFINE_JIT_OPERATION(operationPutByValWithThisStrict, void, (JSGlobalObject*
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     Identifier property = JSValue::decode(encodedSubscript).toPropertyKey(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope);
+    RETURN_IF_EXCEPTION(scope, void());
     scope.release();
     putWithThis<true>(globalObject, encodedBase, encodedThis, encodedValue, property);
-    OPERATION_RETURN(scope);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationPutByValWithThis, void, (JSGlobalObject* globalObject, EncodedJSValue encodedBase, EncodedJSValue encodedThis, EncodedJSValue encodedSubscript, EncodedJSValue encodedValue))
@@ -1947,10 +1822,9 @@ JSC_DEFINE_JIT_OPERATION(operationPutByValWithThis, void, (JSGlobalObject* globa
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     Identifier property = JSValue::decode(encodedSubscript).toPropertyKey(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope);
+    RETURN_IF_EXCEPTION(scope, void());
     scope.release();
     putWithThis<false>(globalObject, encodedBase, encodedThis, encodedValue, property);
-    OPERATION_RETURN(scope);
 }
 
 ALWAYS_INLINE static void defineDataProperty(JSGlobalObject* globalObject, JSObject* base, const Identifier& propertyName, JSValue value, int32_t attributes)
@@ -1971,10 +1845,9 @@ JSC_DEFINE_JIT_OPERATION(operationDefineDataProperty, void, (JSGlobalObject* glo
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     Identifier propertyName = JSValue::decode(encodedProperty).toPropertyKey(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope);
+    RETURN_IF_EXCEPTION(scope, void());
     scope.release();
     defineDataProperty(globalObject, base, propertyName, JSValue::decode(encodedValue), attributes);
-    OPERATION_RETURN(scope);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationDefineDataPropertyString, void, (JSGlobalObject* globalObject, JSObject* base, JSString* property, EncodedJSValue encodedValue, int32_t attributes))
@@ -1985,10 +1858,9 @@ JSC_DEFINE_JIT_OPERATION(operationDefineDataPropertyString, void, (JSGlobalObjec
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     Identifier propertyName = property->toIdentifier(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope);
+    RETURN_IF_EXCEPTION(scope, void());
     scope.release();
     defineDataProperty(globalObject, base, propertyName, JSValue::decode(encodedValue), attributes);
-    OPERATION_RETURN(scope);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationDefineDataPropertyStringIdent, void, (JSGlobalObject* globalObject, JSObject* base, UniquedStringImpl* property, EncodedJSValue encodedValue, int32_t attributes))
@@ -1996,9 +1868,7 @@ JSC_DEFINE_JIT_OPERATION(operationDefineDataPropertyStringIdent, void, (JSGlobal
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
     defineDataProperty(globalObject, base, Identifier::fromUid(vm, property), JSValue::decode(encodedValue), attributes);
-    OPERATION_RETURN(scope);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationDefineDataPropertySymbol, void, (JSGlobalObject* globalObject, JSObject* base, Symbol* property, EncodedJSValue encodedValue, int32_t attributes))
@@ -2006,9 +1876,7 @@ JSC_DEFINE_JIT_OPERATION(operationDefineDataPropertySymbol, void, (JSGlobalObjec
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
     defineDataProperty(globalObject, base, Identifier::fromUid(property->privateName()), JSValue::decode(encodedValue), attributes);
-    OPERATION_RETURN(scope);
 }
 
 ALWAYS_INLINE static void defineAccessorProperty(JSGlobalObject* globalObject, JSObject* base, const Identifier& propertyName, JSObject* getter, JSObject* setter, int32_t attributes)
@@ -2029,9 +1897,8 @@ JSC_DEFINE_JIT_OPERATION(operationDefineAccessorProperty, void, (JSGlobalObject*
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     Identifier propertyName = JSValue::decode(encodedProperty).toPropertyKey(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope);
+    RETURN_IF_EXCEPTION(scope, void());
     defineAccessorProperty(globalObject, base, propertyName, getter, setter, attributes);
-    OPERATION_RETURN(scope);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationDefineAccessorPropertyString, void, (JSGlobalObject* globalObject, JSObject* base, JSString* property, JSObject* getter, JSObject* setter, int32_t attributes))
@@ -2042,9 +1909,8 @@ JSC_DEFINE_JIT_OPERATION(operationDefineAccessorPropertyString, void, (JSGlobalO
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     Identifier propertyName = property->toIdentifier(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope);
+    RETURN_IF_EXCEPTION(scope, void());
     defineAccessorProperty(globalObject, base, propertyName, getter, setter, attributes);
-    OPERATION_RETURN(scope);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationDefineAccessorPropertyStringIdent, void, (JSGlobalObject* globalObject, JSObject* base, UniquedStringImpl* property, JSObject* getter, JSObject* setter, int32_t attributes))
@@ -2052,9 +1918,7 @@ JSC_DEFINE_JIT_OPERATION(operationDefineAccessorPropertyStringIdent, void, (JSGl
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
     defineAccessorProperty(globalObject, base, Identifier::fromUid(vm, property), getter, setter, attributes);
-    OPERATION_RETURN(scope);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationDefineAccessorPropertySymbol, void, (JSGlobalObject* globalObject, JSObject* base, Symbol* property, JSObject* getter, JSObject* setter, int32_t attributes))
@@ -2062,9 +1926,7 @@ JSC_DEFINE_JIT_OPERATION(operationDefineAccessorPropertySymbol, void, (JSGlobalO
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
     defineAccessorProperty(globalObject, base, Identifier::fromUid(property->privateName()), getter, setter, attributes);
-    OPERATION_RETURN(scope);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationNewArray, char*, (JSGlobalObject* globalObject, Structure* arrayStructure, void* buffer, size_t size))
@@ -2072,10 +1934,9 @@ JSC_DEFINE_JIT_OPERATION(operationNewArray, char*, (JSGlobalObject* globalObject
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
     ActiveScratchBufferScope activeScratchBufferScope(ScratchBuffer::fromData(buffer), size);
 
-    OPERATION_RETURN(scope, bitwise_cast<char*>(constructArray(globalObject, arrayStructure, static_cast<JSValue*>(buffer), size)));
+    return bitwise_cast<char*>(constructArray(globalObject, arrayStructure, static_cast<JSValue*>(buffer), size));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationNewEmptyArray, char*, (VM* vmPointer, Structure* arrayStructure))
@@ -2083,9 +1944,8 @@ JSC_DEFINE_JIT_OPERATION(operationNewEmptyArray, char*, (VM* vmPointer, Structur
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, bitwise_cast<char*>(JSArray::create(vm, arrayStructure)));
+    return bitwise_cast<char*>(JSArray::create(vm, arrayStructure));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationNewArrayWithSize, char*, (JSGlobalObject* globalObject, Structure* arrayStructure, int32_t size, Butterfly* butterfly))
@@ -2097,7 +1957,7 @@ JSC_DEFINE_JIT_OPERATION(operationNewArrayWithSize, char*, (JSGlobalObject* glob
 
     if (UNLIKELY(size < 0)) {
         throwException(globalObject, scope, createRangeError(globalObject, ArrayInvalidLengthError));
-        OPERATION_RETURN(scope, nullptr);
+        return nullptr;
     }
 
     JSArray* result;
@@ -2107,10 +1967,10 @@ JSC_DEFINE_JIT_OPERATION(operationNewArrayWithSize, char*, (JSGlobalObject* glob
         result = JSArray::tryCreate(vm, arrayStructure, size);
         if (UNLIKELY(!result)) {
             throwOutOfMemoryError(globalObject, scope);
-            OPERATION_RETURN(scope, nullptr);
+            return nullptr;
         }
     }
-    OPERATION_RETURN(scope, bitwise_cast<char*>(result));
+    return bitwise_cast<char*>(result);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationNewArrayWithSizeAndHint, char*, (JSGlobalObject* globalObject, Structure* arrayStructure, int32_t size, int32_t vectorLengthHint, Butterfly* butterfly))
@@ -2122,7 +1982,7 @@ JSC_DEFINE_JIT_OPERATION(operationNewArrayWithSizeAndHint, char*, (JSGlobalObjec
 
     if (UNLIKELY(size < 0)) {
         throwException(globalObject, scope, createRangeError(globalObject, ArrayInvalidLengthError));
-        OPERATION_RETURN(scope, nullptr);
+        return nullptr;
     }
 
     JSArray* result;
@@ -2132,10 +1992,10 @@ JSC_DEFINE_JIT_OPERATION(operationNewArrayWithSizeAndHint, char*, (JSGlobalObjec
         result = JSArray::tryCreate(vm, arrayStructure, size, vectorLengthHint);
         if (UNLIKELY(!result)) {
             throwOutOfMemoryError(globalObject, scope);
-            OPERATION_RETURN(scope, nullptr);
+            return nullptr;
         }
     }
-    OPERATION_RETURN(scope, bitwise_cast<char*>(result));
+    return bitwise_cast<char*>(result);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationNewArrayBuffer, JSCell*, (VM* vmPointer, Structure* arrayStructure, JSCell* immutableButterflyCell))
@@ -2143,14 +2003,13 @@ JSC_DEFINE_JIT_OPERATION(operationNewArrayBuffer, JSCell*, (VM* vmPointer, Struc
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
     ASSERT(!arrayStructure->outOfLineCapacity());
     auto* immutableButterfly = jsCast<JSImmutableButterfly*>(immutableButterflyCell);
     ASSERT(arrayStructure->indexingMode() == immutableButterfly->indexingMode() || hasAnyArrayStorage(arrayStructure->indexingMode()));
     auto* result = CommonSlowPaths::allocateNewArrayBuffer(vm, arrayStructure, immutableButterfly);
     ASSERT(result->indexingMode() == result->structure()->indexingMode());
     ASSERT(result->structure() == arrayStructure);
-    OPERATION_RETURN(scope, result);
+    return result;
 }
 
 #define JSC_TYPED_ARRAY_OPERATIONS(type) \
@@ -2159,8 +2018,7 @@ JSC_DEFINE_JIT_OPERATION(operationNewArrayBuffer, JSCell*, (VM* vmPointer, Struc
         VM& vm = globalObject->vm(); \
         CallFrame* callFrame = DECLARE_CALL_FRAME(vm); \
         JITOperationPrologueCallFrameTracer tracer(vm, callFrame); \
-        auto scope = DECLARE_THROW_SCOPE(vm); \
-        OPERATION_RETURN(scope, newTypedArrayWithSize<JS##type##Array>(globalObject, vm, structure, length, vector)); \
+        return newTypedArrayWithSize<JS##type##Array>(globalObject, vm, structure, length, vector); \
     } \
     \
     JSC_DEFINE_JIT_OPERATION(operationNew##type##ArrayWithOneArgument, char*, (JSGlobalObject* globalObject, EncodedJSValue encodedValue)) \
@@ -2168,13 +2026,12 @@ JSC_DEFINE_JIT_OPERATION(operationNewArrayBuffer, JSCell*, (VM* vmPointer, Struc
         VM& vm = globalObject->vm(); \
         CallFrame* callFrame = DECLARE_CALL_FRAME(vm); \
         JITOperationPrologueCallFrameTracer tracer(vm, callFrame); \
-        auto scope = DECLARE_THROW_SCOPE(vm); \
         JSValue firstValue = JSValue::decode(encodedValue); \
         bool isResizableOrGrowableShared = false; \
         if (auto* arrayBuffer = jsDynamicCast<JSArrayBuffer*>(firstValue)) \
             isResizableOrGrowableShared = arrayBuffer->isResizableOrGrowableShared(); \
         Structure* structure = globalObject->typedArrayStructure(Type##type, isResizableOrGrowableShared); \
-        OPERATION_RETURN(scope, reinterpret_cast<char*>(constructGenericTypedArrayViewWithArguments<JS##type##Array>(globalObject, structure, firstValue, 0, std::nullopt))); \
+        return reinterpret_cast<char*>(constructGenericTypedArrayViewWithArguments<JS##type##Array>(globalObject, structure, firstValue, 0, std::nullopt)); \
     } \
 
     FOR_EACH_TYPED_ARRAY_TYPE_EXCLUDING_DATA_VIEW(JSC_TYPED_ARRAY_OPERATIONS)
@@ -2185,9 +2042,8 @@ JSC_DEFINE_JIT_OPERATION(operationNewArrayIterator, JSCell*, (VM* vmPointer, Str
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, JSArrayIterator::createWithInitialValues(vm, structure));
+    return JSArrayIterator::createWithInitialValues(vm, structure);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationNewMapIterator, JSCell*, (VM* vmPointer, Structure* structure))
@@ -2195,9 +2051,8 @@ JSC_DEFINE_JIT_OPERATION(operationNewMapIterator, JSCell*, (VM* vmPointer, Struc
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, JSMapIterator::createWithInitialValues(vm, structure));
+    return JSMapIterator::createWithInitialValues(vm, structure);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationNewSetIterator, JSCell*, (VM* vmPointer, Structure* structure))
@@ -2205,20 +2060,18 @@ JSC_DEFINE_JIT_OPERATION(operationNewSetIterator, JSCell*, (VM* vmPointer, Struc
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, JSSetIterator::createWithInitialValues(vm, structure));
+    return JSSetIterator::createWithInitialValues(vm, structure);
 }
 
-JSC_DEFINE_JIT_OPERATION(operationCreateActivationDirect, JSCell*, (VM* vmPointer, Structure* structure, JSScope* jsScope, SymbolTable* table, EncodedJSValue initialValueEncoded))
+JSC_DEFINE_JIT_OPERATION(operationCreateActivationDirect, JSCell*, (VM* vmPointer, Structure* structure, JSScope* scope, SymbolTable* table, EncodedJSValue initialValueEncoded))
 {
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue initialValue = JSValue::decode(initialValueEncoded);
     ASSERT(initialValue == jsUndefined() || initialValue == jsTDZValue());
-    OPERATION_RETURN(scope, JSLexicalEnvironment::create(vm, structure, jsScope, table, initialValue));
+    return JSLexicalEnvironment::create(vm, structure, scope, table, initialValue);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationCreateDirectArguments, JSCell*, (VM* vmPointer, Structure* structure, uint32_t length, uint32_t minCapacity))
@@ -2226,28 +2079,26 @@ JSC_DEFINE_JIT_OPERATION(operationCreateDirectArguments, JSCell*, (VM* vmPointer
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
     DirectArguments* result = DirectArguments::create(
         vm, structure, length, std::max(length, minCapacity));
     // The caller will store to this object without barriers. Most likely, at this point, this is
     // still a young object and so no barriers are needed. But it's good to be careful anyway,
     // since the GC should be allowed to do crazy (like pretenuring, for example).
     vm.writeBarrier(result);
-    OPERATION_RETURN(scope, result);
+    return result;
 }
 
-JSC_DEFINE_JIT_OPERATION(operationCreateScopedArguments, JSCell*, (JSGlobalObject* globalObject, Structure* structure, Register* argumentStart, uint32_t length, JSFunction* callee, JSLexicalEnvironment* environment))
+JSC_DEFINE_JIT_OPERATION(operationCreateScopedArguments, JSCell*, (JSGlobalObject* globalObject, Structure* structure, Register* argumentStart, uint32_t length, JSFunction* callee, JSLexicalEnvironment* scope))
 {
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     // We could pass the ScopedArgumentsTable* as an argument. We currently don't because I
     // didn't feel like changing the max number of arguments for a slow path call from 6 to 7.
-    ScopedArgumentsTable* table = environment->symbolTable()->arguments();
+    ScopedArgumentsTable* table = scope->symbolTable()->arguments();
 
-    OPERATION_RETURN(scope, ScopedArguments::createByCopyingFrom(vm, structure, argumentStart, length, callee, table, environment));
+    return ScopedArguments::createByCopyingFrom(vm, structure, argumentStart, length, callee, table, scope);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationCreateClonedArguments, JSCell*, (JSGlobalObject* globalObject, Structure* structure, Register* argumentStart, uint32_t length, JSFunction* callee, Butterfly* butterfly))
@@ -2259,7 +2110,7 @@ JSC_DEFINE_JIT_OPERATION(operationCreateClonedArguments, JSCell*, (JSGlobalObjec
 
     JSCell* result = ClonedArguments::createByCopyingFrom(globalObject, structure, argumentStart, length, callee, butterfly);
     EXCEPTION_ASSERT_UNUSED(scope, scope.exception() || result);
-    OPERATION_RETURN(scope, result);
+    return result;
 }
 
 JSC_DEFINE_JIT_OPERATION(operationCreateDirectArgumentsDuringExit, JSCell*, (VM* vmPointer, InlineCallFrame* inlineCallFrame, JSFunction* callee, uint32_t argumentCount))
@@ -2267,7 +2118,6 @@ JSC_DEFINE_JIT_OPERATION(operationCreateDirectArgumentsDuringExit, JSCell*, (VM*
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     DeferGCForAWhile deferGC(vm);
 
@@ -2290,7 +2140,7 @@ JSC_DEFINE_JIT_OPERATION(operationCreateDirectArgumentsDuringExit, JSCell*, (VM*
     for (unsigned i = length; i--;)
         result->setIndexQuickly(vm, i, arguments[i].jsValue());
 
-    OPERATION_RETURN(scope, result);
+    return result;
 }
 
 JSC_DEFINE_JIT_OPERATION(operationCreateClonedArgumentsDuringExit, JSCell*, (VM* vmPointer, InlineCallFrame* inlineCallFrame, JSFunction* callee, uint32_t argumentCount))
@@ -2298,7 +2148,6 @@ JSC_DEFINE_JIT_OPERATION(operationCreateClonedArgumentsDuringExit, JSCell*, (VM*
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     DeferGCForAWhile deferGC(vm);
 
@@ -2310,8 +2159,7 @@ JSC_DEFINE_JIT_OPERATION(operationCreateClonedArgumentsDuringExit, JSCell*, (VM*
 
     unsigned length = argumentCount - 1;
     JSGlobalObject* globalObject = codeBlock->globalObject();
-    ClonedArguments* result = ClonedArguments::createEmpty(vm, nullptr, globalObject->clonedArgumentsStructure(), callee, length, nullptr);
-    RELEASE_ASSERT_RESOURCE_AVAILABLE(result, MemoryExhaustion, "Crash intentionally because memory is exhausted.");
+    ClonedArguments* result = ClonedArguments::createEmpty(vm, globalObject->clonedArgumentsStructure(), callee, length, nullptr);
 
     Register* arguments =
         callFrame->registers() + (inlineCallFrame ? inlineCallFrame->stackOffset : 0) +
@@ -2320,7 +2168,7 @@ JSC_DEFINE_JIT_OPERATION(operationCreateClonedArgumentsDuringExit, JSCell*, (VM*
         result->putDirectIndex(globalObject, i, arguments[i].jsValue());
 
 
-    OPERATION_RETURN(scope, result);
+    return result;
 }
 
 JSC_DEFINE_JIT_OPERATION(operationCreateRest, JSCell*, (JSGlobalObject* globalObject, Register* argumentStart, unsigned numberOfParamsToSkip, unsigned arraySize))
@@ -2328,12 +2176,11 @@ JSC_DEFINE_JIT_OPERATION(operationCreateRest, JSCell*, (JSGlobalObject* globalOb
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     Structure* structure = globalObject->restParameterStructure();
     static_assert(sizeof(Register) == sizeof(JSValue), "This is a strong assumption here.");
     JSValue* argumentsToCopyRegion = bitwise_cast<JSValue*>(argumentStart) + numberOfParamsToSkip;
-    OPERATION_RETURN(scope, constructArray(globalObject, structure, argumentsToCopyRegion, arraySize));
+    return constructArray(globalObject, structure, argumentsToCopyRegion, arraySize);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationTypeOfIsObject, size_t, (JSGlobalObject* globalObject, JSCell* object))
@@ -2341,11 +2188,10 @@ JSC_DEFINE_JIT_OPERATION(operationTypeOfIsObject, size_t, (JSGlobalObject* globa
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     ASSERT(jsDynamicCast<JSObject*>(object));
 
-    OPERATION_RETURN(scope, jsTypeofIsObject(globalObject, object));
+    return jsTypeofIsObject(globalObject, object);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationTypeOfIsFunction, size_t, (JSGlobalObject* globalObject, JSCell* object))
@@ -2353,11 +2199,10 @@ JSC_DEFINE_JIT_OPERATION(operationTypeOfIsFunction, size_t, (JSGlobalObject* glo
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     ASSERT(jsDynamicCast<JSObject*>(object));
 
-    OPERATION_RETURN(scope, jsTypeofIsFunction(globalObject, object));
+    return jsTypeofIsFunction(globalObject, object);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationObjectIsCallable, size_t, (JSGlobalObject* globalObject, JSCell* object))
@@ -2365,21 +2210,19 @@ JSC_DEFINE_JIT_OPERATION(operationObjectIsCallable, size_t, (JSGlobalObject* glo
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     ASSERT(jsDynamicCast<JSObject*>(object));
 
-    OPERATION_RETURN(scope, object->isCallable());
+    return object->isCallable();
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationIsConstructor, size_t, (JSGlobalObject* globalObject, EncodedJSValue value))
+JSC_DEFINE_JIT_OPERATION(operationIsConstructor, size_t, (JSGlobalObject* globalObject, EncodedJSValue value))
 {
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, JSValue::decode(value).isConstructor());
+    return JSValue::decode(value).isConstructor();
 }
 
 JSC_DEFINE_JIT_OPERATION(operationTypeOfObject, JSCell*, (JSGlobalObject* globalObject, JSCell* object))
@@ -2387,117 +2230,112 @@ JSC_DEFINE_JIT_OPERATION(operationTypeOfObject, JSCell*, (JSGlobalObject* global
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     ASSERT(jsDynamicCast<JSObject*>(object));
 
     if (object->structure()->masqueradesAsUndefined(globalObject))
-        OPERATION_RETURN(scope, vm.smallStrings.undefinedString());
+        return vm.smallStrings.undefinedString();
     if (object->isCallable())
-        OPERATION_RETURN(scope, vm.smallStrings.functionString());
-    OPERATION_RETURN(scope, vm.smallStrings.objectString());
+        return vm.smallStrings.functionString();
+    return vm.smallStrings.objectString();
 }
 
-JSC_DEFINE_JIT_OPERATION(operationAllocateSimplePropertyStorageWithInitialCapacity, Butterfly*, (VM* vmPointer))
+JSC_DEFINE_JIT_OPERATION(operationAllocateSimplePropertyStorageWithInitialCapacity, char*, (VM* vmPointer))
 {
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, Butterfly::createUninitialized(vm, nullptr, 0, initialOutOfLineCapacity, false, 0));
+    return reinterpret_cast<char*>(
+        Butterfly::createUninitialized(vm, nullptr, 0, initialOutOfLineCapacity, false, 0));
 }
 
-JSC_DEFINE_JIT_OPERATION(operationAllocateSimplePropertyStorage, Butterfly*, (VM* vmPointer, size_t newSize))
+JSC_DEFINE_JIT_OPERATION(operationAllocateSimplePropertyStorage, char*, (VM* vmPointer, size_t newSize))
 {
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, Butterfly::createUninitialized(vm, nullptr, 0, newSize, false, 0));
+    return reinterpret_cast<char*>(
+        Butterfly::createUninitialized(vm, nullptr, 0, newSize, false, 0));
 }
 
-JSC_DEFINE_JIT_OPERATION(operationAllocateComplexPropertyStorageWithInitialCapacity, Butterfly*, (VM* vmPointer, JSObject* object))
+JSC_DEFINE_JIT_OPERATION(operationAllocateComplexPropertyStorageWithInitialCapacity, char*, (VM* vmPointer, JSObject* object))
 {
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     ASSERT(!object->structure()->outOfLineCapacity());
-    OPERATION_RETURN(scope, object->allocateMoreOutOfLineStorage(vm, 0, initialOutOfLineCapacity));
+    return reinterpret_cast<char*>(
+        object->allocateMoreOutOfLineStorage(vm, 0, initialOutOfLineCapacity));
 }
 
-JSC_DEFINE_JIT_OPERATION(operationAllocateComplexPropertyStorage, Butterfly*, (VM* vmPointer, JSObject* object, size_t newSize))
+JSC_DEFINE_JIT_OPERATION(operationAllocateComplexPropertyStorage, char*, (VM* vmPointer, JSObject* object, size_t newSize))
 {
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, object->allocateMoreOutOfLineStorage(vm, object->structure()->outOfLineCapacity(), newSize));
+    return reinterpret_cast<char*>(
+        object->allocateMoreOutOfLineStorage(vm, object->structure()->outOfLineCapacity(), newSize));
 }
 
-JSC_DEFINE_JIT_OPERATION(operationEnsureInt32, Butterfly*, (VM* vmPointer, JSCell* cell))
+JSC_DEFINE_JIT_OPERATION(operationEnsureInt32, char*, (VM* vmPointer, JSCell* cell))
 {
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (!cell->isObject())
-        OPERATION_RETURN(scope, nullptr);
+        return nullptr;
 
-    auto* result = reinterpret_cast<Butterfly*>(asObject(cell)->tryMakeWritableInt32(vm).data());
+    auto* result = reinterpret_cast<char*>(asObject(cell)->tryMakeWritableInt32(vm).data());
     ASSERT((!isCopyOnWrite(asObject(cell)->indexingMode()) && hasInt32(cell->indexingMode())) || !result);
-    OPERATION_RETURN(scope, result);
+    return result;
 }
 
-JSC_DEFINE_JIT_OPERATION(operationEnsureDouble, Butterfly*, (VM* vmPointer, JSCell* cell))
+JSC_DEFINE_JIT_OPERATION(operationEnsureDouble, char*, (VM* vmPointer, JSCell* cell))
 {
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (!cell->isObject())
-        OPERATION_RETURN(scope, nullptr);
+        return nullptr;
 
     ASSERT(Options::allowDoubleShape());
-    auto* result = reinterpret_cast<Butterfly*>(asObject(cell)->tryMakeWritableDouble(vm).data());
+    auto* result = reinterpret_cast<char*>(asObject(cell)->tryMakeWritableDouble(vm).data());
     ASSERT((!isCopyOnWrite(asObject(cell)->indexingMode()) && hasDouble(cell->indexingMode())) || !result);
-    OPERATION_RETURN(scope, result);
+    return result;
 }
 
-JSC_DEFINE_JIT_OPERATION(operationEnsureContiguous, Butterfly*, (VM* vmPointer, JSCell* cell))
+JSC_DEFINE_JIT_OPERATION(operationEnsureContiguous, char*, (VM* vmPointer, JSCell* cell))
 {
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (!cell->isObject())
-        OPERATION_RETURN(scope, nullptr);
+        return nullptr;
 
-    auto* result = reinterpret_cast<Butterfly*>(asObject(cell)->tryMakeWritableContiguous(vm).data());
+    auto* result = reinterpret_cast<char*>(asObject(cell)->tryMakeWritableContiguous(vm).data());
     ASSERT((!isCopyOnWrite(asObject(cell)->indexingMode()) && hasContiguous(cell->indexingMode())) || !result);
-    OPERATION_RETURN(scope, result);
+    return result;
 }
 
-JSC_DEFINE_JIT_OPERATION(operationEnsureArrayStorage, Butterfly*, (VM* vmPointer, JSCell* cell))
+JSC_DEFINE_JIT_OPERATION(operationEnsureArrayStorage, char*, (VM* vmPointer, JSCell* cell))
 {
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (!cell->isObject())
-        OPERATION_RETURN(scope, nullptr);
+        return nullptr;
 
-    auto* result = reinterpret_cast<Butterfly*>(asObject(cell)->ensureArrayStorage(vm));
+    auto* result = reinterpret_cast<char*>(asObject(cell)->ensureArrayStorage(vm));
     ASSERT((!isCopyOnWrite(asObject(cell)->indexingMode()) && hasAnyArrayStorage(cell->indexingMode())) || !result);
-    OPERATION_RETURN(scope, result);
+    return result;
 }
 
 JSC_DEFINE_JIT_OPERATION(operationHasIndexedProperty, size_t, (JSGlobalObject* globalObject, JSCell* baseCell, int32_t subscript))
@@ -2505,21 +2343,12 @@ JSC_DEFINE_JIT_OPERATION(operationHasIndexedProperty, size_t, (JSGlobalObject* g
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
     JSObject* object = baseCell->toObject(globalObject);
     if (UNLIKELY(subscript < 0)) {
-        // When subscript is negative, -1 is the most common case. Let's handle it separately.
-        if (LIKELY(subscript == -1)) {
-            // what?
-            if (auto* array = jsDynamicCast<JSArray*>(object); LIKELY(array && array->definitelyNegativeOneMiss()))
-                OPERATION_RETURN(scope, false);
-            OPERATION_RETURN(scope, object->hasProperty(globalObject, vm.propertyNames->negativeOneIdentifier));
-        }
-
         // Go the slowest way possible because negative indices don't use indexed storage.
-        OPERATION_RETURN(scope, object->hasProperty(globalObject, Identifier::from(vm, subscript)));
+        return object->hasProperty(globalObject, Identifier::from(vm, subscript));
     }
-    OPERATION_RETURN(scope, object->hasProperty(globalObject, static_cast<unsigned>(subscript)));
+    return object->hasProperty(globalObject, static_cast<unsigned>(subscript));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationHasEnumerableIndexedProperty, size_t, (JSGlobalObject* globalObject, JSCell* baseCell, int32_t subscript))
@@ -2527,20 +2356,12 @@ JSC_DEFINE_JIT_OPERATION(operationHasEnumerableIndexedProperty, size_t, (JSGloba
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
     JSObject* object = baseCell->toObject(globalObject);
     if (UNLIKELY(subscript < 0)) {
-        // When subscript is negative, -1 is the most common case. Let's handle it separately.
-        if (LIKELY(subscript == -1)) {
-            if (auto* array = jsDynamicCast<JSArray*>(baseCell); LIKELY(array && array->definitelyNegativeOneMiss()))
-                OPERATION_RETURN(scope, false);
-            OPERATION_RETURN(scope, object->hasProperty(globalObject, vm.propertyNames->negativeOneIdentifier));
-        }
-
         // Go the slowest way possible because negative indices don't use indexed storage.
-        OPERATION_RETURN(scope, object->hasEnumerableProperty(globalObject, Identifier::from(vm, subscript)));
+        return object->hasEnumerableProperty(globalObject, Identifier::from(vm, subscript));
     }
-    OPERATION_RETURN(scope, object->hasEnumerableProperty(globalObject, subscript));
+    return object->hasEnumerableProperty(globalObject, subscript);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationGetPropertyEnumerator, JSCell*, (JSGlobalObject* globalObject, EncodedJSValue encodedBase))
@@ -2552,12 +2373,12 @@ JSC_DEFINE_JIT_OPERATION(operationGetPropertyEnumerator, JSCell*, (JSGlobalObjec
 
     JSValue base = JSValue::decode(encodedBase);
     if (base.isUndefinedOrNull())
-        OPERATION_RETURN(scope, vm.emptyPropertyNameEnumerator());
+        return vm.emptyPropertyNameEnumerator();
 
     JSObject* baseObject = base.toObject(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+    RETURN_IF_EXCEPTION(scope, { });
 
-    OPERATION_RETURN(scope, propertyNameEnumerator(globalObject, baseObject));
+    RELEASE_AND_RETURN(scope, propertyNameEnumerator(globalObject, baseObject));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationGetPropertyEnumeratorCell, JSCell*, (JSGlobalObject* globalObject, JSCell* cell))
@@ -2568,9 +2389,9 @@ JSC_DEFINE_JIT_OPERATION(operationGetPropertyEnumeratorCell, JSCell*, (JSGlobalO
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSObject* base = cell->toObject(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+    RETURN_IF_EXCEPTION(scope, { });
 
-    OPERATION_RETURN(scope, propertyNameEnumerator(globalObject, base));
+    RELEASE_AND_RETURN(scope, propertyNameEnumerator(globalObject, base));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationEnumeratorNextUpdateIndexAndMode, UGPRPair, (JSGlobalObject* globalObject, EncodedJSValue baseValue, uint32_t index, int32_t modeNumber, JSPropertyNameEnumerator* enumerator))
@@ -2588,14 +2409,14 @@ JSC_DEFINE_JIT_OPERATION(operationEnumeratorNextUpdateIndexAndMode, UGPRPair, (J
         mode = JSPropertyNameEnumerator::GenericMode;
     } else {
         JSObject* base = JSValue::decode(baseValue).toObject(globalObject);
-        OPERATION_RETURN_IF_EXCEPTION(scope, UGPRPair { });
+        RETURN_IF_EXCEPTION(scope, { });
 
         constexpr bool shouldAllocateIndexedNameString = false;
         enumerator->computeNext(globalObject, base, index, mode, shouldAllocateIndexedNameString);
-        OPERATION_RETURN_IF_EXCEPTION(scope, UGPRPair { });
+        RETURN_IF_EXCEPTION(scope, { });
     }
 
-    OPERATION_RETURN(scope, makeUGPRPair(index, static_cast<uint32_t>(mode)));
+    return makeUGPRPair(index, static_cast<uint32_t>(mode));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationEnumeratorNextUpdatePropertyName, JSString*, (JSGlobalObject* globalObject, uint32_t index, int32_t modeNumber, JSPropertyNameEnumerator* enumerator))
@@ -2603,19 +2424,18 @@ JSC_DEFINE_JIT_OPERATION(operationEnumeratorNextUpdatePropertyName, JSString*, (
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (modeNumber == JSPropertyNameEnumerator::IndexedMode) {
         if (index < enumerator->indexedLength())
-            OPERATION_RETURN(scope, jsString(vm, Identifier::from(vm, index).string()));
-        OPERATION_RETURN(scope, vm.smallStrings.sentinelString());
+            return jsString(vm, Identifier::from(vm, index).string());
+        return vm.smallStrings.sentinelString();
     }
 
     JSString* result = enumerator->propertyNameAtIndex(index);
     if (!result)
-        OPERATION_RETURN(scope, vm.smallStrings.sentinelString());
+        return vm.smallStrings.sentinelString();
 
-    OPERATION_RETURN(scope, result);
+    return result;
 }
 
 JSC_DEFINE_JIT_OPERATION(operationEnumeratorRecoverNameAndGetByVal, EncodedJSValue, (JSGlobalObject* globalObject, EncodedJSValue baseValue, uint32_t index, JSPropertyNameEnumerator* enumerator))
@@ -2628,12 +2448,12 @@ JSC_DEFINE_JIT_OPERATION(operationEnumeratorRecoverNameAndGetByVal, EncodedJSVal
     JSString* string = enumerator->propertyNameAtIndex(index);
     PropertyName propertyName = string->toIdentifier(globalObject);
     // This should only really return for TerminationException since we know string is backed by a UUID.
-    OPERATION_RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    RETURN_IF_EXCEPTION(scope, { });
     JSValue base = JSValue::decode(baseValue);
     JSObject* object = base.toObject(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    RETURN_IF_EXCEPTION(scope, { });
 
-    OPERATION_RETURN(scope, JSValue::encode(object->get(globalObject, propertyName)));
+    RELEASE_AND_RETURN(scope, JSValue::encode(object->get(globalObject, propertyName)));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationEnumeratorInByVal, EncodedJSValue, (JSGlobalObject* globalObject, EncodedJSValue baseValue, EncodedJSValue propertyNameValue, uint32_t index, int32_t modeNumber))
@@ -2645,10 +2465,10 @@ JSC_DEFINE_JIT_OPERATION(operationEnumeratorInByVal, EncodedJSValue, (JSGlobalOb
 
     JSValue base = JSValue::decode(baseValue);
     if (modeNumber == JSPropertyNameEnumerator::IndexedMode && base.isObject())
-        OPERATION_RETURN(scope, JSValue::encode(jsBoolean(jsCast<JSObject*>(base)->hasProperty(globalObject, index))));
+        RELEASE_AND_RETURN(scope, JSValue::encode(jsBoolean(jsCast<JSObject*>(base)->hasProperty(globalObject, index))));
 
     JSString* propertyName = jsSecureCast<JSString*>(JSValue::decode(propertyNameValue));
-    OPERATION_RETURN(scope, JSValue::encode(jsBoolean(CommonSlowPaths::opInByVal(globalObject, base, propertyName))));
+    RELEASE_AND_RETURN(scope, JSValue::encode(jsBoolean(CommonSlowPaths::opInByVal(globalObject, base, propertyName))));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationEnumeratorHasOwnProperty, EncodedJSValue, (JSGlobalObject* globalObject, EncodedJSValue baseValue, EncodedJSValue propertyNameValue, uint32_t index, int32_t modeNumber))
@@ -2660,14 +2480,14 @@ JSC_DEFINE_JIT_OPERATION(operationEnumeratorHasOwnProperty, EncodedJSValue, (JSG
 
     JSValue base = JSValue::decode(baseValue);
     if (modeNumber == JSPropertyNameEnumerator::IndexedMode && base.isObject())
-        OPERATION_RETURN(scope, JSValue::encode(jsBoolean(jsCast<JSObject*>(base)->hasOwnProperty(globalObject, index))));
+        RELEASE_AND_RETURN(scope, JSValue::encode(jsBoolean(jsCast<JSObject*>(base)->hasOwnProperty(globalObject, index))));
 
     JSString* propertyName = jsSecureCast<JSString*>(JSValue::decode(propertyNameValue));
     auto identifier = propertyName->toIdentifier(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    RETURN_IF_EXCEPTION(scope, { });
     JSObject* baseObject = base.toObject(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    OPERATION_RETURN(scope, JSValue::encode(jsBoolean(objectPrototypeHasOwnProperty(globalObject, baseObject, identifier))));
+    RETURN_IF_EXCEPTION(scope, { });
+    RELEASE_AND_RETURN(scope, JSValue::encode(jsBoolean(objectPrototypeHasOwnProperty(globalObject, baseObject, identifier))));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationEnumeratorRecoverNameAndPutByVal, void, (JSGlobalObject* globalObject, EncodedJSValue baseValue, EncodedJSValue valueValue, bool isStrict, uint32_t index, JSPropertyNameEnumerator* enumerator))
@@ -2680,14 +2500,13 @@ JSC_DEFINE_JIT_OPERATION(operationEnumeratorRecoverNameAndPutByVal, void, (JSGlo
     JSString* string = enumerator->propertyNameAtIndex(index);
     PropertyName propertyName = string->toIdentifier(globalObject);
     // This should only really return for TerminationException since we know string is backed by a UUID.
-    OPERATION_RETURN_IF_EXCEPTION(scope);
+    RETURN_IF_EXCEPTION(scope, void());
     JSValue base = JSValue::decode(baseValue);
     JSValue value = JSValue::decode(valueValue);
 
     scope.release();
     PutPropertySlot slot(base, isStrict);
     base.put(globalObject, propertyName, value, slot);
-    OPERATION_RETURN(scope);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationNewRegexpWithLastIndex, JSCell*, (JSGlobalObject* globalObject, JSCell* regexpPtr, EncodedJSValue encodedLastIndex))
@@ -2695,10 +2514,9 @@ JSC_DEFINE_JIT_OPERATION(operationNewRegexpWithLastIndex, JSCell*, (JSGlobalObje
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     RegExp* regexp = static_cast<RegExp*>(regexpPtr);
-    OPERATION_RETURN(scope, RegExpObject::create(vm, globalObject->regExpStructure(), regexp, JSValue::decode(encodedLastIndex)));
+    return RegExpObject::create(vm, globalObject->regExpStructure(), regexp, JSValue::decode(encodedLastIndex));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationResolveRope, StringImpl*, (JSGlobalObject* globalObject, JSString* string))
@@ -2706,9 +2524,8 @@ JSC_DEFINE_JIT_OPERATION(operationResolveRope, StringImpl*, (JSGlobalObject* glo
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, string->value(globalObject)->impl());
+    return string->value(globalObject).impl();
 }
 
 JSC_DEFINE_JIT_OPERATION(operationResolveRopeString, JSString*, (JSGlobalObject* globalObject, JSRopeString* string))
@@ -2716,10 +2533,9 @@ JSC_DEFINE_JIT_OPERATION(operationResolveRopeString, JSString*, (JSGlobalObject*
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     string->resolveRope(globalObject);
-    OPERATION_RETURN(scope, string);
+    return string;
 }
 
 JSC_DEFINE_JIT_OPERATION(operationStringValueOf, JSString*, (JSGlobalObject* globalObject, EncodedJSValue encodedArgument))
@@ -2732,13 +2548,13 @@ JSC_DEFINE_JIT_OPERATION(operationStringValueOf, JSString*, (JSGlobalObject* glo
     JSValue argument = JSValue::decode(encodedArgument);
 
     if (argument.isString())
-        OPERATION_RETURN(scope,  asString(argument));
+        return asString(argument);
 
     if (auto* stringObject = jsDynamicCast<StringObject*>(argument))
-        OPERATION_RETURN(scope,  stringObject->internalValue());
+        return stringObject->internalValue();
 
     throwVMTypeError(globalObject, scope);
-    OPERATION_RETURN(scope, nullptr);
+    return nullptr;
 }
 
 JSC_DEFINE_JIT_OPERATION(operationStringReplaceStringString, JSString*, (JSGlobalObject* globalObject, JSString* stringCell, JSString* searchCell, JSString* replacementCell))
@@ -2748,16 +2564,16 @@ JSC_DEFINE_JIT_OPERATION(operationStringReplaceStringString, JSString*, (JSGloba
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto string = stringCell->value(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+    String string = stringCell->value(globalObject);
+    RETURN_IF_EXCEPTION(scope, nullptr);
 
-    auto search = searchCell->value(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+    String search = searchCell->value(globalObject);
+    RETURN_IF_EXCEPTION(scope, nullptr);
 
-    auto replacement = replacementCell->value(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+    String replacement = replacementCell->value(globalObject);
+    RETURN_IF_EXCEPTION(scope, nullptr);
 
-    OPERATION_RETURN(scope, (stringReplaceStringString<StringReplaceSubstitutions::Yes, StringReplaceUseTable::No, BoyerMooreHorspoolTable<uint8_t>>(globalObject, stringCell, string, search, replacement, nullptr)));
+    RELEASE_AND_RETURN(scope, (stringReplaceStringString<StringReplaceSubstitutions::Yes, StringReplaceUseTable::No, BoyerMooreHorspoolTable<uint8_t>>(globalObject, stringCell, WTFMove(string), WTFMove(search), WTFMove(replacement), nullptr)));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationStringReplaceStringStringWithoutSubstitution, JSString*, (JSGlobalObject* globalObject, JSString* stringCell, JSString* searchCell, JSString* replacementCell))
@@ -2767,16 +2583,16 @@ JSC_DEFINE_JIT_OPERATION(operationStringReplaceStringStringWithoutSubstitution, 
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto string = stringCell->value(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+    String string = stringCell->value(globalObject);
+    RETURN_IF_EXCEPTION(scope, nullptr);
 
-    auto search = searchCell->value(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+    String search = searchCell->value(globalObject);
+    RETURN_IF_EXCEPTION(scope, nullptr);
 
-    auto replacement = replacementCell->value(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+    String replacement = replacementCell->value(globalObject);
+    RETURN_IF_EXCEPTION(scope, nullptr);
 
-    OPERATION_RETURN(scope, (stringReplaceStringString<StringReplaceSubstitutions::No, StringReplaceUseTable::No, BoyerMooreHorspoolTable<uint8_t>>(globalObject, stringCell, string, search, replacement, nullptr)));
+    RELEASE_AND_RETURN(scope, (stringReplaceStringString<StringReplaceSubstitutions::No, StringReplaceUseTable::No, BoyerMooreHorspoolTable<uint8_t>>(globalObject, stringCell, WTFMove(string), WTFMove(search), WTFMove(replacement), nullptr)));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationStringReplaceStringEmptyString, JSString*, (JSGlobalObject* globalObject, JSString* stringCell, JSString* searchCell))
@@ -2786,26 +2602,26 @@ JSC_DEFINE_JIT_OPERATION(operationStringReplaceStringEmptyString, JSString*, (JS
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto string = stringCell->value(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+    String string = stringCell->value(globalObject);
+    RETURN_IF_EXCEPTION(scope, nullptr);
 
-    auto search = searchCell->value(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+    String search = searchCell->value(globalObject);
+    RETURN_IF_EXCEPTION(scope, nullptr);
 
     size_t matchStart = StringView(string).find(vm.adaptiveStringSearcherTables(), StringView(search));
     if (matchStart == notFound)
-        OPERATION_RETURN(scope,  stringCell);
+        return stringCell;
 
     // Because replacement string is empty, it cannot include backreferences.
-    size_t searchLength = search->length();
+    size_t searchLength = search.length();
     size_t matchEnd = matchStart + searchLength;
-    auto result = tryMakeString(StringView(string).substring(0, matchStart), StringView(string).substring(matchEnd, string->length() - matchEnd));
+    auto result = tryMakeString(StringView(string).substring(0, matchStart), StringView(string).substring(matchEnd, string.length() - matchEnd));
     if (UNLIKELY(!result)) {
         throwOutOfMemoryError(globalObject, scope);
-        OPERATION_RETURN(scope,  nullptr);
+        return nullptr;
     }
 
-    OPERATION_RETURN(scope,  jsString(vm, WTFMove(result)));
+    return jsString(vm, WTFMove(result));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationStringReplaceStringStringWithTable8, JSString*, (JSGlobalObject* globalObject, JSString* stringCell, JSString* searchCell, JSString* replacementCell, const BoyerMooreHorspoolTable<uint8_t>* table))
@@ -2815,16 +2631,16 @@ JSC_DEFINE_JIT_OPERATION(operationStringReplaceStringStringWithTable8, JSString*
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto string = stringCell->value(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+    String string = stringCell->value(globalObject);
+    RETURN_IF_EXCEPTION(scope, nullptr);
 
-    auto search = searchCell->value(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+    String search = searchCell->value(globalObject);
+    RETURN_IF_EXCEPTION(scope, nullptr);
 
-    auto replacement = replacementCell->value(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+    String replacement = replacementCell->value(globalObject);
+    RETURN_IF_EXCEPTION(scope, nullptr);
 
-    OPERATION_RETURN(scope, (stringReplaceStringString<StringReplaceSubstitutions::Yes, StringReplaceUseTable::Yes>(globalObject, stringCell, string, search, replacement, table)));
+    RELEASE_AND_RETURN(scope, (stringReplaceStringString<StringReplaceSubstitutions::Yes, StringReplaceUseTable::Yes>(globalObject, stringCell, WTFMove(string), WTFMove(search), WTFMove(replacement), table)));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationStringReplaceStringStringWithoutSubstitutionWithTable8, JSString*, (JSGlobalObject* globalObject, JSString* stringCell, JSString* searchCell, JSString* replacementCell, const BoyerMooreHorspoolTable<uint8_t>* table))
@@ -2834,16 +2650,16 @@ JSC_DEFINE_JIT_OPERATION(operationStringReplaceStringStringWithoutSubstitutionWi
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto string = stringCell->value(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+    String string = stringCell->value(globalObject);
+    RETURN_IF_EXCEPTION(scope, nullptr);
 
-    auto search = searchCell->value(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+    String search = searchCell->value(globalObject);
+    RETURN_IF_EXCEPTION(scope, nullptr);
 
-    auto replacement = replacementCell->value(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+    String replacement = replacementCell->value(globalObject);
+    RETURN_IF_EXCEPTION(scope, nullptr);
 
-    OPERATION_RETURN(scope, (stringReplaceStringString<StringReplaceSubstitutions::No, StringReplaceUseTable::Yes>(globalObject, stringCell, string, search, replacement, table)));
+    RELEASE_AND_RETURN(scope, (stringReplaceStringString<StringReplaceSubstitutions::No, StringReplaceUseTable::Yes>(globalObject, stringCell, WTFMove(string), WTFMove(search), WTFMove(replacement), table)));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationStringReplaceStringEmptyStringWithTable8, JSString*, (JSGlobalObject* globalObject, JSString* stringCell, JSString* searchCell, const BoyerMooreHorspoolTable<uint8_t>* table))
@@ -2853,26 +2669,26 @@ JSC_DEFINE_JIT_OPERATION(operationStringReplaceStringEmptyStringWithTable8, JSSt
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto string = stringCell->value(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+    String string = stringCell->value(globalObject);
+    RETURN_IF_EXCEPTION(scope, nullptr);
 
-    auto search = searchCell->value(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+    String search = searchCell->value(globalObject);
+    RETURN_IF_EXCEPTION(scope, nullptr);
 
     size_t matchStart = table->find(string, search);
     if (matchStart == notFound)
-        OPERATION_RETURN(scope, stringCell);
+        return stringCell;
 
     // Because replacement string is empty, it cannot include backreferences.
-    size_t searchLength = search->length();
+    size_t searchLength = search.length();
     size_t matchEnd = matchStart + searchLength;
-    auto result = tryMakeString(StringView(string).substring(0, matchStart), StringView(string).substring(matchEnd, string->length() - matchEnd));
+    auto result = tryMakeString(StringView(string).substring(0, matchStart), StringView(string).substring(matchEnd, string.length() - matchEnd));
     if (UNLIKELY(!result)) {
         throwOutOfMemoryError(globalObject, scope);
-        OPERATION_RETURN(scope, nullptr);
+        return nullptr;
     }
 
-    OPERATION_RETURN(scope, jsString(vm, WTFMove(result)));
+    return jsString(vm, WTFMove(result));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationStringReplaceStringGeneric, JSString*, (JSGlobalObject* globalObject, JSString* stringCell, JSString* searchCell, EncodedJSValue encodedReplaceValue))
@@ -2882,15 +2698,15 @@ JSC_DEFINE_JIT_OPERATION(operationStringReplaceStringGeneric, JSString*, (JSGlob
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto string = stringCell->value(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+    String string = stringCell->value(globalObject);
+    RETURN_IF_EXCEPTION(scope, nullptr);
 
-    auto search = searchCell->value(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+    String search = searchCell->value(globalObject);
+    RETURN_IF_EXCEPTION(scope, nullptr);
 
     JSValue replaceValue = JSValue::decode(encodedReplaceValue);
 
-    OPERATION_RETURN(scope, replaceUsingStringSearch(vm, globalObject, stringCell, string, search, replaceValue, StringReplaceMode::Single));
+    RELEASE_AND_RETURN(scope, replaceUsingStringSearch(vm, globalObject, stringCell, WTFMove(string), WTFMove(search), replaceValue, StringReplaceMode::Single));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationStringSubstr, JSCell*, (JSGlobalObject* globalObject, JSCell* cell, int32_t from, int32_t span))
@@ -2898,9 +2714,8 @@ JSC_DEFINE_JIT_OPERATION(operationStringSubstr, JSCell*, (JSGlobalObject* global
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, jsSubstring(vm, globalObject, jsCast<JSString*>(cell), from, span));
+    return jsSubstring(vm, globalObject, jsCast<JSString*>(cell), from, span);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationStringSlice, JSString*, (JSGlobalObject* globalObject, JSString* string, int32_t start))
@@ -2908,10 +2723,9 @@ JSC_DEFINE_JIT_OPERATION(operationStringSlice, JSString*, (JSGlobalObject* globa
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     static_assert(static_cast<uint64_t>(JSString::MaxLength) <= static_cast<uint64_t>(std::numeric_limits<int32_t>::max()));
-    OPERATION_RETURN(scope, stringSlice<int32_t>(globalObject, vm, string, string->length(), start, std::nullopt));
+    return stringSlice<int32_t>(globalObject, vm, string, string->length(), start, std::nullopt);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationStringSliceWithEnd, JSString*, (JSGlobalObject* globalObject, JSString* string, int32_t start, int32_t end))
@@ -2919,10 +2733,9 @@ JSC_DEFINE_JIT_OPERATION(operationStringSliceWithEnd, JSString*, (JSGlobalObject
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     static_assert(static_cast<uint64_t>(JSString::MaxLength) <= static_cast<uint64_t>(std::numeric_limits<int32_t>::max()));
-    OPERATION_RETURN(scope, stringSlice<int32_t>(globalObject, vm, string, string->length(), start, end));
+    return stringSlice<int32_t>(globalObject, vm, string, string->length(), start, end);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationStringSubstring, JSString*, (JSGlobalObject* globalObject, JSString* string, int32_t start))
@@ -2930,9 +2743,8 @@ JSC_DEFINE_JIT_OPERATION(operationStringSubstring, JSString*, (JSGlobalObject* g
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, stringSubstring(globalObject, string, start, std::nullopt));
+    return stringSubstring(globalObject, string, start, std::nullopt);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationStringSubstringWithEnd, JSString*, (JSGlobalObject* globalObject, JSString* string, int32_t start, int32_t end))
@@ -2940,9 +2752,8 @@ JSC_DEFINE_JIT_OPERATION(operationStringSubstringWithEnd, JSString*, (JSGlobalOb
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, stringSubstring(globalObject, string, start, end));
+    return stringSubstring(globalObject, string, start, end);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationToLowerCase, JSString*, (JSGlobalObject* globalObject, JSString* string, uint32_t failingIndex))
@@ -2953,15 +2764,15 @@ JSC_DEFINE_JIT_OPERATION(operationToLowerCase, JSString*, (JSGlobalObject* globa
 
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto inputString = string->value(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
-    if (!inputString->length())
-        OPERATION_RETURN(scope, vm.smallStrings.emptyString());
+    String inputString = string->value(globalObject);
+    RETURN_IF_EXCEPTION(scope, nullptr);
+    if (!inputString.length())
+        return vm.smallStrings.emptyString();
 
-    String lowercasedString = inputString->is8Bit() ? inputString->convertToLowercaseWithoutLocaleStartingAtFailingIndex8Bit(failingIndex) : inputString->convertToLowercaseWithoutLocale();
-    if (lowercasedString.impl() == inputString->impl())
-        OPERATION_RETURN(scope, string);
-    OPERATION_RETURN(scope, jsString(vm, WTFMove(lowercasedString)));
+    String lowercasedString = inputString.is8Bit() ? inputString.convertToLowercaseWithoutLocaleStartingAtFailingIndex8Bit(failingIndex) : inputString.convertToLowercaseWithoutLocale();
+    if (lowercasedString.impl() == inputString.impl())
+        return string;
+    RELEASE_AND_RETURN(scope, jsString(vm, WTFMove(lowercasedString)));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationStringLocaleCompare, UCPUStrictInt32, (JSGlobalObject* globalObject, JSString* base, JSString* argument))
@@ -2972,15 +2783,15 @@ JSC_DEFINE_JIT_OPERATION(operationStringLocaleCompare, UCPUStrictInt32, (JSGloba
 
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto string = base->value(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, 0);
+    String string = base->value(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
 
-    auto that = argument->value(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, 0);
+    String that = argument->value(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
 
     auto* collator = globalObject->defaultCollator();
 
-    OPERATION_RETURN(scope, toUCPUStrictInt32(collator->compareStrings(globalObject, string, that)));
+    RELEASE_AND_RETURN(scope, toUCPUStrictInt32(collator->compareStrings(globalObject, string, that)));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationStringIndexOf, UCPUStrictInt32, (JSGlobalObject* globalObject, JSString* base, JSString* argument))
@@ -2991,16 +2802,16 @@ JSC_DEFINE_JIT_OPERATION(operationStringIndexOf, UCPUStrictInt32, (JSGlobalObjec
 
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto thisView = base->view(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, 0);
+    auto thisViewWithString = base->viewWithUnderlyingString(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
 
-    auto otherView = argument->view(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, 0);
+    auto otherViewWithString = argument->viewWithUnderlyingString(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
 
-    size_t result = thisView->find(vm.adaptiveStringSearcherTables(), otherView);
+    size_t result = thisViewWithString.view.find(vm.adaptiveStringSearcherTables(), otherViewWithString.view);
     if (result == notFound)
-        OPERATION_RETURN(scope, toUCPUStrictInt32(-1));
-    OPERATION_RETURN(scope, toUCPUStrictInt32(result));
+        return toUCPUStrictInt32(-1);
+    return toUCPUStrictInt32(result);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationStringIndexOfWithOneChar, UCPUStrictInt32, (JSGlobalObject* globalObject, JSString* base, int32_t character))
@@ -3011,13 +2822,13 @@ JSC_DEFINE_JIT_OPERATION(operationStringIndexOfWithOneChar, UCPUStrictInt32, (JS
 
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto thisView = base->view(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, 0);
+    auto thisViewWithString = base->viewWithUnderlyingString(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
 
-    size_t result = thisView->find(static_cast<UChar>(character));
+    size_t result = thisViewWithString.view.find(static_cast<UChar>(character));
     if (result == notFound)
-        OPERATION_RETURN(scope, toUCPUStrictInt32(-1));
-    OPERATION_RETURN(scope, toUCPUStrictInt32(result));
+        return toUCPUStrictInt32(-1);
+    return toUCPUStrictInt32(result);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationStringIndexOfWithIndex, UCPUStrictInt32, (JSGlobalObject* globalObject, JSString* base, JSString* argument, int32_t position))
@@ -3028,24 +2839,24 @@ JSC_DEFINE_JIT_OPERATION(operationStringIndexOfWithIndex, UCPUStrictInt32, (JSGl
 
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto thisView = base->view(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, 0);
+    auto thisViewWithString = base->viewWithUnderlyingString(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
 
-    auto otherView = argument->view(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, 0);
+    auto otherViewWithString = argument->viewWithUnderlyingString(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
 
-    int32_t length = thisView->length();
+    int32_t length = thisViewWithString.view.length();
     unsigned pos = 0;
     if (position >= 0)
         pos = std::min<uint32_t>(position, length);
 
-    if (static_cast<unsigned>(length) < otherView->length() + pos)
-        OPERATION_RETURN(scope, toUCPUStrictInt32(-1));
+    if (static_cast<unsigned>(length) < otherViewWithString.view.length() + pos)
+        return toUCPUStrictInt32(-1);
 
-    size_t result = thisView->find(vm.adaptiveStringSearcherTables(), otherView, pos);
+    size_t result = thisViewWithString.view.find(vm.adaptiveStringSearcherTables(), otherViewWithString.view, pos);
     if (result == notFound)
-        OPERATION_RETURN(scope, toUCPUStrictInt32(-1));
-    OPERATION_RETURN(scope, toUCPUStrictInt32(result));
+        return toUCPUStrictInt32(-1);
+    return toUCPUStrictInt32(result);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationStringIndexOfWithIndexWithOneChar, UCPUStrictInt32, (JSGlobalObject* globalObject, JSString* base, int32_t position, int32_t character))
@@ -3056,21 +2867,21 @@ JSC_DEFINE_JIT_OPERATION(operationStringIndexOfWithIndexWithOneChar, UCPUStrictI
 
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto thisView = base->view(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, 0);
+    auto thisViewWithString = base->viewWithUnderlyingString(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
 
-    int32_t length = thisView->length();
+    int32_t length = thisViewWithString.view.length();
     unsigned pos = 0;
     if (position >= 0)
         pos = std::min<uint32_t>(position, length);
 
     if (static_cast<unsigned>(length) < 1 + pos)
-        OPERATION_RETURN(scope, toUCPUStrictInt32(-1));
+        return toUCPUStrictInt32(-1);
 
-    size_t result = thisView->find(static_cast<UChar>(character), pos);
+    size_t result = thisViewWithString.view.find(static_cast<UChar>(character), pos);
     if (result == notFound)
-        OPERATION_RETURN(scope, toUCPUStrictInt32(-1));
-    OPERATION_RETURN(scope, toUCPUStrictInt32(result));
+        return toUCPUStrictInt32(-1);
+    return toUCPUStrictInt32(result);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationInt32ToString, char*, (JSGlobalObject* globalObject, int32_t value, int32_t radix))
@@ -3083,10 +2894,10 @@ JSC_DEFINE_JIT_OPERATION(operationInt32ToString, char*, (JSGlobalObject* globalO
 
     if (radix < 2 || radix > 36) {
         throwVMError(globalObject, scope, createRangeError(globalObject, "toString() radix argument must be between 2 and 36"_s));
-        OPERATION_RETURN(scope, nullptr);
+        return nullptr;
     }
 
-    OPERATION_RETURN(scope, reinterpret_cast<char*>(int32ToString(vm, value, radix)));
+    return reinterpret_cast<char*>(int32ToString(vm, value, radix));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationInt52ToString, char*, (JSGlobalObject* globalObject, int64_t value, int32_t radix))
@@ -3099,10 +2910,10 @@ JSC_DEFINE_JIT_OPERATION(operationInt52ToString, char*, (JSGlobalObject* globalO
 
     if (radix < 2 || radix > 36) {
         throwVMError(globalObject, scope, createRangeError(globalObject, "toString() radix argument must be between 2 and 36"_s));
-        OPERATION_RETURN(scope, nullptr);
+        return nullptr;
     }
 
-    OPERATION_RETURN(scope, reinterpret_cast<char*>(int52ToString(vm, value, radix)));
+    return reinterpret_cast<char*>(int52ToString(vm, value, radix));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationDoubleToString, char*, (JSGlobalObject* globalObject, double value, int32_t radix))
@@ -3115,10 +2926,10 @@ JSC_DEFINE_JIT_OPERATION(operationDoubleToString, char*, (JSGlobalObject* global
 
     if (radix < 2 || radix > 36) {
         throwVMError(globalObject, scope, createRangeError(globalObject, "toString() radix argument must be between 2 and 36"_s));
-        OPERATION_RETURN(scope, nullptr);
+        return nullptr;
     }
 
-    OPERATION_RETURN(scope, reinterpret_cast<char*>(numberToString(vm, value, radix)));
+    return reinterpret_cast<char*>(numberToString(vm, value, radix));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationInt32ToStringWithValidRadix, char*, (JSGlobalObject* globalObject, int32_t value, int32_t radix))
@@ -3126,9 +2937,8 @@ JSC_DEFINE_JIT_OPERATION(operationInt32ToStringWithValidRadix, char*, (JSGlobalO
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, reinterpret_cast<char*>(int32ToString(vm, value, radix)));
+    return reinterpret_cast<char*>(int32ToString(vm, value, radix));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationInt52ToStringWithValidRadix, char*, (JSGlobalObject* globalObject, int64_t value, int32_t radix))
@@ -3136,9 +2946,8 @@ JSC_DEFINE_JIT_OPERATION(operationInt52ToStringWithValidRadix, char*, (JSGlobalO
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, reinterpret_cast<char*>(int52ToString(vm, value, radix)));
+    return reinterpret_cast<char*>(int52ToString(vm, value, radix));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationDoubleToStringWithValidRadix, char*, (JSGlobalObject* globalObject, double value, int32_t radix))
@@ -3146,9 +2955,8 @@ JSC_DEFINE_JIT_OPERATION(operationDoubleToStringWithValidRadix, char*, (JSGlobal
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, reinterpret_cast<char*>(numberToString(vm, value, radix)));
+    return reinterpret_cast<char*>(numberToString(vm, value, radix));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationFunctionToString, JSString*, (JSGlobalObject* globalObject, JSFunction* function))
@@ -3156,9 +2964,8 @@ JSC_DEFINE_JIT_OPERATION(operationFunctionToString, JSString*, (JSGlobalObject* 
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, function->toString(globalObject));
+    return function->toString(globalObject);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationFunctionBind, JSBoundFunction*, (JSGlobalObject* globalObject, JSObject* target, EncodedJSValue boundThisValue, EncodedJSValue arg0Value, EncodedJSValue arg1Value, EncodedJSValue arg2Value))
@@ -3170,7 +2977,7 @@ JSC_DEFINE_JIT_OPERATION(operationFunctionBind, JSBoundFunction*, (JSGlobalObjec
 
     if (UNLIKELY(!target->isCallable())) {
         throwTypeError(globalObject, scope, "|this| is not a function inside Function.prototype.bind"_s);
-        OPERATION_RETURN(scope, nullptr);
+        return { };
     }
 
     unsigned boundArgsLength = 0;
@@ -3198,26 +3005,26 @@ JSC_DEFINE_JIT_OPERATION(operationFunctionBind, JSBoundFunction*, (JSGlobalObjec
         length = PNaN; // Defer computation.
     } else {
         bool found = target->hasOwnProperty(globalObject, vm.propertyNames->length);
-        OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+        RETURN_IF_EXCEPTION(scope, { });
         if (found) {
             JSValue lengthValue = target->get(globalObject, vm.propertyNames->length);
-            OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+            RETURN_IF_EXCEPTION(scope, { });
             length = lengthValue.toIntegerOrInfinity(globalObject);
-            OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+            RETURN_IF_EXCEPTION(scope, { });
             if (length > boundArgsLength)
                 length -= boundArgsLength;
             else
                 length = 0;
         }
         JSValue nameValue = target->get(globalObject, vm.propertyNames->name);
-        OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+        RETURN_IF_EXCEPTION(scope, { });
         if (nameValue.isString())
             name = asString(nameValue);
         else
             name = jsEmptyString(vm);
     }
 
-    OPERATION_RETURN(scope, JSBoundFunction::create(vm, globalObject, target, boundThis, boundArgs, length, name));
+    RELEASE_AND_RETURN(scope, JSBoundFunction::create(vm, globalObject, target, boundThis, boundArgs, length, name));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationNewBoundFunction, JSBoundFunction*, (JSGlobalObject* globalObject, JSFunction* function, EncodedJSValue boundThisValue, EncodedJSValue arg0Value, EncodedJSValue arg1Value, EncodedJSValue arg2Value))
@@ -3225,7 +3032,6 @@ JSC_DEFINE_JIT_OPERATION(operationNewBoundFunction, JSBoundFunction*, (JSGlobalO
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue boundThis = JSValue::decode(boundThisValue);
     JSValue arg0 = JSValue::decode(arg0Value);
     JSValue arg1 = JSValue::decode(arg1Value);
@@ -3234,7 +3040,7 @@ JSC_DEFINE_JIT_OPERATION(operationNewBoundFunction, JSBoundFunction*, (JSGlobalO
     boundArgsLength += !!(arg0);
     boundArgsLength += !!(arg1);
     boundArgsLength += !!(arg2);
-    OPERATION_RETURN(scope, JSBoundFunction::createRaw(vm, globalObject, function, boundArgsLength, boundThis, arg0, arg1, arg2));
+    return JSBoundFunction::createRaw(vm, globalObject, function, boundArgsLength, boundThis, arg0, arg1, arg2);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationSingleCharacterString, JSString*, (VM* vmPointer, int32_t character))
@@ -3242,9 +3048,8 @@ JSC_DEFINE_JIT_OPERATION(operationSingleCharacterString, JSString*, (VM* vmPoint
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, jsSingleCharacterString(vm, static_cast<UChar>(character)));
+    return jsSingleCharacterString(vm, static_cast<UChar>(character));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationNewSymbol, Symbol*, (VM* vmPointer))
@@ -3252,9 +3057,8 @@ JSC_DEFINE_JIT_OPERATION(operationNewSymbol, Symbol*, (VM* vmPointer))
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, Symbol::create(vm));
+    return Symbol::create(vm);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationNewSymbolWithStringDescription, Symbol*, (JSGlobalObject* globalObject, JSString* description))
@@ -3264,10 +3068,10 @@ JSC_DEFINE_JIT_OPERATION(operationNewSymbolWithStringDescription, Symbol*, (JSGl
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto string = description->value(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+    String string = description->value(globalObject);
+    RETURN_IF_EXCEPTION(scope, nullptr);
 
-    OPERATION_RETURN(scope, Symbol::createWithDescription(vm, WTFMove(string)));
+    return Symbol::createWithDescription(vm, WTFMove(string));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationNewSymbolWithDescription, Symbol*, (JSGlobalObject* globalObject, EncodedJSValue encodedDescription))
@@ -3279,12 +3083,12 @@ JSC_DEFINE_JIT_OPERATION(operationNewSymbolWithDescription, Symbol*, (JSGlobalOb
 
     JSValue description = JSValue::decode(encodedDescription);
     if (description.isUndefined())
-        OPERATION_RETURN(scope, Symbol::create(vm));
+        return Symbol::create(vm);
 
     String string = description.toWTFString(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+    RETURN_IF_EXCEPTION(scope, nullptr);
 
-    OPERATION_RETURN(scope, Symbol::createWithDescription(vm, string));
+    return Symbol::createWithDescription(vm, string);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationNewStringObject, JSCell*, (VM* vmPointer, JSString* string, Structure* structure))
@@ -3292,9 +3096,8 @@ JSC_DEFINE_JIT_OPERATION(operationNewStringObject, JSCell*, (VM* vmPointer, JSSt
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, StringObject::create(vm, structure, string));
+    return StringObject::create(vm, structure, string);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationToStringOnCell, JSString*, (JSGlobalObject* globalObject, JSCell* cell))
@@ -3302,9 +3105,8 @@ JSC_DEFINE_JIT_OPERATION(operationToStringOnCell, JSString*, (JSGlobalObject* gl
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, JSValue(cell).toString(globalObject));
+    return JSValue(cell).toString(globalObject);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationToString, JSString*, (JSGlobalObject* globalObject, EncodedJSValue value))
@@ -3312,9 +3114,8 @@ JSC_DEFINE_JIT_OPERATION(operationToString, JSString*, (JSGlobalObject* globalOb
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, JSValue::decode(value).toString(globalObject));
+    return JSValue::decode(value).toString(globalObject);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationCallStringConstructorOnCell, JSString*, (JSGlobalObject* globalObject, JSCell* cell))
@@ -3322,9 +3123,8 @@ JSC_DEFINE_JIT_OPERATION(operationCallStringConstructorOnCell, JSString*, (JSGlo
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, stringConstructor(globalObject, cell));
+    return stringConstructor(globalObject, cell);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationCallStringConstructor, JSString*, (JSGlobalObject* globalObject, EncodedJSValue value))
@@ -3332,9 +3132,8 @@ JSC_DEFINE_JIT_OPERATION(operationCallStringConstructor, JSString*, (JSGlobalObj
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, stringConstructor(globalObject, JSValue::decode(value)));
+    return stringConstructor(globalObject, JSValue::decode(value));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationMakeRope2, JSString*, (JSGlobalObject* globalObject, JSString* left, JSString* right))
@@ -3342,9 +3141,8 @@ JSC_DEFINE_JIT_OPERATION(operationMakeRope2, JSString*, (JSGlobalObject* globalO
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, jsString(globalObject, left, right));
+    return jsString(globalObject, left, right);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationMakeRope3, JSString*, (JSGlobalObject* globalObject, JSString* a, JSString* b, JSString* c))
@@ -3352,14 +3150,14 @@ JSC_DEFINE_JIT_OPERATION(operationMakeRope3, JSString*, (JSGlobalObject* globalO
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, jsString(globalObject, a, b, c));
+    return jsString(globalObject, a, b, c);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationStrCat2, JSString*, (JSGlobalObject* globalObject, EncodedJSValue a, EncodedJSValue b))
 {
     VM& vm = globalObject->vm();
+    DeferTermination deferScope(vm);
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -3367,16 +3165,17 @@ JSC_DEFINE_JIT_OPERATION(operationStrCat2, JSString*, (JSGlobalObject* globalObj
     ASSERT(!JSValue::decode(a).isSymbol());
     ASSERT(!JSValue::decode(b).isSymbol());
     JSString* str1 = JSValue::decode(a).toString(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr); // OOM exception can happen from ToString(BigInt).
+    RETURN_IF_EXCEPTION(scope, nullptr); // OOM exception can happen from ToString(BigInt).
     JSString* str2 = JSValue::decode(b).toString(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+    RETURN_IF_EXCEPTION(scope, nullptr);
 
-    OPERATION_RETURN(scope, jsString(globalObject, str1, str2));
+    RELEASE_AND_RETURN(scope, jsString(globalObject, str1, str2));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationStrCat3, JSString*, (JSGlobalObject* globalObject, EncodedJSValue a, EncodedJSValue b, EncodedJSValue c))
 {
     VM& vm = globalObject->vm();
+    DeferTermination deferScope(vm);
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -3385,13 +3184,13 @@ JSC_DEFINE_JIT_OPERATION(operationStrCat3, JSString*, (JSGlobalObject* globalObj
     ASSERT(!JSValue::decode(b).isSymbol());
     ASSERT(!JSValue::decode(c).isSymbol());
     JSString* str1 = JSValue::decode(a).toString(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr); // OOM exception can happen from ToString(BigInt).
+    RETURN_IF_EXCEPTION(scope, nullptr); // OOM exception can happen from ToString(BigInt).
     JSString* str2 = JSValue::decode(b).toString(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+    RETURN_IF_EXCEPTION(scope, nullptr);
     JSString* str3 = JSValue::decode(c).toString(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+    RETURN_IF_EXCEPTION(scope, nullptr);
 
-    OPERATION_RETURN(scope, jsString(globalObject, str1, str2, str3));
+    RELEASE_AND_RETURN(scope, jsString(globalObject, str1, str2, str3));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationMakeAtomString1, JSString*, (JSGlobalObject* globalObject, JSString* a))
@@ -3399,9 +3198,8 @@ JSC_DEFINE_JIT_OPERATION(operationMakeAtomString1, JSString*, (JSGlobalObject* g
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, jsAtomString(globalObject, vm, a));
+    return jsAtomString(globalObject, vm, a);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationMakeAtomString2, JSString*, (JSGlobalObject* globalObject, JSString* a, JSString* b))
@@ -3409,9 +3207,8 @@ JSC_DEFINE_JIT_OPERATION(operationMakeAtomString2, JSString*, (JSGlobalObject* g
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, jsAtomString(globalObject, vm, a, b));
+    return jsAtomString(globalObject, vm, a, b);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationMakeAtomString3, JSString*, (JSGlobalObject* globalObject, JSString* a, JSString* b, JSString* c))
@@ -3419,17 +3216,15 @@ JSC_DEFINE_JIT_OPERATION(operationMakeAtomString3, JSString*, (JSGlobalObject* g
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, jsAtomString(globalObject, vm, a, b, c));
+    return jsAtomString(globalObject, vm, a, b, c);
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationFindSwitchImmTargetForDouble, char*, (VM* vmPointer, EncodedJSValue encodedValue, size_t tableIndex, int32_t min))
+JSC_DEFINE_JIT_OPERATION(operationFindSwitchImmTargetForDouble, char*, (VM* vmPointer, EncodedJSValue encodedValue, size_t tableIndex, int32_t min))
 {
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
     CodeBlock* codeBlock = callFrame->codeBlock();
     const SimpleJumpTable& linkedTable = codeBlock->dfgSwitchJumpTable(tableIndex);
     JSValue value = JSValue::decode(encodedValue);
@@ -3437,8 +3232,8 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationFindSwitchImmTargetForDouble, char*, 
     double asDouble = value.asDouble();
     int32_t asInt32 = static_cast<int32_t>(asDouble);
     if (asDouble == asInt32)
-        OPERATION_RETURN(scope, linkedTable.ctiForValue(min, asInt32).taggedPtr<char*>());
-    OPERATION_RETURN(scope, linkedTable.m_ctiDefault.taggedPtr<char*>());
+        return linkedTable.ctiForValue(min, asInt32).taggedPtr<char*>();
+    return linkedTable.m_ctiDefault.taggedPtr<char*>();
 }
 
 JSC_DEFINE_JIT_OPERATION(operationSwitchString, char*, (JSGlobalObject* globalObject, size_t tableIndex, const UnlinkedStringJumpTable* unlinkedTable, JSString* string))
@@ -3446,32 +3241,32 @@ JSC_DEFINE_JIT_OPERATION(operationSwitchString, char*, (JSGlobalObject* globalOb
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
+    auto throwScope = DECLARE_THROW_SCOPE(vm);
 
-    auto str = string->value(globalObject);
+    StringImpl* strImpl = string->value(globalObject).impl();
 
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+    RETURN_IF_EXCEPTION(throwScope, nullptr);
     CodeBlock* codeBlock = callFrame->codeBlock();
     const StringJumpTable& linkedTable = codeBlock->dfgStringSwitchJumpTable(tableIndex);
-    OPERATION_RETURN(scope, linkedTable.ctiForValue(*unlinkedTable, str->impl()).taggedPtr<char*>());
+    return linkedTable.ctiForValue(*unlinkedTable, strImpl).taggedPtr<char*>();
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationCompareStringImplLess, uintptr_t, (StringImpl* a, StringImpl* b))
+JSC_DEFINE_JIT_OPERATION(operationCompareStringImplLess, uintptr_t, (StringImpl* a, StringImpl* b))
 {
     return codePointCompare(a, b) < 0;
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationCompareStringImplLessEq, uintptr_t, (StringImpl* a, StringImpl* b))
+JSC_DEFINE_JIT_OPERATION(operationCompareStringImplLessEq, uintptr_t, (StringImpl* a, StringImpl* b))
 {
     return codePointCompare(a, b) <= 0;
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationCompareStringImplGreater, uintptr_t, (StringImpl* a, StringImpl* b))
+JSC_DEFINE_JIT_OPERATION(operationCompareStringImplGreater, uintptr_t, (StringImpl* a, StringImpl* b))
 {
     return codePointCompare(a, b) > 0;
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationCompareStringImplGreaterEq, uintptr_t, (StringImpl* a, StringImpl* b))
+JSC_DEFINE_JIT_OPERATION(operationCompareStringImplGreaterEq, uintptr_t, (StringImpl* a, StringImpl* b))
 {
     return codePointCompare(a, b) >= 0;
 }
@@ -3481,9 +3276,8 @@ JSC_DEFINE_JIT_OPERATION(operationCompareStringLess, uintptr_t, (JSGlobalObject*
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, codePointCompareLessThan(asString(a)->value(globalObject), asString(b)->value(globalObject)));
+    return codePointCompareLessThan(asString(a)->value(globalObject), asString(b)->value(globalObject));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationCompareStringLessEq, uintptr_t, (JSGlobalObject* globalObject, JSString* a, JSString* b))
@@ -3491,9 +3285,8 @@ JSC_DEFINE_JIT_OPERATION(operationCompareStringLessEq, uintptr_t, (JSGlobalObjec
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, !codePointCompareLessThan(asString(b)->value(globalObject), asString(a)->value(globalObject)));
+    return !codePointCompareLessThan(asString(b)->value(globalObject), asString(a)->value(globalObject));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationCompareStringGreater, uintptr_t, (JSGlobalObject* globalObject, JSString* a, JSString* b))
@@ -3501,9 +3294,8 @@ JSC_DEFINE_JIT_OPERATION(operationCompareStringGreater, uintptr_t, (JSGlobalObje
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, codePointCompareLessThan(asString(b)->value(globalObject), asString(a)->value(globalObject)));
+    return codePointCompareLessThan(asString(b)->value(globalObject), asString(a)->value(globalObject));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationCompareStringGreaterEq, uintptr_t, (JSGlobalObject* globalObject, JSString* a, JSString* b))
@@ -3511,9 +3303,8 @@ JSC_DEFINE_JIT_OPERATION(operationCompareStringGreaterEq, uintptr_t, (JSGlobalOb
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, !codePointCompareLessThan(asString(a)->value(globalObject), asString(b)->value(globalObject)));
+    return !codePointCompareLessThan(asString(a)->value(globalObject), asString(b)->value(globalObject));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationNotifyWrite, void, (VM* vmPointer, WatchpointSet* set))
@@ -3521,10 +3312,8 @@ JSC_DEFINE_JIT_OPERATION(operationNotifyWrite, void, (VM* vmPointer, WatchpointS
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     set->touch(vm, "Executed NotifyWrite");
-    OPERATION_RETURN(scope);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationThrowStackOverflowForVarargs, void, (JSGlobalObject* globalObject))
@@ -3534,7 +3323,6 @@ JSC_DEFINE_JIT_OPERATION(operationThrowStackOverflowForVarargs, void, (JSGlobalO
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
     throwStackOverflowError(globalObject, scope);
-    OPERATION_RETURN(scope);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationSizeOfVarargs, UCPUStrictInt32, (JSGlobalObject* globalObject, EncodedJSValue encodedArguments, uint32_t firstVarArgOffset))
@@ -3542,10 +3330,9 @@ JSC_DEFINE_JIT_OPERATION(operationSizeOfVarargs, UCPUStrictInt32, (JSGlobalObjec
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue arguments = JSValue::decode(encodedArguments);
 
-    OPERATION_RETURN(scope, toUCPUStrictInt32(sizeOfVarargs(globalObject, arguments, firstVarArgOffset)));
+    return toUCPUStrictInt32(sizeOfVarargs(globalObject, arguments, firstVarArgOffset));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationHasOwnProperty, size_t, (JSGlobalObject* globalObject, JSObject* thisObject, EncodedJSValue encodedKey))
@@ -3557,16 +3344,16 @@ JSC_DEFINE_JIT_OPERATION(operationHasOwnProperty, size_t, (JSGlobalObject* globa
 
     JSValue key = JSValue::decode(encodedKey);
     Identifier propertyName = key.toPropertyKey(globalObject);
-    OPERATION_RETURN_IF_EXCEPTION(scope, false);
+    RETURN_IF_EXCEPTION(scope, false);
 
     PropertySlot slot(thisObject, PropertySlot::InternalMethodType::GetOwnProperty);
     bool result = thisObject->hasOwnProperty(globalObject, propertyName.impl(), slot);
-    OPERATION_RETURN_IF_EXCEPTION(scope, false);
+    RETURN_IF_EXCEPTION(scope, false);
 
     HasOwnPropertyCache* hasOwnPropertyCache = vm.hasOwnPropertyCache();
     ASSERT(hasOwnPropertyCache);
     hasOwnPropertyCache->tryAdd(slot, thisObject, propertyName.impl(), result);
-    OPERATION_RETURN(scope, result);
+    return result;
 }
 
 JSC_DEFINE_JIT_OPERATION(operationNumberIsInteger, size_t, (JSGlobalObject* globalObject, EncodedJSValue value))
@@ -3574,11 +3361,10 @@ JSC_DEFINE_JIT_OPERATION(operationNumberIsInteger, size_t, (JSGlobalObject* glob
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    OPERATION_RETURN(scope, NumberConstructor::isIntegerImpl(JSValue::decode(value)));
+    return NumberConstructor::isIntegerImpl(JSValue::decode(value));
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationNumberIsNaN, UCPUStrictInt32, (EncodedJSValue value))
+JSC_DEFINE_JIT_OPERATION(operationNumberIsNaN, UCPUStrictInt32, (EncodedJSValue value))
 {
     JSValue argument = JSValue::decode(value);
     if (!argument.isNumber())
@@ -3591,12 +3377,11 @@ JSC_DEFINE_JIT_OPERATION(operationIsNaN, UCPUStrictInt32, (JSGlobalObject* globa
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue argument = JSValue::decode(value);
-    OPERATION_RETURN(scope, toUCPUStrictInt32(std::isnan(argument.toNumber(globalObject))));
+    return toUCPUStrictInt32(std::isnan(argument.toNumber(globalObject)));
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationToIntegerOrInfinityDouble, EncodedJSValue, (double d))
+JSC_DEFINE_JIT_OPERATION(operationToIntegerOrInfinityDouble, EncodedJSValue, (double d))
 {
     return JSValue::encode(jsNumber(trunc(std::isnan(d) ? 0.0 : d + 0.0)));
 }
@@ -3606,12 +3391,11 @@ JSC_DEFINE_JIT_OPERATION(operationToIntegerOrInfinityUntyped, EncodedJSValue, (J
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue value = JSValue::decode(encodedValue);
-    OPERATION_RETURN(scope, JSValue::encode(jsNumber(value.toIntegerOrInfinity(globalObject))));
+    return JSValue::encode(jsNumber(value.toIntegerOrInfinity(globalObject)));
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationToLengthDouble, EncodedJSValue, (double argument))
+JSC_DEFINE_JIT_OPERATION(operationToLengthDouble, EncodedJSValue, (double argument))
 {
     double d = trunc(std::isnan(argument) ? 0.0 : argument + 0.0);
     if (d <= 0)
@@ -3624,9 +3408,8 @@ JSC_DEFINE_JIT_OPERATION(operationToLengthUntyped, EncodedJSValue, (JSGlobalObje
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue value = JSValue::decode(encodedValue);
-    OPERATION_RETURN(scope, JSValue::encode(jsNumber(value.toLength(globalObject))));
+    return JSValue::encode(jsNumber(value.toLength(globalObject)));
 }
 
 static ALWAYS_INLINE UCPUStrictInt32 arrayIndexOfString(JSGlobalObject* globalObject, Butterfly* butterfly, JSString* searchElement, int32_t index)
@@ -3657,9 +3440,8 @@ JSC_DEFINE_JIT_OPERATION(operationArrayIndexOfString, UCPUStrictInt32, (JSGlobal
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, arrayIndexOfString(globalObject, butterfly, searchElement, index));
+    return arrayIndexOfString(globalObject, butterfly, searchElement, index);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationArrayIndexOfValueInt32OrContiguous, UCPUStrictInt32, (JSGlobalObject* globalObject, Butterfly* butterfly, EncodedJSValue encodedValue, int32_t index))
@@ -3672,19 +3454,19 @@ JSC_DEFINE_JIT_OPERATION(operationArrayIndexOfValueInt32OrContiguous, UCPUStrict
     JSValue searchElement = JSValue::decode(encodedValue);
 
     if (searchElement.isString())
-        OPERATION_RETURN(scope, arrayIndexOfString(globalObject, butterfly, asString(searchElement), index));
+        RELEASE_AND_RETURN(scope, arrayIndexOfString(globalObject, butterfly, asString(searchElement), index));
 
     int32_t length = butterfly->publicLength();
     auto data = butterfly->contiguous().data();
 
     if (index >= length)
-        OPERATION_RETURN(scope, toUCPUStrictInt32(-1));
+        return toUCPUStrictInt32(-1);
 
     if (searchElement.isObject()) {
         auto* result = bitwise_cast<const WriteBarrier<Unknown>*>(WTF::find64(bitwise_cast<const uint64_t*>(data + index), encodedValue, length - index));
         if (result)
-            OPERATION_RETURN(scope, toUCPUStrictInt32(result - data));
-        OPERATION_RETURN(scope, toUCPUStrictInt32(-1));
+            return toUCPUStrictInt32(result - data);
+        return toUCPUStrictInt32(-1);
     }
 
     for (; index < length; ++index) {
@@ -3692,14 +3474,14 @@ JSC_DEFINE_JIT_OPERATION(operationArrayIndexOfValueInt32OrContiguous, UCPUStrict
         if (!value)
             continue;
         bool isEqual = JSValue::strictEqual(globalObject, searchElement, value);
-        OPERATION_RETURN_IF_EXCEPTION(scope, 0);
+        RETURN_IF_EXCEPTION(scope, { });
         if (isEqual)
-            OPERATION_RETURN(scope, toUCPUStrictInt32(index));
+            return toUCPUStrictInt32(index);
     }
-    OPERATION_RETURN(scope, toUCPUStrictInt32(-1));
+    return toUCPUStrictInt32(-1);
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationArrayIndexOfValueDouble, UCPUStrictInt32, (Butterfly* butterfly, EncodedJSValue encodedValue, int32_t index))
+JSC_DEFINE_JIT_OPERATION(operationArrayIndexOfValueDouble, UCPUStrictInt32, (Butterfly* butterfly, EncodedJSValue encodedValue, int32_t index))
 {
     // We do not cause any exceptions, thus we do not need FrameTracers.
     JSValue searchElement = JSValue::decode(encodedValue);
@@ -3718,7 +3500,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationArrayIndexOfValueDouble, UCPUStrictIn
     return toUCPUStrictInt32(-1);
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationArrayIndexOfNonStringIdentityValueContiguous, UCPUStrictInt32, (Butterfly* butterfly, EncodedJSValue searchElement, int32_t index))
+JSC_DEFINE_JIT_OPERATION(operationArrayIndexOfNonStringIdentityValueContiguous, UCPUStrictInt32, (Butterfly* butterfly, EncodedJSValue searchElement, int32_t index))
 {
     // We do not cause any exceptions, thus we do not need FrameTracers.
     int32_t length = butterfly->publicLength();
@@ -3739,23 +3521,21 @@ JSC_DEFINE_JIT_OPERATION(operationLoadVarargs, void, (JSGlobalObject* globalObje
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue arguments = JSValue::decode(encodedArguments);
 
     loadVarargs(globalObject, bitwise_cast<JSValue*>(&callFrame->r(firstElement)), arguments, offset, lengthIncludingThis - 1);
 
     for (uint32_t i = lengthIncludingThis - 1; i < mandatoryMinimum; ++i)
         callFrame->r(firstElement + i) = jsUndefined();
-    OPERATION_RETURN(scope);
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationFModOnInts, double, (int32_t a, int32_t b))
+JSC_DEFINE_JIT_OPERATION(operationFModOnInts, double, (int32_t a, int32_t b))
 {
     return fmod(a, b);
 }
 
 #if USE(JSVALUE32_64)
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationRandom, double, (JSGlobalObject* globalObject))
+JSC_DEFINE_JIT_OPERATION(operationRandom, double, (JSGlobalObject* globalObject))
 {
     return globalObject->weakRandomNumber();
 }
@@ -3766,8 +3546,7 @@ JSC_DEFINE_JIT_OPERATION(operationStringFromCharCode, JSCell*, (JSGlobalObject* 
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    OPERATION_RETURN(scope, JSC::stringFromCharCode(globalObject, op1));
+    return JSC::stringFromCharCode(globalObject, op1);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationStringFromCharCodeUntyped, EncodedJSValue, (JSGlobalObject* globalObject, EncodedJSValue encodedValue))
@@ -3775,10 +3554,9 @@ JSC_DEFINE_JIT_OPERATION(operationStringFromCharCodeUntyped, EncodedJSValue, (JS
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue charValue = JSValue::decode(encodedValue);
     int32_t chInt = charValue.toUInt32(globalObject);
-    OPERATION_RETURN(scope, JSValue::encode(JSC::stringFromCharCode(globalObject, chInt)));
+    return JSValue::encode(JSC::stringFromCharCode(globalObject, chInt));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationNewRawObject, char*, (VM* vmPointer, Structure* structure, int32_t length, Butterfly* butterfly))
@@ -3786,7 +3564,6 @@ JSC_DEFINE_JIT_OPERATION(operationNewRawObject, char*, (VM* vmPointer, Structure
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (!butterfly
         && (structure->outOfLineCapacity() || hasIndexedProperties(structure->indexingType()))) {
@@ -3801,8 +3578,8 @@ JSC_DEFINE_JIT_OPERATION(operationNewRawObject, char*, (VM* vmPointer, Structure
     }
 
     if (structure->typeInfo().type() == JSType::ArrayType)
-        OPERATION_RETURN(scope, bitwise_cast<char*>(JSArray::createWithButterfly(vm, nullptr, structure, butterfly)));
-    OPERATION_RETURN(scope, bitwise_cast<char*>(JSFinalObject::createWithButterfly(vm, structure, butterfly)));
+        return bitwise_cast<char*>(JSArray::createWithButterfly(vm, nullptr, structure, butterfly));
+    return bitwise_cast<char*>(JSFinalObject::createWithButterfly(vm, structure, butterfly));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationNewObjectWithButterfly, JSCell*, (VM* vmPointer, Structure* structure, Butterfly* butterfly))
@@ -3810,7 +3587,6 @@ JSC_DEFINE_JIT_OPERATION(operationNewObjectWithButterfly, JSCell*, (VM* vmPointe
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (!butterfly) {
         butterfly = Butterfly::create(
@@ -3818,8 +3594,8 @@ JSC_DEFINE_JIT_OPERATION(operationNewObjectWithButterfly, JSCell*, (VM* vmPointe
     }
 
     if (structure->typeInfo().type() == JSType::ArrayType)
-        OPERATION_RETURN(scope, JSArray::createWithButterfly(vm, nullptr, structure, butterfly));
-    OPERATION_RETURN(scope, JSFinalObject::createWithButterfly(vm, structure, butterfly));
+        return JSArray::createWithButterfly(vm, nullptr, structure, butterfly);
+    return JSFinalObject::createWithButterfly(vm, structure, butterfly);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationNewObjectWithButterflyWithIndexingHeaderAndVectorLength, JSCell*, (VM* vmPointer, Structure* structure, unsigned length, Butterfly* butterfly))
@@ -3827,7 +3603,6 @@ JSC_DEFINE_JIT_OPERATION(operationNewObjectWithButterflyWithIndexingHeaderAndVec
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     IndexingHeader header;
     header.setVectorLength(length);
@@ -3841,8 +3616,8 @@ JSC_DEFINE_JIT_OPERATION(operationNewObjectWithButterflyWithIndexingHeaderAndVec
     }
 
     if (structure->typeInfo().type() == JSType::ArrayType)
-        OPERATION_RETURN(scope, JSArray::createWithButterfly(vm, nullptr, structure, butterfly));
-    OPERATION_RETURN(scope, JSFinalObject::createWithButterfly(vm, structure, butterfly));
+        return JSArray::createWithButterfly(vm, nullptr, structure, butterfly);
+    return JSFinalObject::createWithButterfly(vm, structure, butterfly);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationNewArrayWithSpreadSlow, JSCell*, (JSGlobalObject* globalObject, void* buffer, uint32_t numItems))
@@ -3865,13 +3640,13 @@ JSC_DEFINE_JIT_OPERATION(operationNewArrayWithSpreadSlow, JSCell*, (JSGlobalObje
 
     if (UNLIKELY(checkedLength.hasOverflowed())) {
         throwOutOfMemoryError(globalObject, scope);
-        OPERATION_RETURN(scope, nullptr);
+        return nullptr;
     }
 
     unsigned length = checkedLength;
     if (UNLIKELY(length >= MIN_ARRAY_STORAGE_CONSTRUCTION_LENGTH)) {
         throwOutOfMemoryError(globalObject, scope);
-        OPERATION_RETURN(scope, nullptr);
+        return nullptr;
     }
 
     Structure* structure = globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithContiguous);
@@ -3879,9 +3654,9 @@ JSC_DEFINE_JIT_OPERATION(operationNewArrayWithSpreadSlow, JSCell*, (JSGlobalObje
     JSArray* result = JSArray::tryCreate(vm, structure, length);
     if (UNLIKELY(!result)) {
         throwOutOfMemoryError(globalObject, scope);
-        OPERATION_RETURN(scope, nullptr);
+        return nullptr;
     }
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+    RETURN_IF_EXCEPTION(scope, nullptr);
 
     unsigned index = 0;
     for (unsigned i = 0; i < numItems; i++) {
@@ -3890,18 +3665,18 @@ JSC_DEFINE_JIT_OPERATION(operationNewArrayWithSpreadSlow, JSCell*, (JSGlobalObje
             // We are spreading.
             for (unsigned i = 0; i < array->publicLength(); i++) {
                 result->putDirectIndex(globalObject, index, array->get(i));
-                OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+                RETURN_IF_EXCEPTION(scope, nullptr);
                 ++index;
             }
         } else {
             // We are not spreading.
             result->putDirectIndex(globalObject, index, value);
-            OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+            RETURN_IF_EXCEPTION(scope, nullptr);
             ++index;
         }
     }
 
-    OPERATION_RETURN(scope, result);
+    return result;
 }
 
 JSC_DEFINE_JIT_OPERATION(operationCreateImmutableButterfly, JSCell*, (JSGlobalObject* globalObject, unsigned length))
@@ -3912,10 +3687,10 @@ JSC_DEFINE_JIT_OPERATION(operationCreateImmutableButterfly, JSCell*, (JSGlobalOb
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (JSImmutableButterfly* result = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructures[arrayIndexFromIndexingType(CopyOnWriteArrayWithContiguous) - NumberOfIndexingShapes].get(), length))
-        OPERATION_RETURN(scope, result);
+        return result;
 
     throwOutOfMemoryError(globalObject, scope);
-    OPERATION_RETURN(scope, nullptr);
+    return nullptr;
 }
 
 JSC_DEFINE_JIT_OPERATION(operationSpreadGeneric, JSCell*, (JSGlobalObject* globalObject, JSCell* iterable))
@@ -3924,12 +3699,12 @@ JSC_DEFINE_JIT_OPERATION(operationSpreadGeneric, JSCell*, (JSGlobalObject* globa
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
 
-    auto scope = DECLARE_THROW_SCOPE(vm);
+    auto throwScope = DECLARE_THROW_SCOPE(vm);
 
     auto* result = CommonSlowPaths::trySpreadFast(globalObject, iterable);
-    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+    RETURN_IF_EXCEPTION(throwScope, nullptr);
     if (result)
-        OPERATION_RETURN(scope, result);
+        return result;
 
     // FIXME: we can probably make this path faster by having our caller JS code call directly into
     // the iteration protocol builtin: https://bugs.webkit.org/show_bug.cgi?id=164520
@@ -3944,11 +3719,11 @@ JSC_DEFINE_JIT_OPERATION(operationSpreadGeneric, JSCell*, (JSGlobalObject* globa
         arguments.append(iterable);
         ASSERT(!arguments.hasOverflowed());
         JSValue arrayResult = call(globalObject, iterationFunction, callData, jsNull(), arguments);
-        OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+        RETURN_IF_EXCEPTION(throwScope, nullptr);
         array = jsCast<JSArray*>(arrayResult);
     }
 
-    OPERATION_RETURN(scope, JSImmutableButterfly::createFromArray(globalObject, vm, array));
+    RELEASE_AND_RETURN(throwScope, JSImmutableButterfly::createFromArray(globalObject, vm, array));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationSpreadFastArray, JSCell*, (JSGlobalObject* globalObject, JSCell* cell))
@@ -3956,13 +3731,12 @@ JSC_DEFINE_JIT_OPERATION(operationSpreadFastArray, JSCell*, (JSGlobalObject* glo
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     ASSERT(isJSArray(cell));
     JSArray* array = jsCast<JSArray*>(cell);
     ASSERT(array->isIteratorProtocolFastAndNonObservable());
 
-    OPERATION_RETURN(scope, JSImmutableButterfly::createFromArray(globalObject, vm, array));
+    return JSImmutableButterfly::createFromArray(globalObject, vm, array);
 }
 
 static ALWAYS_INLINE JSObject* newArrayWithSpeciesImpl(JSGlobalObject* globalObject, uint64_t length, JSObject* array, IndexingType indexingType)
@@ -4004,9 +3778,8 @@ JSC_DEFINE_JIT_OPERATION(operationNewArrayWithSpeciesInt32, JSObject*, (JSGlobal
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, newArrayWithSpeciesImpl(globalObject, length, array, indexingType));
+    return newArrayWithSpeciesImpl(globalObject, length, array, indexingType);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationNewArrayWithSpecies, JSObject*, (JSGlobalObject* globalObject, EncodedJSValue encodedLength, JSObject* array, IndexingType indexingType))
@@ -4014,10 +3787,9 @@ JSC_DEFINE_JIT_OPERATION(operationNewArrayWithSpecies, JSObject*, (JSGlobalObjec
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     uint64_t length = static_cast<uint64_t>(JSValue::decode(encodedLength).asNumber());
-    OPERATION_RETURN(scope, newArrayWithSpeciesImpl(globalObject, length, array, indexingType));
+    return newArrayWithSpeciesImpl(globalObject, length, array, indexingType);
 }
 
 
@@ -4026,55 +3798,51 @@ JSC_DEFINE_JIT_OPERATION(operationProcessTypeProfilerLogDFG, void, (VM* vmPointe
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     vm.typeProfilerLog()->processLogEntries(vm, "Log Full, called from inside DFG."_s);
-    OPERATION_RETURN(scope);
 }
 
-JSC_DEFINE_JIT_OPERATION(operationResolveScopeForHoistingFuncDeclInEval, EncodedJSValue, (JSGlobalObject* globalObject, JSScope* jsScope, UniquedStringImpl* impl))
+JSC_DEFINE_JIT_OPERATION(operationResolveScopeForHoistingFuncDeclInEval, EncodedJSValue, (JSGlobalObject* globalObject, JSScope* scope, UniquedStringImpl* impl))
 {
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSValue resolvedScope = JSScope::resolveScopeForHoistingFuncDeclInEval(globalObject, jsScope, Identifier::fromUid(vm, impl));
-    OPERATION_RETURN(scope, JSValue::encode(resolvedScope));
+    JSValue resolvedScope = JSScope::resolveScopeForHoistingFuncDeclInEval(globalObject, scope, Identifier::fromUid(vm, impl));
+    return JSValue::encode(resolvedScope);
 }
 
-JSC_DEFINE_JIT_OPERATION(operationResolveScope, JSCell*, (JSGlobalObject* globalObject, JSScope* jsScope, UniquedStringImpl* impl))
+JSC_DEFINE_JIT_OPERATION(operationResolveScope, JSCell*, (JSGlobalObject* globalObject, JSScope* scope, UniquedStringImpl* impl))
 {
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSObject* resolvedScope = JSScope::resolve(globalObject, jsScope, Identifier::fromUid(vm, impl));
-    OPERATION_RETURN(scope, resolvedScope);
+    JSObject* resolvedScope = JSScope::resolve(globalObject, scope, Identifier::fromUid(vm, impl));
+    return resolvedScope;
 }
 
-JSC_DEFINE_JIT_OPERATION(operationGetDynamicVar, EncodedJSValue, (JSGlobalObject* globalObject, JSObject* jsScope, UniquedStringImpl* impl, unsigned getPutInfoBits))
+JSC_DEFINE_JIT_OPERATION(operationGetDynamicVar, EncodedJSValue, (JSGlobalObject* globalObject, JSObject* scope, UniquedStringImpl* impl, unsigned getPutInfoBits))
 {
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
+    auto throwScope = DECLARE_THROW_SCOPE(vm);
 
     Identifier ident = Identifier::fromUid(vm, impl);
-    OPERATION_RETURN(scope, JSValue::encode(jsScope->getPropertySlot(globalObject, ident, [&] (bool found, PropertySlot& slot) -> JSValue {
+    RELEASE_AND_RETURN(throwScope, JSValue::encode(scope->getPropertySlot(globalObject, ident, [&] (bool found, PropertySlot& slot) -> JSValue {
         if (!found) {
             GetPutInfo getPutInfo(getPutInfoBits);
             if (getPutInfo.resolveMode() == ThrowIfNotFound)
-                throwException(globalObject, scope, createUndefinedVariableError(globalObject, ident));
+                throwException(globalObject, throwScope, createUndefinedVariableError(globalObject, ident));
             return jsUndefined();
         }
 
-        if (jsScope->isGlobalLexicalEnvironment()) {
+        if (scope->isGlobalLexicalEnvironment()) {
             // When we can't statically prove we need a TDZ check, we must perform the check on the slow path.
             JSValue result = slot.getValue(globalObject, ident);
             if (result == jsTDZValue()) {
-                throwException(globalObject, scope, createTDZError(globalObject));
+                throwException(globalObject, throwScope, createTDZError(globalObject));
                 return jsUndefined();
             }
             return result;
@@ -4114,26 +3882,22 @@ ALWAYS_INLINE static void putDynamicVar(JSGlobalObject* globalObject, VM& vm, JS
     scope->methodTable()->put(scope, globalObject, ident, JSValue::decode(value), slot);
 }
 
-JSC_DEFINE_JIT_OPERATION(operationPutDynamicVarStrict, void, (JSGlobalObject* globalObject, JSObject* jsScope, EncodedJSValue value, UniquedStringImpl* impl, unsigned getPutInfoBits))
+JSC_DEFINE_JIT_OPERATION(operationPutDynamicVarStrict, void, (JSGlobalObject* globalObject, JSObject* scope, EncodedJSValue value, UniquedStringImpl* impl, unsigned getPutInfoBits))
 {
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
     constexpr bool isStrictMode = true;
-    putDynamicVar(globalObject, vm, jsScope, value, impl, getPutInfoBits, isStrictMode);
-    OPERATION_RETURN(scope);
+    return putDynamicVar(globalObject, vm, scope, value, impl, getPutInfoBits, isStrictMode);
 }
 
-JSC_DEFINE_JIT_OPERATION(operationPutDynamicVarSloppy, void, (JSGlobalObject* globalObject, JSObject* jsScope, EncodedJSValue value, UniquedStringImpl* impl, unsigned getPutInfoBits))
+JSC_DEFINE_JIT_OPERATION(operationPutDynamicVarSloppy, void, (JSGlobalObject* globalObject, JSObject* scope, EncodedJSValue value, UniquedStringImpl* impl, unsigned getPutInfoBits))
 {
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
     constexpr bool isStrictMode = false;
-    putDynamicVar(globalObject, vm, jsScope, value, impl, getPutInfoBits, isStrictMode);
-    OPERATION_RETURN(scope);
+    return putDynamicVar(globalObject, vm, scope, value, impl, getPutInfoBits, isStrictMode);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationNormalizeMapKeyHeapBigInt, EncodedJSValue, (VM* vmPointer, JSBigInt* input))
@@ -4141,8 +3905,7 @@ JSC_DEFINE_JIT_OPERATION(operationNormalizeMapKeyHeapBigInt, EncodedJSValue, (VM
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    OPERATION_RETURN(scope, JSValue::encode(normalizeMapKey(input)));
+    return JSValue::encode(normalizeMapKey(input));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationMapHash, UCPUStrictInt32, (JSGlobalObject* globalObject, EncodedJSValue input))
@@ -4150,199 +3913,61 @@ JSC_DEFINE_JIT_OPERATION(operationMapHash, UCPUStrictInt32, (JSGlobalObject* glo
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, toUCPUStrictInt32(jsMapHash(globalObject, vm, JSValue::decode(input))));
+    return toUCPUStrictInt32(jsMapHash(globalObject, vm, JSValue::decode(input)));
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationMapHashHeapBigInt, UCPUStrictInt32, (VM* vmPointer, JSBigInt* input))
+JSC_DEFINE_JIT_OPERATION(operationMapHashHeapBigInt, UCPUStrictInt32, (VM* vmPointer, JSBigInt* input))
 {
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    OPERATION_RETURN(scope, toUCPUStrictInt32(jsMapHash(input)));
-}
-
-JSC_DEFINE_JIT_OPERATION(operationMapGet, JSValue*, (JSGlobalObject* globalObject, JSCell* cell, EncodedJSValue key, int32_t hash))
-{
-    VM& vm = globalObject->vm();
-    CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
-    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    JSMap* map = jsCast<JSMap*>(cell);
-    JSValue* keySlot = map->getKeySlot(globalObject, JSValue::decode(key), hash);
-    OPERATION_RETURN(scope, keySlot);
-}
-JSC_DEFINE_JIT_OPERATION(operationSetGet, JSValue*, (JSGlobalObject* globalObject, JSCell* cell, EncodedJSValue key, int32_t hash))
-{
-    VM& vm = globalObject->vm();
-    CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
-    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    JSSet* set = jsCast<JSSet*>(cell);
-    JSValue* keySlot = set->getKeySlot(globalObject, JSValue::decode(key), hash);
-    OPERATION_RETURN(scope, keySlot);
+    return toUCPUStrictInt32(jsMapHash(input));
 }
 
-JSC_DEFINE_JIT_OPERATION(operationMapStorage, EncodedJSValue, (JSGlobalObject* globalObject, JSCell* cell))
+JSC_DEFINE_JIT_OPERATION(operationJSMapFindBucket, JSCell*, (JSGlobalObject* globalObject, JSCell* map, EncodedJSValue key, int32_t hash))
 {
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    OPERATION_RETURN(scope, JSValue::encode(jsCast<JSMap*>(cell)->storageOrSentinel(vm)));
-}
-JSC_DEFINE_JIT_OPERATION(operationSetStorage, EncodedJSValue, (JSGlobalObject* globalObject, JSCell* cell))
-{
-    VM& vm = globalObject->vm();
-    CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
-    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    OPERATION_RETURN(scope, JSValue::encode(jsCast<JSSet*>(cell)->storageOrSentinel(vm)));
+    JSMap::BucketType** bucket = jsCast<JSMap*>(map)->findBucket(globalObject, JSValue::decode(key), hash);
+    if (!bucket)
+        return vm.sentinelMapBucket();
+    return *bucket;
 }
 
-JSC_DEFINE_JIT_OPERATION(operationMapIterationNext, EncodedJSValue, (JSGlobalObject* globalObject, JSCell* cell, int32_t index))
+JSC_DEFINE_JIT_OPERATION(operationJSSetFindBucket, JSCell*, (JSGlobalObject* globalObject, JSCell* map, EncodedJSValue key, int32_t hash))
 {
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    if (cell == vm.orderedHashTableSentinel())
-        OPERATION_RETURN(scope, JSValue::encode(vm.orderedHashTableSentinel()));
-
-    JSMap::Storage& storage = *jsCast<JSMap::Storage*>(cell);
-    OPERATION_RETURN(scope, JSValue::encode(JSMap::Helper::nextAndUpdateIterationEntry(vm, storage, index)));
-}
-JSC_DEFINE_JIT_OPERATION(operationMapIterationEntry, EncodedJSValue, (JSGlobalObject* globalObject, JSCell* cell))
-{
-    VM& vm = globalObject->vm();
-    CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
-    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-
-    ASSERT(cell != vm.orderedHashTableSentinel());
-    JSMap::Storage& storage = *jsCast<JSMap::Storage*>(cell);
-    OPERATION_RETURN(scope, JSValue::encode(JSMap::Helper::getIterationEntry(storage)));
-}
-JSC_DEFINE_JIT_OPERATION(operationMapIterationEntryKey, EncodedJSValue, (JSGlobalObject* globalObject, JSCell* cell))
-{
-    VM& vm = globalObject->vm();
-    CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
-    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-
-    ASSERT(cell != vm.orderedHashTableSentinel());
-    JSMap::Storage& storage = *jsCast<JSMap::Storage*>(cell);
-    OPERATION_RETURN(scope, JSValue::encode(JSMap::Helper::getIterationEntryKey(storage)));
-}
-JSC_DEFINE_JIT_OPERATION(operationMapIterationEntryValue, EncodedJSValue, (JSGlobalObject* globalObject, JSCell* cell))
-{
-    VM& vm = globalObject->vm();
-    CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
-    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-
-    ASSERT(cell != vm.orderedHashTableSentinel());
-    JSMap::Storage& storage = *jsCast<JSMap::Storage*>(cell);
-    OPERATION_RETURN(scope, JSValue::encode(JSMap::Helper::getIterationEntryValue(storage)));
+    JSSet::BucketType** bucket = jsCast<JSSet*>(map)->findBucket(globalObject, JSValue::decode(key), hash);
+    if (!bucket)
+        return vm.sentinelSetBucket();
+    return *bucket;
 }
 
-JSC_DEFINE_JIT_OPERATION(operationSetIterationNext, EncodedJSValue, (JSGlobalObject* globalObject, JSCell* cell, int32_t index))
+JSC_DEFINE_JIT_OPERATION(operationSetAdd, JSCell*, (JSGlobalObject* globalObject, JSCell* set, EncodedJSValue key, int32_t hash))
 {
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    if (cell == vm.orderedHashTableSentinel())
-        OPERATION_RETURN(scope, JSValue::encode(vm.orderedHashTableSentinel()));
-
-    JSSet::Storage& storage = *jsCast<JSSet::Storage*>(cell);
-    OPERATION_RETURN(scope, JSValue::encode(JSSet::Helper::nextAndUpdateIterationEntry(vm, storage, index)));
-}
-JSC_DEFINE_JIT_OPERATION(operationSetIterationEntry, EncodedJSValue, (JSGlobalObject* globalObject, JSCell* cell))
-{
-    VM& vm = globalObject->vm();
-    CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
-    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-
-    ASSERT(cell != vm.orderedHashTableSentinel());
-    JSSet::Storage& storage = *jsCast<JSSet::Storage*>(cell);
-    OPERATION_RETURN(scope, JSValue::encode(JSSet::Helper::getIterationEntry(storage)));
-}
-JSC_DEFINE_JIT_OPERATION(operationSetIterationEntryKey, EncodedJSValue, (JSGlobalObject* globalObject, JSCell* cell))
-{
-    VM& vm = globalObject->vm();
-    CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
-    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-
-    ASSERT(cell != vm.orderedHashTableSentinel());
-    JSSet::Storage& storage = *jsCast<JSSet::Storage*>(cell);
-    OPERATION_RETURN(scope, JSValue::encode(JSSet::Helper::getIterationEntryKey(storage)));
+    auto* bucket = jsCast<JSSet*>(set)->addNormalized(globalObject, JSValue::decode(key), JSValue(), hash);
+    if (!bucket)
+        return vm.sentinelSetBucket();
+    return bucket;
 }
 
-JSC_DEFINE_JIT_OPERATION(operationMapIteratorNext, EncodedJSValue, (JSGlobalObject* globalObject, JSCell* cell))
+JSC_DEFINE_JIT_OPERATION(operationMapSet, JSCell*, (JSGlobalObject* globalObject, JSCell* map, EncodedJSValue key, EncodedJSValue value, int32_t hash))
 {
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    OPERATION_RETURN(scope, JSValue::encode(jsCast<JSMapIterator*>(cell)->next(vm)));
-}
-JSC_DEFINE_JIT_OPERATION(operationMapIteratorKey, EncodedJSValue, (JSGlobalObject* globalObject, JSCell* cell))
-{
-    VM& vm = globalObject->vm();
-    CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
-    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    OPERATION_RETURN(scope, JSValue::encode(jsCast<JSMapIterator*>(cell)->nextKey(vm)));
-}
-JSC_DEFINE_JIT_OPERATION(operationMapIteratorValue, EncodedJSValue, (JSGlobalObject* globalObject, JSCell* cell))
-{
-    VM& vm = globalObject->vm();
-    CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
-    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    OPERATION_RETURN(scope, JSValue::encode(jsCast<JSMapIterator*>(cell)->nextValue(vm)));
-}
-
-JSC_DEFINE_JIT_OPERATION(operationSetIteratorNext, EncodedJSValue, (JSGlobalObject* globalObject, JSCell* cell))
-{
-    VM& vm = globalObject->vm();
-    CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
-    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    OPERATION_RETURN(scope, JSValue::encode(jsCast<JSSetIterator*>(cell)->next(vm)));
-}
-JSC_DEFINE_JIT_OPERATION(operationSetIteratorKey, EncodedJSValue, (JSGlobalObject* globalObject, JSCell* cell))
-{
-    VM& vm = globalObject->vm();
-    CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
-    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    OPERATION_RETURN(scope, JSValue::encode(jsCast<JSSetIterator*>(cell)->nextKey(vm)));
-}
-
-JSC_DEFINE_JIT_OPERATION(operationSetAdd, void, (JSGlobalObject* globalObject, JSCell* set, EncodedJSValue key, int32_t hash))
-{
-    VM& vm = globalObject->vm();
-    CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
-    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    jsCast<JSSet*>(set)->addNormalized(globalObject, JSValue::decode(key), JSValue(), hash);
-    OPERATION_RETURN(scope);
-}
-JSC_DEFINE_JIT_OPERATION(operationMapSet, void, (JSGlobalObject* globalObject, JSCell* map, EncodedJSValue key, EncodedJSValue value, int32_t hash))
-{
-    VM& vm = globalObject->vm();
-    CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
-    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    jsCast<JSMap*>(map)->addNormalized(globalObject, JSValue::decode(key), JSValue::decode(value), hash);
-    OPERATION_RETURN(scope);
+    auto* bucket = jsCast<JSMap*>(map)->addNormalized(globalObject, JSValue::decode(key), JSValue::decode(value), hash);
+    if (!bucket)
+        return vm.sentinelMapBucket();
+    return bucket;
 }
 
 JSC_DEFINE_JIT_OPERATION(operationSetDelete, size_t, (JSGlobalObject* globalObject, JSCell* set, EncodedJSValue key, int32_t hash))
@@ -4350,8 +3975,7 @@ JSC_DEFINE_JIT_OPERATION(operationSetDelete, size_t, (JSGlobalObject* globalObje
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    OPERATION_RETURN(scope, jsCast<JSSet*>(set)->removeNormalized(globalObject, JSValue::decode(key), hash));
+    return jsCast<JSSet*>(set)->removeNormalized(globalObject, JSValue::decode(key), hash);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationMapDelete, size_t, (JSGlobalObject* globalObject, JSCell* map, EncodedJSValue key, int32_t hash))
@@ -4359,8 +3983,7 @@ JSC_DEFINE_JIT_OPERATION(operationMapDelete, size_t, (JSGlobalObject* globalObje
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    OPERATION_RETURN(scope, jsCast<JSMap*>(map)->removeNormalized(globalObject, JSValue::decode(key), hash));
+    return jsCast<JSMap*>(map)->removeNormalized(globalObject, JSValue::decode(key), hash);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationNewMap, JSMap*, (VM* vmPointer, Structure* structure))
@@ -4368,8 +3991,7 @@ JSC_DEFINE_JIT_OPERATION(operationNewMap, JSMap*, (VM* vmPointer, Structure* str
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    OPERATION_RETURN(scope, JSMap::create(vm, structure));
+    return JSMap::create(vm, structure);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationNewSet, JSSet*, (VM* vmPointer, Structure* structure))
@@ -4377,8 +3999,7 @@ JSC_DEFINE_JIT_OPERATION(operationNewSet, JSSet*, (VM* vmPointer, Structure* str
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    OPERATION_RETURN(scope, JSSet::create(vm, structure));
+    return JSSet::create(vm, structure);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationWeakSetAdd, void, (JSGlobalObject* globalObject, JSCell* set, JSCell* key, int32_t hash))
@@ -4386,15 +4007,14 @@ JSC_DEFINE_JIT_OPERATION(operationWeakSetAdd, void, (JSGlobalObject* globalObjec
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (UNLIKELY(!canBeHeldWeakly(key))) {
+        auto scope = DECLARE_THROW_SCOPE(vm); // Intentionally putting it here since we would like to make object key case GC-free.
         throwTypeError(globalObject, scope, WeakSetInvalidValueError);
-        OPERATION_RETURN(scope);
+        return;
     }
 
     jsCast<JSWeakSet*>(set)->add(vm, key, JSValue(), hash);
-    OPERATION_RETURN(scope);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationWeakMapSet, void, (JSGlobalObject* globalObject, JSCell* map, JSCell* key, EncodedJSValue value, int32_t hash))
@@ -4402,15 +4022,14 @@ JSC_DEFINE_JIT_OPERATION(operationWeakMapSet, void, (JSGlobalObject* globalObjec
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (UNLIKELY(!canBeHeldWeakly(key))) {
+        auto scope = DECLARE_THROW_SCOPE(vm); // Intentionally putting it here since we would like to make object key case GC-free.
         throwTypeError(globalObject, scope, WeakMapInvalidKeyError);
-        OPERATION_RETURN(scope);
+        return;
     }
 
     jsCast<JSWeakMap*>(map)->add(vm, key, JSValue::decode(value), hash);
-    OPERATION_RETURN(scope);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationGetPrototypeOfObject, EncodedJSValue, (JSGlobalObject* globalObject, JSObject* thisObject))
@@ -4418,8 +4037,7 @@ JSC_DEFINE_JIT_OPERATION(operationGetPrototypeOfObject, EncodedJSValue, (JSGloba
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    OPERATION_RETURN(scope, JSValue::encode(thisObject->getPrototype(vm, globalObject)));
+    return JSValue::encode(thisObject->getPrototype(vm, globalObject));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationGetPrototypeOf, EncodedJSValue, (JSGlobalObject* globalObject, EncodedJSValue encodedValue))
@@ -4427,9 +4045,8 @@ JSC_DEFINE_JIT_OPERATION(operationGetPrototypeOf, EncodedJSValue, (JSGlobalObjec
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue value = JSValue::decode(encodedValue);
-    OPERATION_RETURN(scope, JSValue::encode(value.getPrototype(globalObject)));
+    return JSValue::encode(value.getPrototype(globalObject));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationDateGetFullYear, EncodedJSValue, (VM* vmPointer, DateInstance* date))
@@ -4437,12 +4054,11 @@ JSC_DEFINE_JIT_OPERATION(operationDateGetFullYear, EncodedJSValue, (VM* vmPointe
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     const GregorianDateTime* gregorianDateTime = date->gregorianDateTime(vm.dateCache);
     if (!gregorianDateTime)
-        OPERATION_RETURN(scope, JSValue::encode(jsNaN()));
-    OPERATION_RETURN(scope, JSValue::encode(jsNumber(gregorianDateTime->year())));
+        return JSValue::encode(jsNaN());
+    return JSValue::encode(jsNumber(gregorianDateTime->year()));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationDateGetUTCFullYear, EncodedJSValue, (VM* vmPointer, DateInstance* date))
@@ -4450,12 +4066,11 @@ JSC_DEFINE_JIT_OPERATION(operationDateGetUTCFullYear, EncodedJSValue, (VM* vmPoi
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     const GregorianDateTime* gregorianDateTime = date->gregorianDateTimeUTC(vm.dateCache);
     if (!gregorianDateTime)
-        OPERATION_RETURN(scope, JSValue::encode(jsNaN()));
-    OPERATION_RETURN(scope, JSValue::encode(jsNumber(gregorianDateTime->year())));
+        return JSValue::encode(jsNaN());
+    return JSValue::encode(jsNumber(gregorianDateTime->year()));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationDateGetMonth, EncodedJSValue, (VM* vmPointer, DateInstance* date))
@@ -4463,12 +4078,11 @@ JSC_DEFINE_JIT_OPERATION(operationDateGetMonth, EncodedJSValue, (VM* vmPointer, 
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     const GregorianDateTime* gregorianDateTime = date->gregorianDateTime(vm.dateCache);
     if (!gregorianDateTime)
-        OPERATION_RETURN(scope, JSValue::encode(jsNaN()));
-    OPERATION_RETURN(scope, JSValue::encode(jsNumber(gregorianDateTime->month())));
+        return JSValue::encode(jsNaN());
+    return JSValue::encode(jsNumber(gregorianDateTime->month()));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationDateGetUTCMonth, EncodedJSValue, (VM* vmPointer, DateInstance* date))
@@ -4476,12 +4090,11 @@ JSC_DEFINE_JIT_OPERATION(operationDateGetUTCMonth, EncodedJSValue, (VM* vmPointe
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     const GregorianDateTime* gregorianDateTime = date->gregorianDateTimeUTC(vm.dateCache);
     if (!gregorianDateTime)
-        OPERATION_RETURN(scope, JSValue::encode(jsNaN()));
-    OPERATION_RETURN(scope, JSValue::encode(jsNumber(gregorianDateTime->month())));
+        return JSValue::encode(jsNaN());
+    return JSValue::encode(jsNumber(gregorianDateTime->month()));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationDateGetDate, EncodedJSValue, (VM* vmPointer, DateInstance* date))
@@ -4489,12 +4102,11 @@ JSC_DEFINE_JIT_OPERATION(operationDateGetDate, EncodedJSValue, (VM* vmPointer, D
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     const GregorianDateTime* gregorianDateTime = date->gregorianDateTime(vm.dateCache);
     if (!gregorianDateTime)
-        OPERATION_RETURN(scope, JSValue::encode(jsNaN()));
-    OPERATION_RETURN(scope, JSValue::encode(jsNumber(gregorianDateTime->monthDay())));
+        return JSValue::encode(jsNaN());
+    return JSValue::encode(jsNumber(gregorianDateTime->monthDay()));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationDateGetUTCDate, EncodedJSValue, (VM* vmPointer, DateInstance* date))
@@ -4502,12 +4114,11 @@ JSC_DEFINE_JIT_OPERATION(operationDateGetUTCDate, EncodedJSValue, (VM* vmPointer
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     const GregorianDateTime* gregorianDateTime = date->gregorianDateTimeUTC(vm.dateCache);
     if (!gregorianDateTime)
-        OPERATION_RETURN(scope, JSValue::encode(jsNaN()));
-    OPERATION_RETURN(scope, JSValue::encode(jsNumber(gregorianDateTime->monthDay())));
+        return JSValue::encode(jsNaN());
+    return JSValue::encode(jsNumber(gregorianDateTime->monthDay()));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationDateGetDay, EncodedJSValue, (VM* vmPointer, DateInstance* date))
@@ -4515,12 +4126,11 @@ JSC_DEFINE_JIT_OPERATION(operationDateGetDay, EncodedJSValue, (VM* vmPointer, Da
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     const GregorianDateTime* gregorianDateTime = date->gregorianDateTime(vm.dateCache);
     if (!gregorianDateTime)
-        OPERATION_RETURN(scope, JSValue::encode(jsNaN()));
-    OPERATION_RETURN(scope, JSValue::encode(jsNumber(gregorianDateTime->weekDay())));
+        return JSValue::encode(jsNaN());
+    return JSValue::encode(jsNumber(gregorianDateTime->weekDay()));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationDateGetUTCDay, EncodedJSValue, (VM* vmPointer, DateInstance* date))
@@ -4528,12 +4138,11 @@ JSC_DEFINE_JIT_OPERATION(operationDateGetUTCDay, EncodedJSValue, (VM* vmPointer,
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     const GregorianDateTime* gregorianDateTime = date->gregorianDateTimeUTC(vm.dateCache);
     if (!gregorianDateTime)
-        OPERATION_RETURN(scope, JSValue::encode(jsNaN()));
-    OPERATION_RETURN(scope, JSValue::encode(jsNumber(gregorianDateTime->weekDay())));
+        return JSValue::encode(jsNaN());
+    return JSValue::encode(jsNumber(gregorianDateTime->weekDay()));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationDateGetHours, EncodedJSValue, (VM* vmPointer, DateInstance* date))
@@ -4541,12 +4150,11 @@ JSC_DEFINE_JIT_OPERATION(operationDateGetHours, EncodedJSValue, (VM* vmPointer, 
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     const GregorianDateTime* gregorianDateTime = date->gregorianDateTime(vm.dateCache);
     if (!gregorianDateTime)
-        OPERATION_RETURN(scope, JSValue::encode(jsNaN()));
-    OPERATION_RETURN(scope, JSValue::encode(jsNumber(gregorianDateTime->hour())));
+        return JSValue::encode(jsNaN());
+    return JSValue::encode(jsNumber(gregorianDateTime->hour()));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationDateGetUTCHours, EncodedJSValue, (VM* vmPointer, DateInstance* date))
@@ -4554,12 +4162,11 @@ JSC_DEFINE_JIT_OPERATION(operationDateGetUTCHours, EncodedJSValue, (VM* vmPointe
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     const GregorianDateTime* gregorianDateTime = date->gregorianDateTimeUTC(vm.dateCache);
     if (!gregorianDateTime)
-        OPERATION_RETURN(scope, JSValue::encode(jsNaN()));
-    OPERATION_RETURN(scope, JSValue::encode(jsNumber(gregorianDateTime->hour())));
+        return JSValue::encode(jsNaN());
+    return JSValue::encode(jsNumber(gregorianDateTime->hour()));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationDateGetMinutes, EncodedJSValue, (VM* vmPointer, DateInstance* date))
@@ -4567,12 +4174,11 @@ JSC_DEFINE_JIT_OPERATION(operationDateGetMinutes, EncodedJSValue, (VM* vmPointer
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     const GregorianDateTime* gregorianDateTime = date->gregorianDateTime(vm.dateCache);
     if (!gregorianDateTime)
-        OPERATION_RETURN(scope, JSValue::encode(jsNaN()));
-    OPERATION_RETURN(scope, JSValue::encode(jsNumber(gregorianDateTime->minute())));
+        return JSValue::encode(jsNaN());
+    return JSValue::encode(jsNumber(gregorianDateTime->minute()));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationDateGetUTCMinutes, EncodedJSValue, (VM* vmPointer, DateInstance* date))
@@ -4580,12 +4186,11 @@ JSC_DEFINE_JIT_OPERATION(operationDateGetUTCMinutes, EncodedJSValue, (VM* vmPoin
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     const GregorianDateTime* gregorianDateTime = date->gregorianDateTimeUTC(vm.dateCache);
     if (!gregorianDateTime)
-        OPERATION_RETURN(scope, JSValue::encode(jsNaN()));
-    OPERATION_RETURN(scope, JSValue::encode(jsNumber(gregorianDateTime->minute())));
+        return JSValue::encode(jsNaN());
+    return JSValue::encode(jsNumber(gregorianDateTime->minute()));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationDateGetSeconds, EncodedJSValue, (VM* vmPointer, DateInstance* date))
@@ -4593,12 +4198,11 @@ JSC_DEFINE_JIT_OPERATION(operationDateGetSeconds, EncodedJSValue, (VM* vmPointer
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     const GregorianDateTime* gregorianDateTime = date->gregorianDateTime(vm.dateCache);
     if (!gregorianDateTime)
-        OPERATION_RETURN(scope, JSValue::encode(jsNaN()));
-    OPERATION_RETURN(scope, JSValue::encode(jsNumber(gregorianDateTime->second())));
+        return JSValue::encode(jsNaN());
+    return JSValue::encode(jsNumber(gregorianDateTime->second()));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationDateGetUTCSeconds, EncodedJSValue, (VM* vmPointer, DateInstance* date))
@@ -4606,12 +4210,11 @@ JSC_DEFINE_JIT_OPERATION(operationDateGetUTCSeconds, EncodedJSValue, (VM* vmPoin
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     const GregorianDateTime* gregorianDateTime = date->gregorianDateTimeUTC(vm.dateCache);
     if (!gregorianDateTime)
-        OPERATION_RETURN(scope, JSValue::encode(jsNaN()));
-    OPERATION_RETURN(scope, JSValue::encode(jsNumber(gregorianDateTime->second())));
+        return JSValue::encode(jsNaN());
+    return JSValue::encode(jsNumber(gregorianDateTime->second()));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationDateGetTimezoneOffset, EncodedJSValue, (VM* vmPointer, DateInstance* date))
@@ -4619,12 +4222,11 @@ JSC_DEFINE_JIT_OPERATION(operationDateGetTimezoneOffset, EncodedJSValue, (VM* vm
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     const GregorianDateTime* gregorianDateTime = date->gregorianDateTime(vm.dateCache);
     if (!gregorianDateTime)
-        OPERATION_RETURN(scope, JSValue::encode(jsNaN()));
-    OPERATION_RETURN(scope, JSValue::encode(jsNumber(-gregorianDateTime->utcOffsetInMinute())));
+        return JSValue::encode(jsNaN());
+    return JSValue::encode(jsNumber(-gregorianDateTime->utcOffsetInMinute()));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationDateGetYear, EncodedJSValue, (VM* vmPointer, DateInstance* date))
@@ -4632,12 +4234,11 @@ JSC_DEFINE_JIT_OPERATION(operationDateGetYear, EncodedJSValue, (VM* vmPointer, D
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     const GregorianDateTime* gregorianDateTime = date->gregorianDateTime(vm.dateCache);
     if (!gregorianDateTime)
-        OPERATION_RETURN(scope, JSValue::encode(jsNaN()));
-    OPERATION_RETURN(scope, JSValue::encode(jsNumber(gregorianDateTime->year() - 1900)));
+        return JSValue::encode(jsNaN());
+    return JSValue::encode(jsNumber(gregorianDateTime->year() - 1900));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationInt64ToBigInt, EncodedJSValue, (JSGlobalObject* globalObject, int64_t value))
@@ -4645,8 +4246,7 @@ JSC_DEFINE_JIT_OPERATION(operationInt64ToBigInt, EncodedJSValue, (JSGlobalObject
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    OPERATION_RETURN(scope, JSValue::encode(JSBigInt::makeHeapBigIntOrBigInt32(globalObject, value)));
+    return JSValue::encode(JSBigInt::makeHeapBigIntOrBigInt32(globalObject, value));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationThrowDFG, void, (JSGlobalObject* globalObject, EncodedJSValue valueToThrow))
@@ -4656,7 +4256,6 @@ JSC_DEFINE_JIT_OPERATION(operationThrowDFG, void, (JSGlobalObject* globalObject,
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
     scope.throwException(globalObject, JSValue::decode(valueToThrow));
-    OPERATION_RETURN(scope);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationThrowStaticError, void, (JSGlobalObject* globalObject, JSString* message, uint32_t errorType))
@@ -4665,9 +4264,8 @@ JSC_DEFINE_JIT_OPERATION(operationThrowStaticError, void, (JSGlobalObject* globa
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
-    auto errorMessage = message->value(globalObject);
+    String errorMessage = message->value(globalObject);
     scope.throwException(globalObject, createError(globalObject, static_cast<ErrorTypeWithExtension>(errorType), errorMessage));
-    OPERATION_RETURN(scope);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationLinkDirectCall, void, (DirectCallLinkInfo* callLinkInfo, JSFunction* callee))
@@ -4676,11 +4274,11 @@ JSC_DEFINE_JIT_OPERATION(operationLinkDirectCall, void, (DirectCallLinkInfo* cal
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    auto scope = DECLARE_THROW_SCOPE(vm);
+    auto throwScope = DECLARE_THROW_SCOPE(vm);
 
     CodeSpecializationKind kind = callLinkInfo->specializationKind();
 
-    JSScope* jsScope = callee->scopeUnchecked();
+    JSScope* scope = callee->scopeUnchecked();
     ExecutableBase* executable = callee->executable();
 
     // FIXME: Support wasm IC.
@@ -4695,8 +4293,8 @@ JSC_DEFINE_JIT_OPERATION(operationLinkDirectCall, void, (DirectCallLinkInfo* cal
         FunctionExecutable* functionExecutable = static_cast<FunctionExecutable*>(executable);
         RELEASE_ASSERT(isCall(kind) || functionExecutable->constructAbility() != ConstructAbility::CannotConstruct);
 
-        functionExecutable->prepareForExecution<FunctionExecutable>(vm, callee, jsScope, kind, codeBlock);
-        OPERATION_RETURN_IF_EXCEPTION(scope);
+        functionExecutable->prepareForExecution<FunctionExecutable>(vm, callee, scope, kind, codeBlock);
+        RETURN_IF_EXCEPTION(throwScope, void());
 
         unsigned argumentStackSlots = callLinkInfo->maxArgumentCountIncludingThis();
         if (argumentStackSlots < static_cast<size_t>(codeBlock->numParameters()))
@@ -4706,10 +4304,9 @@ JSC_DEFINE_JIT_OPERATION(operationLinkDirectCall, void, (DirectCallLinkInfo* cal
     }
 
     linkDirectCall(*callLinkInfo, codeBlock, codePtr);
-    OPERATION_RETURN(scope);
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationTriggerReoptimizationNow, void, (CodeBlock* codeBlock, CodeBlock* optimizedCodeBlock, OSRExitBase* exit))
+JSC_DEFINE_JIT_OPERATION(operationTriggerReoptimizationNow, void, (CodeBlock* codeBlock, CodeBlock* optimizedCodeBlock, OSRExitBase* exit))
 {
     // It's sort of preferable that we don't GC while in here. Anyways, doing so wouldn't
     // really be profitable.
@@ -4828,7 +4425,7 @@ static void triggerFTLReplacementCompile(VM& vm, CodeBlock* codeBlock, JITCode* 
         codeBlock, CompilationDeferred);
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationTriggerTierUpNow, void, (VM* vmPointer))
+JSC_DEFINE_JIT_OPERATION(operationTriggerTierUpNow, void, (VM* vmPointer))
 {
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
@@ -5068,7 +4665,7 @@ static char* tierUpCommon(VM& vm, CallFrame* callFrame, BytecodeIndex originByte
     CODEBLOCK_LOG_EVENT(codeBlock, "triggerFTLOSR", ());
     CompilationResult forEntryResult = compile(
         vm, replacementCodeBlock, codeBlock, JITCompilationMode::FTLForOSREntry, originBytecodeIndex,
-        WTFMove(mustHandleValues), ToFTLForOSREntryDeferredCompilationCallback::create(triggerAddress));
+        mustHandleValues, ToFTLForOSREntryDeferredCompilationCallback::create(triggerAddress));
 
     if (jitCode->neverExecutedEntry)
         triggerFTLReplacementCompile(vm, codeBlock, jitCode);
@@ -5094,7 +4691,7 @@ static char* tierUpCommon(VM& vm, CallFrame* callFrame, BytecodeIndex originByte
     return tagCodePtrWithStackPointerForJITCall(untagCodePtr<char*, JSEntryPtrTag>(address), callFrame);
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationTriggerTierUpNowInLoop, void, (VM* vmPointer, unsigned bytecodeIndexBits))
+JSC_DEFINE_JIT_OPERATION(operationTriggerTierUpNowInLoop, void, (VM* vmPointer, unsigned bytecodeIndexBits))
 {
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
@@ -5126,7 +4723,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationTriggerTierUpNowInLoop, void, (VM* vm
     }
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationTriggerOSREntryNow, char*, (VM* vmPointer, unsigned bytecodeIndexBits))
+JSC_DEFINE_JIT_OPERATION(operationTriggerOSREntryNow, char*, (VM* vmPointer, unsigned bytecodeIndexBits))
 {
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);

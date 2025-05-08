@@ -52,7 +52,7 @@
 #include "ConvolverNode.h"
 #include "DelayNode.h"
 #include "DelayOptions.h"
-#include "DocumentInlines.h"
+#include "Document.h"
 #include "DynamicsCompressorNode.h"
 #include "EventNames.h"
 #include "FFTFrame.h"
@@ -73,7 +73,6 @@
 #include "PannerNode.h"
 #include "PeriodicWave.h"
 #include "PeriodicWaveOptions.h"
-#include "PlatformMediaSessionManager.h"
 #include "ScriptController.h"
 #include "ScriptProcessorNode.h"
 #include "StereoPannerNode.h"
@@ -82,11 +81,11 @@
 #include <JavaScriptCore/ArrayBuffer.h>
 #include <JavaScriptCore/ScriptCallStack.h>
 #include <wtf/Atomics.h>
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/MainThread.h>
 #include <wtf/NativePromise.h>
 #include <wtf/Ref.h>
 #include <wtf/Scope.h>
-#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/WTFString.h>
 
 #if DEBUG_AUDIONODE_REFERENCES
@@ -99,7 +98,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(BaseAudioContext);
+WTF_MAKE_ISO_ALLOCATED_IMPL(BaseAudioContext);
 
 bool BaseAudioContext::isSupportedSampleRate(float sampleRate)
 {
@@ -231,7 +230,6 @@ void BaseAudioContext::setState(State state)
     if (m_state != state) {
         m_state = state;
         queueTaskToDispatchEvent(*this, TaskSource::MediaElement, Event::create(eventNames().statechangeEvent, Event::CanBubble::Yes, Event::IsCancelable::No));
-        PlatformMediaSessionManager::updateNowPlayingInfoIfNecessary();
     }
 
     size_t stateIndex = static_cast<size_t>(state);
@@ -276,7 +274,7 @@ bool BaseAudioContext::wouldTaintOrigin(const URL& url) const
         return false;
 
     if (RefPtr document = this->document())
-        return !document->protectedSecurityOrigin()->canRequest(url, OriginAccessPatternsForWebProcess::singleton());
+        return !document->securityOrigin().canRequest(url, OriginAccessPatternsForWebProcess::singleton());
 
     return false;
 }
@@ -296,14 +294,9 @@ void BaseAudioContext::decodeAudioData(Ref<ArrayBuffer>&& audioData, RefPtr<Audi
     if (!m_audioDecoder)
         m_audioDecoder = makeUnique<AsyncAudioDecoder>();
 
-    audioData->pin();
-
-    auto p = m_audioDecoder->decodeAsync(audioData.copyRef(), sampleRate());
-    p->whenSettled(RunLoop::current(), [this, audioData = WTFMove(audioData), activity = makePendingActivity(*this), successCallback = WTFMove(successCallback), errorCallback = WTFMove(errorCallback), promise = WTFMove(promise)] (DecodingTaskPromise::Result&& result) mutable {
-        queueTaskKeepingObjectAlive(*this, TaskSource::InternalAsyncTask, [audioData = WTFMove(audioData), successCallback = WTFMove(successCallback), errorCallback = WTFMove(errorCallback), promise = WTFMove(promise), result = WTFMove(result)]() mutable {
-
-            audioData->unpin();
-
+    auto p = m_audioDecoder->decodeAsync(WTFMove(audioData), sampleRate());
+    p->whenSettled(RunLoop::current(), [this, activity = makePendingActivity(*this), successCallback = WTFMove(successCallback), errorCallback = WTFMove(errorCallback), promise = WTFMove(promise)] (DecodingTaskPromise::Result&& result) mutable {
+        queueTaskKeepingObjectAlive(*this, TaskSource::InternalAsyncTask, [successCallback = WTFMove(successCallback), errorCallback = WTFMove(errorCallback), promise = WTFMove(promise), result = WTFMove(result)]() mutable {
             if (!result) {
                 promise->reject(WTFMove(result.error()));
                 if (errorCallback)
@@ -793,9 +786,9 @@ void BaseAudioContext::removeMarkedSummingJunction(AudioSummingJunction* summing
     m_dirtySummingJunctions.remove(summingJunction);
 }
 
-enum EventTargetInterfaceType BaseAudioContext::eventTargetInterface() const
+EventTargetInterface BaseAudioContext::eventTargetInterface() const
 {
-    return EventTargetInterfaceType::BaseAudioContext;
+    return BaseAudioContextEventTargetInterfaceType;
 }
 
 void BaseAudioContext::markAudioNodeOutputDirty(AudioNodeOutput* output)

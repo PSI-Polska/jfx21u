@@ -51,11 +51,6 @@ void MediaStrategy::resetMediaEngines()
     m_mockMediaSourceEnabled = false;
 }
 
-bool MediaStrategy::hasThreadSafeMediaSourceSupport() const
-{
-    return false;
-}
-
 #if ENABLE(MEDIA_SOURCE)
 void MediaStrategy::enableMockMediaSource()
 {

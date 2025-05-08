@@ -26,26 +26,21 @@
 #include "config.h"
 #include "ToggleEvent.h"
 
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ToggleEvent);
-
-ToggleEvent::ToggleEvent()
-    : Event(EventInterfaceType::ToggleEvent)
-{
-}
+WTF_MAKE_ISO_ALLOCATED_IMPL(ToggleEvent);
 
 ToggleEvent::ToggleEvent(const AtomString& type, const ToggleEvent::Init& initializer, Event::IsCancelable cancelable)
-    : Event(EventInterfaceType::ToggleEvent, type, Event::CanBubble::No, cancelable, Event::IsComposed::No)
+    : Event(type, Event::CanBubble::No, cancelable, Event::IsComposed::No)
     , m_oldState(initializer.oldState)
     , m_newState(initializer.newState)
 {
 }
 
 ToggleEvent::ToggleEvent(const AtomString& type, const ToggleEvent::Init& initializer)
-    : Event(EventInterfaceType::ToggleEvent, type, initializer, IsTrusted::No)
+    : Event(type, initializer, IsTrusted::No)
     , m_oldState(initializer.oldState)
     , m_newState(initializer.newState)
 {
@@ -64,6 +59,11 @@ Ref<ToggleEvent> ToggleEvent::create(const AtomString& eventType, const ToggleEv
 Ref<ToggleEvent> ToggleEvent::createForBindings()
 {
     return adoptRef(*new ToggleEvent);
+}
+
+EventInterface ToggleEvent::eventInterface() const
+{
+    return ToggleEventInterfaceType;
 }
 
 } // namespace WebCore

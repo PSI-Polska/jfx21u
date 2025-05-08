@@ -36,8 +36,7 @@ template<typename T, typename Counter> class EventSender;
 using StyleEventSender = EventSender<HTMLStyleElement, WeakPtrImplWithEventTargetData>;
 
 class HTMLStyleElement final : public HTMLElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLStyleElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLStyleElement);
+    WTF_MAKE_ISO_ALLOCATED(HTMLStyleElement);
 public:
     static Ref<HTMLStyleElement> create(Document&);
     static Ref<HTMLStyleElement> create(const QualifiedName&, Document&, bool createdByParser);
@@ -52,8 +51,6 @@ public:
     static void dispatchPendingLoadEvents(Page*);
 
     void finishParsingChildren() final;
-
-    WEBCORE_EXPORT DOMTokenList& blocking();
 
 private:
     HTMLStyleElement(const QualifiedName&, Document&, bool createdByParser);
@@ -71,7 +68,6 @@ private:
     void addSubresourceAttributeURLs(ListHashSet<URL>&) const final;
 
     InlineStyleSheetOwner m_styleSheetOwner;
-    std::unique_ptr<DOMTokenList> m_blockingList;
     bool m_loadedSheet { false };
 };
 

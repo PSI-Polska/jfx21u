@@ -27,11 +27,8 @@
 
 #if ENABLE(IMAGE_ANALYSIS)
 
-#if ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
 OBJC_CLASS NSAttributedString;
-OBJC_CLASS NSData;
 OBJC_CLASS VKCImageAnalysis;
-#endif
 
 #if ENABLE(DATA_DETECTION)
 OBJC_CLASS DDScannerResult;
@@ -110,10 +107,7 @@ struct TextRecognitionResult {
     Vector<TextRecognitionBlockData> blocks;
 
 #if ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
-    RetainPtr<NSData> imageAnalysisData;
-
-    WEBCORE_EXPORT static RetainPtr<NSData> encodeVKCImageAnalysis(RetainPtr<VKCImageAnalysis>);
-    WEBCORE_EXPORT static RetainPtr<VKCImageAnalysis> decodeVKCImageAnalysis(RetainPtr<NSData>);
+    RetainPtr<VKCImageAnalysis> platformData;
 #endif
 
     bool isEmpty() const

@@ -226,9 +226,9 @@ class GenerationContext:
 
     def _generate_lookup_functions(self, *, to):
         to.write(textwrap.dedent("""
-            CSSValueID findCSSValueKeyword(std::span<const char> characters)
+            CSSValueID findCSSValueKeyword(const char* characters, unsigned length)
             {
-                auto* value = CSSValueKeywordsHash::in_word_set(characters.data(), characters.size());
+                auto* value = CSSValueKeywordsHash::in_word_set(characters, length);
                 return value ? static_cast<CSSValueID>(value->id) : CSSValueInvalid;
             }
 
@@ -337,7 +337,7 @@ class GenerationContext:
 
     def _generate_css_value_keywords_h_forward_declarations(self, *, to):
         to.write(textwrap.dedent("""\
-            CSSValueID findCSSValueKeyword(std::span<const char> characters);
+            CSSValueID findCSSValueKeyword(const char* characters, unsigned length);
             ASCIILiteral nameLiteral(CSSValueID);
             ASCIILiteral nameLiteralForSerialization(CSSValueID); // Lowercase.
             WEBCORE_EXPORT const AtomString& nameString(CSSValueID);

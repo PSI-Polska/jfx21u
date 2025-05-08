@@ -29,22 +29,21 @@
 #include "config.h"
 #include "RenderSVGPath.h"
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "Gradient.h"
 #include "ReferencedSVGResources.h"
 #include "RenderLayer.h"
 #include "RenderSVGResourceMarkerInlines.h"
 #include "RenderSVGShapeInlines.h"
 #include "RenderStyleInlines.h"
-#include "SVGElementTypeHelpers.h"
 #include "SVGMarkerElement.h"
 #include "SVGPathElement.h"
 #include "SVGSubpathData.h"
-#include "SVGVisitedRendererTracking.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderSVGPath);
+WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGPath);
 
 RenderSVGPath::RenderSVGPath(SVGGraphicsElement& element, RenderStyle&& style)
     : RenderSVGShape(Type::SVGPath, element, WTFMove(style))
@@ -214,28 +213,25 @@ void RenderSVGPath::drawMarkers(PaintInfo& paintInfo)
     if (m_markerPositions.isEmpty())
         return;
 
-    static NeverDestroyed<SVGVisitedRendererTracking::VisitedSet> s_visitedSet;
-
-    SVGVisitedRendererTracking recursionTracking(s_visitedSet);
-    if (recursionTracking.isVisiting(*this))
+    if (SVGHitTestCycleDetectionScope::isVisiting(*this))
         return;
 
-    SVGVisitedRendererTracking::Scope recursionScope(recursionTracking, *this);
+    SVGHitTestCycleDetectionScope paintScope(*this);
 
-    CheckedPtr markerStart = svgMarkerStartResourceFromStyle();
-    CheckedPtr markerMid = svgMarkerMidResourceFromStyle();
-    CheckedPtr markerEnd = svgMarkerEndResourceFromStyle();
+    auto* markerStart = svgMarkerStartResourceFromStyle();
+    auto* markerMid = svgMarkerMidResourceFromStyle();
+    auto* markerEnd = svgMarkerEndResourceFromStyle();
     if (!markerStart && !markerMid && !markerEnd)
         return;
 
     float strokeWidth = this->strokeWidth();
     for (auto& markerPosition : m_markerPositions) {
-        if (auto* marker = markerForType(markerPosition.type, markerStart.get(), markerMid.get(), markerEnd.get()); marker && marker->hasLayer()) {
+        if (auto* marker = markerForType(markerPosition.type, markerStart, markerMid, markerEnd); marker && marker->hasLayer()) {
             auto& context = paintInfo.context();
             GraphicsContextStateSaver stateSaver(context);
 
             auto contentTransform = marker->markerTransformation(markerPosition.origin, markerPosition.angle, strokeWidth);
-            marker->checkedLayer()->paintSVGResourceLayer(context, contentTransform);
+            marker->layer()->paintSVGResourceLayer(context, contentTransform);
         }
     }
 }
@@ -245,23 +241,20 @@ FloatRect RenderSVGPath::computeMarkerBoundingBox(const SVGBoundingBoxComputatio
     if (m_markerPositions.isEmpty())
         return { };
 
-    static NeverDestroyed<SVGVisitedRendererTracking::VisitedSet> s_visitedSet;
-
-    SVGVisitedRendererTracking recursionTracking(s_visitedSet);
-    if (recursionTracking.isVisiting(*this))
+    if (SVGHitTestCycleDetectionScope::isVisiting(*this))
         return { };
 
-    SVGVisitedRendererTracking::Scope recursionScope(recursionTracking, *this);
+    SVGHitTestCycleDetectionScope queryScope(*this);
 
-    CheckedPtr markerStart = svgMarkerStartResourceFromStyle();
-    CheckedPtr markerMid = svgMarkerMidResourceFromStyle();
-    CheckedPtr markerEnd = svgMarkerEndResourceFromStyle();
+    auto* markerStart = svgMarkerStartResourceFromStyle();
+    auto* markerMid = svgMarkerMidResourceFromStyle();
+    auto* markerEnd = svgMarkerEndResourceFromStyle();
     if (!markerStart && !markerMid && !markerEnd)
         return { };
 
     FloatRect boundaries;
     for (auto& markerPosition : m_markerPositions) {
-        if (auto* marker = markerForType(markerPosition.type, markerStart.get(), markerMid.get(), markerEnd.get()))
+        if (auto* marker = markerForType(markerPosition.type, markerStart, markerMid, markerEnd))
             boundaries.unite(marker->computeMarkerBoundingBox(options, marker->markerTransformation(markerPosition.origin, markerPosition.angle, strokeWidth())));
     }
 
@@ -292,14 +285,6 @@ bool RenderSVGPath::isRenderingDisabled() const
     return !hasPath() || path().isEmpty();
 }
 
-void RenderSVGPath::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
-{
-    if (RefPtr pathElement = dynamicDowncast<SVGPathElement>(graphicsElement())) {
-        if (!oldStyle || style().d() != oldStyle->d())
-            pathElement->pathDidChange();
-    }
-
-    RenderSVGShape::styleDidChange(diff, oldStyle);
 }
 
-}
+#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

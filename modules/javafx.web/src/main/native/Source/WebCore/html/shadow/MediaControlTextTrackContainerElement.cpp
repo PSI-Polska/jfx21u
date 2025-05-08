@@ -57,12 +57,12 @@
 #include "TextTrackList.h"
 #include "UserAgentParts.h"
 #include "VTTRegionList.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/Language.h>
-#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MediaControlTextTrackContainerElement);
+WTF_MAKE_ISO_ALLOCATED_IMPL(MediaControlTextTrackContainerElement);
 
 using namespace HTMLNames;
 
@@ -102,7 +102,7 @@ void MediaControlTextTrackContainerElement::updateDisplay()
         return;
 
     // 2. Let video be the media element or other playback mechanism.
-    RefPtr video = dynamicDowncast<HTMLVideoElement>(*m_mediaElement);
+    auto* video = dynamicDowncast<HTMLVideoElement>(*m_mediaElement);
     if (!video)
         return;
 
@@ -156,7 +156,7 @@ void MediaControlTextTrackContainerElement::updateDisplay()
         removeChildren();
 
     activeCues.removeAllMatching([] (CueInterval& cueInterval) {
-        RefPtr cue = cueInterval.data();
+        RefPtr<TextTrackCue> cue = cueInterval.data();
         return !cue->track()
             || !cue->track()->isRendered()
             || cue->track()->mode() == TextTrack::Mode::Disabled
@@ -256,7 +256,7 @@ void MediaControlTextTrackContainerElement::updateActiveCuesFontSize()
     m_fontSize = lroundf(100 * fontScale);
 
     for (auto& activeCue : m_mediaElement->currentlyActiveCues()) {
-        RefPtr cue = activeCue.data();
+        RefPtr<TextTrackCue> cue = activeCue.data();
         if (cue->isRenderable())
             cue->setFontSize(m_fontSize, m_fontSizeIsImportant);
     }
@@ -275,9 +275,9 @@ void MediaControlTextTrackContainerElement::updateTextStrokeStyle()
     // FIXME: Since it is possible to have more than one text track enabled, the following code may not find the correct language.
     // The default UI only allows a user to enable one track at a time, so it should be OK for now, but we should consider doing
     // this differently, see <https://bugs.webkit.org/show_bug.cgi?id=169875>.
-    if (RefPtr tracks = m_mediaElement->textTracks()) {
+    if (auto* tracks = m_mediaElement->textTracks()) {
         for (unsigned i = 0; i < tracks->length(); ++i) {
-            RefPtr track = tracks->item(i);
+            auto track = tracks->item(i);
             if (track && track->mode() == TextTrack::Mode::Showing) {
                 language = track->validBCP47Language();
                 break;
@@ -290,7 +290,7 @@ void MediaControlTextTrackContainerElement::updateTextStrokeStyle()
 
     // FIXME: find a way to set this property in the stylesheet like the other user style preferences, see <https://bugs.webkit.org/show_bug.cgi?id=169874>.
     if (document().page()->group().ensureCaptionPreferences().captionStrokeWidthForFont(m_fontSize, language, strokeWidth, important))
-        setInlineStyleProperty(CSSPropertyStrokeWidth, strokeWidth, CSSUnitType::CSS_PX, important ? IsImportant::Yes : IsImportant::No);
+        setInlineStyleProperty(CSSPropertyStrokeWidth, strokeWidth, CSSUnitType::CSS_PX, important);
 }
 
 void MediaControlTextTrackContainerElement::updateTextTrackRepresentationIfNeeded()
@@ -349,12 +349,6 @@ void MediaControlTextTrackContainerElement::updateTextTrackStyle()
     removeInlineStyleProperty(CSSPropertyHeight);
     removeInlineStyleProperty(CSSPropertyLeft);
     removeInlineStyleProperty(CSSPropertyTop);
-}
-
-void MediaControlTextTrackContainerElement::requiresTextTrackRepresentationChanged()
-{
-    updateTextTrackRepresentationIfNeeded();
-    updateSizes(ForceUpdate::Yes);
 }
 
 void MediaControlTextTrackContainerElement::enteredFullscreen()
@@ -427,7 +421,7 @@ RefPtr<NativeImage> MediaControlTextTrackContainerElement::createTextTrackRepres
     if (!frame)
         return nullptr;
 
-    protectedDocument()->updateLayout();
+    document().updateLayout();
 
     auto* renderer = this->renderer();
     if (!renderer)
@@ -445,7 +439,7 @@ RefPtr<NativeImage> MediaControlTextTrackContainerElement::createTextTrackRepres
     IntRect paintingRect = IntRect(IntPoint(), layer->size());
 
     // FIXME (149422): This buffer should not be unconditionally unaccelerated.
-    auto buffer = ImageBuffer::create(paintingRect.size(), RenderingPurpose::Unspecified, deviceScaleFactor, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
+    auto buffer = ImageBuffer::create(paintingRect.size(), RenderingPurpose::Unspecified, deviceScaleFactor, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
     if (!buffer)
         return nullptr;
 

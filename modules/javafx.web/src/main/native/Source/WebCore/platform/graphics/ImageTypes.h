@@ -102,11 +102,4 @@ enum class AllowImageSubsampling : bool {
     Yes
 };
 
-#if USE(SKIA)
-enum class StrictImageClamping : bool {
-    No,
-    Yes
-};
-#endif
-
 }

@@ -44,7 +44,7 @@ struct GreaterThanOrSameSizeAsStyleRareInheritedData : public RefCounted<Greater
     Length lengths[2];
     float secondFloat;
     TextUnderlineOffset offset;
-    TextEdge lineFitEdge;
+    TextBoxEdge textBoxEdge;
     void* customPropertyDataRefs[1];
     unsigned bitfields[7];
     short pagedMediaShorts[2];
@@ -84,9 +84,9 @@ StyleRareInheritedData::StyleRareInheritedData()
     , visitedLinkCaretColor(StyleColor::currentColor())
     , accentColor(StyleColor::currentColor())
     , indent(RenderStyle::initialTextIndent())
-    , usedZoom(RenderStyle::initialZoom())
+    , effectiveZoom(RenderStyle::initialZoom())
     , textUnderlineOffset(RenderStyle::initialTextUnderlineOffset())
-    , lineFitEdge(RenderStyle::initialLineFitEdge())
+    , textBoxEdge(RenderStyle::initialTextBoxEdge())
     , miterLimit(RenderStyle::initialStrokeMiterLimit())
     , customProperties(StyleCustomPropertyData::create())
     , widows(RenderStyle::initialWidows())
@@ -108,7 +108,6 @@ StyleRareInheritedData::StyleRareInheritedData()
     , textOrientation(static_cast<unsigned>(TextOrientation::Mixed))
     , textIndentLine(static_cast<unsigned>(RenderStyle::initialTextIndentLine()))
     , textIndentType(static_cast<unsigned>(RenderStyle::initialTextIndentType()))
-    , textUnderlinePosition(static_cast<unsigned>(RenderStyle::initialTextUnderlinePosition().toRaw()))
     , lineBoxContain(static_cast<unsigned>(RenderStyle::initialLineBoxContain().toRaw()))
     , imageOrientation(RenderStyle::initialImageOrientation())
     , imageRendering(static_cast<unsigned>(RenderStyle::initialImageRendering()))
@@ -120,8 +119,8 @@ StyleRareInheritedData::StyleRareInheritedData()
     , textAlignLast(static_cast<unsigned>(RenderStyle::initialTextAlignLast()))
     , textJustify(static_cast<unsigned>(RenderStyle::initialTextJustify()))
     , textDecorationSkipInk(static_cast<unsigned>(RenderStyle::initialTextDecorationSkipInk()))
+    , textUnderlinePosition(static_cast<unsigned>(RenderStyle::initialTextUnderlinePosition()))
     , rubyPosition(static_cast<unsigned>(RenderStyle::initialRubyPosition()))
-    , rubyAlign(static_cast<unsigned>(RenderStyle::initialRubyAlign()))
     , textZoom(static_cast<unsigned>(RenderStyle::initialTextZoom()))
 #if PLATFORM(IOS_FAMILY)
     , touchCalloutEnabled(RenderStyle::initialTouchCalloutEnabled())
@@ -138,15 +137,13 @@ StyleRareInheritedData::StyleRareInheritedData()
     , hasAutoAccentColor(true)
     , effectiveInert(false)
     , isInSubtreeWithBlendMode(false)
-    , isInVisibilityAdjustmentSubtree(false)
-    , usedContentVisibility(static_cast<unsigned>(ContentVisibility::Visible))
-    , usedTouchActions(RenderStyle::initialTouchActions())
+    , effectiveContentVisibility(static_cast<unsigned>(ContentVisibility::Visible))
+    , effectiveTouchActions(RenderStyle::initialTouchActions())
     , strokeWidth(RenderStyle::initialStrokeWidth())
     , strokeColor(RenderStyle::initialStrokeColor())
 #if ENABLE(DARK_MODE_CSS)
     , colorScheme(RenderStyle::initialColorScheme())
 #endif
-    , quotes(RenderStyle::initialQuotes())
     , appleColorFilter(StyleFilterData::create())
     , lineGrid(RenderStyle::initialLineGrid())
     , tabSize(RenderStyle::initialTabSize())
@@ -177,9 +174,9 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
     , textShadow(o.textShadow ? makeUnique<ShadowData>(*o.textShadow) : nullptr)
     , cursorData(o.cursorData)
     , indent(o.indent)
-    , usedZoom(o.usedZoom)
+    , effectiveZoom(o.effectiveZoom)
     , textUnderlineOffset(o.textUnderlineOffset)
-    , lineFitEdge(o.lineFitEdge)
+    , textBoxEdge(o.textBoxEdge)
     , miterLimit(o.miterLimit)
     , customProperties(o.customProperties)
     , widows(o.widows)
@@ -202,7 +199,6 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
     , textOrientation(o.textOrientation)
     , textIndentLine(o.textIndentLine)
     , textIndentType(o.textIndentType)
-    , textUnderlinePosition(o.textUnderlinePosition)
     , lineBoxContain(o.lineBoxContain)
     , imageOrientation(o.imageOrientation)
     , imageRendering(o.imageRendering)
@@ -214,8 +210,8 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
     , textAlignLast(o.textAlignLast)
     , textJustify(o.textJustify)
     , textDecorationSkipInk(o.textDecorationSkipInk)
+    , textUnderlinePosition(o.textUnderlinePosition)
     , rubyPosition(o.rubyPosition)
-    , rubyAlign(o.rubyAlign)
     , textZoom(o.textZoom)
 #if PLATFORM(IOS_FAMILY)
     , touchCalloutEnabled(o.touchCalloutEnabled)
@@ -232,9 +228,8 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
     , hasAutoAccentColor(o.hasAutoAccentColor)
     , effectiveInert(o.effectiveInert)
     , isInSubtreeWithBlendMode(o.isInSubtreeWithBlendMode)
-    , isInVisibilityAdjustmentSubtree(o.isInVisibilityAdjustmentSubtree)
-    , usedContentVisibility(o.usedContentVisibility)
-    , usedTouchActions(o.usedTouchActions)
+    , effectiveContentVisibility(o.effectiveContentVisibility)
+    , effectiveTouchActions(o.effectiveTouchActions)
     , eventListenerRegionTypes(o.eventListenerRegionTypes)
     , strokeWidth(o.strokeWidth)
     , strokeColor(o.strokeColor)
@@ -247,7 +242,6 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
     , colorScheme(o.colorScheme)
 #endif
     , textEmphasisCustomMark(o.textEmphasisCustomMark)
-    , quotes(o.quotes)
     , appleColorFilter(o.appleColorFilter)
     , lineGrid(o.lineGrid)
     , tabSize(o.tabSize)
@@ -260,7 +254,6 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
     , listStyleType(o.listStyleType)
     , scrollbarColor(o.scrollbarColor)
 {
-    ASSERT(o == *this, "StyleRareInheritedData should be properly copied.");
 }
 
 Ref<StyleRareInheritedData> StyleRareInheritedData::copy() const
@@ -288,9 +281,9 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
         && arePointingToEqualData(textShadow, o.textShadow)
         && arePointingToEqualData(cursorData, o.cursorData)
         && indent == o.indent
-        && usedZoom == o.usedZoom
+        && effectiveZoom == o.effectiveZoom
         && textUnderlineOffset == o.textUnderlineOffset
-        && lineFitEdge == o.lineFitEdge
+        && textBoxEdge == o.textBoxEdge
         && wordSpacing == o.wordSpacing
         && miterLimit == o.miterLimit
         && widows == o.widows
@@ -342,7 +335,6 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
         && textDecorationSkipInk == o.textDecorationSkipInk
         && textUnderlinePosition == o.textUnderlinePosition
         && rubyPosition == o.rubyPosition
-        && rubyAlign == o.rubyAlign
         && textZoom == o.textZoom
         && lineSnap == o.lineSnap
         && lineAlign == o.lineAlign
@@ -357,11 +349,10 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
         && hasVisitedLinkAutoCaretColor == o.hasVisitedLinkAutoCaretColor
         && hasAutoAccentColor == o.hasAutoAccentColor
         && isInSubtreeWithBlendMode == o.isInSubtreeWithBlendMode
-        && isInVisibilityAdjustmentSubtree == o.isInVisibilityAdjustmentSubtree
-        && usedTouchActions == o.usedTouchActions
+        && effectiveTouchActions == o.effectiveTouchActions
         && eventListenerRegionTypes == o.eventListenerRegionTypes
         && effectiveInert == o.effectiveInert
-        && usedContentVisibility == o.usedContentVisibility
+        && effectiveContentVisibility == o.effectiveContentVisibility
         && strokeWidth == o.strokeWidth
         && strokeColor == o.strokeColor
         && visitedLinkStrokeColor == o.visitedLinkStrokeColor

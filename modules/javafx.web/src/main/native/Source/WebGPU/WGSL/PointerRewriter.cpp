@@ -41,9 +41,9 @@ class PointerRewriter : AST::ScopedVisitor<AST::Expression*> {
     using Base::visit;
 
 public:
-    PointerRewriter(ShaderModule& shaderModule)
+    PointerRewriter(CallGraph& callGraph)
         : Base()
-        , m_shaderModule(shaderModule)
+        , m_callGraph(callGraph)
     {
     }
 
@@ -59,14 +59,14 @@ public:
 private:
     void rewrite(AST::Statement::List&);
 
-    ShaderModule& m_shaderModule;
+    CallGraph& m_callGraph;
     unsigned m_currentStatementIndex { 0 };
     Vector<unsigned> m_indicesToDelete;
 };
 
 void PointerRewriter::run()
 {
-    Base::visit(m_shaderModule);
+    Base::visit(m_callGraph.ast());
 }
 
 void PointerRewriter::rewrite(AST::Statement::List& statements)
@@ -81,7 +81,7 @@ void PointerRewriter::rewrite(AST::Statement::List& statements)
     }
 
     for (int i = m_indicesToDelete.size() - 1; i >= 0; --i)
-        m_shaderModule.remove(statements, m_indicesToDelete[i]);
+        m_callGraph.ast().remove(statements, m_indicesToDelete[i]);
 }
 
 void PointerRewriter::visit(AST::CompoundStatement& statement)
@@ -114,10 +114,8 @@ void PointerRewriter::visit(AST::VariableStatement& statement)
 void PointerRewriter::visit(AST::PhonyAssignmentStatement& statement)
 {
     auto* pointerType = std::get_if<Types::Pointer>(statement.rhs().inferredType());
-    if (!pointerType) {
-        AST::Visitor::visit(statement);
+    if (!pointerType)
         return;
-    }
     m_indicesToDelete.append(m_currentStatementIndex);
 }
 
@@ -138,11 +136,7 @@ void PointerRewriter::visit(AST::IdentifierExpression& identifier)
     if (!variable || !*variable)
         return;
 
-    auto& identity = m_shaderModule.astBuilder().construct<AST::IdentityExpression>(
-        identifier.span(),
-        **variable
-    );
-    m_shaderModule.replace(identifier, identity);
+    m_callGraph.ast().replace(identifier, **variable);
 }
 
 void PointerRewriter::visit(AST::UnaryExpression& unary)
@@ -155,17 +149,19 @@ void PointerRewriter::visit(AST::UnaryExpression& unary)
     AST::Expression* nested = &unary.expression();
     while (is<AST::IdentityExpression>(*nested))
         nested = &downcast<AST::IdentityExpression>(*nested).expression();
-
-    auto* nestedUnary = dynamicDowncast<AST::UnaryExpression>(*nested);
-    if (!nestedUnary || nestedUnary->operation() != AST::UnaryOperation::AddressOf)
+    if (!is<AST::UnaryExpression>(*nested))
         return;
 
-    m_shaderModule.replace(unary, nestedUnary->expression());
+    auto& nestedUnary = downcast<AST::UnaryExpression>(*nested);
+    if (nestedUnary.operation() != AST::UnaryOperation::AddressOf)
+        return;
+
+    m_callGraph.ast().replace(unary, nestedUnary.expression());
 }
 
-void rewritePointers(ShaderModule& shaderModule)
+void rewritePointers(CallGraph& callGraph)
 {
-    PointerRewriter(shaderModule).run();
+    PointerRewriter(callGraph).run();
 }
 
 } // namespace WGSL

@@ -28,50 +28,29 @@
 #if ENABLE(OFFSCREEN_CANVAS)
 
 #include "CanvasRenderingContext.h"
-#include <wtf/ThreadSafeRefCounted.h>
-#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
-class PlaceholderRenderingContext;
-
-// Thread-safe interface to submit frames from worker to the placeholder rendering context.
-class PlaceholderRenderingContextSource : public ThreadSafeRefCounted<PlaceholderRenderingContextSource> {
-    WTF_MAKE_FAST_ALLOCATED;
-    WTF_MAKE_NONCOPYABLE(PlaceholderRenderingContextSource);
-public:
-    static Ref<PlaceholderRenderingContextSource> create(PlaceholderRenderingContext&);
-    virtual ~PlaceholderRenderingContextSource() = default;
-
-    // Called by the offscreen context to submit the frame.
-    virtual void setPlaceholderBuffer(ImageBuffer&);
-
-    // Called by the placeholder context to attach to compositor layer.
-    virtual void setContentsToLayer(GraphicsLayer&) = 0;
-
-protected:
-    PlaceholderRenderingContextSource(PlaceholderRenderingContext&);
-    WeakPtr<PlaceholderRenderingContext> m_placeholder; // For main thread use.
-};
+class ImageBufferPipe;
+class OffscreenCanvas;
 
 class PlaceholderRenderingContext final : public CanvasRenderingContext {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(PlaceholderRenderingContext);
+    WTF_MAKE_ISO_ALLOCATED(PlaceholderRenderingContext);
 public:
-    static std::unique_ptr<PlaceholderRenderingContext> create(HTMLCanvasElement&);
+    PlaceholderRenderingContext(CanvasBase&);
 
-    HTMLCanvasElement& canvas() const;
-    IntSize size() const;
-    void setPlaceholderBuffer(Ref<ImageBuffer>&&);
+    HTMLCanvasElement* canvas() const;
 
-    Ref<PlaceholderRenderingContextSource> source() const { return m_source; }
+    const RefPtr<ImageBufferPipe>& imageBufferPipe() const { return m_imageBufferPipe; }
 
 private:
-    PlaceholderRenderingContext(HTMLCanvasElement&);
     bool isPlaceholder() const final { return true; }
-    bool delegatesDisplay() const final { return true; }
-    void setContentsToLayer(GraphicsLayer&) final;
 
-    Ref<PlaceholderRenderingContextSource> m_source;
+    bool isAccelerated() const final { return !!m_imageBufferPipe; }
+    bool isGPUBased() const final { return !!m_imageBufferPipe; }
+    void setContentsToLayer(GraphicsLayer&);
+
+    RefPtr<ImageBufferPipe> m_imageBufferPipe;
 };
 
 }

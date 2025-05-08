@@ -28,15 +28,6 @@
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
-class VisibilityChangeClient;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::VisibilityChangeClient> : std::true_type { };
-}
-
-namespace WebCore {
 
 class VisibilityChangeClient : public CanMakeWeakPtr<VisibilityChangeClient> {
 public:

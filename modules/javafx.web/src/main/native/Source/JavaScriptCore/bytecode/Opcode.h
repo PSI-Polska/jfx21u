@@ -38,7 +38,6 @@
 
 #include <wtf/Assertions.h>
 #include <wtf/MathExtras.h>
-#include <wtf/text/ASCIILiteral.h>
 
 namespace JSC {
 
@@ -105,7 +104,6 @@ static constexpr unsigned bitWidthForMaxBytecodeStructLength = WTF::getMSBSetCon
     macro(OpGetByVal) \
     macro(OpEnumeratorGetByVal) \
     macro(OpGetById) \
-    macro(OpGetLength) \
     macro(OpGetByIdWithThis) \
     macro(OpTryGetById) \
     macro(OpGetByIdDirect) \
@@ -137,7 +135,6 @@ static constexpr unsigned bitWidthForMaxBytecodeStructLength = WTF::getMSBSetCon
     macro(OpCallIgnoreResult) \
 
 #define FOR_EACH_OPCODE_WITH_SIMPLE_ARRAY_PROFILE(macro) \
-    macro(OpGetLength) \
     macro(OpGetByVal) \
     macro(OpInByVal) \
     macro(OpPutByVal) \
@@ -196,7 +193,7 @@ typedef void* Opcode;
 typedef OpcodeID Opcode;
 #endif
 
-extern ASCIILiteral const opcodeNames[];
+extern const char* const opcodeNames[];
 extern const char* const wasmOpcodeNames[];
 
 #if ENABLE(OPCODE_STATS)

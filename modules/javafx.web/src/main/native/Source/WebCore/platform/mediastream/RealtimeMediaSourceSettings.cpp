@@ -40,7 +40,7 @@ namespace WebCore {
 
 RealtimeMediaSourceSettings RealtimeMediaSourceSettings::isolatedCopy() const
 {
-    return { m_width, m_height , m_frameRate, m_facingMode, m_volume , m_sampleRate, m_sampleSize, m_echoCancellation, m_deviceId.isolatedCopy(), m_groupId.isolatedCopy(), m_label.isolatedCopy(), m_displaySurface, m_logicalSurface, m_whiteBalanceMode, m_zoom, m_torch, m_backgroundBlur, m_powerEfficient, RealtimeMediaSourceSupportedConstraints { m_supportedConstraints } };
+    return { m_width, m_height , m_frameRate, m_facingMode, m_volume , m_sampleRate, m_sampleSize, m_echoCancellation, m_deviceId.isolatedCopy(), m_groupId.isolatedCopy(), m_label.isolatedCopy(), m_displaySurface, m_logicalSurface, m_whiteBalanceMode, m_zoom, m_torch, RealtimeMediaSourceSupportedConstraints { m_supportedConstraints } };
 }
 
 VideoFacingMode RealtimeMediaSourceSettings::videoFacingModeEnum(const String& mode)
@@ -61,69 +61,63 @@ String RealtimeMediaSourceSettings::convertFlagsToString(const OptionSet<Realtim
 {
     StringBuilder builder;
 
-    builder.append("[ "_s);
+    builder.append("[ ");
     for (auto flag : flags) {
         if (!builder.isEmpty())
-            builder.append(", "_s);
+            builder.append(", ");
 
         switch (flag) {
         case RealtimeMediaSourceSettings::Width:
-            builder.append("Width"_s);
+            builder.append("Width");
             break;
         case RealtimeMediaSourceSettings::Height:
-            builder.append("Height"_s);
+            builder.append("Height");
             break;
         case RealtimeMediaSourceSettings::FrameRate:
-            builder.append("FrameRate"_s);
+            builder.append("FrameRate");
             break;
         case RealtimeMediaSourceSettings::FacingMode:
-            builder.append("FacingMode"_s);
+            builder.append("FacingMode");
             break;
         case RealtimeMediaSourceSettings::Volume:
-            builder.append("Volume"_s);
+            builder.append("Volume");
             break;
         case RealtimeMediaSourceSettings::SampleRate:
-            builder.append("SampleRate"_s);
+            builder.append("SampleRate");
             break;
         case RealtimeMediaSourceSettings::SampleSize:
-            builder.append("SampleSize"_s);
+            builder.append("SampleSize");
             break;
         case RealtimeMediaSourceSettings::EchoCancellation:
-            builder.append("EchoCancellation"_s);
+            builder.append("EchoCancellation");
             break;
         case RealtimeMediaSourceSettings::DeviceId:
-            builder.append("DeviceId"_s);
+            builder.append("DeviceId");
             break;
         case RealtimeMediaSourceSettings::GroupId:
-            builder.append("GroupId"_s);
+            builder.append("GroupId");
             break;
         case RealtimeMediaSourceSettings::Label:
-            builder.append("Label"_s);
+            builder.append("Label");
             break;
         case RealtimeMediaSourceSettings::DisplaySurface:
-            builder.append("DisplaySurface"_s);
+            builder.append("DisplaySurface");
             break;
         case RealtimeMediaSourceSettings::LogicalSurface:
-            builder.append("LogicalSurface"_s);
+            builder.append("LogicalSurface");
             break;
         case RealtimeMediaSourceSettings::WhiteBalanceMode:
-            builder.append("WhiteBalanceMode"_s);
+            builder.append("WhiteBalanceMode");
             break;
         case RealtimeMediaSourceSettings::Zoom:
-            builder.append("Zoom"_s);
+            builder.append("Zoom");
             break;
         case RealtimeMediaSourceSettings::Torch:
-            builder.append("Torch"_s);
-            break;
-        case RealtimeMediaSourceSettings::BackgroundBlur:
-            builder.append("BackgroundBlur"_s);
-            break;
-        case RealtimeMediaSourceSettings::PowerEfficient:
-            builder.append("PowerEfficient"_s);
+            builder.append("Torch");
             break;
         }
     }
-    builder.append(" ]"_s);
+    builder.append(" ]");
 
     return builder.toString();
 }
@@ -164,10 +158,6 @@ OptionSet<RealtimeMediaSourceSettings::Flag> RealtimeMediaSourceSettings::differ
         difference.add(RealtimeMediaSourceSettings::Zoom);
     if (torch() != that.torch())
         difference.add(RealtimeMediaSourceSettings::Torch);
-    if (backgroundBlur() != that.backgroundBlur())
-        difference.add(RealtimeMediaSourceSettings::BackgroundBlur);
-    if (powerEfficient() != that.powerEfficient())
-        difference.add(RealtimeMediaSourceSettings::PowerEfficient);
 
     return difference;
 }

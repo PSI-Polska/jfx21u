@@ -68,7 +68,6 @@
 #include "JITCompilation.h"
 #include "JSCInlines.h"
 #include "LinkBuffer.h"
-#include "OperationResult.h"
 #include "PureNaN.h"
 #include <cmath>
 #include <regex>
@@ -203,7 +202,7 @@ template<typename T, typename... Arguments>
 T invoke(CodePtr<JITCompilationPtrTag> ptr, Arguments... arguments)
 {
     void* executableAddress = untagCFunctionPtr<JITCompilationPtrTag>(ptr.taggedPtr());
-    T (SYSV_ABI *function)(Arguments...) = bitwise_cast<T(SYSV_ABI *)(Arguments...)>(executableAddress);
+    T (*function)(Arguments...) = bitwise_cast<T(*)(Arguments...)>(executableAddress);
     return function(arguments...);
 }
 
@@ -283,10 +282,6 @@ typedef B3Operand<int16_t> Int16Operand;
 typedef B3Operand<int8_t> Int8Operand;
 
 #define MAKE_OPERAND(value) B3Operand<decltype(value)> { #value, value }
-
-#ifndef M_PI
-#define M_PI 3.14159265358979323846264338327950288
-#endif
 
 template<typename FloatType>
 void populateWithInterestingValues(Vector<B3Operand<FloatType>>& operands)
@@ -573,7 +568,7 @@ void testPatchpointDoubleRegs();
 void testSpillDefSmallerThanUse();
 void testSpillUseLargerThanDef();
 void testLateRegister();
-extern "C" void SYSV_ABI interpreterPrint(Vector<intptr_t>* stream, intptr_t value);
+extern "C" void interpreterPrint(Vector<intptr_t>* stream, intptr_t value);
 void testInterpreter();
 void testReduceStrengthCheckBottomUseInAnotherBlock();
 void testResetReachabilityDanglingReference();
@@ -1213,7 +1208,6 @@ void testLoadPreIndex32();
 void testLoadPreIndex64();
 void testLoadPostIndex32();
 void testLoadPostIndex64();
-void testLoadPreIndex32WithStore();
 
 void testStorePreIndex32();
 void testStorePreIndex64();

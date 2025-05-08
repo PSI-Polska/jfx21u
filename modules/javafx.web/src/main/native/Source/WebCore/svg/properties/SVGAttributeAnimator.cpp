@@ -49,7 +49,7 @@ void SVGAttributeAnimator::applyAnimatedStylePropertyChange(SVGElement& element,
     ASSERT(!element.deletionHasBegun());
     ASSERT(id != CSSPropertyInvalid);
 
-    if (!element.ensureAnimatedSMILStyleProperties().setProperty(id, value))
+    if (!element.ensureAnimatedSMILStyleProperties().setProperty(id, value, false))
         return;
     element.invalidateStyle();
 }

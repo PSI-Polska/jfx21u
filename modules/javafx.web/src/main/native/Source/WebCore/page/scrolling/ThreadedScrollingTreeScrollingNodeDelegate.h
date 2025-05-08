@@ -81,10 +81,8 @@ protected:
 
     ScrollExtents scrollExtents() const override;
 
-    void deferWheelEventTestCompletionForReason(ScrollingNodeID, WheelEventTestMonitor::DeferReason) const override;
-    void removeWheelEventTestCompletionDeferralForReason(ScrollingNodeID, WheelEventTestMonitor::DeferReason) const override;
-
-    ScrollingNodeID scrollingNodeIDForTesting() const final;
+    void deferWheelEventTestCompletionForReason(WheelEventTestMonitor::ScrollableAreaIdentifier, WheelEventTestMonitor::DeferReason) const override;
+    void removeWheelEventTestCompletionDeferralForReason(WheelEventTestMonitor::ScrollableAreaIdentifier, WheelEventTestMonitor::DeferReason) const override;
 
     FloatPoint adjustedScrollPosition(const FloatPoint&) const override;
 

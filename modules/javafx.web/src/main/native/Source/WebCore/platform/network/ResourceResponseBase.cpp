@@ -40,7 +40,6 @@
 #include <wtf/persistence/PersistentCoders.h>
 #include <wtf/persistence/PersistentDecoder.h>
 #include <wtf/persistence/PersistentEncoder.h>
-#include <wtf/text/MakeString.h>
 #include <wtf/text/StringView.h>
 
 namespace WebCore {
@@ -345,7 +344,7 @@ String ResourceResponseBase::sanitizeSuggestedFilename(const String& suggestedFi
     response.setHTTPStatusCode(200);
     String escapedSuggestedFilename = makeStringByReplacingAll(suggestedFilename, '\\', "\\\\"_s);
     escapedSuggestedFilename = makeStringByReplacingAll(escapedSuggestedFilename, '"', "\\\""_s);
-    response.setHTTPHeaderField(HTTPHeaderName::ContentDisposition, makeString("attachment; filename=\""_s, escapedSuggestedFilename, '"'));
+    response.setHTTPHeaderField(HTTPHeaderName::ContentDisposition, makeString("attachment; filename=\"", escapedSuggestedFilename, '"'));
     return response.suggestedFilename();
 }
 

@@ -27,13 +27,13 @@
 #include "SVGGraphicsElement.h"
 #include "SVGRenderingContext.h"
 #include "SVGResourcesCache.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/SetForScope.h>
 #include <wtf/StackStats.h>
-#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(LegacyRenderSVGResourceContainer);
+WTF_MAKE_ISO_ALLOCATED_IMPL(LegacyRenderSVGResourceContainer);
 
 LegacyRenderSVGResourceContainer::LegacyRenderSVGResourceContainer(Type type, SVGElement& element, RenderStyle&& style)
     : LegacyRenderSVGHiddenContainer(type, element, WTFMove(style), SVGModelObjectFlag::IsResourceContainer)
@@ -135,11 +135,11 @@ void LegacyRenderSVGResourceContainer::markAllClientLayersForInvalidation()
     if (m_clientLayers.isEmptyIgnoringNullReferences())
         return;
 
-    Ref document = (*m_clientLayers.begin()).renderer().document();
-    if (!document->view() || document->renderTreeBeingDestroyed())
+    auto& document = (*m_clientLayers.begin()).renderer().document();
+    if (!document.view() || document.renderTreeBeingDestroyed())
         return;
 
-    auto inLayout = document->view()->layoutContext().isInLayout();
+    auto inLayout = document.view()->layoutContext().isInLayout();
     for (auto& clientLayer : m_clientLayers) {
         // FIXME: We should not get here while in layout. See webkit.org/b/208903.
         // Repaint should also be triggered through some other means.
@@ -160,7 +160,7 @@ void LegacyRenderSVGResourceContainer::markClientForInvalidation(RenderObject& c
     switch (mode) {
     case LayoutAndBoundariesInvalidation:
     case BoundariesInvalidation:
-        client.invalidateCachedBoundaries();
+        client.setNeedsBoundariesUpdate();
         break;
     case RepaintInvalidation:
         if (!client.renderTreeBeingDestroyed())
@@ -194,20 +194,20 @@ void LegacyRenderSVGResourceContainer::removeClientRenderLayer(RenderLayer& clie
 
 void LegacyRenderSVGResourceContainer::registerResource()
 {
-    Ref treeScope = this->treeScopeForSVGReferences();
-    if (!treeScope->isIdOfPendingSVGResource(m_id)) {
-        treeScope->addSVGResource(m_id, *this);
+    auto& treeScope = this->treeScopeForSVGReferences();
+    if (!treeScope.isIdOfPendingSVGResource(m_id)) {
+        treeScope.addSVGResource(m_id, *this);
         return;
     }
 
-    auto elements = copyToVectorOf<Ref<SVGElement>>(treeScope->removePendingSVGResource(m_id));
+    auto elements = copyToVectorOf<Ref<SVGElement>>(treeScope.removePendingSVGResource(m_id));
 
-    treeScope->addSVGResource(m_id, *this);
+    treeScope.addSVGResource(m_id, *this);
 
     // Update cached resources of pending clients.
     for (auto& client : elements) {
         ASSERT(client->hasPendingResources());
-        treeScope->clearHasPendingSVGResourcesIfPossible(client);
+        treeScope.clearHasPendingSVGResourcesIfPossible(client);
         auto* renderer = client->renderer();
         if (!renderer)
             continue;
@@ -238,7 +238,7 @@ AffineTransform LegacyRenderSVGResourceContainer::transformOnNonScalingStroke(Re
     if (!object->isRenderOrLegacyRenderSVGShape())
         return resourceTransform;
 
-    RefPtr element = downcast<SVGGraphicsElement>(object->node());
+    SVGGraphicsElement* element = downcast<SVGGraphicsElement>(object->node());
     AffineTransform transform = element->getScreenCTM(SVGLocatable::DisallowStyleUpdate);
     transform *= resourceTransform;
     return transform;

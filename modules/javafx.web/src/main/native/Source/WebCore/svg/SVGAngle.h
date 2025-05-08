@@ -56,9 +56,6 @@ public:
 
     SVGAngleValue::Type unitType() const
     {
-        // Per spec https://svgwg.org/svg2-draft/types.html#__svg__SVGAngle__SVG_ANGLETYPE_UNKNOWN
-        if (m_value.unitType() > SVGAngleValue::Type::SVG_ANGLETYPE_GRAD)
-            return SVGAngleValue::Type::SVG_ANGLETYPE_UNKNOWN;
         return m_value.unitType();
     }
 

@@ -31,9 +31,11 @@ namespace JSC {
 class SlotVisitor;
 template<typename T> class Handle;
 
-WeakHandleOwner::~WeakHandleOwner() = default;
+WeakHandleOwner::~WeakHandleOwner()
+{
+}
 
-bool WeakHandleOwner::isReachableFromOpaqueRoots(Handle<Unknown>, void*, AbstractSlotVisitor&, ASCIILiteral*)
+bool WeakHandleOwner::isReachableFromOpaqueRoots(Handle<Unknown>, void*, AbstractSlotVisitor&, const char**)
 {
     return false;
 }

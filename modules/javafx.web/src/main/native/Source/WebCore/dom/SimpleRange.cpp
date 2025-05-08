@@ -46,16 +46,6 @@ SimpleRange::SimpleRange(BoundaryPoint&& start, BoundaryPoint&& end)
 {
 }
 
-WeakSimpleRange::WeakSimpleRange(const WeakBoundaryPoint& start, const WeakBoundaryPoint& end)
-    : start(start)
-    , end(end)
-{
-}
-WeakSimpleRange::WeakSimpleRange(WeakBoundaryPoint&& start, WeakBoundaryPoint&& end)
-    : start(WTFMove(start))
-    , end(WTFMove(end))
-{
-}
 std::optional<SimpleRange> makeRangeSelectingNode(Node& node)
 {
     RefPtr parent = node.parentNode();
@@ -166,7 +156,7 @@ template<> bool contains<ComposedTree>(const SimpleRange& range, const std::opti
     return point && contains<ComposedTree>(range, *point);
 }
 
-bool contains(TreeType type, const SimpleRange& range, const BoundaryPoint& point)
+bool containsForTesting(TreeType type, const SimpleRange& range, const BoundaryPoint& point)
 {
     switch (type) {
     case Tree:
@@ -209,7 +199,7 @@ template<TreeType treeType> bool contains(const SimpleRange& outerRange, const S
 template bool contains<Tree>(const SimpleRange&, const SimpleRange&);
 template bool contains<ComposedTree>(const SimpleRange&, const SimpleRange&);
 
-bool contains(TreeType type, const SimpleRange& outerRange, const SimpleRange& innerRange)
+bool containsForTesting(TreeType type, const SimpleRange& outerRange, const SimpleRange& innerRange)
 {
     switch (type) {
     case Tree:
@@ -274,7 +264,7 @@ template<TreeType treeType> bool contains(const SimpleRange& range, const Node& 
 template bool contains<Tree>(const SimpleRange&, const Node&);
 template bool contains<ComposedTree>(const SimpleRange&, const Node&);
 
-bool contains(TreeType type, const SimpleRange& range, const Node& node)
+bool containsForTesting(TreeType type, const SimpleRange& range, const Node& node)
 {
     switch (type) {
     case Tree:

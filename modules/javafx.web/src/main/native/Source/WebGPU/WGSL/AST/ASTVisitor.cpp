@@ -57,7 +57,7 @@ void Visitor::visit(AST::Directive& directive)
 {
     switch (directive.kind()) {
     case AST::NodeKind::DiagnosticDirective:
-        checkErrorAndVisit(uncheckedDowncast<AST::DiagnosticDirective>(directive));
+        checkErrorAndVisit(downcast<AST::DiagnosticDirective>(directive));
         break;
     default:
         ASSERT_NOT_REACHED("Unhandled Directive");
@@ -74,19 +74,19 @@ void Visitor::visit(AST::Declaration& declaration)
 {
     switch (declaration.kind()) {
     case AST::NodeKind::Function:
-        checkErrorAndVisit(uncheckedDowncast<AST::Function>(declaration));
+        checkErrorAndVisit(downcast<AST::Function>(declaration));
         break;
     case AST::NodeKind::Variable:
-        checkErrorAndVisit(uncheckedDowncast<AST::Variable>(declaration));
+        checkErrorAndVisit(downcast<AST::Variable>(declaration));
         break;
     case AST::NodeKind::Structure:
-        checkErrorAndVisit(uncheckedDowncast<AST::Structure>(declaration));
+        checkErrorAndVisit(downcast<AST::Structure>(declaration));
         break;
     case AST::NodeKind::TypeAlias:
-        checkErrorAndVisit(uncheckedDowncast<AST::TypeAlias>(declaration));
+        checkErrorAndVisit(downcast<AST::TypeAlias>(declaration));
         break;
     case AST::NodeKind::ConstAssert:
-        checkErrorAndVisit(uncheckedDowncast<AST::ConstAssert>(declaration));
+        checkErrorAndVisit(downcast<AST::ConstAssert>(declaration));
         break;
     default:
         ASSERT_NOT_REACHED("Unhandled Declaration");
@@ -109,46 +109,46 @@ void Visitor::visit(Attribute& attribute)
 {
     switch (attribute.kind()) {
     case AST::NodeKind::AlignAttribute:
-        checkErrorAndVisit(uncheckedDowncast<AST::AlignAttribute>(attribute));
+        checkErrorAndVisit(downcast<AST::AlignAttribute>(attribute));
         break;
     case AST::NodeKind::BindingAttribute:
-        checkErrorAndVisit(uncheckedDowncast<AST::BindingAttribute>(attribute));
+        checkErrorAndVisit(downcast<AST::BindingAttribute>(attribute));
         break;
     case AST::NodeKind::BuiltinAttribute:
-        checkErrorAndVisit(uncheckedDowncast<AST::BuiltinAttribute>(attribute));
+        checkErrorAndVisit(downcast<AST::BuiltinAttribute>(attribute));
         break;
     case AST::NodeKind::ConstAttribute:
-        checkErrorAndVisit(uncheckedDowncast<AST::ConstAttribute>(attribute));
+        checkErrorAndVisit(downcast<AST::ConstAttribute>(attribute));
         break;
     case AST::NodeKind::DiagnosticAttribute:
-        checkErrorAndVisit(uncheckedDowncast<AST::DiagnosticAttribute>(attribute));
+        checkErrorAndVisit(downcast<AST::DiagnosticAttribute>(attribute));
         break;
     case AST::NodeKind::GroupAttribute:
-        checkErrorAndVisit(uncheckedDowncast<AST::GroupAttribute>(attribute));
+        checkErrorAndVisit(downcast<AST::GroupAttribute>(attribute));
         break;
     case AST::NodeKind::IdAttribute:
-        checkErrorAndVisit(uncheckedDowncast<AST::IdAttribute>(attribute));
+        checkErrorAndVisit(downcast<AST::IdAttribute>(attribute));
         break;
     case AST::NodeKind::InterpolateAttribute:
-        checkErrorAndVisit(uncheckedDowncast<AST::InterpolateAttribute>(attribute));
+        checkErrorAndVisit(downcast<AST::InterpolateAttribute>(attribute));
         break;
     case AST::NodeKind::InvariantAttribute:
-        checkErrorAndVisit(uncheckedDowncast<AST::InvariantAttribute>(attribute));
+        checkErrorAndVisit(downcast<AST::InvariantAttribute>(attribute));
         break;
     case AST::NodeKind::LocationAttribute:
-        checkErrorAndVisit(uncheckedDowncast<AST::LocationAttribute>(attribute));
+        checkErrorAndVisit(downcast<AST::LocationAttribute>(attribute));
         break;
     case AST::NodeKind::MustUseAttribute:
-        checkErrorAndVisit(uncheckedDowncast<AST::MustUseAttribute>(attribute));
+        checkErrorAndVisit(downcast<AST::MustUseAttribute>(attribute));
         break;
     case AST::NodeKind::SizeAttribute:
-        checkErrorAndVisit(uncheckedDowncast<AST::SizeAttribute>(attribute));
+        checkErrorAndVisit(downcast<AST::SizeAttribute>(attribute));
         break;
     case AST::NodeKind::StageAttribute:
-        checkErrorAndVisit(uncheckedDowncast<AST::StageAttribute>(attribute));
+        checkErrorAndVisit(downcast<AST::StageAttribute>(attribute));
         break;
     case AST::NodeKind::WorkgroupSizeAttribute:
-        checkErrorAndVisit(uncheckedDowncast<AST::WorkgroupSizeAttribute>(attribute));
+        checkErrorAndVisit(downcast<AST::WorkgroupSizeAttribute>(attribute));
         break;
     default:
         ASSERT_NOT_REACHED("Unhandled Attribute");
@@ -227,58 +227,58 @@ void Visitor::visit(Expression& expression)
 {
     switch (expression.kind()) {
     case AST::NodeKind::AbstractFloatLiteral:
-        checkErrorAndVisit(uncheckedDowncast<AST::AbstractFloatLiteral>(expression));
+        checkErrorAndVisit(downcast<AST::AbstractFloatLiteral>(expression));
         break;
     case AST::NodeKind::AbstractIntegerLiteral:
-        checkErrorAndVisit(uncheckedDowncast<AST::AbstractIntegerLiteral>(expression));
+        checkErrorAndVisit(downcast<AST::AbstractIntegerLiteral>(expression));
         break;
     case AST::NodeKind::BinaryExpression:
-        checkErrorAndVisit(uncheckedDowncast<AST::BinaryExpression>(expression));
+        checkErrorAndVisit(downcast<AST::BinaryExpression>(expression));
         break;
     case AST::NodeKind::BitcastExpression:
-        checkErrorAndVisit(uncheckedDowncast<AST::BitcastExpression>(expression));
+        checkErrorAndVisit(downcast<AST::BitcastExpression>(expression));
         break;
     case AST::NodeKind::BoolLiteral:
-        checkErrorAndVisit(uncheckedDowncast<AST::BoolLiteral>(expression));
+        checkErrorAndVisit(downcast<AST::BoolLiteral>(expression));
         break;
     case AST::NodeKind::CallExpression:
-        checkErrorAndVisit(uncheckedDowncast<AST::CallExpression>(expression));
+        checkErrorAndVisit(downcast<AST::CallExpression>(expression));
         break;
     case AST::NodeKind::FieldAccessExpression:
-        checkErrorAndVisit(uncheckedDowncast<AST::FieldAccessExpression>(expression));
+        checkErrorAndVisit(downcast<AST::FieldAccessExpression>(expression));
         break;
     case AST::NodeKind::Float32Literal:
-        checkErrorAndVisit(uncheckedDowncast<AST::Float32Literal>(expression));
+        checkErrorAndVisit(downcast<AST::Float32Literal>(expression));
         break;
     case AST::NodeKind::Float16Literal:
-        checkErrorAndVisit(uncheckedDowncast<AST::Float16Literal>(expression));
+        checkErrorAndVisit(downcast<AST::Float16Literal>(expression));
         break;
     case AST::NodeKind::IdentifierExpression:
-        checkErrorAndVisit(uncheckedDowncast<AST::IdentifierExpression>(expression));
+        checkErrorAndVisit(downcast<AST::IdentifierExpression>(expression));
         break;
     case AST::NodeKind::IdentityExpression:
-        checkErrorAndVisit(uncheckedDowncast<IdentityExpression>(expression));
+        checkErrorAndVisit(downcast<IdentityExpression>(expression));
         break;
     case AST::NodeKind::IndexAccessExpression:
-        checkErrorAndVisit(uncheckedDowncast<AST::IndexAccessExpression>(expression));
+        checkErrorAndVisit(downcast<AST::IndexAccessExpression>(expression));
         break;
     case AST::NodeKind::Signed32Literal:
-        checkErrorAndVisit(uncheckedDowncast<AST::Signed32Literal>(expression));
+        checkErrorAndVisit(downcast<AST::Signed32Literal>(expression));
         break;
     case AST::NodeKind::UnaryExpression:
-        checkErrorAndVisit(uncheckedDowncast<AST::UnaryExpression>(expression));
+        checkErrorAndVisit(downcast<AST::UnaryExpression>(expression));
         break;
     case AST::NodeKind::Unsigned32Literal:
-        checkErrorAndVisit(uncheckedDowncast<AST::Unsigned32Literal>(expression));
+        checkErrorAndVisit(downcast<AST::Unsigned32Literal>(expression));
         break;
     case AST::NodeKind::ArrayTypeExpression:
-        checkErrorAndVisit(uncheckedDowncast<AST::ArrayTypeExpression>(expression));
+        checkErrorAndVisit(downcast<AST::ArrayTypeExpression>(expression));
         break;
     case AST::NodeKind::ElaboratedTypeExpression:
-        checkErrorAndVisit(uncheckedDowncast<AST::ElaboratedTypeExpression>(expression));
+        checkErrorAndVisit(downcast<AST::ElaboratedTypeExpression>(expression));
         break;
     case AST::NodeKind::ReferenceTypeExpression:
-        checkErrorAndVisit(uncheckedDowncast<AST::ReferenceTypeExpression>(expression));
+        checkErrorAndVisit(downcast<AST::ReferenceTypeExpression>(expression));
         break;
     default:
         ASSERT_NOT_REACHED("Unhandled Expression");
@@ -394,58 +394,58 @@ void Visitor::visit(Statement& statement)
 {
     switch (statement.kind()) {
     case AST::NodeKind::AssignmentStatement:
-        checkErrorAndVisit(uncheckedDowncast<AST::AssignmentStatement>(statement));
+        checkErrorAndVisit(downcast<AST::AssignmentStatement>(statement));
         break;
     case AST::NodeKind::BreakStatement:
-        checkErrorAndVisit(uncheckedDowncast<AST::BreakStatement>(statement));
+        checkErrorAndVisit(downcast<AST::BreakStatement>(statement));
         break;
     case AST::NodeKind::CallStatement:
-        checkErrorAndVisit(uncheckedDowncast<AST::CallStatement>(statement));
+        checkErrorAndVisit(downcast<AST::CallStatement>(statement));
         break;
     case AST::NodeKind::CompoundAssignmentStatement:
-        checkErrorAndVisit(uncheckedDowncast<AST::CompoundAssignmentStatement>(statement));
+        checkErrorAndVisit(downcast<AST::CompoundAssignmentStatement>(statement));
         break;
     case AST::NodeKind::CompoundStatement:
-        checkErrorAndVisit(uncheckedDowncast<AST::CompoundStatement>(statement));
+        checkErrorAndVisit(downcast<AST::CompoundStatement>(statement));
         break;
     case AST::NodeKind::ConstAssertStatement:
-        checkErrorAndVisit(uncheckedDowncast<AST::ConstAssertStatement>(statement));
+        checkErrorAndVisit(downcast<AST::ConstAssertStatement>(statement));
         break;
     case AST::NodeKind::ContinueStatement:
-        checkErrorAndVisit(uncheckedDowncast<AST::ContinueStatement>(statement));
+        checkErrorAndVisit(downcast<AST::ContinueStatement>(statement));
         break;
     case AST::NodeKind::DecrementIncrementStatement:
-        checkErrorAndVisit(uncheckedDowncast<AST::DecrementIncrementStatement>(statement));
+        checkErrorAndVisit(downcast<AST::DecrementIncrementStatement>(statement));
         break;
     case AST::NodeKind::DiscardStatement:
-        checkErrorAndVisit(uncheckedDowncast<AST::DiscardStatement>(statement));
+        checkErrorAndVisit(downcast<AST::DiscardStatement>(statement));
         break;
     case AST::NodeKind::ForStatement:
-        checkErrorAndVisit(uncheckedDowncast<AST::ForStatement>(statement));
+        checkErrorAndVisit(downcast<AST::ForStatement>(statement));
         break;
     case AST::NodeKind::IfStatement:
-        checkErrorAndVisit(uncheckedDowncast<AST::IfStatement>(statement));
+        checkErrorAndVisit(downcast<AST::IfStatement>(statement));
         break;
     case AST::NodeKind::LoopStatement:
-        checkErrorAndVisit(uncheckedDowncast<AST::LoopStatement>(statement));
+        checkErrorAndVisit(downcast<AST::LoopStatement>(statement));
         break;
     case AST::NodeKind::PhonyAssignmentStatement:
-        checkErrorAndVisit(uncheckedDowncast<AST::PhonyAssignmentStatement>(statement));
+        checkErrorAndVisit(downcast<AST::PhonyAssignmentStatement>(statement));
         break;
     case AST::NodeKind::ReturnStatement:
-        checkErrorAndVisit(uncheckedDowncast<AST::ReturnStatement>(statement));
+        checkErrorAndVisit(downcast<AST::ReturnStatement>(statement));
         break;
     case AST::NodeKind::StaticAssertStatement:
-        checkErrorAndVisit(uncheckedDowncast<AST::StaticAssertStatement>(statement));
+        checkErrorAndVisit(downcast<AST::StaticAssertStatement>(statement));
         break;
     case AST::NodeKind::SwitchStatement:
-        checkErrorAndVisit(uncheckedDowncast<AST::SwitchStatement>(statement));
+        checkErrorAndVisit(downcast<AST::SwitchStatement>(statement));
         break;
     case AST::NodeKind::VariableStatement:
-        checkErrorAndVisit(uncheckedDowncast<AST::VariableStatement>(statement));
+        checkErrorAndVisit(downcast<AST::VariableStatement>(statement));
         break;
     case AST::NodeKind::WhileStatement:
-        checkErrorAndVisit(uncheckedDowncast<AST::WhileStatement>(statement));
+        checkErrorAndVisit(downcast<AST::WhileStatement>(statement));
         break;
     default:
         ASSERT_NOT_REACHED("Unhandled Statement");

@@ -30,12 +30,11 @@
 
 #include "DelayOptions.h"
 #include "DelayProcessor.h"
-#include <wtf/TZoneMallocInlines.h>
-#include <wtf/text/MakeString.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DelayNode);
+WTF_MAKE_ISO_ALLOCATED_IMPL(DelayNode);
 
 constexpr double maximumAllowedDelayTime = 180;
 
@@ -54,7 +53,7 @@ ExceptionOr<Ref<DelayNode>> DelayNode::create(BaseAudioContext& context, const D
         return Exception { ExceptionCode::NotSupportedError, "maxDelayTime should be a positive value"_s };
 
     if (options.maxDelayTime >= maximumAllowedDelayTime || std::isnan(options.maxDelayTime))
-        return Exception { ExceptionCode::NotSupportedError, makeString("maxDelayTime should be less than "_s, maximumAllowedDelayTime) };
+        return Exception { ExceptionCode::NotSupportedError, makeString("maxDelayTime should be less than ", maximumAllowedDelayTime) };
 
     auto delayNode = adoptRef(*new DelayNode(context, options.maxDelayTime));
 

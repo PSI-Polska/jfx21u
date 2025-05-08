@@ -141,32 +141,17 @@ bool SVGTests::isValid() const
     return true;
 }
 
-Ref<SVGStringList> SVGTests::protectedRequiredFeatures()
-{
-    return requiredFeatures();
-}
-
-Ref<SVGStringList> SVGTests::protectedRequiredExtensions()
-{
-    return requiredExtensions();
-}
-
-Ref<SVGStringList> SVGTests::protectedSystemLanguage()
-{
-    return systemLanguage();
-}
-
 void SVGTests::parseAttribute(const QualifiedName& attributeName, const AtomString& value)
 {
     switch (attributeName.nodeName()) {
     case AttributeNames::requiredFeaturesAttr:
-        protectedRequiredFeatures()->reset(value);
+        requiredFeatures().reset(value);
         break;
     case AttributeNames::requiredExtensionsAttr:
-        protectedRequiredExtensions()->reset(value);
+        requiredExtensions().reset(value);
         break;
     case AttributeNames::systemLanguageAttr:
-        protectedSystemLanguage()->reset(value);
+        systemLanguage().reset(value);
         break;
     default:
         break;
@@ -178,10 +163,9 @@ void SVGTests::svgAttributeChanged(const QualifiedName& attrName)
     if (!PropertyRegistry::isKnownAttribute(attrName))
         return;
 
-    Ref contextElement = m_contextElement.get();
-    if (!contextElement->isConnected())
+    if (!m_contextElement.isConnected())
         return;
-    contextElement->invalidateStyleAndRenderersForSubtree();
+    m_contextElement.invalidateStyleAndRenderersForSubtree();
 }
 
 void SVGTests::addSupportedAttributes(MemoryCompactLookupOnlyRobinHoodHashSet<QualifiedName>& supportedAttributes)
@@ -212,20 +196,14 @@ bool SVGTests::hasFeatureForLegacyBindings(const String& feature, const String& 
     return false;
 }
 
-Ref<SVGElement> SVGTests::protectedContextElement() const
-{
-    return m_contextElement.get();
-}
-
 SVGConditionalProcessingAttributes& SVGTests::conditionalProcessingAttributes()
 {
-    RefAllowingPartiallyDestroyed<SVGElement> contextElement = m_contextElement.get();
-    return contextElement->conditionalProcessingAttributes();
+    return m_contextElement.conditionalProcessingAttributes();
 }
 
 SVGConditionalProcessingAttributes* SVGTests::conditionalProcessingAttributesIfExists() const
 {
-    return protectedContextElement()->conditionalProcessingAttributesIfExists();
+    return m_contextElement.conditionalProcessingAttributesIfExists();
 }
 
-} // namespace WebCore
+}

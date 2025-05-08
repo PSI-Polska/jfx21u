@@ -55,7 +55,7 @@ public:
     WEBCORE_EXPORT void setSessionIDForTesting(PAL::SessionID);
 
     void setSessionStorageQuota(unsigned quota) { m_sessionStorageQuota = quota; }
-    virtual void cloneSessionStorageNamespaceForPage(Page&, Page&) { RELEASE_ASSERT_NOT_REACHED(); }
+    virtual void copySessionStorageNamespace(Page&, Page&) = 0;
 
 protected:
     StorageNamespace* optionalLocalStorageNamespace() { return m_localStorageNamespace.get(); }

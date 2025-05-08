@@ -25,16 +25,13 @@
 #include "DocumentInlines.h"
 #include "FEGaussianBlur.h"
 #include "NodeName.h"
-#include "SVGDocumentExtensions.h"
-#include "SVGFilter.h"
 #include "SVGNames.h"
 #include "SVGParserUtilities.h"
-#include <wtf/TZoneMallocInlines.h>
-#include <wtf/text/MakeString.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGFEGaussianBlurElement);
+WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFEGaussianBlurElement);
 
 inline SVGFEGaussianBlurElement::SVGFEGaussianBlurElement(const QualifiedName& tagName, Document& document)
     : SVGFilterPrimitiveStandardAttributes(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -56,8 +53,8 @@ Ref<SVGFEGaussianBlurElement> SVGFEGaussianBlurElement::create(const QualifiedNa
 
 void SVGFEGaussianBlurElement::setStdDeviation(float x, float y)
 {
-    Ref { m_stdDeviationX }->setBaseValInternal(x);
-    Ref { m_stdDeviationY }->setBaseValInternal(y);
+    m_stdDeviationX->setBaseValInternal(x);
+    m_stdDeviationY->setBaseValInternal(y);
     updateSVGRendererForElementChange();
 }
 
@@ -66,19 +63,19 @@ void SVGFEGaussianBlurElement::attributeChanged(const QualifiedName& name, const
     switch (name.nodeName()) {
     case AttributeNames::stdDeviationAttr:
         if (auto result = parseNumberOptionalNumber(newValue)) {
-            Ref { m_stdDeviationX }->setBaseValInternal(result->first);
-            Ref { m_stdDeviationY }->setBaseValInternal(result->second);
+            m_stdDeviationX->setBaseValInternal(result->first);
+            m_stdDeviationY->setBaseValInternal(result->second);
         }
         break;
     case AttributeNames::inAttr:
-        Ref { m_in1 }->setBaseValInternal(newValue);
+        m_in1->setBaseValInternal(newValue);
         break;
     case AttributeNames::edgeModeAttr: {
         auto propertyValue = SVGPropertyTraits<EdgeModeType>::fromString(newValue);
         if (propertyValue != EdgeModeType::Unknown)
-            Ref { m_edgeMode }->setBaseValInternal<EdgeModeType>(propertyValue);
+            m_edgeMode->setBaseValInternal<EdgeModeType>(propertyValue);
         else
-            protectedDocument()->checkedSVGExtensions()->reportWarning(makeString("feGaussianBlur: problem parsing edgeMode=\""_s, newValue, "\". Filtered element will not be displayed."_s));
+            document().accessSVGExtensions().reportWarning("feGaussianBlur: problem parsing edgeMode=\"" + newValue + "\". Filtered element will not be displayed.");
         break;
     }
     default:

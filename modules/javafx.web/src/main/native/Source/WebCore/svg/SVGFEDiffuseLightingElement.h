@@ -31,8 +31,7 @@ class FEDiffuseLighting;
 class SVGColor;
 
 class SVGFEDiffuseLightingElement final : public SVGFilterPrimitiveStandardAttributes {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGFEDiffuseLightingElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGFEDiffuseLightingElement);
+    WTF_MAKE_ISO_ALLOCATED(SVGFEDiffuseLightingElement);
 public:
     static Ref<SVGFEDiffuseLightingElement> create(const QualifiedName&, Document&);
     void lightElementAttributeChanged(const SVGFELightElement*, const QualifiedName&);

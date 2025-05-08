@@ -44,8 +44,15 @@ JITCode::JITCode()
 JITCode::~JITCode()
 {
     if (FTL::shouldDumpDisassembly()) {
+        if (m_b3Code || m_arityCheckEntrypoint) {
+            dataLog("Destroying FTL JIT code at ");
+            CommaPrinter comma;
             if (m_b3Code)
-            dataLogLn("Destroying FTL JIT code at ", m_b3Code);
+                dataLog(comma, m_b3Code);
+            if (m_arityCheckEntrypoint)
+                dataLog(comma, m_arityCheckEntrypoint);
+            dataLog("\n");
+        }
     }
 }
 
@@ -64,9 +71,9 @@ void JITCode::initializeAddressForCall(CodePtr<JSEntryPtrTag> address)
     m_addressForCall = address;
 }
 
-void JITCode::initializeAddressForArityCheck(CodePtr<JSEntryPtrTag> entrypoint)
+void JITCode::initializeArityCheckEntrypoint(CodeRef<JSEntryPtrTag> entrypoint)
 {
-    m_addressForArityCheck = entrypoint;
+    m_arityCheckEntrypoint = entrypoint;
 }
 
 CodePtr<JSEntryPtrTag> JITCode::addressForCall(ArityCheckMode arityCheck)
@@ -75,7 +82,7 @@ CodePtr<JSEntryPtrTag> JITCode::addressForCall(ArityCheckMode arityCheck)
     case ArityCheckNotRequired:
         return m_addressForCall;
     case MustCheckArity:
-        return m_addressForArityCheck;
+        return m_arityCheckEntrypoint.code();
     }
     RELEASE_ASSERT_NOT_REACHED();
     return CodePtr<JSEntryPtrTag>();
@@ -134,7 +141,7 @@ const DFG::CommonData* JITCode::dfgCommon() const
     return &common;
 }
 
-void JITCode::shrinkToFit()
+void JITCode::shrinkToFit(const ConcurrentJSLocker&)
 {
     common.shrinkToFit();
     m_osrExit.shrinkToFit();

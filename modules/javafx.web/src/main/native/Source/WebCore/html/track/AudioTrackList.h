@@ -54,10 +54,12 @@ public:
     void remove(TrackBase&, bool scheduleEvent = true) final;
 
     // EventTarget
-    enum EventTargetInterfaceType eventTargetInterface() const override;
+    EventTargetInterface eventTargetInterface() const override;
 
 private:
     AudioTrackList(ScriptExecutionContext*);
+
+    const char* activeDOMObjectName() const final;
 };
 static_assert(sizeof(AudioTrackList) == sizeof(TrackListBase));
 

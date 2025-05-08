@@ -27,11 +27,10 @@
 
 [
     EnabledBySetting=WebGPUEnabled,
-    Exposed=(Window,Worker),
+    Exposed=(Window,DedicatedWorker),
     SecureContext
 ]
 interface GPU {
     Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options);
     GPUTextureFormat getPreferredCanvasFormat();
-    [SameObject] readonly attribute WGSLLanguageFeatures wgslLanguageFeatures;
 };

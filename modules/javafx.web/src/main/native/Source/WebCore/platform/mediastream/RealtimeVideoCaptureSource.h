@@ -43,7 +43,9 @@ class WEBCORE_EXPORT RealtimeVideoCaptureSource : public RealtimeMediaSource, pu
 public:
     virtual ~RealtimeVideoCaptureSource();
 
-    bool supportsSizeFrameRateAndZoom(const VideoPresetConstraints&) override;
+    void clientUpdatedSizeFrameRateAndZoom(std::optional<int> width, std::optional<int> height, std::optional<double> frameRate, std::optional<double> zoom);
+
+    bool supportsSizeFrameRateAndZoom(std::optional<int> width, std::optional<int> height, std::optional<double>, std::optional<double>) override;
     virtual void generatePresets() = 0;
 
     double observedFrameRate() const final { return m_observedFrameRate; }
@@ -58,10 +60,12 @@ public:
 protected:
     RealtimeVideoCaptureSource(const CaptureDevice&, MediaDeviceHashSalts&&, PageIdentifier);
 
-    void setSizeFrameRateAndZoom(const VideoPresetConstraints&) override;
+    void setSizeFrameRateAndZoom(std::optional<int> width, std::optional<int> height, std::optional<double>, std::optional<double>) override;
 
-    virtual void applyFrameRateAndZoomWithPreset(double, double, std::optional<VideoPreset>&&);
+    virtual bool prefersPreset(const VideoPreset&) { return true; }
+    virtual void setFrameRateAndZoomWithPreset(double, double, std::optional<VideoPreset>&&) { };
     virtual bool canResizeVideoFrames() const { return false; }
+    bool shouldUsePreset(const VideoPreset& current, const VideoPreset& candidate);
 
     void setSupportedPresets(Vector<VideoPreset>&&);
     void setSupportedPresets(Vector<VideoPresetData>&&);
@@ -78,8 +82,6 @@ protected:
     virtual Ref<TakePhotoNativePromise> takePhotoInternal(PhotoSettings&&);
     bool mutedForPhotoCapture() const { return m_mutedForPhotoCapture; }
 
-    bool canBePowerEfficient();
-
 private:
     struct CaptureSizeFrameRateAndZoom {
         std::optional<VideoPreset> encodingPreset;
@@ -90,18 +92,16 @@ private:
     bool supportsCaptureSize(std::optional<int>, std::optional<int>, const Function<bool(const IntSize&)>&&);
 
     enum class TryPreservingSize { No, Yes };
-    std::optional<CaptureSizeFrameRateAndZoom> bestSupportedSizeFrameRateAndZoom(const VideoPresetConstraints&, TryPreservingSize = TryPreservingSize::Yes);
-    std::optional<CaptureSizeFrameRateAndZoom> bestSupportedSizeFrameRateAndZoomConsideringObservers(const VideoPresetConstraints&);
+    std::optional<CaptureSizeFrameRateAndZoom> bestSupportedSizeFrameRateAndZoom(std::optional<int> width, std::optional<int> height, std::optional<double>, std::optional<double>, TryPreservingSize = TryPreservingSize::Yes);
+    std::optional<CaptureSizeFrameRateAndZoom> bestSupportedSizeFrameRateAndZoomConsideringObservers(std::optional<int> width, std::optional<int> height, std::optional<double>, std::optional<double>);
 
     bool presetSupportsFrameRate(const VideoPreset&, double);
     bool presetSupportsZoom(const VideoPreset&, double);
 
-    void setSizeFrameRateAndZoomForPhoto(CaptureSizeFrameRateAndZoom&&);
     Ref<TakePhotoNativePromise> takePhoto(PhotoSettings&&) final;
-    bool isPowerEfficient() const final;
 
 #if !RELEASE_LOG_DISABLED
-    ASCIILiteral logClassName() const override { return "RealtimeVideoCaptureSource"_s; }
+    const char* logClassName() const override { return "RealtimeVideoCaptureSource"; }
 #endif
 
     std::optional<VideoPreset> m_currentPreset;
@@ -120,10 +120,6 @@ struct SizeFrameRateAndZoom {
     String toJSONString() const;
     Ref<JSON::Object> toJSONObject() const;
 };
-
-inline void RealtimeVideoCaptureSource::applyFrameRateAndZoomWithPreset(double, double, std::optional<VideoPreset>&&)
-{
-}
 
 } // namespace WebCore
 

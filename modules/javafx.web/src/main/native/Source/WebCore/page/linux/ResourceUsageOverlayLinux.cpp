@@ -36,7 +36,7 @@
 #include "ResourceUsageThread.h"
 #include "SystemFontDatabase.h"
 #include <JavaScriptCore/VM.h>
-#include <wtf/text/MakeString.h>
+#include <wtf/text/StringConcatenateNumbers.h>
 
 namespace WebCore {
 
@@ -52,11 +52,11 @@ static String cpuUsageString(float cpuUsage)
 static String formatByteNumber(size_t number)
 {
     if (number >= 1024 * 1048576)
-        return makeString(FormattedNumber::fixedWidth(number / (1024. * 1048576), 3), " GB"_s);
+        return makeString(FormattedNumber::fixedWidth(number / (1024. * 1048576), 3), " GB");
     if (number >= 1048576)
-        return makeString(FormattedNumber::fixedWidth(number / 1048576., 2), " MB"_s);
+        return makeString(FormattedNumber::fixedWidth(number / 1048576., 2), " MB");
     if (number >= 1024)
-        return makeString(FormattedNumber::fixedWidth(number / 1024, 1), " kB"_s);
+        return makeString(FormattedNumber::fixedWidth(number / 1024, 1), " kB");
     return String::number(number);
 }
 
@@ -95,32 +95,32 @@ private:
         context.setFillColor(SRGBA<uint8_t> { 230, 230, 230 });
 
         FloatPoint position = { 10, 20 };
-        auto string =  makeString("CPU: "_s, cpuUsageString(gData.cpu));
+        String string =  "CPU: " + cpuUsageString(gData.cpu);
         context.drawText(m_textFont, TextRun(string), position);
         position.move(0, gFontSize + 2);
 
-        string = makeString("Memory: "_s, formatByteNumber(gData.totalDirtySize));
+        string = "Memory: " + formatByteNumber(gData.totalDirtySize);
         context.drawText(m_textFont, TextRun(string), position);
         position.move(0, gFontSize + 2);
 
-        string = makeString("External: "_s, formatByteNumber(gData.totalExternalSize));
+        string = "External: " + formatByteNumber(gData.totalExternalSize);
         context.drawText(m_textFont, TextRun(string), position);
         position.move(0, gFontSize + 2);
 
-        string = makeString("GC Heap: "_s, formatByteNumber(gData.categories[MemoryCategory::GCHeap].dirtySize));
+        string = "GC Heap: " + formatByteNumber(gData.categories[MemoryCategory::GCHeap].dirtySize);
         context.drawText(m_textFont, TextRun(string), position);
         position.move(0, gFontSize + 2);
 
-        string = makeString("GC owned: "_s, formatByteNumber(gData.categories[MemoryCategory::GCOwned].dirtySize));
+        string = "GC owned: " + formatByteNumber(gData.categories[MemoryCategory::GCOwned].dirtySize);
         context.drawText(m_textFont, TextRun(string), position);
         position.move(0, gFontSize + 2);
 
         MonotonicTime now = MonotonicTime::now();
-        string = makeString("Eden GC: "_s, gcTimerString(gData.timeOfNextEdenCollection, now));
+        string = "Eden GC: " + gcTimerString(gData.timeOfNextEdenCollection, now);
         context.drawText(m_textFont, TextRun(string), position);
         position.move(0, gFontSize + 2);
 
-        string = makeString("Full GC: "_s, gcTimerString(gData.timeOfNextFullCollection, now));
+        string = "Full GC: " + gcTimerString(gData.timeOfNextFullCollection, now);
         context.drawText(m_textFont, TextRun(string), position);
         position.move(0, gFontSize + 2);
     }

@@ -36,7 +36,6 @@
 #include <climits>
 #include <limits>
 #include <wtf/CheckedRef.h>
-#include <wtf/FastMalloc.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -45,7 +44,7 @@ static const constexpr GlyphBufferGlyph deletedGlyph = 0xFFFF;
 
 class Font;
 
-class GlyphBuffer {
+class GlyphBuffer : public CanMakeCheckedPtr {
 public:
     bool isEmpty() const { return m_fonts.isEmpty(); }
     unsigned size() const { return m_fonts.size(); }
@@ -137,11 +136,11 @@ public:
     {
         ASSERT(location <= size());
 
-        m_fonts.insertFill(location, font, length);
-        m_glyphs.insertFill(location, std::numeric_limits<GlyphBufferGlyph>::max(), length);
-        m_advances.insertFill(location, makeGlyphBufferAdvance(), length);
-        m_origins.insertFill(location, makeGlyphBufferOrigin(), length);
-        m_offsetsInString.insertFill(location, 0, length);
+        m_fonts.insertVector(location, Vector<const Font*>(length, font));
+        m_glyphs.insertVector(location, Vector<GlyphBufferGlyph>(length, std::numeric_limits<GlyphBufferGlyph>::max()));
+        m_advances.insertVector(location, Vector<GlyphBufferAdvance>(length, makeGlyphBufferAdvance()));
+        m_origins.insertVector(location, Vector<GlyphBufferOrigin>(length, makeGlyphBufferOrigin()));
+        m_offsetsInString.insertVector(location, Vector<GlyphBufferStringOffset>(length, 0));
     }
 
     void reverse(unsigned from, unsigned length)

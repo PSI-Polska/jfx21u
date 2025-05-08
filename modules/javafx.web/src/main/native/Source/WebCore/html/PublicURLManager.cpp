@@ -35,9 +35,9 @@
 
 namespace WebCore {
 
-Ref<PublicURLManager> PublicURLManager::create(ScriptExecutionContext* context)
+std::unique_ptr<PublicURLManager> PublicURLManager::create(ScriptExecutionContext* context)
 {
-    Ref publicURLManager = adoptRef(*new PublicURLManager(context));
+    auto publicURLManager = makeUnique<PublicURLManager>(context);
     publicURLManager->suspendIfNeeded();
     return publicURLManager;
 }
@@ -60,7 +60,7 @@ void PublicURLManager::revoke(const URL& url)
     if (m_isStopped || !scriptExecutionContext())
         return;
 
-    RefPtr contextOrigin = scriptExecutionContext()->securityOrigin();
+    auto* contextOrigin = scriptExecutionContext()->securityOrigin();
     if (!contextOrigin)
         return;
 
@@ -79,11 +79,16 @@ void PublicURLManager::stop()
         return;
 
     m_isStopped = true;
-    if (RefPtr context = scriptExecutionContext()) {
+    if (auto* context = scriptExecutionContext()) {
         URLRegistry::forEach([&](auto& registry) {
             registry.unregisterURLsForContext(*context);
         });
     }
+}
+
+const char* PublicURLManager::activeDOMObjectName() const
+{
+    return "PublicURLManager";
 }
 
 } // namespace WebCore

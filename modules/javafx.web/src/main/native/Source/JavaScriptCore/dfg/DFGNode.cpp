@@ -376,8 +376,7 @@ void Node::convertToGetByIdMaybeMegamorphic(Graph& graph, CacheableIdentifier id
     children.child1() = Edge(base.node(), CellUse);
     children.child2() = Edge();
     children.child3() = Edge();
-    auto* data = graph.m_getByIdData.add(GetByIdData { identifier, CacheType::GetByIdSelf });
-    m_opInfo = data;
+    m_opInfo = identifier;
 }
 
 void Node::convertToPutByIdMaybeMegamorphic(Graph& graph, CacheableIdentifier identifier)
@@ -396,18 +395,6 @@ void Node::convertToPutByIdMaybeMegamorphic(Graph& graph, CacheableIdentifier id
     children.child1() = Edge(base.node(), CellUse);
     children.child2() = Edge(value.node());
     children.child3() = Edge();
-    m_opInfo = identifier;
-}
-
-void Node::convertToInByIdMaybeMegamorphic(Graph& graph, CacheableIdentifier identifier)
-{
-    ASSERT(op() == InByVal || op() == InByValMegamorphic);
-    bool isMegamorphic = op() == InByValMegamorphic && canUseMegamorphicInById(graph.m_vm, identifier.uid());
-    Edge base = graph.child(this, 0);
-    ASSERT(base.useKind() == CellUse);
-    setOpAndDefaultFlags(isMegamorphic ? InByIdMegamorphic : InById);
-    children.setChild1(Edge(base.node(), CellUse));
-    children.setChild2(Edge());
     m_opInfo = identifier;
 }
 

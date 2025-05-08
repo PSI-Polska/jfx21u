@@ -28,6 +28,7 @@
 #include "DestinationColorSpace.h"
 #include "FloatRect.h"
 #include "PlatformScreen.h"
+#include <wtf/EnumTraits.h>
 #include <wtf/HashMap.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/text/WTFString.h>

@@ -90,8 +90,7 @@ template<typename Config, typename Type>
 BNO_INLINE void* IsoTLS::allocateSlow(api::IsoHeapBase<Type>& handle, bool abortOnFailure)
 {
     IsoMallocFallback::MallocResult fallbackResult = IsoMallocFallback::tryMalloc(
-        Config::objectSize,
-        CompactAllocationMode::NonCompact
+        Config::objectSize
 #if BENABLE_MALLOC_HEAP_BREAKDOWN
         , handle.m_zone
 #endif

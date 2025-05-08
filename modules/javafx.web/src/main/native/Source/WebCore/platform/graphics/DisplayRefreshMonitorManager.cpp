@@ -72,13 +72,13 @@ void DisplayRefreshMonitorManager::unregisterClient(DisplayRefreshMonitorClient&
 
 void DisplayRefreshMonitorManager::clientPreferredFramesPerSecondChanged(DisplayRefreshMonitorClient& client)
 {
-    if (RefPtr monitor = monitorForClient(client))
+    if (auto* monitor = monitorForClient(client))
         monitor->clientPreferredFramesPerSecondChanged(client);
 }
 
 bool DisplayRefreshMonitorManager::scheduleAnimation(DisplayRefreshMonitorClient& client)
 {
-    if (RefPtr monitor = monitorForClient(client)) {
+    if (auto* monitor = monitorForClient(client)) {
         client.setIsScheduled(true);
         return monitor->requestRefreshCallback();
     }
@@ -103,7 +103,8 @@ void DisplayRefreshMonitorManager::windowScreenDidChange(PlatformDisplayID displ
 
 std::optional<FramesPerSecond> DisplayRefreshMonitorManager::nominalFramesPerSecondForDisplay(PlatformDisplayID displayID, DisplayRefreshMonitorFactory* factory)
 {
-    if (RefPtr monitor = ensureMonitorForDisplayID(displayID, factory))
+    auto* monitor = ensureMonitorForDisplayID(displayID, factory);
+    if (monitor)
         return monitor->displayNominalFramesPerSecond();
 
     return std::nullopt;
@@ -111,7 +112,8 @@ std::optional<FramesPerSecond> DisplayRefreshMonitorManager::nominalFramesPerSec
 
 void DisplayRefreshMonitorManager::displayDidRefresh(PlatformDisplayID displayID, const DisplayUpdate& displayUpdate)
 {
-    if (RefPtr monitor = monitorForDisplayID(displayID))
+    auto* monitor = monitorForDisplayID(displayID);
+    if (monitor)
         monitor->displayLinkFired(displayUpdate);
 }
 
@@ -127,11 +129,11 @@ DisplayRefreshMonitor* DisplayRefreshMonitorManager::monitorForClient(DisplayRef
     if (!client.hasDisplayID())
         return nullptr;
 
-    RefPtr monitor = ensureMonitorForDisplayID(client.displayID(), client.displayRefreshMonitorFactory());
+    auto* monitor = ensureMonitorForDisplayID(client.displayID(), client.displayRefreshMonitorFactory());
     if (monitor)
         monitor->addClient(client);
 
-    return monitor.get();
+    return monitor;
 }
 
 DisplayRefreshMonitor* DisplayRefreshMonitorManager::monitorForDisplayID(PlatformDisplayID displayID) const

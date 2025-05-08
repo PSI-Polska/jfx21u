@@ -29,13 +29,12 @@
 
 #import <QuartzCore/QuartzCore.h>
 #import <optional>
-#import <wtf/TZoneMalloc.h>
 #import <wtf/text/WTFString.h>
 
 namespace WebGPU {
 
 class PresentationContextCoreAnimation : public PresentationContext {
-    WTF_MAKE_TZONE_ALLOCATED(PresentationContextCoreAnimation);
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     static Ref<PresentationContextCoreAnimation> create(const WGPUSurfaceDescriptor& descriptor)
     {
@@ -52,8 +51,6 @@ public:
     TextureView* getCurrentTextureView() override; // FIXME: This should return a TextureView&.
 
     bool isPresentationContextCoreAnimation() const override { return true; }
-
-    bool isValid() override { return m_configuration != std::nullopt; }
 
 private:
     PresentationContextCoreAnimation(const WGPUSurfaceDescriptor&);

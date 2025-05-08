@@ -30,12 +30,16 @@
 #include "StdLibExtras.h"
 #include <inttypes.h>
 
+#if BENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
+
 namespace WebConfig {
 
 using Slot = uint64_t;
 extern "C" Slot g_config[];
 
 } // namespace WebConfig
+
+#endif // BENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
 
 namespace Gigacage {
 
@@ -98,6 +102,8 @@ struct Config {
     size_t allocSizes[NumberOfKinds];
 };
 
+#if BENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
+
 // The first 4 slots are reserved for the use of the ExecutableAllocator.
 constexpr size_t startSlotOfGigacageConfig = 4;
 constexpr size_t startOffsetOfGigacageConfig = startSlotOfGigacageConfig * sizeof(WebConfig::Slot);
@@ -112,4 +118,14 @@ static_assert(bmalloc::roundUpToMultipleOf<alignmentOfGigacageConfig>(startOffse
 
 #define g_gigacageConfig (*bmalloc::bitwise_cast<Gigacage::Config*>(&WebConfig::g_config[Gigacage::startSlotOfGigacageConfig]))
 
+#else // not BENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
+
+extern "C" BEXPORT Config g_gigacageConfig;
+
+#endif // BENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
+
 } // namespace Gigacage
+
+#if !BENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
+using Gigacage::g_gigacageConfig;
+#endif

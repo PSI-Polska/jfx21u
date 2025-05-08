@@ -108,7 +108,7 @@ void testAllocateAlignedSmallerThanSizeClassAndSmallerThanLargestAvailable(
     uintptr_t freedObjectEnd;
 
     for (size_t index = 0; index < numFirstObjects; ++index) {
-        void* ptr = iso_allocate_common_primitive(firstSize, pas_non_compact_allocation_mode);
+        void* ptr = iso_allocate_common_primitive(firstSize);
         if (verbose)
             cout << "Adding first object " << ptr << "\n";
         objects.push_back(ptr);
@@ -125,7 +125,7 @@ void testAllocateAlignedSmallerThanSizeClassAndSmallerThanLargestAvailable(
     vector<void*> fillerObjects;
     bool didStartAllocatingInFreedObject = false;
     for (;;) {
-        void* fillerObject = iso_allocate_common_primitive(fillerObjectSize, pas_non_compact_allocation_mode);
+        void* fillerObject = iso_allocate_common_primitive(fillerObjectSize);
         uintptr_t fillerObjectBegin = reinterpret_cast<uintptr_t>(fillerObject);
         uintptr_t fillerObjectEnd = fillerObjectBegin + fillerObjectSize;
         if (verbose)
@@ -146,7 +146,7 @@ void testAllocateAlignedSmallerThanSizeClassAndSmallerThanLargestAvailable(
         iso_deallocate(fillerObjects[index]);
 
     for (size_t index = 0; index < numAlignedObjects; ++index) {
-        void* ptr = iso_allocate_common_primitive_with_alignment(alignedSize, alignedSize, pas_non_compact_allocation_mode);;
+        void* ptr = iso_allocate_common_primitive_with_alignment(alignedSize, alignedSize);;
         if (verbose)
             cout << "Allocated aligned object " << ptr << "\n";
     }

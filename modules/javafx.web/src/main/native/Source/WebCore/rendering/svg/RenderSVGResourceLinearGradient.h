@@ -20,6 +20,7 @@
 
 #pragma once
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "AffineTransform.h"
 #include "LinearGradientAttributes.h"
 #include "RenderSVGResourceGradient.h"
@@ -31,14 +32,12 @@ namespace WebCore {
 class SVGLinearGradientElement;
 
 class RenderSVGResourceLinearGradient final : public RenderSVGResourceGradient {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGResourceLinearGradient);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGResourceLinearGradient);
+    WTF_MAKE_ISO_ALLOCATED(RenderSVGResourceLinearGradient);
 public:
     RenderSVGResourceLinearGradient(SVGLinearGradientElement&, RenderStyle&&);
     virtual ~RenderSVGResourceLinearGradient();
 
     inline SVGLinearGradientElement& linearGradientElement() const;
-    inline Ref<SVGLinearGradientElement> protectedLinearGradientElement() const;
 
     SVGUnitTypes::SVGUnitType gradientUnits() const final { return m_attributes ? m_attributes.value().gradientUnits() : SVGUnitTypes::SVG_UNIT_TYPE_UNKNOWN; }
     AffineTransform gradientTransform() const final { return m_attributes ? m_attributes.value().gradientTransform() : identity; }
@@ -63,3 +62,5 @@ private:
 }
 
 SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGResourceLinearGradient, isRenderSVGResourceLinearGradient())
+
+#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

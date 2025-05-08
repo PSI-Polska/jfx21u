@@ -108,22 +108,22 @@ public:
 
     static JSImmutableButterfly* cachedPropertyNamesSentinel() { return bitwise_cast<JSImmutableButterfly*>(static_cast<uintptr_t>(1)); }
 
-    static constexpr ptrdiff_t offsetOfCachedPropertyNames(CachedPropertyNamesKind kind)
+    static ptrdiff_t offsetOfCachedPropertyNames(CachedPropertyNamesKind kind)
     {
         return OBJECT_OFFSETOF(StructureRareData, m_cachedPropertyNames) + sizeof(WriteBarrier<JSImmutableButterfly>) * static_cast<unsigned>(kind);
     }
 
-    static constexpr ptrdiff_t offsetOfCachedPropertyNameEnumeratorAndFlag()
+    static ptrdiff_t offsetOfCachedPropertyNameEnumeratorAndFlag()
     {
         return OBJECT_OFFSETOF(StructureRareData, m_cachedPropertyNameEnumeratorAndFlag);
     }
 
-    static constexpr ptrdiff_t offsetOfSpecialPropertyCache()
+    static ptrdiff_t offsetOfSpecialPropertyCache()
     {
         return OBJECT_OFFSETOF(StructureRareData, m_specialPropertyCache);
     }
 
-    static constexpr ptrdiff_t offsetOfPrevious()
+    static ptrdiff_t offsetOfPrevious()
     {
         return OBJECT_OFFSETOF(StructureRareData, m_previous);
     }

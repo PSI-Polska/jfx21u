@@ -30,10 +30,7 @@
 #include "Document.h"
 #include "Logging.h"
 #include "TrackListBase.h"
-#include "TrackPrivateBase.h"
-#include "TrackPrivateBaseClient.h"
 #include <wtf/Language.h>
-#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
@@ -46,15 +43,10 @@ static int s_uniqueId = 0;
 static bool isValidBCP47LanguageTag(const String&);
 
 #if !RELEASE_LOG_DISABLED
-static Ref<Logger> nullLogger(TrackBase& track)
+static RefPtr<Logger>& nullLogger()
 {
-    static std::once_flag onceKey;
-    static LazyNeverDestroyed<Ref<Logger>> logger;
-    std::call_once(onceKey, [&] {
-        logger.construct(Logger::create(&track));
-        logger.get()->setEnabled(&track, false);
-    });
-    return logger.get();
+    static NeverDestroyed<RefPtr<Logger>> logger;
+    return logger;
 }
 #endif
 
@@ -73,11 +65,14 @@ TrackBase::TrackBase(ScriptExecutionContext* context, Type type, const std::opti
     m_type = type;
 
 #if !RELEASE_LOG_DISABLED
-    m_logger = nullLogger(*this);
+    if (!nullLogger().get()) {
+        nullLogger() = Logger::create(this);
+        nullLogger()->setEnabled(this, false);
+    }
+
+    m_logger = nullLogger().get();
 #endif
 }
-
-TrackBase::~TrackBase() = default;
 
 void TrackBase::didMoveToNewDocument(Document& newDocument)
 {
@@ -175,7 +170,7 @@ void TrackBase::setLanguage(const AtomString& language)
     if (language.contains((UChar)'\0'))
         message = "The language contains a null character and is not a valid BCP 47 language tag."_s;
     else
-        message = makeString("The language '"_s, language, "' is not a valid BCP 47 language tag."_s);
+        message = makeString("The language '", language, "' is not a valid BCP 47 language tag.");
 
     context->addConsoleMessage(MessageSource::Rendering, MessageLevel::Warning, message);
 }
@@ -192,20 +187,6 @@ WTFLogChannel& TrackBase::logChannel() const
     return LogMedia;
 }
 #endif
-
-void TrackBase::addClientToTrackPrivateBase(TrackPrivateBaseClient& client, TrackPrivateBase& track)
-{
-    if (auto context = scriptExecutionContext()) {
-        m_clientRegistrationId = track.addClient([contextIdentifier = context->identifier()](auto&& task) {
-            ScriptExecutionContext::ensureOnContextThread(contextIdentifier, WTFMove(task));
-        }, client);
-    }
-}
-
-void TrackBase::removeClientFromTrackPrivateBase(TrackPrivateBase& track)
-{
-    track.removeClient(m_clientRegistrationId);
-}
 
 MediaTrackBase::MediaTrackBase(ScriptExecutionContext* context, Type type, const std::optional<AtomString>& id, TrackID trackId, const AtomString& label, const AtomString& language)
     : TrackBase(context, type, id, trackId, label, language)

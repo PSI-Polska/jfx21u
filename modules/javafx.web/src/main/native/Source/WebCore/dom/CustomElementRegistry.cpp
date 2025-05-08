@@ -163,7 +163,7 @@ void CustomElementRegistry::upgrade(Node& root)
     if (!containerNode)
         return;
 
-    RefPtr element = dynamicDowncast<Element>(*containerNode);
+    auto* element = dynamicDowncast<Element>(*containerNode);
     if (element && element->isCustomElementUpgradeCandidate())
         CustomElementReactionQueue::tryToUpgradeElement(*element);
 

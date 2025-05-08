@@ -25,16 +25,13 @@
 
 #pragma once
 
-#include "IDBObjectStoreIdentifier.h"
 #include "IDBRequest.h"
 #include "IDBRequestData.h"
 #include "IDBResourceIdentifier.h"
 #include "IDBResultData.h"
 #include "IDBTransaction.h"
-#include <optional>
 #include <wtf/Function.h>
 #include <wtf/MainThread.h>
-#include <wtf/Markable.h>
 #include <wtf/Threading.h>
 
 namespace WebCore {
@@ -48,7 +45,7 @@ enum class IndexRecordType : bool;
 namespace IDBClient {
 
 class TransactionOperation : public ThreadSafeRefCounted<TransactionOperation> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(TransactionOperation);
+    WTF_MAKE_ISO_ALLOCATED(TransactionOperation);
     friend IDBRequestData::IDBRequestData(TransactionOperation&);
 public:
     virtual ~TransactionOperation()
@@ -128,7 +125,7 @@ protected:
 
     Ref<IDBTransaction> m_transaction;
     IDBResourceIdentifier m_identifier;
-    Markable<IDBObjectStoreIdentifier> m_objectStoreIdentifier;
+    uint64_t m_objectStoreIdentifier { 0 };
     uint64_t m_indexIdentifier { 0 };
     std::optional<IDBResourceIdentifier> m_cursorIdentifier;
     IndexedDB::IndexRecordType m_indexRecordType { IndexedDB::IndexRecordType::Key };
@@ -137,7 +134,7 @@ protected:
 
 private:
     IDBResourceIdentifier transactionIdentifier() const { return m_transaction->info().identifier(); }
-    std::optional<IDBObjectStoreIdentifier> objectStoreIdentifier() const { return m_objectStoreIdentifier; }
+    uint64_t objectStoreIdentifier() const { return m_objectStoreIdentifier; }
     uint64_t indexIdentifier() const { return m_indexIdentifier; }
     std::optional<IDBResourceIdentifier> cursorIdentifier() const { return m_cursorIdentifier; }
     IDBTransaction& transaction() { return m_transaction.get(); }
@@ -152,7 +149,7 @@ private:
 };
 
 class TransactionOperationImpl final : public TransactionOperation {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(TransactionOperationImpl);
+    WTF_MAKE_ISO_ALLOCATED(TransactionOperationImpl);
 public:
     template<typename... Args> static Ref<TransactionOperationImpl> create(Args&&... args) { return adoptRef(*new TransactionOperationImpl(std::forward<Args>(args)...)); }
 private:

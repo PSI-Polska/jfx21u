@@ -34,15 +34,6 @@
 #include <wtf/WeakRef.h>
 
 namespace WebCore {
-class AlternativeTextController;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::AlternativeTextController> : std::true_type { };
-}
-
-namespace WebCore {
 
 class CompositeEditCommand;
 class Document;

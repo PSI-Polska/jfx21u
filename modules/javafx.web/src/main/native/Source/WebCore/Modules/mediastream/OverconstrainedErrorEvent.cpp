@@ -27,11 +27,11 @@
 
 #if ENABLE(MEDIA_STREAM)
 
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(OverconstrainedErrorEvent);
+WTF_MAKE_ISO_ALLOCATED_IMPL(OverconstrainedErrorEvent);
 
 } // namespace WebCore
 

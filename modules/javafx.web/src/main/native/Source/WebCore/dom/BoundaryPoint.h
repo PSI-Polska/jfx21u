@@ -36,7 +36,7 @@ struct BoundaryPoint {
     BoundaryPoint(Ref<Node>&&, unsigned);
 
     Document& document() const;
-    WEBCORE_EXPORT Ref<Document> protectedDocument() const;
+    Ref<Document> protectedDocument() const;
 };
 
 bool operator==(const BoundaryPoint&, const BoundaryPoint&);
@@ -44,7 +44,6 @@ bool operator==(const BoundaryPoint&, const BoundaryPoint&);
 WTF::TextStream& operator<<(WTF::TextStream&, const BoundaryPoint&);
 
 template<TreeType = Tree> std::partial_ordering treeOrder(const BoundaryPoint&, const BoundaryPoint&);
-template<> WEBCORE_EXPORT std::partial_ordering treeOrder<ComposedTree>(const BoundaryPoint&, const BoundaryPoint&);
 
 WEBCORE_EXPORT std::optional<BoundaryPoint> makeBoundaryPointBeforeNode(Node&);
 WEBCORE_EXPORT std::optional<BoundaryPoint> makeBoundaryPointAfterNode(Node&);
@@ -79,14 +78,4 @@ inline BoundaryPoint makeBoundaryPointAfterNodeContents(Node& node)
     return { node, node.length() };
 }
 
-struct WeakBoundaryPoint {
-    WeakPtr<Node, Node::WeakPtrImplType> container;
-    unsigned offset { 0 };
-    WeakBoundaryPoint(WeakPtr<Node, Node::WeakPtrImplType>&&, unsigned);
-};
-inline WeakBoundaryPoint::WeakBoundaryPoint(WeakPtr<Node, Node::WeakPtrImplType>&& container, unsigned offset)
-    : container(WTFMove(container))
-    , offset(offset)
-{
-}
 }

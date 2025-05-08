@@ -26,7 +26,6 @@
 [
     EnabledBySetting=MediaCapabilitiesEnabled,
     JSGenerateToJSObject,
-    JSGenerateToNativeObject
 ] dictionary AudioConfiguration {
   required DOMString contentType;
   DOMString channels;

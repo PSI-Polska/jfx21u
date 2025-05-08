@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "PublicSuffixStore.h"
+#include "PublicSuffix.h"
 #include "SecurityOriginData.h"
 #include <wtf/HashTraits.h>
 #include <wtf/URL.h>
@@ -91,10 +91,14 @@ public:
 
     static RegistrableDomain uncheckedCreateFromHost(const String& host)
     {
-        auto registrableDomain = PublicSuffixStore::singleton().topPrivatelyControlledDomain(host);
+#if ENABLE(PUBLIC_SUFFIX_LIST)
+        auto registrableDomain = topPrivatelyControlledDomain(host);
         if (registrableDomain.isEmpty())
             return uncheckedCreateFromRegistrableDomainString(host);
         return RegistrableDomain { WTFMove(registrableDomain) };
+#else
+        return uncheckedCreateFromRegistrableDomainString(host);
+#endif
     }
 
 private:
@@ -116,7 +120,11 @@ private:
 
     static inline String registrableDomainFromHost(const String& host)
     {
-        auto domain = PublicSuffixStore::singleton().topPrivatelyControlledDomain(host);
+#if ENABLE(PUBLIC_SUFFIX_LIST)
+        auto domain = topPrivatelyControlledDomain(host);
+#else
+        auto domain = host;
+#endif
         if (host.isEmpty())
             domain = "nullOrigin"_s;
         else if (domain.isEmpty())

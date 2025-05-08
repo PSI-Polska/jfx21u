@@ -28,15 +28,6 @@
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
-class SVGResourceElementClient;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::SVGResourceElementClient> : std::true_type { };
-}
-
-namespace WebCore {
 
 class SVGElement;
 
@@ -46,7 +37,6 @@ public:
 
     virtual void resourceChanged(SVGElement&) = 0;
 
-    virtual const RenderElement& renderer() const = 0;
 };
 
 } // namespace WebCore

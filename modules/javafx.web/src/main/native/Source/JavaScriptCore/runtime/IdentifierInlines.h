@@ -85,14 +85,14 @@ ALWAYS_INLINE Identifier Identifier::fromString(VM& vm, ASCIILiteral s)
     return Identifier(vm, s);
 }
 
-inline Identifier Identifier::fromString(VM& vm, std::span<const LChar> s)
+inline Identifier Identifier::fromString(VM& vm, const LChar* s, int length)
 {
-    return Identifier(vm, s);
+    return Identifier(vm, s, length);
 }
 
-inline Identifier Identifier::fromString(VM& vm, std::span<const UChar> s)
+inline Identifier Identifier::fromString(VM& vm, const UChar* s, int length)
 {
-    return Identifier(vm, s);
+    return Identifier(vm, s, length);
 }
 
 inline Identifier Identifier::fromString(VM& vm, const String& string)

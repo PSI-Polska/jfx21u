@@ -200,60 +200,60 @@ void GraphicsContextState::mergeAllChanges(const GraphicsContextState& state)
 #endif
 }
 
-static ASCIILiteral stateChangeName(GraphicsContextState::Change change)
+static const char* stateChangeName(GraphicsContextState::Change change)
 {
     switch (change) {
     case GraphicsContextState::Change::FillBrush:
-        return "fill-brush"_s;
+        return "fill-brush";
 
     case GraphicsContextState::Change::FillRule:
-        return "fill-rule"_s;
+        return "fill-rule";
 
     case GraphicsContextState::Change::StrokeBrush:
-        return "stroke-brush"_s;
+        return "stroke-brush";
 
     case GraphicsContextState::Change::StrokeThickness:
-        return "stroke-thickness"_s;
+        return "stroke-thickness";
 
     case GraphicsContextState::Change::StrokeStyle:
-        return "stroke-style"_s;
+        return "stroke-style";
 
     case GraphicsContextState::Change::CompositeMode:
-        return "composite-mode"_s;
+        return "composite-mode";
 
     case GraphicsContextState::Change::DropShadow:
-        return "drop-shadow"_s;
+        return "drop-shadow";
 
     case GraphicsContextState::Change::Style:
-        return "style"_s;
+        return "style";
 
     case GraphicsContextState::Change::Alpha:
-        return "alpha"_s;
+        return "alpha";
 
     case GraphicsContextState::Change::ImageInterpolationQuality:
-        return "image-interpolation-quality"_s;
+        return "image-interpolation-quality";
 
     case GraphicsContextState::Change::TextDrawingMode:
-        return "text-drawing-mode"_s;
+        return "text-drawing-mode";
 
     case GraphicsContextState::Change::ShouldAntialias:
-        return "should-antialias"_s;
+        return "should-antialias";
 
     case GraphicsContextState::Change::ShouldSmoothFonts:
-        return "should-smooth-fonts"_s;
+        return "should-smooth-fonts";
 
     case GraphicsContextState::Change::ShouldSubpixelQuantizeFonts:
-        return "should-subpixel-quantize-fonts"_s;
+        return "should-subpixel-quantize-fonts";
 
     case GraphicsContextState::Change::ShadowsIgnoreTransforms:
-        return "shadows-ignore-transforms"_s;
+        return "shadows-ignore-transforms";
 
     case GraphicsContextState::Change::DrawLuminanceMask:
-        return "draw-luminance-mask"_s;
+        return "draw-luminance-mask";
 
 #if HAVE(OS_DARK_MODE_SUPPORT)
     case GraphicsContextState::Change::UseDarkAppearance:
-        return "use-dark-appearance"_s;
+        return "use-dark-appearance";
 #endif
     }
 

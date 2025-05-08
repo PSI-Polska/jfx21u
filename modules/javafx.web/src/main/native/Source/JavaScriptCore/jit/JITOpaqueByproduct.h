@@ -40,9 +40,7 @@ public:
     OpaqueByproduct() { }
     virtual ~OpaqueByproduct() { }
 
-    // This can't be pure virtual as it breaks our Dumpable concept.
-    // FIXME: Make this virtual after we stop suppporting the Montery Clang.
-    virtual void dump(PrintStream&) const { }
+    virtual void dump(PrintStream&) const = 0;
 };
 
 } // namespace JSC

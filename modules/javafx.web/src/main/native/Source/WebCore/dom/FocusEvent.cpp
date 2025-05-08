@@ -27,30 +27,30 @@
 #include "FocusEvent.h"
 
 #include "Node.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(FocusEvent);
+WTF_MAKE_ISO_ALLOCATED_IMPL(FocusEvent);
+
+EventInterface FocusEvent::eventInterface() const
+{
+    return FocusEventInterfaceType;
+}
 
 bool FocusEvent::isFocusEvent() const
 {
     return true;
 }
 
-FocusEvent::FocusEvent()
-    : UIEvent(EventInterfaceType::FocusEvent)
-{
-}
-
 FocusEvent::FocusEvent(const AtomString& type, CanBubble canBubble, IsCancelable isCancelable, RefPtr<WindowProxy>&& view, int detail, RefPtr<EventTarget>&& relatedTarget)
-    : UIEvent(EventInterfaceType::FocusEvent, type, canBubble, isCancelable, IsComposed::Yes, WTFMove(view), detail)
+    : UIEvent(type, canBubble, isCancelable, IsComposed::Yes, WTFMove(view), detail)
     , m_relatedTarget(WTFMove(relatedTarget))
 {
 }
 
 FocusEvent::FocusEvent(const AtomString& type, const Init& initializer)
-    : UIEvent(EventInterfaceType::FocusEvent, type, initializer)
+    : UIEvent(type, initializer)
     , m_relatedTarget(initializer.relatedTarget)
 {
 }

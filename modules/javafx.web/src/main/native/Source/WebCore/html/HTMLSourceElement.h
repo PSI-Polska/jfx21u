@@ -39,15 +39,13 @@ class HTMLSourceElement final
     , public AttachmentAssociatedElement
 #endif
     , public ActiveDOMObject {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLSourceElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLSourceElement);
+    WTF_MAKE_ISO_ALLOCATED(HTMLSourceElement);
 public:
     static Ref<HTMLSourceElement> create(Document&);
     static Ref<HTMLSourceElement> create(const QualifiedName&, Document&);
 
-    // ActiveDOMObject.
-    void ref() const final { HTMLElement::ref(); }
-    void deref() const final { HTMLElement::deref(); }
+    using HTMLElement::ref;
+    using HTMLElement::deref;
 
     void scheduleErrorEvent();
     void cancelPendingErrorEvent();
@@ -62,11 +60,11 @@ private:
     void didMoveToNewDocument(Document& oldDocument, Document& newDocument) final;
 
     bool isURLAttribute(const Attribute&) const final;
-    bool attributeContainsURL(const Attribute&) const final;
     Attribute replaceURLsInAttributeValue(const Attribute&, const HashMap<String, String>&) const override;
     void addCandidateSubresourceURLs(ListHashSet<URL>&) const override;
 
     // ActiveDOMObject.
+    const char* activeDOMObjectName() const final;
     void stop() final;
 
 #if ENABLE(ATTACHMENT_ELEMENT)

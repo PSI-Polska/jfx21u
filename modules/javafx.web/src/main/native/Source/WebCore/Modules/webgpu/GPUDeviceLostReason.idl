@@ -27,7 +27,8 @@
 
 [
     EnabledBySetting=WebGPUEnabled
-] enum GPUDeviceLostReason {
+]
+enum GPUDeviceLostReason {
     "unknown",
     "destroyed"
 };

@@ -27,25 +27,22 @@
 #include "config.h"
 #include "CompositionEvent.h"
 
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CompositionEvent);
+WTF_MAKE_ISO_ALLOCATED_IMPL(CompositionEvent);
 
-CompositionEvent::CompositionEvent()
-    : UIEvent(EventInterfaceType::CompositionEvent)
-{
-}
+CompositionEvent::CompositionEvent() = default;
 
 CompositionEvent::CompositionEvent(const AtomString& type, RefPtr<WindowProxy>&& view, const String& data)
-    : UIEvent(EventInterfaceType::CompositionEvent, type, CanBubble::Yes, IsCancelable::Yes, IsComposed::Yes, WTFMove(view), 0)
+    : UIEvent(type, CanBubble::Yes, IsCancelable::Yes, IsComposed::Yes, WTFMove(view), 0)
     , m_data(data)
 {
 }
 
 CompositionEvent::CompositionEvent(const AtomString& type, const Init& initializer)
-    : UIEvent(EventInterfaceType::CompositionEvent, type, initializer)
+    : UIEvent(type, initializer)
     , m_data(initializer.data)
 {
 }
@@ -60,6 +57,11 @@ void CompositionEvent::initCompositionEvent(const AtomString& type, bool canBubb
     initUIEvent(type, canBubble, cancelable, WTFMove(view), 0);
 
     m_data = data;
+}
+
+EventInterface CompositionEvent::eventInterface() const
+{
+    return CompositionEventInterfaceType;
 }
 
 bool CompositionEvent::isCompositionEvent() const

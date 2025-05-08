@@ -32,7 +32,7 @@ typedef [EnforceRange] unsigned long GPUBufferUsageFlags;
 
 [
     EnabledBySetting=WebGPUEnabled,
-    Exposed=(Window,Worker),
+    Exposed=(Window,DedicatedWorker),
     SecureContext
 ]
 interface GPUBuffer {

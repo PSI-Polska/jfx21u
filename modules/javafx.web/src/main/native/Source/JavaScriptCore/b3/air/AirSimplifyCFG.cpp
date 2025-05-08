@@ -37,7 +37,7 @@ bool simplifyCFG(Code& code)
 {
     constexpr bool verbose = false;
 
-    PhaseScope phaseScope(code, "simplifyCFG"_s);
+    PhaseScope phaseScope(code, "simplifyCFG");
 
     // We have three easy simplification rules:
     //

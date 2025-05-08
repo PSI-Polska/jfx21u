@@ -80,7 +80,7 @@ class SourceBufferPrivate
 #endif
 {
 public:
-    WEBCORE_EXPORT explicit SourceBufferPrivate(MediaSourcePrivate&);
+    WEBCORE_EXPORT SourceBufferPrivate(MediaSourcePrivate&);
     WEBCORE_EXPORT virtual ~SourceBufferPrivate();
 
     virtual constexpr MediaPlatformType platformType() const = 0;
@@ -107,8 +107,7 @@ public:
     virtual void setGroupStartTimestampToEndTimestamp() { m_groupStartTimestamp = m_groupEndTimestamp; }
     virtual void setShouldGenerateTimestamps(bool flag) { m_shouldGenerateTimestamps = flag; }
     WEBCORE_EXPORT virtual Ref<MediaPromise> removeCodedFrames(const MediaTime& start, const MediaTime& end, const MediaTime& currentMediaTime);
-    WEBCORE_EXPORT virtual bool evictCodedFrames(uint64_t newDataSize, const MediaTime& currentTime);
-    WEBCORE_EXPORT virtual void asyncEvictCodedFrames(uint64_t newDataSize, const MediaTime& currentTime);
+    WEBCORE_EXPORT virtual void evictCodedFrames(uint64_t newDataSize, uint64_t maximumBufferSize, const MediaTime& currentTime);
     WEBCORE_EXPORT virtual size_t platformEvictionThreshold() const;
     WEBCORE_EXPORT virtual uint64_t totalTrackBufferSizeInBytes() const;
     WEBCORE_EXPORT virtual void resetTimestampOffsetInTrackBuffers();
@@ -123,12 +122,11 @@ public:
     WEBCORE_EXPORT virtual void updateTrackIds(Vector<std::pair<TrackID, TrackID>>&& trackIdPairs);
 
     WEBCORE_EXPORT void setClient(SourceBufferPrivateClient&);
+    WEBCORE_EXPORT void detach();
 
     void setMediaSourceDuration(const MediaTime& duration) { m_mediaSourceDuration = duration; }
 
-    WEBCORE_EXPORT virtual bool isBufferFullFor(uint64_t requiredSize) const;
-    WEBCORE_EXPORT virtual bool canAppend(uint64_t requiredSize) const;
-    SourceBufferEvictionData evictionData() const { return m_evictionData; }
+    bool isBufferFullFor(uint64_t requiredSize, uint64_t maximumBufferSize);
     WEBCORE_EXPORT Vector<PlatformTimeRanges> trackBuffersRanges() const;
 
     // Methods used by MediaSourcePrivate
@@ -136,16 +134,15 @@ public:
     bool hasVideo() const { return m_hasVideo; }
     bool hasReceivedFirstInitializationSegment() const { return m_receivedFirstInitializationSegment; }
 
-    virtual MediaTime timestampOffset() const { return m_timestampOffset; }
+    MediaTime timestampOffset() const { return m_timestampOffset; }
 
     virtual size_t platformMaximumBufferSize() const { return 0; }
-    virtual Ref<GenericPromise> setMaximumBufferSize(size_t);
 
     // Methods for ManagedSourceBuffer
-    WEBCORE_EXPORT virtual void memoryPressure(const MediaTime& currentTime);
+    WEBCORE_EXPORT virtual void memoryPressure(uint64_t maximumBufferSize, const MediaTime& currentTime);
 
     // Internals Utility methods
-    using SamplesPromise = NativePromise<Vector<String>, PlatformMediaError>;
+    using SamplesPromise = NativePromise<Vector<String>, int>;
     WEBCORE_EXPORT virtual Ref<SamplesPromise> bufferedSamplesForTrackId(TrackID);
     WEBCORE_EXPORT virtual Ref<SamplesPromise> enqueuedSamplesForTrackID(TrackID);
     virtual MediaTime minimumUpcomingPresentationTimeForTrackID(TrackID) { return MediaTime::invalidTime(); }
@@ -166,11 +163,8 @@ public:
 #endif
 
 protected:
-    WEBCORE_EXPORT explicit SourceBufferPrivate(MediaSourcePrivate&, RefCountedSerialFunctionDispatcher&);
-    MediaTime currentTime() const;
+    MediaTime currentMediaTime() const;
     MediaTime mediaSourceDuration() const;
-
-    WEBCORE_EXPORT void ensureOnDispatcher(Function<void()>&&) const;
 
     using InitializationSegment = SourceBufferPrivateClient::InitializationSegment;
     WEBCORE_EXPORT void didReceiveInitializationSegment(InitializationSegment&&);
@@ -180,7 +174,7 @@ protected:
     virtual Ref<MediaPromise> appendInternal(Ref<SharedBuffer>&&) = 0;
     virtual void resetParserStateInternal() = 0;
     virtual MediaTime timeFudgeFactor() const { return PlatformTimeRanges::timeFudgeFactor(); }
-    virtual bool isActive() const { return m_isActive; }
+    bool isActive() const { return m_isActive; }
     virtual bool isSeeking() const { return false; }
     virtual void flush(TrackID) { }
     virtual void enqueueSample(Ref<MediaSample>&&, TrackID) { }
@@ -192,12 +186,7 @@ protected:
     virtual void setMinimumUpcomingPresentationTime(TrackID, const MediaTime&) { }
     virtual void clearMinimumUpcomingPresentationTime(TrackID) { }
 
-    enum class NeedsFlush: bool {
-        No = 0,
-        Yes
-    };
-
-    void reenqueSamples(TrackID, NeedsFlush = NeedsFlush::Yes);
+    void reenqueSamples(TrackID);
 
     virtual bool precheckInitializationSegment(const InitializationSegment&) { return true; }
     virtual void processInitializationSegment(std::optional<InitializationSegment>&&) { }
@@ -213,9 +202,6 @@ protected:
     WEBCORE_EXPORT RefPtr<SourceBufferPrivateClient> client() const;
 
     ThreadSafeWeakPtr<MediaSourcePrivate> m_mediaSource { nullptr };
-    const Ref<RefCountedSerialFunctionDispatcher> m_dispatcher; // SerialFunctionDispatcher the SourceBufferPrivate/MediaSourcePrivate
-
-    SourceBufferEvictionData m_evictionData;
 
 private:
     MediaTime minimumBufferedTime() const;
@@ -223,14 +209,14 @@ private:
     Ref<MediaPromise> updateBuffered();
     void updateHighestPresentationTimestamp();
     void updateMinimumUpcomingPresentationTime(TrackBuffer&, TrackID);
-    void reenqueueMediaForTime(TrackBuffer&, TrackID, const MediaTime&, NeedsFlush = NeedsFlush::Yes);
+    void reenqueueMediaForTime(TrackBuffer&, TrackID, const MediaTime&);
     bool validateInitializationSegment(const InitializationSegment&);
     void provideMediaData(TrackBuffer&, TrackID);
     void setBufferedDirty(bool);
     void trySignalAllSamplesInTrackEnqueued(TrackBuffer&, TrackID);
     MediaTime findPreviousSyncSamplePresentationTime(const MediaTime&);
     void removeCodedFramesInternal(const MediaTime& start, const MediaTime& end, const MediaTime& currentMediaTime);
-    bool evictFrames(uint64_t newDataSize, const MediaTime& currentTime);
+    bool evictFrames(uint64_t newDataSize, uint64_t maximumBufferSize, const MediaTime& currentTime);
     bool hasTooManySamples() const;
     void iterateTrackBuffers(Function<void(TrackBuffer&)>&&);
     void iterateTrackBuffers(Function<void(const TrackBuffer&)>&&) const;
@@ -254,12 +240,6 @@ private:
 
     void processPendingMediaSamples();
     bool processMediaSample(SourceBufferPrivateClient&, Ref<MediaSample>&&);
-
-    enum class ComputeEvictionDataRule {
-        Default,
-        ForceNotification
-    };
-    void computeEvictionData(ComputeEvictionDataRule = ComputeEvictionDataRule::Default);
 
     using SamplesVector = Vector<Ref<MediaSample>>;
     SamplesVector m_pendingSamples;

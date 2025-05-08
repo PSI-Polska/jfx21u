@@ -30,7 +30,6 @@
 #include "config.h"
 #include "CSSPropertyAnimation.h"
 
-#include "AnimationMalloc.h"
 #include "AnimationUtilities.h"
 #include "CSSCustomPropertyValue.h"
 #include "CSSPrimitiveValue.h"
@@ -67,7 +66,6 @@
 #include "StyleFilterImage.h"
 #include "StylePropertyShorthand.h"
 #include "StyleResolver.h"
-#include "StyleTextEdge.h"
 #include <algorithm>
 #include <memory>
 #include <wtf/MathExtras.h>
@@ -182,14 +180,10 @@ static inline TransformOperations blendFunc(const TransformOperations& from, con
 {
     if (context.compositeOperation == CompositeOperation::Add) {
         ASSERT(context.progress == 1.0);
-
-        Vector<Ref<TransformOperation>> operations;
-        operations.reserveInitialCapacity(from.size() + to.size());
-
-        operations.appendRange(from.begin(), from.end());
-        operations.appendRange(to.begin(), to.end());
-
-        return TransformOperations { WTFMove(operations) };
+        TransformOperations resultOperations;
+        resultOperations.operations().appendVector(from.operations());
+        resultOperations.operations().appendVector(to.operations());
+        return resultOperations;
     }
 
     auto prefix = [&]() -> std::optional<unsigned> {
@@ -310,9 +304,11 @@ static RefPtr<TranslateTransformOperation> blendFunc(TranslateTransformOperation
     return nullptr;
 }
 
-static Ref<TransformOperation> blendFunc(TransformOperation& from, TransformOperation& to, const CSSPropertyBlendingContext& context)
+static RefPtr<TransformOperation> blendFunc(TransformOperation* from, TransformOperation* to, const CSSPropertyBlendingContext& context)
 {
-    return to.blend(&from, context);
+    if (from && to)
+        return to->blend(from, context);
+    return nullptr;
 }
 
 static inline RefPtr<PathOperation> blendFunc(PathOperation* from, PathOperation* to, const CSSPropertyBlendingContext& context)
@@ -365,10 +361,8 @@ static inline ContentVisibility blendFunc(ContentVisibility from, ContentVisibil
 
 static inline Visibility blendFunc(Visibility from, Visibility to, const CSSPropertyBlendingContext& context)
 {
-    if (context.isDiscrete) {
-        ASSERT(!context.progress || context.progress == 1.0);
-        return context.progress ? to : from;
-    }
+    if (from != Visibility::Visible && to != Visibility::Visible)
+        return context.progress < 0.5 ? from : to;
 
     // Any non-zero result means we consider the object to be visible. Only at 0 do we consider the object to be
     // invisible. The invisible value we use (Visibility::Hidden vs. Visibility::Collapse) depends on the specified from/to values.
@@ -379,22 +373,6 @@ static inline Visibility blendFunc(Visibility from, Visibility to, const CSSProp
     // The composite operation here is irrelevant.
     double result = blendFunc(fromVal, toVal, { context.progress, false, CompositeOperation::Replace, context.client, context.property });
     return result > 0. ? Visibility::Visible : (to != Visibility::Visible ? to : from);
-}
-
-static inline DisplayType blendFunc(DisplayType from, DisplayType to, const CSSPropertyBlendingContext& context)
-{
-    // https://drafts.csswg.org/css-display-4/#display-animation
-    // In general, the display property's animation type is discrete. However, similar to interpolation of
-    // visibility, during interpolation between none and any other display value, p values between 0 and 1
-    // map to the non-none value. Additionally, the element is inert as long as its display value would
-    // compute to none when ignoring the Transitions and Animations cascade origins.
-    if (from != DisplayType::None && to != DisplayType::None)
-        return context.progress < 0.5 ? from : to;
-    if (context.progress <= 0)
-        return from;
-    if (context.progress >= 1)
-        return to;
-    return from == DisplayType::None ? to : from;
 }
 
 static inline TextUnderlineOffset blendFunc(const TextUnderlineOffset& from, const TextUnderlineOffset& to, const CSSPropertyBlendingContext& context)
@@ -688,19 +666,10 @@ static inline GridTrackList blendFunc(const GridTrackList& from, const GridTrack
     return result;
 }
 
-static inline RefPtr<BasicShapePath> blendFunc(BasicShapePath* from, BasicShapePath* to, const CSSPropertyBlendingContext& context)
-{
-    if (context.isDiscrete)
-        return context.progress < 0.5 ? from : to;
-    ASSERT(from && to);
-    auto blendedValue = to->blend(*from, context);
-    return &downcast<BasicShapePath>(blendedValue.leakRef());
-}
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AnimationPropertyWrapperBase);
 class AnimationPropertyWrapperBase {
     WTF_MAKE_NONCOPYABLE(AnimationPropertyWrapperBase);
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(AnimationPropertyWrapperBase);
 public:
     explicit AnimationPropertyWrapperBase(CSSPropertyID property)
         : m_property(property)
@@ -727,10 +696,11 @@ public:
 private:
     CSSPropertyID m_property;
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AnimationPropertyWrapperBase);
 
 template <typename T>
 class PropertyWrapperGetter : public AnimationPropertyWrapperBase {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     PropertyWrapperGetter(CSSPropertyID property, T (RenderStyle::*getter)() const)
         : AnimationPropertyWrapperBase(property)
@@ -763,7 +733,7 @@ private:
 
 template <typename T>
 class PropertyWrapper : public PropertyWrapperGetter<T> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     PropertyWrapper(CSSPropertyID property, T (RenderStyle::*getter)() const, void (RenderStyle::*setter)(T))
         : PropertyWrapperGetter<T>(property, getter)
@@ -780,9 +750,9 @@ protected:
     void (RenderStyle::*m_setter)(T);
 };
 
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(OffsetRotateWrapper);
 class OffsetRotateWrapper final : public PropertyWrapperGetter<OffsetRotation> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(OffsetRotateWrapper);
 public:
     OffsetRotateWrapper()
         : PropertyWrapperGetter(CSSPropertyOffsetRotate, &RenderStyle::offsetRotate)
@@ -810,10 +780,11 @@ private:
         destination.setOffsetRotate(value(from).blend(value(to), context));
     }
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(OffsetRotateWrapper);
 
 template <typename T>
 class PositivePropertyWrapper final : public PropertyWrapper<T> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     PositivePropertyWrapper(CSSPropertyID property, T (RenderStyle::*getter)() const, void (RenderStyle::*setter)(T))
         : PropertyWrapper<T>(property, getter, setter)
@@ -830,7 +801,7 @@ private:
 
 template <typename T>
 class DiscretePropertyWrapper : public PropertyWrapperGetter<T> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     DiscretePropertyWrapper(CSSPropertyID property, T (RenderStyle::*getter)() const, void (RenderStyle::*setter)(T))
         : PropertyWrapperGetter<T>(property, getter)
@@ -850,9 +821,9 @@ private:
     void (RenderStyle::*m_setter)(T);
 };
 
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(GridTemplatePropertyWrapper);
 class GridTemplatePropertyWrapper final : public PropertyWrapper<const GridTrackList&> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(GridTemplatePropertyWrapper);
 public:
     GridTemplatePropertyWrapper(CSSPropertyID property, const GridTrackList& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(const GridTrackList&))
         : PropertyWrapper(property, getter, setter)
@@ -870,14 +841,16 @@ private:
         return WebCore::canInterpolate(this->value(from), this->value(to));
     }
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(GridTemplatePropertyWrapper);
 
-class NinePieceImageRepeatWrapper final : public AnimationPropertyWrapperBase {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(BorderImageRepeatWrapper);
+class BorderImageRepeatWrapper final : public AnimationPropertyWrapperBase {
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(BorderImageRepeatWrapper);
 public:
-    NinePieceImageRepeatWrapper(CSSPropertyID property, NinePieceImageRule (RenderStyle::*horizontalGetter)() const, void (RenderStyle::*horizontalSetter)(NinePieceImageRule), NinePieceImageRule (RenderStyle::*verticalGetter)() const, void (RenderStyle::*verticalSetter)(NinePieceImageRule))
-        : AnimationPropertyWrapperBase(property)
-        , m_horizontalWrapper(DiscretePropertyWrapper<NinePieceImageRule>(property, horizontalGetter, horizontalSetter))
-        , m_verticalWrapper(DiscretePropertyWrapper<NinePieceImageRule>(property, verticalGetter, verticalSetter))
+    BorderImageRepeatWrapper()
+        : AnimationPropertyWrapperBase(CSSPropertyBorderImageRepeat)
+        , m_horizontalWrapper(DiscretePropertyWrapper<NinePieceImageRule>(CSSPropertyBorderImageRepeat, &RenderStyle::borderImageHorizontalRule, &RenderStyle::setBorderImageHorizontalRule))
+        , m_verticalWrapper(DiscretePropertyWrapper<NinePieceImageRule>(CSSPropertyBorderImageRepeat, &RenderStyle::borderImageVerticalRule, &RenderStyle::setBorderImageVerticalRule))
     {
     }
 
@@ -906,10 +879,11 @@ private:
     DiscretePropertyWrapper<NinePieceImageRule> m_horizontalWrapper;
     DiscretePropertyWrapper<NinePieceImageRule> m_verticalWrapper;
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(BorderImageRepeatWrapper);
 
 template <typename T>
 class RefCountedPropertyWrapper : public PropertyWrapperGetter<T*> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     RefCountedPropertyWrapper(CSSPropertyID property, T* (RenderStyle::*getter)() const, void (RenderStyle::*setter)(RefPtr<T>&&))
         : PropertyWrapperGetter<T*>(property, getter)
@@ -955,9 +929,9 @@ static bool lengthsRequireBlendingForAccumulativeIteration(const Length& from, c
     return from.isCalculated() || to.isCalculated() || from.type() != to.type();
 }
 
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(LengthPropertyWrapper);
 class LengthPropertyWrapper : public PropertyWrapperGetter<const Length&> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(LengthPropertyWrapper);
 public:
     enum class Flags {
         IsLengthPercentage          = 1 << 0,
@@ -991,7 +965,7 @@ private:
     void (RenderStyle::*m_setter)(Length&&);
     OptionSet<Flags> m_flags;
 };
-
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(LengthPropertyWrapper);
 
 static bool canInterpolateLengthVariants(const LengthSize& from, const LengthSize& to)
 {
@@ -1008,9 +982,9 @@ static bool canInterpolateLengthVariants(const GapLength& from, const GapLength&
     return canInterpolateLengths(from.length(), to.length(), isLengthPercentage);
 }
 
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(LengthPointPropertyWrapper);
 class LengthPointPropertyWrapper : public PropertyWrapperGetter<const LengthPoint&> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(LengthPointPropertyWrapper);
 public:
     LengthPointPropertyWrapper(CSSPropertyID property, const LengthPoint& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(LengthPoint))
         : PropertyWrapperGetter(property, getter)
@@ -1034,7 +1008,7 @@ private:
 
     void (RenderStyle::*m_setter)(LengthPoint);
 };
-
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(LengthPointPropertyWrapper);
 
 // This class extends LengthPointPropertyWrapper to accommodate `auto` or `normal` values expressed as
 // LengthPoint(Length(LengthType::Auto/Normal), Length(LengthType::Auto/Normal)). This is used for
@@ -1090,7 +1064,7 @@ static bool lengthVariantRequiresBlendingForAccumulativeIteration(const GapLengt
 
 template <typename T>
 class LengthVariantPropertyWrapper final : public PropertyWrapperGetter<const T&> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     LengthVariantPropertyWrapper(CSSPropertyID property, const T& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(T&&))
         : PropertyWrapperGetter<const T&>(property, getter)
@@ -1117,9 +1091,9 @@ private:
     void (RenderStyle::*m_setter)(T&&);
 };
 
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(OptionalLengthPropertyWrapper);
 class OptionalLengthPropertyWrapper : public PropertyWrapperGetter<std::optional<Length>> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(OptionalLengthPropertyWrapper);
 
 public:
     enum class Flags {
@@ -1159,14 +1133,14 @@ private:
     void (RenderStyle::*m_setter)(std::optional<Length>);
     OptionSet<Flags> m_flags;
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(OptionalLengthPropertyWrapper);
 
 
-
-
-class ContainIntrinsicLengthPropertyWrapper final : public OptionalLengthPropertyWrapper {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ContainIntrinsiclLengthPropertyWrapper);
+class ContainIntrinsiclLengthPropertyWrapper final : public OptionalLengthPropertyWrapper {
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ContainIntrinsiclLengthPropertyWrapper);
 public:
-    ContainIntrinsicLengthPropertyWrapper(CSSPropertyID property, std::optional<Length> (RenderStyle::*getter)() const, void (RenderStyle::*setter)(std::optional<Length>), ContainIntrinsicSizeType (RenderStyle::*typeGetter)() const, void (RenderStyle::*typeSetter)(ContainIntrinsicSizeType))
+    ContainIntrinsiclLengthPropertyWrapper(CSSPropertyID property, std::optional<Length> (RenderStyle::*getter)() const, void (RenderStyle::*setter)(std::optional<Length>), ContainIntrinsicSizeType (RenderStyle::*typeGetter)() const, void (RenderStyle::*typeSetter)(ContainIntrinsicSizeType))
         : OptionalLengthPropertyWrapper(property, getter, setter, { Flags::NegativeLengthsAreInvalid })
         , m_containIntrinsicSizeTypeGetter(typeGetter)
         , m_containIntrinsicSizeTypeSetter(typeSetter)
@@ -1193,11 +1167,11 @@ private:
     ContainIntrinsicSizeType (RenderStyle::*m_containIntrinsicSizeTypeGetter)() const;
     void (RenderStyle::*m_containIntrinsicSizeTypeSetter)(ContainIntrinsicSizeType);
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ContainIntrinsiclLengthPropertyWrapper);
 
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(LengthBoxPropertyWrapper);
 class LengthBoxPropertyWrapper : public PropertyWrapperGetter<const LengthBox&> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(LengthBoxPropertyWrapper);
 public:
     enum class Flags {
         IsLengthPercentage      = 1 << 0,
@@ -1214,12 +1188,8 @@ public:
 
     bool canInterpolate(const RenderStyle& from, const RenderStyle& to, CompositeOperation) const override
     {
-        if (m_flags.contains(Flags::UsesFillKeyword)) {
-            if (property() == CSSPropertyBorderImageSlice && from.borderImage().fill() != to.borderImage().fill())
-                return false;
-            if (property() == CSSPropertyMaskBorderSlice && from.maskBorder().fill() != to.maskBorder().fill())
+        if (m_flags.contains(Flags::UsesFillKeyword) && from.borderImage().fill() != to.borderImage().fill())
             return false;
-        }
 
         bool isLengthPercentage = m_flags.contains(Flags::IsLengthPercentage);
 
@@ -1252,12 +1222,8 @@ public:
 
     void blend(RenderStyle& destination, const RenderStyle& from, const RenderStyle& to, const CSSPropertyBlendingContext& context) const override
     {
-        if (m_flags.contains(Flags::UsesFillKeyword)) {
-            if (property() == CSSPropertyBorderImageSlice)
+        if (m_flags.contains(Flags::UsesFillKeyword))
             destination.setBorderImageSliceFill((!context.progress || !context.isDiscrete ? from : to).borderImage().fill());
-            else if (property() == CSSPropertyMaskBorderSlice)
-                destination.setMaskBorderSliceFill((!context.progress || !context.isDiscrete ? from : to).maskBorder().fill());
-        }
         if (m_flags.contains(Flags::MayOverrideBorderWidths))
             destination.setBorderImageWidthOverridesBorderWidths((!context.progress || !context.isDiscrete ? from : to).borderImage().overridesBorderWidths());
         if (context.isDiscrete) {
@@ -1274,11 +1240,11 @@ public:
     void (RenderStyle::*m_setter)(LengthBox&&);
     OptionSet<Flags> m_flags;
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(LengthBoxPropertyWrapper);
 
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ClipWrapper);
 class ClipWrapper final : public LengthBoxPropertyWrapper {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ClipWrapper);
 public:
     ClipWrapper()
         : LengthBoxPropertyWrapper(CSSPropertyClip, &RenderStyle::clip, &RenderStyle::setClip, { LengthBoxPropertyWrapper::Flags::AllowsNegativeValues })
@@ -1297,11 +1263,11 @@ private:
         destination.setHasClip(true);
     }
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ClipWrapper);
 
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PathOperationPropertyWrapper);
 class PathOperationPropertyWrapper : public RefCountedPropertyWrapper<PathOperation> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(PathOperationPropertyWrapper);
 public:
     PathOperationPropertyWrapper(CSSPropertyID property, PathOperation* (RenderStyle::*getter)() const, void (RenderStyle::*setter)(RefPtr<PathOperation>&&))
         : RefCountedPropertyWrapper(property, getter, setter)
@@ -1331,11 +1297,11 @@ private:
         return *clipPathA == *clipPathB;
     }
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PathOperationPropertyWrapper);
 
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(OffsetPathWrapper);
 class OffsetPathWrapper final : public PathOperationPropertyWrapper {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(OffsetPathWrapper);
 public:
     OffsetPathWrapper()
         : PathOperationPropertyWrapper(CSSPropertyOffsetPath, &RenderStyle::offsetPath, &RenderStyle::setOffsetPath)
@@ -1353,13 +1319,13 @@ private:
 #endif
     }
 };
-
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(OffsetPathWrapper);
 
 #if ENABLE(VARIATION_FONTS)
 
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PropertyWrapperFontVariationSettings);
 class PropertyWrapperFontVariationSettings final : public PropertyWrapper<FontVariationSettings> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(PropertyWrapperFontVariationSettings);
 public:
     PropertyWrapperFontVariationSettings()
         : PropertyWrapper(CSSPropertyFontVariationSettings, &RenderStyle::fontVariationSettings, &RenderStyle::setFontVariationSettings)
@@ -1392,13 +1358,13 @@ private:
         return true;
     }
 };
-
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PropertyWrapperFontVariationSettings);
 
 #endif
 
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PropertyWrapperShape);
 class PropertyWrapperShape final : public RefCountedPropertyWrapper<ShapeValue> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(PropertyWrapperShape);
 public:
     PropertyWrapperShape(CSSPropertyID property, ShapeValue* (RenderStyle::*getter)() const, void (RenderStyle::*setter)(RefPtr<ShapeValue>&&))
         : RefCountedPropertyWrapper(property, getter, setter)
@@ -1428,11 +1394,11 @@ private:
         return fromShape && toShape && fromShape->canBlend(*toShape);
     }
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PropertyWrapperShape);
 
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleImagePropertyWrapper);
 class StyleImagePropertyWrapper final : public RefCountedPropertyWrapper<StyleImage> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleImagePropertyWrapper);
 public:
     StyleImagePropertyWrapper(CSSPropertyID property, StyleImage* (RenderStyle::*getter)() const, void (RenderStyle::*setter)(RefPtr<StyleImage>&&))
         : RefCountedPropertyWrapper(property, getter, setter)
@@ -1455,11 +1421,11 @@ private:
         return value(from) && value(to);
     }
 };
-
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleImagePropertyWrapper);
 
 template <typename T>
 class AcceleratedPropertyWrapper final : public PropertyWrapper<T> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     AcceleratedPropertyWrapper(CSSPropertyID property, T (RenderStyle::*getter)() const, void (RenderStyle::*setter)(T))
         : PropertyWrapper<T>(property, getter, setter)
@@ -1471,34 +1437,9 @@ private:
     bool requiresBlendingForAccumulativeIteration(const RenderStyle&, const RenderStyle&) const final { return this->property() == CSSPropertyTransform; }
 };
 
-class AcceleratedTransformOperationsPropertyWrapper final : public PropertyWrapperGetter<const TransformOperations&> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
-public:
-    AcceleratedTransformOperationsPropertyWrapper()
-        : PropertyWrapperGetter<const TransformOperations&>(CSSPropertyTransform, &RenderStyle::transform)
-    {
-    }
-
-    bool canInterpolate(const RenderStyle& from, const RenderStyle& to, CompositeOperation compositeOperation) const override
-    {
-        if (compositeOperation == CompositeOperation::Replace)
-            return !this->value(to).shouldFallBackToDiscreteAnimation(this->value(from), { });
-        return true;
-    }
-
-    void blend(RenderStyle& destination, const RenderStyle& from, const RenderStyle& to, const CSSPropertyBlendingContext& context) const override
-    {
-        destination.setTransform(blendFunc(this->value(from), this->value(to), context));
-    }
-
-private:
-    bool animationIsAccelerated(const Settings&) const final { return true; }
-    bool requiresBlendingForAccumulativeIteration(const RenderStyle&, const RenderStyle&) const final { return true; }
-};
-
 template <typename T>
 class AcceleratedIndividualTransformPropertyWrapper final : public RefCountedPropertyWrapper<T> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     AcceleratedIndividualTransformPropertyWrapper(CSSPropertyID property, T* (RenderStyle::*getter)() const, void (RenderStyle::*setter)(RefPtr<T>&&))
         : RefCountedPropertyWrapper<T>(property, getter, setter)
@@ -1514,13 +1455,12 @@ private:
     }
 };
 
-
-class PropertyWrapperFilter final : public PropertyWrapperGetter<const FilterOperations&> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PropertyWrapperFilter);
+class PropertyWrapperFilter final : public PropertyWrapper<const FilterOperations&> {
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(PropertyWrapperFilter);
 public:
-    PropertyWrapperFilter(CSSPropertyID property, const FilterOperations& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(FilterOperations&&))
-        : PropertyWrapperGetter<const FilterOperations&>(property, getter)
-        , m_setter(setter)
+    PropertyWrapperFilter(CSSPropertyID propertyID, const FilterOperations& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(const FilterOperations&))
+        : PropertyWrapper(propertyID, getter, setter)
     {
     }
 
@@ -1543,10 +1483,8 @@ private:
     {
         (destination.*m_setter)(blendFunc(value(from), value(to), context));
     }
-
-    void (RenderStyle::*m_setter)(FilterOperations&&);
 };
-
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PropertyWrapperFilter);
 
 static inline size_t shadowListLength(const ShadowData* shadow)
 {
@@ -1572,9 +1510,9 @@ static inline const ShadowData* shadowForBlending(const ShadowData* srcShadow, c
     return otherShadow->isWebkitBoxShadow() ? &defaultWebKitBoxShadowData.get() : &defaultShadowData.get();
 }
 
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PropertyWrapperShadow);
 class PropertyWrapperShadow final : public AnimationPropertyWrapperBase {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(PropertyWrapperShadow);
 public:
     PropertyWrapperShadow(CSSPropertyID property, const ShadowData* (RenderStyle::*getter)() const, void (RenderStyle::*setter)(std::unique_ptr<ShadowData>, bool))
         : AnimationPropertyWrapperBase(property)
@@ -1756,11 +1694,11 @@ private:
     const ShadowData* (RenderStyle::*m_getter)() const;
     void (RenderStyle::*m_setter)(std::unique_ptr<ShadowData>, bool);
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PropertyWrapperShadow);
 
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PropertyWrapperStyleColor);
 class PropertyWrapperStyleColor : public AnimationPropertyWrapperBase {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(PropertyWrapperStyleColor);
 public:
     PropertyWrapperStyleColor(CSSPropertyID property, const StyleColor& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(const StyleColor&))
         : AnimationPropertyWrapperBase(property)
@@ -1819,11 +1757,11 @@ private:
     const StyleColor& (RenderStyle::*m_getter)() const;
     void (RenderStyle::*m_setter)(const StyleColor&);
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PropertyWrapperStyleColor);
 
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PropertyWrapperColor);
 class PropertyWrapperColor : public AnimationPropertyWrapperBase {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(PropertyWrapperColor);
 public:
     PropertyWrapperColor(CSSPropertyID property, const Color& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(const Color&))
         : AnimationPropertyWrapperBase(property)
@@ -1863,11 +1801,11 @@ private:
     const Color& (RenderStyle::*m_getter)() const;
     void (RenderStyle::*m_setter)(const Color&);
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PropertyWrapperColor);
 
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ScrollbarColorPropertyWrapper);
 class ScrollbarColorPropertyWrapper final : public AnimationPropertyWrapperBase {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ScrollbarColorPropertyWrapper);
 public:
     ScrollbarColorPropertyWrapper()
         : AnimationPropertyWrapperBase(CSSPropertyScrollbarColor)
@@ -1918,12 +1856,12 @@ private:
     }
 #endif
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ScrollbarColorPropertyWrapper);
 
 
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PropertyWrapperVisitedAffectedStyleColor);
 class PropertyWrapperVisitedAffectedStyleColor : public AnimationPropertyWrapperBase {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(PropertyWrapperVisitedAffectedStyleColor);
 public:
     PropertyWrapperVisitedAffectedStyleColor(CSSPropertyID property, const StyleColor& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(const StyleColor&), const StyleColor& (RenderStyle::*visitedGetter)() const, void (RenderStyle::*visitedSetter)(const StyleColor&))
         : AnimationPropertyWrapperBase(property)
@@ -1958,11 +1896,11 @@ private:
     }
 #endif
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PropertyWrapperVisitedAffectedStyleColor);
 
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PropertyWrapperVisitedAffectedColor);
 class PropertyWrapperVisitedAffectedColor : public AnimationPropertyWrapperBase {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(PropertyWrapperVisitedAffectedColor);
 public:
     PropertyWrapperVisitedAffectedColor(CSSPropertyID property, const Color& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(const Color&), const Color& (RenderStyle::*visitedGetter)() const, void (RenderStyle::*visitedSetter)(const Color&))
         : AnimationPropertyWrapperBase(property)
@@ -1997,11 +1935,11 @@ private:
     }
 #endif
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PropertyWrapperVisitedAffectedColor);
 
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AccentColorPropertyWrapper);
 class AccentColorPropertyWrapper final : public PropertyWrapperStyleColor {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(AccentColorPropertyWrapper);
 public:
     AccentColorPropertyWrapper()
         : PropertyWrapperStyleColor(CSSPropertyAccentColor, &RenderStyle::accentColor, &RenderStyle::setAccentColor)
@@ -2035,7 +1973,7 @@ private:
             destination.setAccentColor(blendingRenderStyle.accentColor());
     }
 };
-
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AccentColorPropertyWrapper);
 
 static bool canInterpolateCaretColor(const RenderStyle& from, const RenderStyle& to, bool visited)
 {
@@ -2044,9 +1982,9 @@ static bool canInterpolateCaretColor(const RenderStyle& from, const RenderStyle&
     return !from.hasAutoCaretColor() && !to.hasAutoCaretColor();
 }
 
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CaretColorPropertyWrapper);
 class CaretColorPropertyWrapper final : public PropertyWrapperVisitedAffectedStyleColor {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(CaretColorPropertyWrapper);
 public:
     CaretColorPropertyWrapper()
         : PropertyWrapperVisitedAffectedStyleColor(CSSPropertyCaretColor, &RenderStyle::caretColor, &RenderStyle::setCaretColor, &RenderStyle::visitedLinkCaretColor, &RenderStyle::setVisitedLinkCaretColor)
@@ -2089,13 +2027,13 @@ private:
         }
     }
 };
-
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CaretColorPropertyWrapper);
 
 // Wrapper base class for an animatable property in a FillLayer
 
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(FillLayerAnimationPropertyWrapperBase);
 class FillLayerAnimationPropertyWrapperBase {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(FillLayerAnimationPropertyWrapperBase);
 public:
     FillLayerAnimationPropertyWrapperBase(CSSPropertyID property)
         : m_property(property)
@@ -2116,11 +2054,11 @@ public:
 private:
     CSSPropertyID m_property;
 };
-
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(FillLayerAnimationPropertyWrapperBase);
 
 template <typename T>
 class FillLayerPropertyWrapperGetter : public FillLayerAnimationPropertyWrapperBase {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(FillLayerPropertyWrapperGetter);
 public:
     FillLayerPropertyWrapperGetter(CSSPropertyID property, T (FillLayer::*getter)() const)
@@ -2157,7 +2095,7 @@ private:
 
 template <typename T>
 class FillLayerPropertyWrapper final : public FillLayerPropertyWrapperGetter<const T&> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     FillLayerPropertyWrapper(CSSPropertyID property, const T& (FillLayer::*getter)() const, void (FillLayer::*setter)(T))
         : FillLayerPropertyWrapperGetter<const T&>(property, getter)
@@ -2189,9 +2127,9 @@ private:
     void (FillLayer::*m_setter)(T);
 };
 
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(FillLayerPositionPropertyWrapper);
 class FillLayerPositionPropertyWrapper final : public FillLayerPropertyWrapperGetter<const Length&> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(FillLayerPositionPropertyWrapper);
 public:
     FillLayerPositionPropertyWrapper(CSSPropertyID property, const Length& (FillLayer::*lengthGetter)() const, void (FillLayer::*lengthSetter)(Length), Edge (FillLayer::*originGetter)() const, void (FillLayer::*originSetter)(Edge), Edge farEdge)
         : FillLayerPropertyWrapperGetter(property, lengthGetter)
@@ -2254,11 +2192,11 @@ private:
     void (FillLayer::*m_originSetter)(Edge);
     Edge m_farEdge;
 };
-
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(FillLayerPositionPropertyWrapper);
 
 template <typename T>
 class FillLayerRefCountedPropertyWrapper : public FillLayerPropertyWrapperGetter<T*> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     FillLayerRefCountedPropertyWrapper(CSSPropertyID property, T* (FillLayer::*getter)() const, void (FillLayer::*setter)(RefPtr<T>&&))
         : FillLayerPropertyWrapperGetter<T*>(property, getter)
@@ -2285,9 +2223,9 @@ private:
     void (FillLayer::*m_setter)(RefPtr<T>&&);
 };
 
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(FillLayerStyleImagePropertyWrapper);
 class FillLayerStyleImagePropertyWrapper final : public FillLayerRefCountedPropertyWrapper<StyleImage> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(FillLayerStyleImagePropertyWrapper);
 public:
     FillLayerStyleImagePropertyWrapper(CSSPropertyID property, StyleImage* (FillLayer::*getter)() const, void (FillLayer::*setter)(RefPtr<StyleImage>&&))
         : FillLayerRefCountedPropertyWrapper(property, getter, setter)
@@ -2318,11 +2256,11 @@ private:
     }
 #endif
 };
-
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(FillLayerStyleImagePropertyWrapper);
 
 template <typename T>
 class DiscreteFillLayerPropertyWrapper final : public FillLayerAnimationPropertyWrapperBase {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     DiscreteFillLayerPropertyWrapper(CSSPropertyID property, T (FillLayer::*getter)() const, void (FillLayer::*setter)(T))
         : FillLayerAnimationPropertyWrapperBase(property)
@@ -2356,9 +2294,9 @@ private:
     void (FillLayer::*m_setter)(T);
 };
 
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(FillLayersPropertyWrapper);
 class FillLayersPropertyWrapper final : public AnimationPropertyWrapperBase {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(FillLayersPropertyWrapper);
 public:
     typedef const FillLayer& (RenderStyle::*LayersGetter)() const;
     typedef FillLayer& (RenderStyle::*LayersAccessor)();
@@ -2499,11 +2437,11 @@ private:
     LayersGetter m_layersGetter;
     LayersAccessor m_layersAccessor;
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(FillLayersPropertyWrapper);
 
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ShorthandPropertyWrapper);
 class ShorthandPropertyWrapper final : public AnimationPropertyWrapperBase {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ShorthandPropertyWrapper);
 public:
     ShorthandPropertyWrapper(CSSPropertyID property, Vector<AnimationPropertyWrapperBase*> longhandWrappers)
         : AnimationPropertyWrapperBase(property)
@@ -2544,11 +2482,11 @@ private:
 
     Vector<AnimationPropertyWrapperBase*> m_propertyWrappers;
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ShorthandPropertyWrapper);
 
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PropertyWrapperFlex);
 class PropertyWrapperFlex final : public AnimationPropertyWrapperBase {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(PropertyWrapperFlex);
 public:
     PropertyWrapperFlex()
         : AnimationPropertyWrapperBase(CSSPropertyFlex)
@@ -2584,13 +2522,13 @@ private:
     }
 #endif
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PropertyWrapperFlex);
 
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PropertyWrapperSVGPaint);
 class PropertyWrapperSVGPaint final : public AnimationPropertyWrapperBase {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(PropertyWrapperSVGPaint);
 public:
-    PropertyWrapperSVGPaint(CSSPropertyID property, SVGPaintType (RenderStyle::*paintTypeGetter)() const, const StyleColor& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(const StyleColor&))
+    PropertyWrapperSVGPaint(CSSPropertyID property, SVGPaintType (RenderStyle::*paintTypeGetter)() const, StyleColor (RenderStyle::*getter)() const, void (RenderStyle::*setter)(const StyleColor&))
         : AnimationPropertyWrapperBase(property)
         , m_paintTypeGetter(paintTypeGetter)
         , m_getter(getter)
@@ -2598,6 +2536,7 @@ public:
     {
     }
 
+private:
     bool equals(const RenderStyle& a, const RenderStyle& b) const final
     {
         if (&a == &b)
@@ -2652,53 +2591,15 @@ public:
     }
 #endif
 
-private:
     SVGPaintType (RenderStyle::*m_paintTypeGetter)() const;
-    const StyleColor& (RenderStyle::*m_getter)() const;
+    StyleColor (RenderStyle::*m_getter)() const;
     void (RenderStyle::*m_setter)(const StyleColor&);
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PropertyWrapperSVGPaint);
 
-
-
-class PropertyWrapperVisitedAffectedSVGPaint : public AnimationPropertyWrapperBase {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
-public:
-    PropertyWrapperVisitedAffectedSVGPaint(CSSPropertyID property, SVGPaintType (RenderStyle::*paintTypeGetter)() const, const StyleColor& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(const StyleColor&), SVGPaintType (RenderStyle::*visitedPaintTypeGetter)() const, const StyleColor& (RenderStyle::*visitedGetter)() const, void (RenderStyle::*visitedSetter)(const StyleColor&))
-        : AnimationPropertyWrapperBase(property)
-        , m_wrapper(makeUnique<PropertyWrapperSVGPaint>(property, paintTypeGetter, getter, setter))
-        , m_visitedWrapper(makeUnique<PropertyWrapperSVGPaint>(property, visitedPaintTypeGetter, visitedGetter, visitedSetter))
-    {
-    }
-
-protected:
-    bool equals(const RenderStyle& a, const RenderStyle& b) const override
-    {
-        return m_wrapper->equals(a, b) && m_visitedWrapper->equals(a, b);
-    }
-
-    void blend(RenderStyle& destination, const RenderStyle& from, const RenderStyle& to, const CSSPropertyBlendingContext& context) const override
-    {
-        m_wrapper->blend(destination, from, to, context);
-        m_visitedWrapper->blend(destination, from, to, context);
-    }
-
-    std::unique_ptr<PropertyWrapperSVGPaint> m_wrapper;
-    std::unique_ptr<PropertyWrapperSVGPaint> m_visitedWrapper;
-
-private:
-#if !LOG_DISABLED
-    void logBlend(const RenderStyle& from, const RenderStyle& to, const RenderStyle& destination, double progress) const final
-    {
-        m_wrapper->logBlend(from, to, destination, progress);
-        m_visitedWrapper->logBlend(from, to, destination, progress);
-    }
-#endif
-};
-
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PropertyWrapperFontWeight);
 class PropertyWrapperFontWeight final : public PropertyWrapper<FontSelectionValue> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(PropertyWrapperFontWeight);
 public:
     PropertyWrapperFontWeight()
         : PropertyWrapper(CSSPropertyFontWeight, &RenderStyle::fontWeight, &RenderStyle::setFontWeight)
@@ -2712,11 +2613,11 @@ private:
         (destination.*m_setter)(FontSelectionValue(std::clamp(blendFunc(static_cast<float>(this->value(from)), static_cast<float>(this->value(to)), context), 1.0f, 1000.0f)));
     }
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PropertyWrapperFontWeight);
 
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PropertyWrapperFontStyle);
 class PropertyWrapperFontStyle final : public PropertyWrapper<std::optional<FontSelectionValue>> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(PropertyWrapperFontStyle);
 public:
     PropertyWrapperFontStyle()
         : PropertyWrapper(CSSPropertyFontStyle, &RenderStyle::fontItalic, &RenderStyle::setFontItalic)
@@ -2749,11 +2650,11 @@ private:
         destination.fontCascade().update(currentFontSelector);
     }
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PropertyWrapperFontStyle);
 
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PropertyWrapperFontSizeAdjust);
 class PropertyWrapperFontSizeAdjust final : public PropertyWrapperGetter<FontSizeAdjust> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(PropertyWrapperFontSizeAdjust);
 public:
     PropertyWrapperFontSizeAdjust()
         : PropertyWrapperGetter(CSSPropertyFontSizeAdjust, &RenderStyle::fontSizeAdjust)
@@ -2785,11 +2686,11 @@ private:
         destination.setFontSizeAdjust(blendedFontSizeAdjust());
     }
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PropertyWrapperFontSizeAdjust);
 
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PropertyWrapperBaselineShift);
 class PropertyWrapperBaselineShift final : public PropertyWrapper<SVGLengthValue> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(PropertyWrapperBaselineShift);
 public:
     PropertyWrapperBaselineShift()
         : PropertyWrapper(CSSPropertyBaselineShift, &RenderStyle::baselineShiftValue, &RenderStyle::setBaselineShiftValue)
@@ -2814,11 +2715,11 @@ private:
         PropertyWrapper::blend(destination, from, to, context);
     }
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PropertyWrapperBaselineShift);
 
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PropertyWrapperTextDecorationThickness);
 class PropertyWrapperTextDecorationThickness final : public PropertyWrapperGetter<TextDecorationThickness> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(PropertyWrapperTextDecorationThickness);
 public:
     PropertyWrapperTextDecorationThickness()
         : PropertyWrapperGetter(CSSPropertyTextDecorationThickness, &RenderStyle::textDecorationThickness)
@@ -2857,11 +2758,11 @@ private:
         destination.setTextDecorationThickness(blendedTextDecorationThickness());
     }
 };
-
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PropertyWrapperTextDecorationThickness);
 
 template <typename T>
 class AutoPropertyWrapper final : public PropertyWrapper<T> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     AutoPropertyWrapper(CSSPropertyID property, T (RenderStyle::*getter)() const, void (RenderStyle::*setter)(T), bool (RenderStyle::*autoGetter)() const, void (RenderStyle::*autoSetter)(), std::optional<T> minValue = std::nullopt)
         : PropertyWrapper<T>(property, getter, setter)
@@ -2903,9 +2804,9 @@ private:
 };
 
 
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(FloatPropertyWrapper);
 class FloatPropertyWrapper : public PropertyWrapper<float> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(FloatPropertyWrapper);
 public:
     enum class ValueRange : uint8_t {
         All,
@@ -2932,11 +2833,11 @@ protected:
 private:
     ValueRange m_valueRange;
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(FloatPropertyWrapper);
 
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(LineHeightWrapper);
 class LineHeightWrapper final : public LengthPropertyWrapper {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(LineHeightWrapper);
 public:
     LineHeightWrapper()
         : LengthPropertyWrapper(CSSPropertyLineHeight, &RenderStyle::specifiedLineHeight, &RenderStyle::setLineHeight)
@@ -2962,11 +2863,11 @@ private:
         return LengthPropertyWrapper::canInterpolate(from, to, compositeOperation);
     }
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(LineHeightWrapper);
 
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(VerticalAlignWrapper);
 class VerticalAlignWrapper final : public LengthPropertyWrapper {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(VerticalAlignWrapper);
 public:
     VerticalAlignWrapper()
         : LengthPropertyWrapper(CSSPropertyVerticalAlign, &RenderStyle::verticalAlignLength, &RenderStyle::setVerticalAlignLength, LengthPropertyWrapper::Flags::IsLengthPercentage)
@@ -2986,11 +2887,11 @@ private:
         destination.setVerticalAlign(blendingStyle.verticalAlign());
     }
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(VerticalAlignWrapper);
 
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(TextIndentWrapper);
 class TextIndentWrapper final : public LengthPropertyWrapper {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(TextIndentWrapper);
 public:
     TextIndentWrapper()
         : LengthPropertyWrapper(CSSPropertyTextIndent, &RenderStyle::textIndent, &RenderStyle::setTextIndent, LengthPropertyWrapper::Flags::IsLengthPercentage)
@@ -3024,11 +2925,11 @@ private:
         LengthPropertyWrapper::blend(destination, from, to, context);
     }
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(TextIndentWrapper);
 
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(OffsetDistanceWrapper);
 class OffsetDistanceWrapper final : public LengthPropertyWrapper {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(OffsetDistanceWrapper);
 public:
     OffsetDistanceWrapper()
         : LengthPropertyWrapper(CSSPropertyOffsetDistance, &RenderStyle::offsetDistance, &RenderStyle::setOffsetDistance, LengthPropertyWrapper::Flags::IsLengthPercentage)
@@ -3046,11 +2947,11 @@ private:
 #endif
     }
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(OffsetDistanceWrapper);
 
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PerspectiveWrapper);
 class PerspectiveWrapper final : public FloatPropertyWrapper {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(PerspectiveWrapper);
 public:
     PerspectiveWrapper()
         : FloatPropertyWrapper(CSSPropertyPerspective, &RenderStyle::perspective, &RenderStyle::setPerspective, FloatPropertyWrapper::ValueRange::NonNegative)
@@ -3073,11 +2974,11 @@ private:
             FloatPropertyWrapper::blend(destination, from, to, context);
     }
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PerspectiveWrapper);
 
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(TabSizePropertyWrapper);
 class TabSizePropertyWrapper final : public PropertyWrapper<const TabSize&> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(TabSizePropertyWrapper);
 public:
     TabSizePropertyWrapper()
         : PropertyWrapper(CSSPropertyTabSize, &RenderStyle::tabSize, &RenderStyle::setTabSize)
@@ -3098,11 +2999,11 @@ private:
             PropertyWrapper::blend(destination, from, to, context);
     }
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(TabSizePropertyWrapper);
 
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PropertyWrapperAspectRatio);
 class PropertyWrapperAspectRatio final : public AnimationPropertyWrapperBase {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(PropertyWrapperAspectRatio);
 public:
     PropertyWrapperAspectRatio()
         : AnimationPropertyWrapperBase(CSSPropertyAspectRatio)
@@ -3144,11 +3045,11 @@ public:
         destination.setAspectRatio(applicableStyle.aspectRatioWidth(), applicableStyle.aspectRatioHeight());
     }
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PropertyWrapperAspectRatio);
 
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StrokeDasharrayPropertyWrapper);
 class StrokeDasharrayPropertyWrapper final : public PropertyWrapper<Vector<SVGLengthValue>> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StrokeDasharrayPropertyWrapper);
 public:
     StrokeDasharrayPropertyWrapper()
         : PropertyWrapper(CSSPropertyStrokeDasharray, &RenderStyle::strokeDashArray, &RenderStyle::setStrokeDashArray)
@@ -3161,11 +3062,11 @@ private:
         return false;
     }
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StrokeDasharrayPropertyWrapper);
 
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PropertyWrapperContent);
 class PropertyWrapperContent final : public AnimationPropertyWrapperBase {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(PropertyWrapperContent);
 public:
     PropertyWrapperContent()
         : AnimationPropertyWrapperBase(CSSPropertyContent)
@@ -3202,11 +3103,11 @@ public:
             destination.clearContent();
     }
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PropertyWrapperContent);
 
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(TextEmphasisStyleWrapper);
 class TextEmphasisStyleWrapper final : public DiscretePropertyWrapper<TextEmphasisMark> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(TextEmphasisStyleWrapper);
 public:
     TextEmphasisStyleWrapper()
         : DiscretePropertyWrapper(CSSPropertyTextEmphasisStyle, &RenderStyle::textEmphasisMark, &RenderStyle::setTextEmphasisMark)
@@ -3220,11 +3121,11 @@ private:
         DiscretePropertyWrapper::blend(destination, from, to, context);
     }
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(TextEmphasisStyleWrapper);
 
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(DiscreteFontDescriptionWrapper);
 class DiscreteFontDescriptionWrapper : public AnimationPropertyWrapperBase {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(DiscreteFontDescriptionWrapper);
 public:
     DiscreteFontDescriptionWrapper(CSSPropertyID property)
         : AnimationPropertyWrapperBase(property)
@@ -3260,11 +3161,11 @@ private:
     }
 #endif
 };
-
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(DiscreteFontDescriptionWrapper);
 
 template <typename T>
 class DiscreteFontDescriptionTypedWrapper : public DiscreteFontDescriptionWrapper {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     DiscreteFontDescriptionTypedWrapper(CSSPropertyID property, T (FontCascadeDescription::*getter)() const, void (FontCascadeDescription::*setter)(T))
         : DiscreteFontDescriptionWrapper(property)
@@ -3293,9 +3194,9 @@ private:
     void (FontCascadeDescription::*m_setter)(T);
 };
 
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(FontFamilyWrapper);
 class FontFamilyWrapper final : public DiscreteFontDescriptionWrapper {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(FontFamilyWrapper);
 public:
     FontFamilyWrapper()
         : DiscreteFontDescriptionWrapper(CSSPropertyFontFamily)
@@ -3313,11 +3214,11 @@ private:
         destination.setFamilies(source.families());
     }
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(FontFamilyWrapper);
 
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CounterWrapper);
 class CounterWrapper final : public AnimationPropertyWrapperBase {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(CounterWrapper);
 public:
     CounterWrapper(CSSPropertyID property)
         : AnimationPropertyWrapperBase(property)
@@ -3387,11 +3288,11 @@ public:
         }
     }
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CounterWrapper);
 
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(FontFeatureSettingsWrapper);
 class FontFeatureSettingsWrapper final : public DiscreteFontDescriptionWrapper {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(FontFeatureSettingsWrapper);
 public:
     FontFeatureSettingsWrapper()
         : DiscreteFontDescriptionWrapper(CSSPropertyFontFeatureSettings)
@@ -3409,11 +3310,11 @@ private:
         destination.setFeatureSettings(FontFeatureSettings(source.featureSettings()));
     }
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(FontFeatureSettingsWrapper);
 
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(FontVariantEastAsianWrapper);
 class FontVariantEastAsianWrapper final : public DiscreteFontDescriptionWrapper {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(FontVariantEastAsianWrapper);
 public:
     FontVariantEastAsianWrapper()
         : DiscreteFontDescriptionWrapper(CSSPropertyFontVariantEastAsian)
@@ -3435,11 +3336,11 @@ private:
         destination.setVariantEastAsianRuby(source.variantEastAsianRuby());
     }
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(FontVariantEastAsianWrapper);
 
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(FontVariantLigaturesWrapper);
 class FontVariantLigaturesWrapper final : public DiscreteFontDescriptionWrapper {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(FontVariantLigaturesWrapper);
 public:
     FontVariantLigaturesWrapper()
         : DiscreteFontDescriptionWrapper(CSSPropertyFontVariantLigatures)
@@ -3463,11 +3364,11 @@ private:
         destination.setVariantContextualAlternates(source.variantContextualAlternates());
     }
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(FontVariantLigaturesWrapper);
 
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(GridTemplateAreasWrapper);
 class GridTemplateAreasWrapper final : public AnimationPropertyWrapperBase {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(GridTemplateAreasWrapper);
 public:
     GridTemplateAreasWrapper()
         : AnimationPropertyWrapperBase(CSSPropertyGridTemplateAreas)
@@ -3505,11 +3406,11 @@ public:
         destination.setNamedGridAreaColumnCount(source.namedGridAreaColumnCount());
     }
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(GridTemplateAreasWrapper);
 
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(FontVariantNumericWrapper);
 class FontVariantNumericWrapper final : public DiscreteFontDescriptionWrapper {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(FontVariantNumericWrapper);
 public:
     FontVariantNumericWrapper()
         : DiscreteFontDescriptionWrapper(CSSPropertyFontVariantNumeric)
@@ -3535,11 +3436,11 @@ private:
         destination.setVariantNumericSlashedZero(source.variantNumericSlashedZero());
     }
 };
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(FontVariantNumericWrapper);
 
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(QuotesWrapper);
 class QuotesWrapper final : public AnimationPropertyWrapperBase {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(QuotesWrapper);
 public:
     QuotesWrapper()
         : AnimationPropertyWrapperBase(CSSPropertyQuotes)
@@ -3566,30 +3467,11 @@ private:
     }
 #endif
 };
-
-
-
-class VisibilityWrapper final : public PropertyWrapper<Visibility> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
-public:
-    VisibilityWrapper()
-        : PropertyWrapper(CSSPropertyVisibility, &RenderStyle::visibility, &RenderStyle::setVisibility)
-    {
-    }
-
-private:
-    bool canInterpolate(const RenderStyle& from, const RenderStyle& to, CompositeOperation) const final
-    {
-        // https://drafts.csswg.org/web-animations-1/#animating-visibility
-        // If neither value is visible, then discrete animation is used.
-        return value(from) == Visibility::Visible || value(to) == Visibility::Visible;
-    }
-};
-
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(QuotesWrapper);
 
 template <typename T>
 class DiscreteSVGPropertyWrapper final : public AnimationPropertyWrapperBase {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     DiscreteSVGPropertyWrapper(CSSPropertyID property, T (SVGRenderStyle::*getter)() const, void (SVGRenderStyle::*setter)(T))
         : AnimationPropertyWrapperBase(property)
@@ -3627,28 +3509,9 @@ private:
     void (SVGRenderStyle::*m_setter)(T);
 };
 
-
-class DWrapper final : public RefCountedPropertyWrapper<BasicShapePath> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
-public:
-    DWrapper()
-        : RefCountedPropertyWrapper(CSSPropertyD, &RenderStyle::d, &RenderStyle::setD)
-    {
-    }
-
-private:
-    bool canInterpolate(const RenderStyle& from, const RenderStyle& to, CompositeOperation) const final
-    {
-        auto* fromValue = value(from);
-        auto* toValue = value(to);
-        return fromValue && toValue && fromValue->canBlend(*toValue);
-    }
-};
-
-
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSPropertyAnimationWrapperMap);
 class CSSPropertyAnimationWrapperMap final {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(CSSPropertyAnimationWrapperMap);
 public:
     static CSSPropertyAnimationWrapperMap& singleton()
     {
@@ -3696,12 +3559,11 @@ private:
 
     friend class WTF::NeverDestroyed<CSSPropertyAnimationWrapperMap>;
 };
-
-
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSPropertyAnimationWrapperMap);
 
 template <typename T>
 class NonNormalizedDiscretePropertyWrapper final : public PropertyWrapper<T> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(NonNormalizedDiscretePropertyWrapper);
 public:
     NonNormalizedDiscretePropertyWrapper(CSSPropertyID property, T (RenderStyle::*getter)() const, void (RenderStyle::*setter)(T))
         : PropertyWrapper<T>(property, getter, setter)
@@ -3712,7 +3574,6 @@ private:
     bool canInterpolate(const RenderStyle&, const RenderStyle&, CompositeOperation) const final { return false; }
     bool normalizesProgressForDiscreteInterpolation() const final { return false; }
 };
-
 
 CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
 {
@@ -3765,13 +3626,9 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         new LengthBoxPropertyWrapper(CSSPropertyBorderImageSlice, &RenderStyle::borderImageSlices, &RenderStyle::setBorderImageSlices, { LengthBoxPropertyWrapper::Flags::UsesFillKeyword }),
         new LengthBoxPropertyWrapper(CSSPropertyBorderImageWidth, &RenderStyle::borderImageWidth, &RenderStyle::setBorderImageWidth, { LengthBoxPropertyWrapper::Flags::IsLengthPercentage, LengthBoxPropertyWrapper::Flags::MayOverrideBorderWidths }),
         new LengthBoxPropertyWrapper(CSSPropertyBorderImageOutset, &RenderStyle::borderImageOutset, &RenderStyle::setBorderImageOutset),
-        new NinePieceImageRepeatWrapper(CSSPropertyBorderImageRepeat, &RenderStyle::borderImageHorizontalRule, &RenderStyle::setBorderImageHorizontalRule, &RenderStyle::borderImageVerticalRule, &RenderStyle::setBorderImageVerticalRule),
 
         new StyleImagePropertyWrapper(CSSPropertyMaskBorderSource, &RenderStyle::maskBorderSource, &RenderStyle::setMaskBorderSource),
-        new LengthBoxPropertyWrapper(CSSPropertyMaskBorderSlice, &RenderStyle::maskBorderSlices, &RenderStyle::setMaskBorderSlices, { LengthBoxPropertyWrapper::Flags::UsesFillKeyword }),
-        new LengthBoxPropertyWrapper(CSSPropertyMaskBorderWidth, &RenderStyle::maskBorderWidth, &RenderStyle::setMaskBorderWidth, { LengthBoxPropertyWrapper::Flags::IsLengthPercentage }),
-        new LengthBoxPropertyWrapper(CSSPropertyMaskBorderOutset, &RenderStyle::maskBorderOutset, &RenderStyle::setMaskBorderOutset),
-        new NinePieceImageRepeatWrapper(CSSPropertyMaskBorderRepeat, &RenderStyle::maskBorderHorizontalRule, &RenderStyle::setMaskBorderHorizontalRule, &RenderStyle::maskBorderVerticalRule, &RenderStyle::setMaskBorderVerticalRule),
+        new PropertyWrapper<const NinePieceImage&>(CSSPropertyMaskBorder, &RenderStyle::maskBorder, &RenderStyle::setMaskBorder),
         new PropertyWrapper<const NinePieceImage&>(CSSPropertyWebkitMaskBoxImage, &RenderStyle::maskBorder, &RenderStyle::setMaskBorder),
 
         new FillLayersPropertyWrapper(CSSPropertyBackgroundPositionX, &RenderStyle::backgroundLayers, &RenderStyle::ensureBackgroundLayers),
@@ -3820,13 +3677,13 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         new LengthVariantPropertyWrapper<LengthSize>(CSSPropertyBorderTopRightRadius, &RenderStyle::borderTopRightRadius, &RenderStyle::setBorderTopRightRadius),
         new LengthVariantPropertyWrapper<LengthSize>(CSSPropertyBorderBottomLeftRadius, &RenderStyle::borderBottomLeftRadius, &RenderStyle::setBorderBottomLeftRadius),
         new LengthVariantPropertyWrapper<LengthSize>(CSSPropertyBorderBottomRightRadius, &RenderStyle::borderBottomRightRadius, &RenderStyle::setBorderBottomRightRadius),
-        new VisibilityWrapper,
-        new NonNormalizedDiscretePropertyWrapper<DisplayType>(CSSPropertyDisplay, &RenderStyle::display, &RenderStyle::setDisplay),
+        new PropertyWrapper<Visibility>(CSSPropertyVisibility, &RenderStyle::visibility, &RenderStyle::setVisibility),
 
         new ClipWrapper,
 
         new AcceleratedPropertyWrapper<float>(CSSPropertyOpacity, &RenderStyle::opacity, &RenderStyle::setOpacity),
-        new AcceleratedTransformOperationsPropertyWrapper,
+        new AcceleratedPropertyWrapper<const TransformOperations&>(CSSPropertyTransform, &RenderStyle::transform, &RenderStyle::setTransform),
+
         new AcceleratedIndividualTransformPropertyWrapper<ScaleTransformOperation>(CSSPropertyScale, &RenderStyle::scale, &RenderStyle::setScale),
         new AcceleratedIndividualTransformPropertyWrapper<RotateTransformOperation>(CSSPropertyRotate, &RenderStyle::rotate, &RenderStyle::setRotate),
         new AcceleratedIndividualTransformPropertyWrapper<TranslateTransformOperation>(CSSPropertyTranslate, &RenderStyle::translate, &RenderStyle::setTranslate),
@@ -3855,10 +3712,10 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         new PropertyWrapperShadow(CSSPropertyWebkitBoxShadow, &RenderStyle::boxShadow, &RenderStyle::setBoxShadow),
         new PropertyWrapperShadow(CSSPropertyTextShadow, &RenderStyle::textShadow, &RenderStyle::setTextShadow),
 
-        new PropertyWrapperVisitedAffectedSVGPaint(CSSPropertyFill, &RenderStyle::fillPaintType, &RenderStyle::fillPaintColor, &RenderStyle::setFillPaintColor, &RenderStyle::visitedFillPaintType, &RenderStyle::visitedFillPaintColor, &RenderStyle::setVisitedFillPaintColor),
+        new PropertyWrapperSVGPaint(CSSPropertyFill, &RenderStyle::fillPaintType, &RenderStyle::fillPaintColor, &RenderStyle::setFillPaintColor),
         new PropertyWrapper<float>(CSSPropertyFillOpacity, &RenderStyle::fillOpacity, &RenderStyle::setFillOpacity),
 
-        new PropertyWrapperVisitedAffectedSVGPaint(CSSPropertyStroke, &RenderStyle::strokePaintType, &RenderStyle::strokePaintColor, &RenderStyle::setStrokePaintColor, &RenderStyle::visitedStrokePaintType, &RenderStyle::visitedStrokePaintColor, &RenderStyle::setVisitedStrokePaintColor),
+        new PropertyWrapperSVGPaint(CSSPropertyStroke, &RenderStyle::strokePaintType, &RenderStyle::strokePaintColor, &RenderStyle::setStrokePaintColor),
         new PropertyWrapper<float>(CSSPropertyStrokeOpacity, &RenderStyle::strokeOpacity, &RenderStyle::setStrokeOpacity),
         new StrokeDasharrayPropertyWrapper,
         new PropertyWrapper<float>(CSSPropertyStrokeMiterlimit, &RenderStyle::strokeMiterLimit, &RenderStyle::setStrokeMiterLimit),
@@ -3873,8 +3730,6 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         new LengthPropertyWrapper(CSSPropertyX, &RenderStyle::x, &RenderStyle::setX),
         new LengthPropertyWrapper(CSSPropertyY, &RenderStyle::y, &RenderStyle::setY),
 
-        new DWrapper,
-
         new PropertyWrapper<float>(CSSPropertyFloodOpacity, &RenderStyle::floodOpacity, &RenderStyle::setFloodOpacity),
         new PropertyWrapperStyleColor(CSSPropertyFloodColor, &RenderStyle::floodColor, &RenderStyle::setFloodColor),
 
@@ -3882,12 +3737,10 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         new PropertyWrapperStyleColor(CSSPropertyStopColor, &RenderStyle::stopColor, &RenderStyle::setStopColor),
 
         new PropertyWrapperStyleColor(CSSPropertyLightingColor, &RenderStyle::lightingColor, &RenderStyle::setLightingColor),
-        new PropertyWrapperStyleColor(CSSPropertyStrokeColor, &RenderStyle::strokeColor, &RenderStyle::setStrokeColor),
 
         new PropertyWrapperBaselineShift,
         new PropertyWrapper<SVGLengthValue>(CSSPropertyKerning, &RenderStyle::kerning, &RenderStyle::setKerning),
 #if ENABLE(VARIATION_FONTS)
-        new DiscretePropertyWrapper<FontOpticalSizing>(CSSPropertyFontOpticalSizing, &RenderStyle::fontOpticalSizing, &RenderStyle::setFontOpticalSizing),
         new PropertyWrapperFontVariationSettings,
 #endif
         new PropertyWrapperFontSizeAdjust,
@@ -3905,12 +3758,19 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
 
         new TabSizePropertyWrapper,
 
-        new DiscretePropertyWrapper<BlockStepInsert>(CSSPropertyBlockStepInsert, &RenderStyle::blockStepInsert, &RenderStyle::setBlockStepInsert),
-        new OptionalLengthPropertyWrapper(CSSPropertyBlockStepSize, &RenderStyle::blockStepSize, &RenderStyle::setBlockStepSize, { OptionalLengthPropertyWrapper::Flags::NegativeLengthsAreInvalid }),
+        new ContainIntrinsiclLengthPropertyWrapper(CSSPropertyContainIntrinsicWidth, &RenderStyle::containIntrinsicWidth, &RenderStyle::setContainIntrinsicWidth, &RenderStyle::containIntrinsicWidthType, &RenderStyle::setContainIntrinsicWidthType),
+        new ContainIntrinsiclLengthPropertyWrapper(CSSPropertyContainIntrinsicHeight, &RenderStyle::containIntrinsicHeight, &RenderStyle::setContainIntrinsicHeight, &RenderStyle::containIntrinsicHeightType, &RenderStyle::setContainIntrinsicHeightType),
 
-        new ContainIntrinsicLengthPropertyWrapper(CSSPropertyContainIntrinsicWidth, &RenderStyle::containIntrinsicWidth, &RenderStyle::setContainIntrinsicWidth, &RenderStyle::containIntrinsicWidthType, &RenderStyle::setContainIntrinsicWidthType),
-        new ContainIntrinsicLengthPropertyWrapper(CSSPropertyContainIntrinsicHeight, &RenderStyle::containIntrinsicHeight, &RenderStyle::setContainIntrinsicHeight, &RenderStyle::containIntrinsicHeightType, &RenderStyle::setContainIntrinsicHeightType),
-
+        // FIXME: The following properties are currently not animatable but should be:
+        // background-blend-mode, clip-rule, color-interpolation,
+        // color-interpolation-filters, counter-increment, counter-reset, dominant-baseline,
+        // fill-rule, font-family, font-feature-settings, font-kerning, font-language-override,
+        // font-synthesis, font-variant-alternates, font-variant-caps, font-variant-east-asian,
+        // font-variant-ligatures, font-variant-numeric, font-variant-position, grid-template-areas,
+        // ime-mode, marker-end, marker-mid, marker-start, mask, mask-clip, mask-composite, mask-image,
+        // mask-mode, mask-origin, mask-repeat, mask-type, offset-distance, perspective-origin, quotes,
+        // ruby-align, scroll-behavior, shape-rendering, stroke-linecap, stroke-linejoin,
+        // text-anchor, text-emphasis-style, text-rendering, vector-effect
         new DiscretePropertyWrapper<const StyleContentAlignmentData&>(CSSPropertyAlignContent, &RenderStyle::alignContent, &RenderStyle::setAlignContent),
         new DiscretePropertyWrapper<const StyleSelfAlignmentData&>(CSSPropertyAlignItems, &RenderStyle::alignItems, &RenderStyle::setAlignItems),
         new DiscretePropertyWrapper<const StyleSelfAlignmentData&>(CSSPropertyAlignSelf, &RenderStyle::alignSelf, &RenderStyle::setAlignSelf),
@@ -3921,18 +3781,16 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         new DiscretePropertyWrapper<FillRepeatXY>(CSSPropertyBackgroundRepeat, &RenderStyle::backgroundRepeat, &RenderStyle::setBackgroundRepeat),
         new DiscretePropertyWrapper<BorderStyle>(CSSPropertyBorderBottomStyle, &RenderStyle::borderBottomStyle, &RenderStyle::setBorderBottomStyle),
         new DiscretePropertyWrapper<BorderCollapse>(CSSPropertyBorderCollapse, &RenderStyle::borderCollapse, &RenderStyle::setBorderCollapse),
+        new BorderImageRepeatWrapper,
         new DiscretePropertyWrapper<BorderStyle>(CSSPropertyBorderLeftStyle, &RenderStyle::borderLeftStyle, &RenderStyle::setBorderLeftStyle),
         new DiscretePropertyWrapper<BorderStyle>(CSSPropertyBorderRightStyle, &RenderStyle::borderRightStyle, &RenderStyle::setBorderRightStyle),
         new DiscretePropertyWrapper<BorderStyle>(CSSPropertyBorderTopStyle, &RenderStyle::borderTopStyle, &RenderStyle::setBorderTopStyle),
         new DiscretePropertyWrapper<BoxSizing>(CSSPropertyBoxSizing, &RenderStyle::boxSizing, &RenderStyle::setBoxSizing),
         new DiscretePropertyWrapper<CaptionSide>(CSSPropertyCaptionSide, &RenderStyle::captionSide, &RenderStyle::setCaptionSide),
         new DiscretePropertyWrapper<Clear>(CSSPropertyClear, &RenderStyle::clear, &RenderStyle::setClear),
-        new DiscretePropertyWrapper<TextEdge>(CSSPropertyTextBoxEdge, &RenderStyle::textBoxEdge, &RenderStyle::setTextBoxEdge),
-        new DiscretePropertyWrapper<TextEdge>(CSSPropertyLineFitEdge, &RenderStyle::lineFitEdge, &RenderStyle::setLineFitEdge),
         new DiscretePropertyWrapper<TextBoxTrim>(CSSPropertyTextBoxTrim, &RenderStyle::textBoxTrim, &RenderStyle::setTextBoxTrim),
         new DiscretePropertyWrapper<PrintColorAdjust>(CSSPropertyPrintColorAdjust, &RenderStyle::printColorAdjust, &RenderStyle::setPrintColorAdjust),
         new DiscretePropertyWrapper<ColumnFill>(CSSPropertyColumnFill, &RenderStyle::columnFill, &RenderStyle::setColumnFill),
-        new DiscretePropertyWrapper<ColumnSpan>(CSSPropertyColumnSpan, &RenderStyle::columnSpan, &RenderStyle::setColumnSpan),
         new DiscretePropertyWrapper<BorderStyle>(CSSPropertyColumnRuleStyle, &RenderStyle::columnRuleStyle, &RenderStyle::setColumnRuleStyle),
         new NonNormalizedDiscretePropertyWrapper<ContentVisibility>(CSSPropertyContentVisibility, &RenderStyle::contentVisibility, &RenderStyle::setContentVisibility),
         new DiscretePropertyWrapper<CursorType>(CSSPropertyCursor, &RenderStyle::cursor, &RenderStyle::setCursor),
@@ -3949,11 +3807,8 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         new DiscretePropertyWrapper<const GridPosition&>(CSSPropertyGridColumnStart, &RenderStyle::gridItemColumnStart, &RenderStyle::setGridItemColumnStart),
         new DiscretePropertyWrapper<const GridPosition&>(CSSPropertyGridRowEnd, &RenderStyle::gridItemRowEnd, &RenderStyle::setGridItemRowEnd),
         new DiscretePropertyWrapper<const GridPosition&>(CSSPropertyGridRowStart, &RenderStyle::gridItemRowStart, &RenderStyle::setGridItemRowStart),
-        new DiscretePropertyWrapper<OptionSet<HangingPunctuation>>(CSSPropertyHangingPunctuation, &RenderStyle::hangingPunctuation, &RenderStyle::setHangingPunctuation),
         new DiscretePropertyWrapper<Hyphens>(CSSPropertyHyphens, &RenderStyle::hyphens, &RenderStyle::setHyphens),
-        new DiscretePropertyWrapper<const AtomString&>(CSSPropertyHyphenateCharacter, &RenderStyle::hyphenationString, &RenderStyle::setHyphenationString),
         new DiscretePropertyWrapper<ImageOrientation>(CSSPropertyImageOrientation, &RenderStyle::imageOrientation, &RenderStyle::setImageOrientation),
-        new DiscretePropertyWrapper<ImageRendering>(CSSPropertyImageRendering, &RenderStyle::imageRendering, &RenderStyle::setImageRendering),
         new DiscretePropertyWrapper<const IntSize&>(CSSPropertyWebkitInitialLetter, &RenderStyle::initialLetter, &RenderStyle::setInitialLetter),
         new DiscretePropertyWrapper<const StyleContentAlignmentData&>(CSSPropertyJustifyContent, &RenderStyle::justifyContent, &RenderStyle::setJustifyContent),
         new DiscretePropertyWrapper<const StyleSelfAlignmentData&>(CSSPropertyJustifyItems, &RenderStyle::justifyItems, &RenderStyle::setJustifyItems),
@@ -3973,8 +3828,7 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         new DiscretePropertyWrapper<PointerEvents>(CSSPropertyPointerEvents, &RenderStyle::pointerEvents, &RenderStyle::setPointerEvents),
         new DiscretePropertyWrapper<PositionType>(CSSPropertyPosition, &RenderStyle::position, &RenderStyle::setPosition),
         new DiscretePropertyWrapper<Resize>(CSSPropertyResize, &RenderStyle::resize, &RenderStyle::setResize),
-        new DiscretePropertyWrapper<RubyPosition>(CSSPropertyRubyPosition, &RenderStyle::rubyPosition, &RenderStyle::setRubyPosition),
-        new DiscretePropertyWrapper<RubyAlign>(CSSPropertyRubyAlign, &RenderStyle::rubyAlign, &RenderStyle::setRubyAlign),
+        new DiscretePropertyWrapper<RubyPosition>(CSSPropertyWebkitRubyPosition, &RenderStyle::rubyPosition, &RenderStyle::setRubyPosition),
         new DiscretePropertyWrapper<TableLayoutType>(CSSPropertyTableLayout, &RenderStyle::tableLayout, &RenderStyle::setTableLayout),
         new DiscretePropertyWrapper<TextAlignMode>(CSSPropertyTextAlign, &RenderStyle::textAlign, &RenderStyle::setTextAlign),
         new DiscretePropertyWrapper<TextAlignLast>(CSSPropertyTextAlignLast, &RenderStyle::textAlignLast, &RenderStyle::setTextAlignLast),
@@ -3997,18 +3851,16 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         new DiscretePropertyWrapper<OverflowAnchor>(CSSPropertyOverflowAnchor, &RenderStyle::overflowAnchor, &RenderStyle::setOverflowAnchor),
         new DiscretePropertyWrapper<TextSpacingTrim>(CSSPropertyTextSpacingTrim, &RenderStyle::textSpacingTrim, &RenderStyle::setTextSpacingTrim),
         new DiscretePropertyWrapper<TextAutospace>(CSSPropertyTextAutospace, &RenderStyle::textAutospace, &RenderStyle::setTextAutospace),
-        new DiscretePropertyWrapper<OptionSet<TextUnderlinePosition>>(CSSPropertyTextUnderlinePosition, &RenderStyle::textUnderlinePosition, &RenderStyle::setTextUnderlinePosition),
 
         new DiscretePropertyWrapper<BoxDecorationBreak>(CSSPropertyWebkitBoxDecorationBreak, &RenderStyle::boxDecorationBreak, &RenderStyle::setBoxDecorationBreak),
         new DiscretePropertyWrapper<Isolation>(CSSPropertyIsolation, &RenderStyle::isolation, &RenderStyle::setIsolation),
         new DiscretePropertyWrapper<BlendMode>(CSSPropertyMixBlendMode, &RenderStyle::blendMode, &RenderStyle::setBlendMode),
         new DiscretePropertyWrapper<BlendMode>(CSSPropertyBackgroundBlendMode, &RenderStyle::backgroundBlendMode, &RenderStyle::setBackgroundBlendMode),
-        new DiscretePropertyWrapper<StyleAppearance>(CSSPropertyAppearance, &RenderStyle::appearance, &RenderStyle::setAppearance),
 #if ENABLE(DARK_MODE_CSS)
         new DiscretePropertyWrapper<StyleColorScheme>(CSSPropertyColorScheme, &RenderStyle::colorScheme, &RenderStyle::setColorScheme),
 #endif
         new PropertyWrapperAspectRatio,
-        new DiscretePropertyWrapper<const FontPalette&>(CSSPropertyFontPalette, &RenderStyle::fontPalette, &RenderStyle::setFontPalette),
+        new DiscretePropertyWrapper<FontPalette>(CSSPropertyFontPalette, &RenderStyle::fontPalette, &RenderStyle::setFontPalette),
 
         new OffsetPathWrapper,
         new OffsetDistanceWrapper,
@@ -4022,8 +3874,6 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         new DiscreteFontDescriptionTypedWrapper<Kerning>(CSSPropertyFontKerning, &FontCascadeDescription::kerning, &FontCascadeDescription::setKerning),
         new FontFeatureSettingsWrapper,
         new FontFamilyWrapper,
-        new DiscreteSVGPropertyWrapper<AlignmentBaseline>(CSSPropertyAlignmentBaseline, &SVGRenderStyle::alignmentBaseline, &SVGRenderStyle::setAlignmentBaseline),
-        new DiscreteSVGPropertyWrapper<BufferedRendering>(CSSPropertyBufferedRendering, &SVGRenderStyle::bufferedRendering, &SVGRenderStyle::setBufferedRendering),
         new DiscreteSVGPropertyWrapper<WindRule>(CSSPropertyClipRule, &SVGRenderStyle::clipRule, &SVGRenderStyle::setClipRule),
         new DiscreteSVGPropertyWrapper<ColorInterpolation>(CSSPropertyColorInterpolationFilters, &SVGRenderStyle::colorInterpolationFilters, &SVGRenderStyle::setColorInterpolationFilters),
         new DiscreteSVGPropertyWrapper<DominantBaseline>(CSSPropertyDominantBaseline, &SVGRenderStyle::dominantBaseline, &SVGRenderStyle::setDominantBaseline),
@@ -4034,7 +3884,7 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         new DiscreteFontDescriptionTypedWrapper<FontSynthesisLonghandValue>(CSSPropertyFontSynthesisWeight, &FontCascadeDescription::fontSynthesisWeight, &FontCascadeDescription::setFontSynthesisWeight),
         new DiscreteFontDescriptionTypedWrapper<FontSynthesisLonghandValue>(CSSPropertyFontSynthesisStyle, &FontCascadeDescription::fontSynthesisStyle, &FontCascadeDescription::setFontSynthesisStyle),
         new DiscreteFontDescriptionTypedWrapper<FontSynthesisLonghandValue>(CSSPropertyFontSynthesisSmallCaps, &FontCascadeDescription::fontSynthesisSmallCaps, &FontCascadeDescription::setFontSynthesisSmallCaps),
-        new DiscreteFontDescriptionTypedWrapper<const FontVariantAlternates&>(CSSPropertyFontVariantAlternates, &FontCascadeDescription::variantAlternates, &FontCascadeDescription::setVariantAlternates),
+        new DiscreteFontDescriptionTypedWrapper<FontVariantAlternates>(CSSPropertyFontVariantAlternates, &FontCascadeDescription::variantAlternates, &FontCascadeDescription::setVariantAlternates),
         new FontVariantEastAsianWrapper,
         new FontVariantLigaturesWrapper,
         new FontVariantNumericWrapper,
@@ -4054,16 +3904,9 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         new DiscreteSVGPropertyWrapper<const String&>(CSSPropertyMarkerEnd, &SVGRenderStyle::markerEndResource, &SVGRenderStyle::setMarkerEndResource),
         new DiscreteSVGPropertyWrapper<const String&>(CSSPropertyMarkerMid, &SVGRenderStyle::markerMidResource, &SVGRenderStyle::setMarkerMidResource),
         new DiscreteSVGPropertyWrapper<const String&>(CSSPropertyMarkerStart, &SVGRenderStyle::markerStartResource, &SVGRenderStyle::setMarkerStartResource),
-        new DiscretePropertyWrapper<ScrollbarGutter>(CSSPropertyScrollbarGutter, &RenderStyle::scrollbarGutter, &RenderStyle::setScrollbarGutter),
+        new DiscretePropertyWrapper<const ScrollbarGutter>(CSSPropertyScrollbarGutter, &RenderStyle::scrollbarGutter, &RenderStyle::setScrollbarGutter),
         new DiscretePropertyWrapper<ScrollbarWidth>(CSSPropertyScrollbarWidth, &RenderStyle::scrollbarWidth, &RenderStyle::setScrollbarWidth),
-        new DiscretePropertyWrapper<const ScrollSnapAlign&>(CSSPropertyScrollSnapAlign, &RenderStyle::scrollSnapAlign, &RenderStyle::setScrollSnapAlign),
-        new DiscretePropertyWrapper<ScrollSnapStop>(CSSPropertyScrollSnapStop, &RenderStyle::scrollSnapStop, &RenderStyle::setScrollSnapStop),
-        new DiscretePropertyWrapper<ScrollSnapType>(CSSPropertyScrollSnapType, &RenderStyle::scrollSnapType, &RenderStyle::setScrollSnapType),
-        new DiscretePropertyWrapper<const Vector<Style::ScopedName>&>(CSSPropertyViewTransitionClass, &RenderStyle::viewTransitionClasses, &RenderStyle::setViewTransitionClasses),
-        new DiscretePropertyWrapper<std::optional<Style::ScopedName>>(CSSPropertyViewTransitionName, &RenderStyle::viewTransitionName, &RenderStyle::setViewTransitionName),
-        new DiscretePropertyWrapper<FieldSizing>(CSSPropertyFieldSizing, &RenderStyle::fieldSizing, &RenderStyle::setFieldSizing),
-        new DiscretePropertyWrapper<const Vector<AtomString>&>(CSSPropertyAnchorName, &RenderStyle::anchorNames, &RenderStyle::setAnchorNames),
-        new DiscretePropertyWrapper<const AtomString&>(CSSPropertyPositionAnchor, &RenderStyle::positionAnchor, &RenderStyle::setPositionAnchor)
+        new DiscretePropertyWrapper<std::optional<Style::ScopedName>>(CSSPropertyViewTransitionName, &RenderStyle::viewTransitionName, &RenderStyle::setViewTransitionName)
     };
     const unsigned animatableLonghandPropertiesCount = std::size(animatableLonghandPropertyWrappers);
 
@@ -4084,21 +3927,8 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         CSSPropertyBorder,
         CSSPropertyBorderImage,
         CSSPropertyBorderSpacing,
-        CSSPropertyColumns,
-        CSSPropertyFlex,
-        CSSPropertyFlexFlow,
-        CSSPropertyGap,
-        CSSPropertyGrid,
-        CSSPropertyGridArea,
-        CSSPropertyGridColumn,
-        CSSPropertyGridRow,
-        CSSPropertyGridTemplate,
         CSSPropertyListStyle, // for list-style-image
         CSSPropertyMargin,
-        CSSPropertyMarginBlock, // logical shorthand
-        CSSPropertyMarginInline, // logical shorthand
-        CSSPropertyMarker,
-        CSSPropertyMaskBorder,
         CSSPropertyOutline,
         CSSPropertyPadding,
         CSSPropertyPaddingBlock,
@@ -4106,23 +3936,16 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         CSSPropertyPageBreakAfter,
         CSSPropertyPageBreakBefore,
         CSSPropertyPageBreakInside,
-        CSSPropertyPlaceContent,
-        CSSPropertyPlaceItems,
-        CSSPropertyPlaceSelf,
         CSSPropertyWebkitTextStroke,
         CSSPropertyColumnRule,
         CSSPropertyWebkitBorderRadius,
-        CSSPropertyTextDecoration,
-        CSSPropertyTextDecorationSkip,
         CSSPropertyTransformOrigin,
         CSSPropertyPerspectiveOrigin,
         CSSPropertyOffset,
-        CSSPropertyOverflow,
         CSSPropertyTextEmphasis,
         CSSPropertyFontVariant,
         CSSPropertyFontSynthesis,
         CSSPropertyContainIntrinsicSize,
-        CSSPropertyTextBox,
         CSSPropertyTextWrap,
         CSSPropertyWhiteSpace
     };
@@ -4168,8 +3991,36 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         // When adding a new property, you should make sure it belongs in this list
         // or provide a wrapper for it above. If you are adding to this list but the
         // property should be animatable, make sure to file a bug.
-
-        // To be fixed / untriaged:
+        case CSSPropertyDirection:
+        case CSSPropertyDisplay:
+#if ENABLE(VARIATION_FONTS)
+        case CSSPropertyFontOpticalSizing:
+#endif
+        case CSSPropertyTextOrientation:
+        case CSSPropertyWritingMode:
+        case CSSPropertyWebkitFontSmoothing:
+        case CSSPropertyWebkitLocale:
+        case CSSPropertyWebkitTextOrientation:
+#if ENABLE(TEXT_AUTOSIZING)
+        case CSSPropertyWebkitTextSizeAdjust:
+        case CSSPropertyInternalTextAutosizingStatus:
+#endif
+        case CSSPropertyWebkitTextZoom:
+        case CSSPropertyAlignmentBaseline:
+        case CSSPropertyAnimation:
+        case CSSPropertyAnimationComposition:
+        case CSSPropertyAnimationDelay:
+        case CSSPropertyAnimationDirection:
+        case CSSPropertyAnimationDuration:
+        case CSSPropertyAnimationFillMode:
+        case CSSPropertyAnimationIterationCount:
+        case CSSPropertyAnimationName:
+        case CSSPropertyAnimationPlayState:
+        case CSSPropertyAnimationTimeline:
+        case CSSPropertyAnimationTimingFunction:
+        case CSSPropertyAppearance:
+        case CSSPropertyBlockStepInsert:
+        case CSSPropertyBlockStepSize:
         case CSSPropertyBorderBlock: // logical shorthand
         case CSSPropertyBorderBlockColor: // logical shorthand
         case CSSPropertyBorderBlockStyle: // logical shorthand
@@ -4179,6 +4030,25 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         case CSSPropertyBorderInlineStyle: // logical shorthand
         case CSSPropertyBorderInlineWidth: // logical shorthand
         case CSSPropertyBorderStyle:
+        case CSSPropertyBufferedRendering:
+        case CSSPropertyColumnSpan:
+        case CSSPropertyColumns:
+        case CSSPropertyContain:
+        case CSSPropertyContainer:
+        case CSSPropertyContainerName:
+        case CSSPropertyContainerType:
+        case CSSPropertyFlex:
+        case CSSPropertyFlexFlow:
+        case CSSPropertyGap:
+        case CSSPropertyGlyphOrientationHorizontal:
+        case CSSPropertyGlyphOrientationVertical:
+        case CSSPropertyGrid:
+        case CSSPropertyGridArea:
+        case CSSPropertyGridColumn:
+        case CSSPropertyGridRow:
+        case CSSPropertyGridTemplate:
+        case CSSPropertyHangingPunctuation:
+        case CSSPropertyImageRendering:
         case CSSPropertyInlineSize:
         case CSSPropertyInputSecurity:
         case CSSPropertyInset:
@@ -4188,13 +4058,28 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         case CSSPropertyInsetInline:
         case CSSPropertyInsetInlineEnd:
         case CSSPropertyInsetInlineStart:
+        case CSSPropertyListStyle:
+        case CSSPropertyMarginBlock: // logical shorthand
+        case CSSPropertyMarginInline: // logical shorthand
+        case CSSPropertyMarker:
+        case CSSPropertyMaskBorder:
+        case CSSPropertyMaskBorderOutset:
+        case CSSPropertyMaskBorderRepeat:
+        case CSSPropertyMaskBorderSlice:
+        case CSSPropertyMaskBorderSource:
+        case CSSPropertyMaskBorderWidth:
         case CSSPropertyMasonryAutoFlow:
+        case CSSPropertyMathStyle:
+        case CSSPropertyOverflow:
         case CSSPropertyOverscrollBehavior:
         case CSSPropertyOverscrollBehaviorBlock:
         case CSSPropertyOverscrollBehaviorInline:
         case CSSPropertyOverscrollBehaviorX:
         case CSSPropertyOverscrollBehaviorY:
         case CSSPropertyPage:
+        case CSSPropertyPlaceContent:
+        case CSSPropertyPlaceItems:
+        case CSSPropertyPlaceSelf:
         case CSSPropertyScrollMargin:
         case CSSPropertyScrollMarginBlock:
         case CSSPropertyScrollMarginBlockEnd:
@@ -4217,39 +4102,20 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         case CSSPropertyScrollPaddingLeft:
         case CSSPropertyScrollPaddingRight:
         case CSSPropertyScrollPaddingTop:
-#if ENABLE(TEXT_AUTOSIZING)
-        case CSSPropertyWebkitTextSizeAdjust:
-#endif
-        case CSSPropertyViewTimeline:
-        case CSSPropertyViewTimelineInset: // FIXME: view-timeline-inset should be animatable (bug 265690)
-        case CSSPropertyWebkitUserSelect:
-
-        // Not animatable per-spec:
-        case CSSPropertyAnimation:
-        case CSSPropertyAnimationComposition:
-        case CSSPropertyAnimationDelay:
-        case CSSPropertyAnimationDirection:
-        case CSSPropertyAnimationDuration:
-        case CSSPropertyAnimationFillMode:
-        case CSSPropertyAnimationIterationCount:
-        case CSSPropertyAnimationName:
-        case CSSPropertyAnimationPlayState:
-        case CSSPropertyAnimationTimeline:
-        case CSSPropertyAnimationTimingFunction:
-        case CSSPropertyContain:
-        case CSSPropertyContainer:
-        case CSSPropertyContainerName:
-        case CSSPropertyContainerType:
-        case CSSPropertyDirection:
-        case CSSPropertyGlyphOrientationHorizontal:
-        case CSSPropertyGlyphOrientationVertical:
-        case CSSPropertyMathStyle:
+        case CSSPropertyScrollSnapAlign:
+        case CSSPropertyScrollSnapStop:
+        case CSSPropertyScrollSnapType:
         case CSSPropertyScrollTimeline:
         case CSSPropertyScrollTimelineAxis:
         case CSSPropertyScrollTimelineName:
+        case CSSPropertyTextBoxEdge:
+        case CSSPropertySize:
         case CSSPropertySpeakAs:
+        case CSSPropertyStrokeColor:
         case CSSPropertyTextCombineUpright:
-        case CSSPropertyTextOrientation:
+        case CSSPropertyTextDecoration:
+        case CSSPropertyTextDecorationSkip:
+        case CSSPropertyTextUnderlinePosition:
         case CSSPropertyTransition:
         case CSSPropertyTransitionBehavior:
         case CSSPropertyTransitionDelay:
@@ -4257,16 +4123,11 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         case CSSPropertyTransitionProperty:
         case CSSPropertyTransitionTimingFunction:
         case CSSPropertyUnicodeBidi:
+        case CSSPropertyViewTimeline:
         case CSSPropertyViewTimelineAxis:
+        case CSSPropertyViewTimelineInset: // FIXME: view-timeline-inset should be animabale (bug 265690)
         case CSSPropertyViewTimelineName:
         case CSSPropertyWillChange:
-        case CSSPropertyWritingMode:
-        case CSSPropertyZoom:
-
-        // FIXME: This is a descriptor, not a CSS property:
-        case CSSPropertySize:
-
-        // Legacy -webkit- properties.
 #if ENABLE(APPLE_PAY)
         case CSSPropertyApplePayButtonStyle:
         case CSSPropertyApplePayButtonType:
@@ -4292,7 +4153,7 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         case CSSPropertyWebkitCursorVisibility:
 #endif
         case CSSPropertyWebkitFontSizeDelta:
-        case CSSPropertyWebkitFontSmoothing:
+        case CSSPropertyHyphenateCharacter:
         case CSSPropertyWebkitHyphenateLimitAfter:
         case CSSPropertyWebkitHyphenateLimitBefore:
         case CSSPropertyWebkitHyphenateLimitLines:
@@ -4301,7 +4162,6 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         case CSSPropertyWebkitLineClamp:
         case CSSPropertyWebkitLineGrid:
         case CSSPropertyWebkitLineSnap:
-        case CSSPropertyWebkitLocale:
         case CSSPropertyWebkitMarqueeDirection:
         case CSSPropertyWebkitMarqueeIncrement:
         case CSSPropertyWebkitMarqueeRepetition:
@@ -4312,7 +4172,6 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         case CSSPropertyWebkitMaskSourceType:
         case CSSPropertyWebkitNbspMode:
         case CSSPropertyWebkitPerspective:
-        case CSSPropertyWebkitRubyPosition:
 #if ENABLE(OVERFLOW_SCROLLING_TOUCH)
         case CSSPropertyWebkitOverflowScrolling:
 #endif
@@ -4323,19 +4182,16 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         case CSSPropertyWebkitTextCombine:
         case CSSPropertyWebkitTextDecoration:
         case CSSPropertyWebkitTextDecorationsInEffect:
-        case CSSPropertyWebkitTextOrientation:
         case CSSPropertyWebkitTextSecurity:
-#if ENABLE(TEXT_AUTOSIZING)
-        case CSSPropertyInternalTextAutosizingStatus:
-#endif
         case CSSPropertyWebkitTextStroke:
         case CSSPropertyWebkitTextStrokeWidth:
-        case CSSPropertyWebkitTextZoom:
 #if PLATFORM(IOS_FAMILY)
         case CSSPropertyWebkitTouchCallout:
 #endif
         case CSSPropertyWebkitUserDrag:
         case CSSPropertyWebkitUserModify:
+        case CSSPropertyWebkitUserSelect:
+        case CSSPropertyZoom:
             continue;
         default:
             if (CSSProperty::isDescriptorOnly(property))
@@ -4355,11 +4211,16 @@ static void blendStandardProperty(const CSSPropertyBlendingClient& client, CSSPr
 
     AnimationPropertyWrapperBase* wrapper = CSSPropertyAnimationWrapperMap::singleton().wrapperForProperty(property);
     if (wrapper) {
+        // https://drafts.csswg.org/web-animations-1/#discrete
+        // The property's values cannot be meaningfully combined, thus it is not additive and
+        // interpolation swaps from Va to Vb at 50% (p=0.5).
         auto isDiscrete = !wrapper->canInterpolate(from, to, compositeOperation);
-        CSSPropertyBlendingContext context { progress, isDiscrete, compositeOperation, client, property, iterationCompositeOperation, currentIteration };
-        if (wrapper->normalizesProgressForDiscreteInterpolation())
-            context.normalizeProgress();
-        wrapper->blend(destination, from, to, context);
+        if (isDiscrete && wrapper->normalizesProgressForDiscreteInterpolation()) {
+            // If we want additive, we should specify progress at 0 actually and return from.
+            progress = progress < 0.5 ? 0 : 1;
+            compositeOperation = CompositeOperation::Replace;
+        }
+        wrapper->blend(destination, from, to, { progress, isDiscrete, compositeOperation, client, property, iterationCompositeOperation, currentIteration });
 #if !LOG_DISABLED
         wrapper->logBlend(from, to, destination, progress);
 #endif
@@ -4394,7 +4255,7 @@ static std::optional<CSSCustomPropertyValue::SyntaxValue> blendSyntaxValues(cons
     if (std::holds_alternative<CSSCustomPropertyValue::TransformSyntaxValue>(from) && std::holds_alternative<CSSCustomPropertyValue::TransformSyntaxValue>(to)) {
         auto& fromTransformOperation = std::get<CSSCustomPropertyValue::TransformSyntaxValue>(from).transform;
         auto& toTransformOperation = std::get<CSSCustomPropertyValue::TransformSyntaxValue>(to).transform;
-        return CSSCustomPropertyValue::TransformSyntaxValue { blendFunc(fromTransformOperation, toTransformOperation, blendingContext) };
+        return CSSCustomPropertyValue::TransformSyntaxValue { blendFunc(fromTransformOperation.get(), toTransformOperation.get(), blendingContext) };
     }
 
     return std::nullopt;
@@ -4424,24 +4285,22 @@ static std::optional<CSSCustomPropertyValue::SyntaxValueList> blendSyntaxValueLi
 
     // <transform-function> lists are special in that they don't require matching numbers of items.
     if (std::holds_alternative<CSSCustomPropertyValue::TransformSyntaxValue>(*firstValue)) {
-        auto transformOperationsFromSyntaxValueList = [](const CSSCustomPropertyValue::SyntaxValueList& list) {
-            return TransformOperations {
-                list.values.map([](auto& syntaxValue) {
+        auto transformOperationsFromSyntaxValueList = [](const CSSCustomPropertyValue::SyntaxValueList& src) {
+            TransformOperations transformOperations;
+            for (auto& syntaxValue : src.values) {
                 ASSERT(std::holds_alternative<CSSCustomPropertyValue::TransformSyntaxValue>(syntaxValue));
-                    return std::get<CSSCustomPropertyValue::TransformSyntaxValue>(syntaxValue).transform.copyRef();
-                })
-            };
+                transformOperations.operations().append(std::get<CSSCustomPropertyValue::TransformSyntaxValue>(syntaxValue).transform);
+            }
+            return transformOperations;
         };
 
         auto fromTransformOperations = transformOperationsFromSyntaxValueList(from);
         auto toTransformOperations = transformOperationsFromSyntaxValueList(to);
         auto blendedTransformOperations = blendFunc(fromTransformOperations, toTransformOperations, blendingContext);
-
-        auto blendedSyntaxValues = WTF::map(blendedTransformOperations, [](auto& transformOperation) -> CSSCustomPropertyValue::SyntaxValue {
-            return CSSCustomPropertyValue::TransformSyntaxValue { transformOperation.copyRef() };
+        auto blendedSyntaxValues = blendedTransformOperations.operations().map([](auto& transformOperation) -> CSSCustomPropertyValue::SyntaxValue {
+            return CSSCustomPropertyValue::TransformSyntaxValue { transformOperation };
         });
-
-        return CSSCustomPropertyValue::SyntaxValueList { WTFMove(blendedSyntaxValues), from.separator };
+        return CSSCustomPropertyValue::SyntaxValueList { blendedSyntaxValues, from.separator };
     }
 
     // Other lists must have matching sizes.

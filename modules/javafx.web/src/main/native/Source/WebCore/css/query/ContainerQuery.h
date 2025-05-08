@@ -66,4 +66,6 @@ void serialize(StringBuilder&, const ContainerQuery&);
 
 }
 
+using CachedQueryContainers = Vector<Ref<const Element>>;
+
 }

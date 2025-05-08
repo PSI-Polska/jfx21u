@@ -37,7 +37,6 @@ namespace WebCore {
 
 class CSSSelector;
 class StyleSheetContents;
-class StyleRuleViewTransition;
 
 namespace MQ {
 class MediaQueryEvaluator;
@@ -79,8 +78,6 @@ public:
 
     void addRule(const StyleRule&, unsigned selectorIndex, unsigned selectorListIndex);
     void addPageRule(StyleRulePage&);
-    void setViewTransitionRule(StyleRuleViewTransition&);
-    RefPtr<StyleRuleViewTransition> viewTransitionRule() const;
 
     void addToRuleSet(const AtomString& key, AtomRuleMap&, const RuleData&);
     void shrinkToFit();
@@ -97,7 +94,6 @@ public:
     const RuleDataVector* tagRules(const AtomString& key, bool isHTMLName) const;
     const RuleDataVector* userAgentPartRules(const AtomString& key) const { return m_userAgentPartRules.get(key); }
     const RuleDataVector* linkPseudoClassRules() const { return &m_linkPseudoClassRules; }
-    const RuleDataVector* namedPseudoElementRules(const AtomString& key) const { return m_namedPseudoElementRules.get(key); }
 #if ENABLE(VIDEO)
     const RuleDataVector& cuePseudoRules() const { return m_cuePseudoRules; }
 #endif
@@ -105,7 +101,6 @@ public:
     const RuleDataVector& slottedPseudoElementRules() const { return m_slottedPseudoElementRules; }
     const RuleDataVector& partPseudoElementRules() const { return m_partPseudoElementRules; }
     const RuleDataVector* focusPseudoClassRules() const { return &m_focusPseudoClassRules; }
-    const RuleDataVector* rootElementRules() const { return &m_rootElementRules; }
     const RuleDataVector* universalRules() const { return &m_universalRules; }
 
     const Vector<StyleRulePage*>& pageRules() const { return m_pageRules; }
@@ -115,7 +110,6 @@ public:
     bool hasAttributeRules() const { return !m_attributeLocalNameRules.isEmpty(); }
     bool hasUserAgentPartRules() const { return !m_userAgentPartRules.isEmpty(); }
     bool hasHostPseudoClassRulesMatchingInShadowTree() const { return m_hasHostPseudoClassRulesMatchingInShadowTree; }
-    bool hasHostPseudoClassRulesInUniversalBucket() const { return m_hasHostPseudoClassRulesInUniversalBucket; }
 
     static constexpr auto cascadeLayerPriorityForPresentationalHints = std::numeric_limits<CascadeLayerPriority>::min();
     static constexpr auto cascadeLayerPriorityForUnlayered = std::numeric_limits<CascadeLayerPriority>::max();
@@ -124,7 +118,6 @@ public:
 
     bool hasContainerQueries() const { return !m_containerQueries.isEmpty(); }
     Vector<const CQ::ContainerQuery*> containerQueriesFor(const RuleData&) const;
-    Vector<Ref<const StyleRuleContainer>> containerQueryRules() const;
 
     bool hasScopeRules() const { return !m_scopeRules.isEmpty(); }
     Vector<Ref<const StyleRuleScope>> scopeRulesFor(const RuleData&) const;
@@ -169,7 +162,7 @@ private:
     };
 
     struct ContainerQueryAndParent {
-        Ref<const StyleRuleContainer> containerRule;
+        Ref<StyleRuleContainer> containerRule;
         ContainerQueryIdentifier parent;
     };
 
@@ -195,7 +188,6 @@ private:
     AtomRuleMap m_tagLocalNameRules;
     AtomRuleMap m_tagLowercaseLocalNameRules;
     AtomRuleMap m_userAgentPartRules;
-    AtomRuleMap m_namedPseudoElementRules;
     RuleDataVector m_linkPseudoClassRules;
 #if ENABLE(VIDEO)
     RuleDataVector m_cuePseudoRules;
@@ -204,10 +196,8 @@ private:
     RuleDataVector m_slottedPseudoElementRules;
     RuleDataVector m_partPseudoElementRules;
     RuleDataVector m_focusPseudoClassRules;
-    RuleDataVector m_rootElementRules;
     RuleDataVector m_universalRules;
     Vector<StyleRulePage*> m_pageRules;
-    RefPtr<StyleRuleViewTransition> m_viewTransitionRule;
     RuleFeatureSet m_features;
     Vector<DynamicMediaQueryRules> m_dynamicMediaQueryRules;
     HashMap<Vector<size_t>, Ref<const RuleSet>> m_mediaQueryInvalidationRuleSetCache;
@@ -228,7 +218,6 @@ private:
 
     bool m_hasHostPseudoClassRulesMatchingInShadowTree { false };
     bool m_hasViewportDependentMediaQueries { false };
-    bool m_hasHostPseudoClassRulesInUniversalBucket { false };
 };
 
 inline const RuleSet::RuleDataVector* RuleSet::attributeRules(const AtomString& key, bool isHTMLName) const

@@ -27,7 +27,8 @@
 
 [
     EnabledBySetting=WebGPUEnabled
-] enum GPUBufferBindingType {
+]
+enum GPUBufferBindingType {
     "uniform",
     "storage",
     "read-only-storage"

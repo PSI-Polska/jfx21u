@@ -55,7 +55,7 @@ Ref<FormState> FormState::create(HTMLFormElement& form, StringPairVector&& textF
 void FormState::willDetachPage()
 {
     // Beartrap for <rdar://problem/37579354>
-    RELEASE_ASSERT(refCount());
+    RELEASE_ASSERT(hasOneRef());
 }
 
 Ref<Document> FormState::protectedSourceDocument() const

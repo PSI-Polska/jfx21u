@@ -38,16 +38,15 @@
 #include "WorkletPendingTasks.h"
 #include <JavaScriptCore/IdentifiersFactory.h>
 #include <wtf/CrossThreadCopier.h>
-#include <wtf/TZoneMallocInlines.h>
-#include <wtf/text/MakeString.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(Worklet);
+WTF_MAKE_ISO_ALLOCATED_IMPL(Worklet);
 
 Worklet::Worklet(Document& document)
     : ActiveDOMObject(&document)
-    , m_identifier(makeString("worklet:"_s, Inspector::IdentifiersFactory::createIdentifier()))
+    , m_identifier("worklet:" + Inspector::IdentifiersFactory::createIdentifier())
 {
 }
 
@@ -104,6 +103,11 @@ void Worklet::finishPendingTasks(WorkletPendingTasks& tasks)
     ASSERT(m_pendingTasksSet.contains(&tasks));
 
     m_pendingTasksSet.remove(&tasks);
+}
+
+const char* Worklet::activeDOMObjectName() const
+{
+    return "Worklet";
 }
 
 } // namespace WebCore

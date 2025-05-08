@@ -30,15 +30,6 @@
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
-class AbstractScriptBufferHolder;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::AbstractScriptBufferHolder> : std::true_type { };
-}
-
-namespace WebCore {
 
 class AbstractScriptBufferHolder : public CanMakeWeakPtr<AbstractScriptBufferHolder> {
 public:
@@ -71,12 +62,12 @@ public:
         if (!m_contiguousBuffer && (!m_containsOnlyASCII || *m_containsOnlyASCII))
             m_contiguousBuffer = m_scriptBuffer.buffer()->makeContiguous();
         if (!m_containsOnlyASCII) {
-            m_containsOnlyASCII = charactersAreAllASCII(m_contiguousBuffer->span());
+            m_containsOnlyASCII = charactersAreAllASCII(m_contiguousBuffer->data(), m_contiguousBuffer->size());
             if (*m_containsOnlyASCII)
-                m_scriptHash = StringHasher::computeHashAndMaskTop8Bits(m_contiguousBuffer->span());
+                m_scriptHash = StringHasher::computeHashAndMaskTop8Bits(m_contiguousBuffer->data(), m_contiguousBuffer->size());
         }
         if (*m_containsOnlyASCII)
-            return m_contiguousBuffer->span();
+            return { m_contiguousBuffer->data(), static_cast<unsigned>(m_contiguousBuffer->size()) };
 
         if (!m_cachedScriptString) {
             m_cachedScriptString = m_scriptBuffer.toString();

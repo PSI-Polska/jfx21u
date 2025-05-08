@@ -35,42 +35,6 @@
 
 namespace WGSL {
 
-static unsigned isIdentifierStart(UChar character, std::span<const UChar> code)
-{
-    if (character == '_')
-        return 1;
-
-    unsigned length = 1;
-    if (code.size() > 1 && u_charType(character) == U_SURROGATE)
-        ++length;
-    if (u_stringHasBinaryProperty(code.data(), length, UCHAR_XID_START))
-        return length;
-    return 0;
-}
-
-static unsigned isIdentifierContinue(UChar character, std::span<const UChar> code)
-{
-    if (auto length = isIdentifierStart(character, code))
-        return length;
-
-    unsigned length = 1;
-    if (code.size() > 1 && u_charType(character) == U_SURROGATE)
-        ++length;
-    if (u_stringHasBinaryProperty(code.data(), length, UCHAR_XID_CONTINUE))
-        return length;
-    return 0;
-}
-
-static unsigned isIdentifierStart(LChar character, std::span<const LChar>)
-{
-    return isASCIIAlpha(character) || character == '_';
-}
-
-static unsigned isIdentifierContinue(LChar character, std::span<const LChar>)
-{
-    return isASCIIAlphanumeric(character) || character == '_';
-}
-
 template <typename T>
 Vector<Token> Lexer<T>::lex()
 {
@@ -284,20 +248,13 @@ Token Lexer<T>::nextToken()
     default:
         if (isASCIIDigit(m_current) || m_current == '.')
             return lexNumber();
-        if (auto consumed = isIdentifierStart(m_current, m_code.span())) {
-            unsigned length = consumed;
-            auto* startOfToken = m_code.position();
-            shift(consumed);
-            while (!isAtEndOfFile()) {
-                auto consumed = isIdentifierContinue(m_current, m_code.span());
-                if (!consumed)
-                    break;
-                length += consumed;
-                shift(consumed);
-            }
-
+        if (isIdentifierStart(m_current)) {
+            const T* startOfToken = m_code;
+            shift();
+            while (isIdentifierContinue(m_current))
+                shift();
             // FIXME: a trie would be more efficient here, look at JavaScriptCore/KeywordLookupGenerator.py for an example of code autogeneration that produces such a trie.
-            String view(StringImpl::createWithoutCopying({ startOfToken, currentTokenLength() }));
+            String view(StringImpl::createWithoutCopying(startOfToken, currentTokenLength()));
 
             static constexpr std::pair<ComparableASCIILiteral, TokenType> keywordMappings[] {
                 { "_", TokenType::Underbar },
@@ -467,11 +424,6 @@ FOREACH_KEYWORD(MAPPING_ENTRY)
             if (UNLIKELY(reservedWordSet.contains(view)))
                 return makeToken(TokenType::ReservedWord);
 
-
-            if (UNLIKELY(length >= 2 && *startOfToken == '_' && *(startOfToken + 1) == '_'))
-                return makeToken(TokenType::Invalid);
-
-
             return makeIdentifierToken(WTFMove(view));
         }
         break;
@@ -482,25 +434,25 @@ FOREACH_KEYWORD(MAPPING_ENTRY)
 template <typename T>
 T Lexer<T>::shift(unsigned i)
 {
-    ASSERT(i <= m_code.lengthRemaining());
+    ASSERT(m_code + i <= m_codeEnd);
 
     T last = m_current;
     // At one point timing showed that setting m_current to 0 unconditionally was faster than an if-else sequence.
     m_current = 0;
-    m_code.advanceBy(i);
+    m_code += i;
     m_currentPosition.offset += i;
     m_currentPosition.lineOffset += i;
-    if (LIKELY(m_code.hasCharactersRemaining()))
-        m_current = m_code[0];
+    if (LIKELY(m_code < m_codeEnd))
+        m_current = *m_code;
     return last;
 }
 
 template <typename T>
 T Lexer<T>::peek(unsigned i)
 {
-    if (UNLIKELY(i >= m_code.lengthRemaining()))
+    if (UNLIKELY(m_code + i >= m_codeEnd))
         return 0;
-    return m_code[i];
+    return *(m_code + i);
 }
 
 template <typename T>
@@ -574,10 +526,11 @@ bool Lexer<T>::skipWhitespaceAndComments()
 template <typename T>
 bool Lexer<T>::isAtEndOfFile() const
 {
-    if (m_code.atEnd()) {
+    if (m_code == m_codeEnd) {
         ASSERT(!m_current);
         return true;
     }
+    ASSERT(m_code < m_codeEnd);
     return false;
 }
 
@@ -703,7 +656,7 @@ Token Lexer<T>::lexNumber()
     char suffix = '\0';
     char exponentSign = '\0';
     bool isHex = false;
-    auto* integral = m_code.position();
+    const T* integral = m_code;
     const T* fract = nullptr;
     const T* exponent = nullptr;
 
@@ -798,14 +751,14 @@ Token Lexer<T>::lexNumber()
     }
             break;
         case FloatFractNoIntegral:
-            fract = m_code.position();
+            fract = m_code;
             if (!isASCIIDigit(m_current))
                 return makeToken(TokenType::Period);
             state = FloatFract;
             break;
         case FloatFract:
             if (!fract)
-                fract = m_code.position();
+                fract = m_code;
             switch (m_current) {
             case 'f':
             case 'h':
@@ -824,7 +777,7 @@ Token Lexer<T>::lexNumber()
             }
             break;
         case FloatExponent:
-            exponent = m_code.position();
+            exponent = m_code;
             switch (m_current) {
             case '+':
             case '-':
@@ -839,7 +792,7 @@ Token Lexer<T>::lexNumber()
             break;
         case FloatExponentPostSign:
             if (exponentSign == '+')
-                exponent = m_code.position();
+                exponent = m_code;
             if (!isASCIIDigit(m_current))
                 return makeToken(TokenType::Invalid);
             state = FloatExponentNonEmpty;
@@ -858,7 +811,7 @@ Token Lexer<T>::lexNumber()
             break;
         case Hex:
             isHex = true;
-            integral = m_code.position();
+            integral = m_code;
             if (m_current == '.')
                 state = HexFloatFractNoIntegral;
             else if (isASCIIHexDigit(m_current))
@@ -889,14 +842,14 @@ Token Lexer<T>::lexNumber()
             }
             break;
         case HexFloatFractNoIntegral:
-            fract = m_code.position();
+            fract = m_code;
             if (!isASCIIHexDigit(m_current))
                 return makeToken(TokenType::Invalid);
             state = HexFloatFract;
             break;
         case HexFloatFract:
             if (!fract)
-                fract = m_code.position();
+                fract = m_code;
             if (isASCIIHexDigit(m_current))
                 break;
             if (m_current == 'p' || m_current == 'P')
@@ -905,7 +858,7 @@ Token Lexer<T>::lexNumber()
                 state = EndNoShift;
             break;
         case HexFloatExponent:
-            exponent = m_code.position();
+            exponent = m_code;
             if (isASCIIDigit(m_current))
                 state = HexFloatExponentNonEmpty;
             else if (m_current == '+' || m_current == '-') {
@@ -916,7 +869,7 @@ Token Lexer<T>::lexNumber()
             break;
         case HexFloatExponentPostSign:
             if (exponentSign == '+')
-                exponent = m_code.position();
+                exponent = m_code;
             if (isASCIIDigit(m_current)) {
                 state = HexFloatExponentNonEmpty;
                 break;
@@ -932,7 +885,7 @@ Token Lexer<T>::lexNumber()
                 state = EndNoShift;
             break;
         case HexFloatExponentRequireSuffix:
-            exponent = m_code.position();
+            exponent = m_code;
             if (isASCIIDigit(m_current))
                 state = HexFloatExponentRequireSuffixNonEmpty;
             else if (m_current == '+' || m_current == '-') {
@@ -943,7 +896,7 @@ Token Lexer<T>::lexNumber()
             break;
         case HexFloatExponentRequireSuffixPostSign:
             if (exponentSign == '+')
-                exponent = m_code.position();
+                exponent = m_code;
             if (isASCIIDigit(m_current)) {
                 state = HexFloatExponentRequireSuffixNonEmpty;
                 break;
@@ -975,39 +928,39 @@ Token Lexer<T>::lexNumber()
         case 'i': {
             if constexpr (std::is_integral_v<decltype(value)>) {
                 if (auto result = convertInteger<int>(value))
-                    return makeIntegerToken(TokenType::IntegerLiteralSigned, *result);
+                    return makeLiteralToken(TokenType::IntegerLiteralSigned, *result);
     }
-            break;
+            return makeToken(TokenType::Invalid);
         }
         case 'u': {
             if constexpr (std::is_integral_v<decltype(value)>) {
                 if (auto result = convertInteger<unsigned>(value))
-                    return makeIntegerToken(TokenType::IntegerLiteralUnsigned, *result);
+                    return makeLiteralToken(TokenType::IntegerLiteralUnsigned, *result);
             }
             break;
         }
         case 'f': {
             if (auto result = convertFloat<float>(value))
-                return makeFloatToken(TokenType::FloatLiteral, *result);
+                return makeLiteralToken(TokenType::FloatLiteral, *result);
             break;
         }
         case 'h':
             if (auto result = convertFloat<half>(value))
-                return makeFloatToken(TokenType::HalfLiteral, *result);
+                return makeLiteralToken(TokenType::HalfLiteral, *result);
             break;
         default:
             if constexpr (std::is_floating_point_v<decltype(value)>) {
                 if (auto result = convertFloat<double>(value))
-                    return makeFloatToken(TokenType::AbstractFloatLiteral, *result);
+                    return makeLiteralToken(TokenType::AbstractFloatLiteral, *result);
             } else {
                 if (auto result = convertInteger<int64_t>(value))
-                    return makeIntegerToken(TokenType::IntegerLiteral, *result);
+                    return makeLiteralToken(TokenType::IntegerLiteral, *result);
             }
         }
         return makeToken(TokenType::Invalid);
     };
 
-    auto* end = m_code.position() - (suffix ? 1 : 0);
+    auto* end = m_code - (suffix ? 1 : 0);
     if (!fract && !exponent) {
         auto length = static_cast<size_t>(end - integral);
         if (length > 19)
@@ -1041,7 +994,7 @@ Token Lexer<T>::lexNumber()
 
     if (!isHex) {
         size_t parsedLength;
-        double result = parseDouble(std::span { integral, m_code.position() }, parsedLength);
+        double result = parseDouble(integral, m_code - integral, parsedLength);
         ASSERT(integral + parsedLength == end);
         return convert(result);
     }

@@ -290,12 +290,12 @@ JSString* JSBoundFunction::nameSlow(VM& vm)
         StringBuilder builder(StringBuilder::OverflowHandler::RecordOverflow);
         for (unsigned i = 0; i < nestingCount; ++i)
             builder.append("bound "_s);
-        auto terminalString = terminal->value(globalObject); // Resolving rope.
+        String terminalString = terminal->value(globalObject); // Resolving rope.
         if (UNLIKELY(scope.exception())) {
             scope.clearException();
             terminal = jsEmptyString(vm);
         } else {
-            builder.append(terminalString.data);
+            builder.append(WTFMove(terminalString));
             if (builder.hasOverflowed())
                 terminal = jsEmptyString(vm);
             else

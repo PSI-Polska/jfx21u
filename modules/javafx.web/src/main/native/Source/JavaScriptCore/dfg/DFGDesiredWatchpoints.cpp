@@ -34,84 +34,79 @@
 
 namespace JSC { namespace DFG {
 
-bool ArrayBufferViewWatchpointAdaptor::add(CodeBlock* codeBlock, JSArrayBufferView* view, WatchpointCollector& collector)
+void ArrayBufferViewWatchpointAdaptor::add(CodeBlock* codeBlock, JSArrayBufferView* view, WatchpointCollector& collector)
 {
-    return collector.addWatchpoint([&](CodeBlockJettisoningWatchpoint& watchpoint) {
-        if (hasBeenInvalidated(view, collector.concurrency()))
-            return false;
-
+    collector.addWatchpoint([&](CodeBlockJettisoningWatchpoint& watchpoint) {
         // view is already frozen. If it is deallocated, jettisoning happens.
+        {
+            ConcurrentJSLocker locker(codeBlock->m_lock);
             watchpoint.initialize(codeBlock);
+        }
         ArrayBuffer* arrayBuffer = view->possiblySharedBuffer();
         if (!arrayBuffer) {
             watchpoint.fire(codeBlock->vm(), StringFireDetail("ArrayBuffer could not be allocated, probably because of OOM."));
-            return true;
+            return;
         }
 
         // FIXME: We don't need to set this watchpoint at all for shared buffers.
         // https://bugs.webkit.org/show_bug.cgi?id=164108
         arrayBuffer->detachingWatchpointSet().add(&watchpoint);
-        return true;
     });
 }
 
-bool SymbolTableAdaptor::add(CodeBlock* codeBlock, SymbolTable* symbolTable, WatchpointCollector& collector)
+void SymbolTableAdaptor::add(CodeBlock* codeBlock, SymbolTable* symbolTable, WatchpointCollector& collector)
 {
-    return collector.addWatchpoint([&](CodeBlockJettisoningWatchpoint& watchpoint) {
-        if (hasBeenInvalidated(symbolTable, collector.concurrency()))
-            return false;
-
-        // symbolTable is already frozen strongly.
+    collector.addWatchpoint([&](CodeBlockJettisoningWatchpoint& watchpoint) {
+        {
+            ConcurrentJSLocker locker(codeBlock->m_lock);
             watchpoint.initialize(codeBlock);
+        }
+        codeBlock->addConstant(ConcurrentJSLocker(codeBlock->m_lock), symbolTable); // For common users, it doesn't really matter if it's weak or not. If references to it go away, we go away, too.
         symbolTable->singleton().add(&watchpoint);
-        return true;
     });
 }
 
-bool FunctionExecutableAdaptor::add(CodeBlock* codeBlock, FunctionExecutable* executable, WatchpointCollector& collector)
+void FunctionExecutableAdaptor::add(CodeBlock* codeBlock, FunctionExecutable* executable, WatchpointCollector& collector)
 {
-    return collector.addWatchpoint([&](CodeBlockJettisoningWatchpoint& watchpoint) {
-        if (hasBeenInvalidated(executable, collector.concurrency()))
-            return false;
-
-        // executable is already frozen strongly.
+    collector.addWatchpoint([&](CodeBlockJettisoningWatchpoint& watchpoint) {
+        {
+            ConcurrentJSLocker locker(codeBlock->m_lock);
             watchpoint.initialize(codeBlock);
+        }
+        codeBlock->addConstant(ConcurrentJSLocker(codeBlock->m_lock), executable); // For common users, it doesn't really matter if it's weak or not. If references to it go away, we go away, too.
         executable->singleton().add(&watchpoint);
-
-        return true;
     });
 }
 
-bool AdaptiveStructureWatchpointAdaptor::add(CodeBlock* codeBlock, const ObjectPropertyCondition& key, WatchpointCollector& collector)
+void AdaptiveStructureWatchpointAdaptor::add(CodeBlock* codeBlock, const ObjectPropertyCondition& key, WatchpointCollector& collector)
 {
     VM& vm = codeBlock->vm();
     switch (key.kind()) {
     case PropertyCondition::Equivalence: {
-        return collector.addAdaptiveInferredPropertyValueWatchpoint([&](AdaptiveInferredPropertyValueWatchpoint& watchpoint) {
-            if (hasBeenInvalidated(key, collector.concurrency()))
-                return false;
-
+        collector.addAdaptiveInferredPropertyValueWatchpoint([&](AdaptiveInferredPropertyValueWatchpoint& watchpoint) {
+            {
+                ConcurrentJSLocker locker(codeBlock->m_lock);
                 watchpoint.initialize(key, codeBlock);
+            }
             watchpoint.install(vm);
-            return true;
         });
+        break;
     }
     default: {
-        return collector.addAdaptiveStructureWatchpoint([&](AdaptiveStructureWatchpoint& watchpoint) {
-            if (hasBeenInvalidated(key, collector.concurrency()))
-                return false;
-
+        collector.addAdaptiveStructureWatchpoint([&](AdaptiveStructureWatchpoint& watchpoint) {
+            {
+                ConcurrentJSLocker locker(codeBlock->m_lock);
                 watchpoint.initialize(key, codeBlock);
+            }
             watchpoint.install(vm);
-            return true;
         });
+        break;
     }
     }
-    return true;
 }
 
-DesiredWatchpoints::DesiredWatchpoints() = default;
-DesiredWatchpoints::~DesiredWatchpoints() = default;
+DesiredWatchpoints::DesiredWatchpoints() { }
+DesiredWatchpoints::~DesiredWatchpoints() { }
 
 void DesiredWatchpoints::addLazily(WatchpointSet& set)
 {
@@ -123,15 +118,13 @@ void DesiredWatchpoints::addLazily(InlineWatchpointSet& set)
     m_inlineSets.addLazily(&set);
 }
 
-void DesiredWatchpoints::addLazily(Graph& graph, SymbolTable* symbolTable)
+void DesiredWatchpoints::addLazily(SymbolTable* symbolTable)
 {
-    graph.freezeStrong(symbolTable); // Keep this strongly.
     m_symbolTables.addLazily(symbolTable);
 }
 
-void DesiredWatchpoints::addLazily(Graph& graph, FunctionExecutable* executable)
+void DesiredWatchpoints::addLazily(FunctionExecutable* executable)
 {
-    graph.freezeStrong(executable); // Keep this strongly.
     m_functionExecutables.addLazily(executable);
 }
 
@@ -158,10 +151,11 @@ bool DesiredWatchpoints::consider(Structure* structure)
     return true;
 }
 
-void DesiredWatchpoints::countWatchpoints(CodeBlock* codeBlock, DesiredIdentifiers& identifiers, CommonData* commonData)
+void DesiredWatchpoints::reallyAdd(CodeBlock* codeBlock, DesiredIdentifiers& identifiers, CommonData* commonData)
 {
-    WatchpointCollector collector(*commonData);
+    WatchpointCollector collector;
 
+    auto reallyAdd = [&]() {
         m_sets.reallyAdd(codeBlock, collector);
         m_inlineSets.reallyAdd(codeBlock, collector);
         m_symbolTables.reallyAdd(codeBlock, collector);
@@ -169,42 +163,22 @@ void DesiredWatchpoints::countWatchpoints(CodeBlock* codeBlock, DesiredIdentifie
         m_bufferViews.reallyAdd(codeBlock, collector);
         m_adaptiveStructureSets.reallyAdd(codeBlock, collector);
         m_globalProperties.reallyAdd(codeBlock, identifiers, collector);
-
-    auto counts = collector.counts();
-    commonData->m_watchpoints = FixedVector<CodeBlockJettisoningWatchpoint>(counts.m_watchpointCount);
-    commonData->m_adaptiveStructureWatchpoints = FixedVector<AdaptiveStructureWatchpoint>(counts.m_adaptiveStructureWatchpointCount);
-    commonData->m_adaptiveInferredPropertyValueWatchpoints = FixedVector<AdaptiveInferredPropertyValueWatchpoint>(counts.m_adaptiveInferredPropertyValueWatchpointCount);
-}
-
-bool DesiredWatchpoints::reallyAdd(CodeBlock* codeBlock, DesiredIdentifiers& identifiers, CommonData* commonData)
-{
-    WatchpointCollector collector(*commonData);
+    };
+    reallyAdd();
     collector.materialize();
 
-    if (!m_sets.reallyAdd(codeBlock, collector))
-        return false;
+    reallyAdd();
+    collector.finalize(codeBlock, *commonData);
+}
 
-    if (!m_inlineSets.reallyAdd(codeBlock, collector))
-        return false;
-
-    if (!m_symbolTables.reallyAdd(codeBlock, collector))
-        return false;
-
-    if (!m_functionExecutables.reallyAdd(codeBlock, collector))
-        return false;
-
-    if (!m_bufferViews.reallyAdd(codeBlock, collector))
-        return false;
-
-    if (!m_adaptiveStructureSets.reallyAdd(codeBlock, collector))
-        return false;
-
-    if (!m_globalProperties.reallyAdd(codeBlock, identifiers, collector))
-        return false;
-
-    collector.finalize(*commonData);
-
-    return true;
+bool DesiredWatchpoints::areStillValid() const
+{
+    return m_sets.areStillValid()
+        && m_inlineSets.areStillValid()
+        && m_symbolTables.areStillValid()
+        && m_functionExecutables.areStillValid()
+        && m_bufferViews.areStillValid()
+        && m_adaptiveStructureSets.areStillValid();
 }
 
 bool DesiredWatchpoints::areStillValidOnMainThread(VM& vm, DesiredIdentifiers& identifiers)
@@ -223,6 +197,14 @@ void DesiredWatchpoints::dumpInContext(PrintStream& out, DumpContext* context) c
     out.print(prefix, "    FunctionExecutables: ", inContext(m_functionExecutables, context), "\n");
     out.print(prefix, "    Buffer views: ", inContext(m_bufferViews, context), "\n");
     out.print(prefix, "    Object property conditions: ", inContext(m_adaptiveStructureSets, context), "\n");
+}
+
+void WatchpointCollector::finalize(CodeBlock* codeBlock, CommonData& common)
+{
+    ConcurrentJSLocker locker(codeBlock->m_lock);
+    common.m_watchpoints = WTFMove(m_watchpoints);
+    common.m_adaptiveStructureWatchpoints = WTFMove(m_adaptiveStructureWatchpoints);
+    common.m_adaptiveInferredPropertyValueWatchpoints = WTFMove(m_adaptiveInferredPropertyValueWatchpoints);
 }
 
 } } // namespace JSC::DFG

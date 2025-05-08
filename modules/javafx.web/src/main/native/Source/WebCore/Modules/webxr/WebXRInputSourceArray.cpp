@@ -33,11 +33,11 @@
 #include "WebXRSession.h"
 #include "XRInputSourceEvent.h"
 #include "XRInputSourcesChangeEvent.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WebXRInputSourceArray);
+WTF_MAKE_ISO_ALLOCATED_IMPL(WebXRInputSourceArray);
 
 UniqueRef<WebXRInputSourceArray> WebXRInputSourceArray::create(WebXRSession& session)
 {
@@ -79,9 +79,9 @@ void WebXRInputSourceArray::clear()
 // https://immersive-web.github.io/webxr/#list-of-active-xr-input-sources
 void WebXRInputSourceArray::update(double timestamp, const InputSourceList& inputSources)
 {
-    Vector<Ref<WebXRInputSource>> added;
-    Vector<Ref<WebXRInputSource>> removed;
-    Vector<Ref<WebXRInputSource>> removedWithInputEvents;
+    Vector<RefPtr<WebXRInputSource>> added;
+    Vector<RefPtr<WebXRInputSource>> removed;
+    Vector<RefPtr<WebXRInputSource>> removedWithInputEvents;
     Vector<Ref<XRInputSourceEvent>> inputEvents;
 
     handleRemovedInputSources(inputSources, removed, removedWithInputEvents, inputEvents);
@@ -129,7 +129,7 @@ void WebXRInputSourceArray::update(double timestamp, const InputSourceList& inpu
 }
 
 // https://immersive-web.github.io/webxr/#list-of-active-xr-input-sources
-void WebXRInputSourceArray::handleRemovedInputSources(const InputSourceList& inputSources, Vector<Ref<WebXRInputSource>>& removed, Vector<Ref<WebXRInputSource>>& removedWithInputEvents, Vector<Ref<XRInputSourceEvent>>& inputEvents)
+void WebXRInputSourceArray::handleRemovedInputSources(const InputSourceList& inputSources, Vector<RefPtr<WebXRInputSource>>& removed, Vector<RefPtr<WebXRInputSource>>& removedWithInputEvents, Vector<Ref<XRInputSourceEvent>>& inputEvents)
 {
     // When any previously added XR input sources are no longer available for XRSession session, the user agent MUST run the following steps:
     // 1. If session's promise resolved flag is not set, abort these steps.
@@ -143,9 +143,9 @@ void WebXRInputSourceArray::handleRemovedInputSources(const InputSourceList& inp
             source->disconnect();
             source->pollEvents(sourceInputEvents);
             if (sourceInputEvents.isEmpty())
-                removed.append(source);
+                removed.append(source.copyRef());
             else
-                removedWithInputEvents.append(source);
+                removedWithInputEvents.append(source.copyRef());
             inputEvents.appendVector(sourceInputEvents);
             return true;
         }
@@ -154,7 +154,7 @@ void WebXRInputSourceArray::handleRemovedInputSources(const InputSourceList& inp
 }
 
 // https://immersive-web.github.io/webxr/#list-of-active-xr-input-sources
-void WebXRInputSourceArray::handleAddedOrUpdatedInputSources(double timestamp, const InputSourceList& inputSources, Vector<Ref<WebXRInputSource>>& added, Vector<Ref<WebXRInputSource>>& removed, Vector<Ref<WebXRInputSource>>& removedWithInputEvents, Vector<Ref<XRInputSourceEvent>>& inputEvents)
+void WebXRInputSourceArray::handleAddedOrUpdatedInputSources(double timestamp, const InputSourceList& inputSources, Vector<RefPtr<WebXRInputSource>>& added, Vector<RefPtr<WebXRInputSource>>& removed, Vector<RefPtr<WebXRInputSource>>& removedWithInputEvents, Vector<Ref<XRInputSourceEvent>>& inputEvents)
 {
     RefPtr document = downcast<Document>(m_session.scriptExecutionContext());
     if (!document)
@@ -171,7 +171,7 @@ void WebXRInputSourceArray::handleAddedOrUpdatedInputSources(double timestamp, c
             //   3.2 Add inputSource to added.
 
             auto input = WebXRInputSource::create(*document, m_session, timestamp, inputSource);
-            added.append(input);
+            added.append(input.copyRef());
             input->pollEvents(inputEvents);
             m_inputSources.append(WTFMove(input));
             continue;
@@ -186,21 +186,21 @@ void WebXRInputSourceArray::handleAddedOrUpdatedInputSources(double timestamp, c
         //  4.1 Let newInputSource be a new XRInputSource in the relevant realm of session.
         //  4.1 Add oldInputSource to removed.
         //  4.1 Add newInputSource to added.
-        Ref input = m_inputSources[index];
+        auto& input = m_inputSources[index];
 
         if (input->requiresInputSourceChange(inputSource)) {
             Vector<Ref<XRInputSourceEvent>> sourceInputEvents;
             input->disconnect();
             input->pollEvents(sourceInputEvents);
             if (sourceInputEvents.isEmpty())
-                removed.append(input);
+                removed.append(input.copyRef());
             else
-                removedWithInputEvents.append(input);
+                removedWithInputEvents.append(input.copyRef());
             inputEvents.appendVector(sourceInputEvents);
             m_inputSources.remove(index);
 
             auto newInputSource = WebXRInputSource::create(*document, m_session, timestamp, inputSource);
-            added.append(newInputSource);
+            added.append(newInputSource.copyRef());
             newInputSource->pollEvents(inputEvents);
             m_inputSources.append(WTFMove(newInputSource));
         } else {

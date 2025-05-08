@@ -30,17 +30,17 @@
 
 namespace WTF {
 
-void CodePtrBase::dumpWithName(void* executableAddress, void* dataLocation, ASCIILiteral name, PrintStream& out)
+void CodePtrBase::dumpWithName(void* executableAddress, void* dataLocation, const char* name, PrintStream& out)
 {
     if (!executableAddress) {
-        out.print(name, "(null)"_s);
+        out.print(name, "(null)");
         return;
     }
     if (executableAddress == dataLocation) {
-        out.print(name, "("_s, RawPointer(executableAddress), ")"_s);
+        out.print(name, "(", RawPointer(executableAddress), ")");
         return;
     }
-    out.print(name, "(executable = "_s, RawPointer(executableAddress), ", dataLocation = "_s, RawPointer(dataLocation), ")"_s);
+    out.print(name, "(executable = ", RawPointer(executableAddress), ", dataLocation = ", RawPointer(dataLocation), ")");
 }
 
 } // namespace WTF

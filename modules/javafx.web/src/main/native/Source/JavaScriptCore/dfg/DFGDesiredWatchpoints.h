@@ -43,94 +43,78 @@ class Graph;
 struct Prefix;
 
 enum class WatchpointRegistrationMode : uint8_t { Collect, Add };
-struct DesiredWatchpointCounts {
-    unsigned m_watchpointCount { 0 };
-    unsigned m_adaptiveStructureWatchpointCount { 0 };
-    unsigned m_adaptiveInferredPropertyValueWatchpointCount { 0 };
-};
-
 class WatchpointCollector final {
     WTF_MAKE_NONCOPYABLE(WatchpointCollector);
 public:
-    WatchpointCollector(CommonData& commonData)
-        : m_watchpoints(WTFMove(commonData.m_watchpoints))
-        , m_adaptiveStructureWatchpoints(WTFMove(commonData.m_adaptiveStructureWatchpoints))
-        , m_adaptiveInferredPropertyValueWatchpoints(WTFMove(commonData.m_adaptiveInferredPropertyValueWatchpoints))
-    { }
-
-    DesiredWatchpointCounts counts() { return m_counts; }
+    WatchpointCollector() = default;
 
     void materialize()
     {
+        m_watchpoints = FixedVector<CodeBlockJettisoningWatchpoint>(m_watchpointCount);
+        m_adaptiveStructureWatchpoints = FixedVector<AdaptiveStructureWatchpoint>(m_adaptiveStructureWatchpointCount);
+        m_adaptiveInferredPropertyValueWatchpoints = FixedVector<AdaptiveInferredPropertyValueWatchpoint>(m_adaptiveInferredPropertyValueWatchpointCount);
         m_mode = WatchpointRegistrationMode::Add;
     }
 
-    void finalize(CommonData& commonData)
+    template<typename Func>
+    void addWatchpoint(const Func& function)
     {
-        commonData.m_watchpoints = WTFMove(m_watchpoints);
-        commonData.m_adaptiveStructureWatchpoints = WTFMove(m_adaptiveStructureWatchpoints);
-        commonData.m_adaptiveInferredPropertyValueWatchpoints = WTFMove(m_adaptiveInferredPropertyValueWatchpoints);
+        if (m_mode == WatchpointRegistrationMode::Add)
+            function(m_watchpoints[m_watchpointIndex++]);
+        else
+            ++m_watchpointCount;
     }
 
     template<typename Func>
-    bool addWatchpoint(const Func& function)
+    void addAdaptiveStructureWatchpoint(const Func& function)
     {
         if (m_mode == WatchpointRegistrationMode::Add)
-            return function(m_watchpoints[m_watchpointIndex++]);
-        ++m_counts.m_watchpointCount;
-        return true;
+            function(m_adaptiveStructureWatchpoints[m_adaptiveStructureWatchpointsIndex++]);
+        else
+            ++m_adaptiveStructureWatchpointCount;
     }
 
     template<typename Func>
-    bool addAdaptiveStructureWatchpoint(const Func& function)
+    void addAdaptiveInferredPropertyValueWatchpoint(const Func& function)
     {
         if (m_mode == WatchpointRegistrationMode::Add)
-            return function(m_adaptiveStructureWatchpoints[m_adaptiveStructureWatchpointsIndex++]);
-        ++m_counts.m_adaptiveStructureWatchpointCount;
-        return true;
+            function(m_adaptiveInferredPropertyValueWatchpoints[m_adaptiveInferredPropertyValueWatchpointsIndex++]);
+        else
+            ++m_adaptiveInferredPropertyValueWatchpointCount;
     }
 
-    template<typename Func>
-    bool addAdaptiveInferredPropertyValueWatchpoint(const Func& function)
-    {
-        if (m_mode == WatchpointRegistrationMode::Add)
-            return function(m_adaptiveInferredPropertyValueWatchpoints[m_adaptiveInferredPropertyValueWatchpointsIndex++]);
-        ++m_counts.m_adaptiveInferredPropertyValueWatchpointCount;
-        return true;
-    }
+    void finalize(CodeBlock*, CommonData&);
 
     WatchpointRegistrationMode mode() const { return m_mode; }
-    Concurrency concurrency() const { return m_mode == WatchpointRegistrationMode::Add ? Concurrency::MainThread : Concurrency::ConcurrentThread; }
 
 private:
-    DesiredWatchpointCounts m_counts;
+    unsigned m_watchpointCount { 0 };
+    unsigned m_adaptiveStructureWatchpointCount { 0 };
+    unsigned m_adaptiveInferredPropertyValueWatchpointCount { 0 };
 
     unsigned m_watchpointIndex { 0 };
     unsigned m_adaptiveStructureWatchpointsIndex { 0 };
     unsigned m_adaptiveInferredPropertyValueWatchpointsIndex { 0 };
-    WatchpointRegistrationMode m_mode { WatchpointRegistrationMode::Collect };
+
     FixedVector<CodeBlockJettisoningWatchpoint> m_watchpoints;
     FixedVector<AdaptiveStructureWatchpoint> m_adaptiveStructureWatchpoints;
     FixedVector<AdaptiveInferredPropertyValueWatchpoint> m_adaptiveInferredPropertyValueWatchpoints;
+    WatchpointRegistrationMode m_mode { WatchpointRegistrationMode::Collect };
 };
 
 template<typename T>
 struct SetPointerAdaptor {
-    static bool add(CodeBlock* codeBlock, T set, WatchpointCollector& collector)
+    static void add(CodeBlock* codeBlock, T set, WatchpointCollector& collector)
     {
-        return collector.addWatchpoint([&](CodeBlockJettisoningWatchpoint& watchpoint) {
-            if (hasBeenInvalidated(set, collector.concurrency()))
-                return false;
-
+        collector.addWatchpoint([&](CodeBlockJettisoningWatchpoint& watchpoint) {
             {
                 ConcurrentJSLocker locker(codeBlock->m_lock);
                 watchpoint.initialize(codeBlock);
             }
             set->add(&watchpoint);
-            return true;
         });
     }
-    static bool hasBeenInvalidated(T set, Concurrency)
+    static bool hasBeenInvalidated(T set)
     {
         return set->hasBeenInvalidated();
     }
@@ -141,8 +125,8 @@ struct SetPointerAdaptor {
 };
 
 struct SymbolTableAdaptor {
-    static bool add(CodeBlock*, SymbolTable*, WatchpointCollector&);
-    static bool hasBeenInvalidated(SymbolTable* symbolTable, Concurrency)
+    static void add(CodeBlock*, SymbolTable*, WatchpointCollector&);
+    static bool hasBeenInvalidated(SymbolTable* symbolTable)
     {
         return symbolTable->singleton().hasBeenInvalidated();
     }
@@ -153,8 +137,8 @@ struct SymbolTableAdaptor {
 };
 
 struct FunctionExecutableAdaptor {
-    static bool add(CodeBlock*, FunctionExecutable*, WatchpointCollector&);
-    static bool hasBeenInvalidated(FunctionExecutable* executable, Concurrency)
+    static void add(CodeBlock*, FunctionExecutable*, WatchpointCollector&);
+    static bool hasBeenInvalidated(FunctionExecutable* executable)
     {
         return executable->singleton().hasBeenInvalidated();
     }
@@ -165,8 +149,8 @@ struct FunctionExecutableAdaptor {
 };
 
 struct ArrayBufferViewWatchpointAdaptor {
-    static bool add(CodeBlock*, JSArrayBufferView*, WatchpointCollector&);
-    static bool hasBeenInvalidated(JSArrayBufferView* view, Concurrency)
+    static void add(CodeBlock*, JSArrayBufferView*, WatchpointCollector&);
+    static bool hasBeenInvalidated(JSArrayBufferView* view)
     {
         return !view->length();
     }
@@ -177,10 +161,10 @@ struct ArrayBufferViewWatchpointAdaptor {
 };
 
 struct AdaptiveStructureWatchpointAdaptor {
-    static bool add(CodeBlock*, const ObjectPropertyCondition&, WatchpointCollector&);
-    static bool hasBeenInvalidated(const ObjectPropertyCondition& key, Concurrency concurrency)
+    static void add(CodeBlock*, const ObjectPropertyCondition&, WatchpointCollector&);
+    static bool hasBeenInvalidated(const ObjectPropertyCondition& key)
     {
-        return !key.isWatchable(PropertyCondition::MakeNoChanges, concurrency);
+        return !key.isWatchable(PropertyCondition::MakeNoChanges);
     }
     static void dumpInContext(
         PrintStream& out, const ObjectPropertyCondition& key, DumpContext* context)
@@ -205,18 +189,24 @@ public:
         m_sets.add(set);
     }
 
-    bool reallyAdd(CodeBlock* codeBlock, WatchpointCollector& collector)
+    void reallyAdd(CodeBlock* codeBlock, WatchpointCollector& collector)
     {
         if (collector.mode() == WatchpointRegistrationMode::Add)
             RELEASE_ASSERT(!m_reallyAdded);
 
-        for (auto& set : m_sets) {
-            if (!Adaptor::add(codeBlock, set, collector))
-                return false;
-        }
+        for (auto& set : m_sets)
+            Adaptor::add(codeBlock, set, collector);
 
         if (collector.mode() == WatchpointRegistrationMode::Add)
             m_reallyAdded = true;
+    }
+
+    bool areStillValid() const
+    {
+        for (auto& set : m_sets) {
+            if (Adaptor::hasBeenInvalidated(set))
+                return false;
+        }
 
         return true;
     }
@@ -247,8 +237,8 @@ public:
 
     void addLazily(WatchpointSet&);
     void addLazily(InlineWatchpointSet&);
-    void addLazily(Graph&, SymbolTable*);
-    void addLazily(Graph&, FunctionExecutable*);
+    void addLazily(SymbolTable*);
+    void addLazily(FunctionExecutable*);
     void addLazily(JSArrayBufferView*);
 
     // It's recommended that you don't call this directly. Use Graph::watchCondition(), which does
@@ -259,10 +249,9 @@ public:
 
     bool consider(Structure*);
 
-    void countWatchpoints(CodeBlock*, DesiredIdentifiers&, CommonData*);
+    void reallyAdd(CodeBlock*, DesiredIdentifiers&, CommonData*);
 
-    bool reallyAdd(CodeBlock*, DesiredIdentifiers&, CommonData*);
-
+    bool areStillValid() const;
     bool areStillValidOnMainThread(VM&, DesiredIdentifiers&);
 
     bool isWatched(WatchpointSet& set)

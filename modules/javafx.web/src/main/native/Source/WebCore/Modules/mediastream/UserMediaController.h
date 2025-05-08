@@ -27,6 +27,7 @@
 
 #if ENABLE(MEDIA_STREAM)
 
+#include "FeaturePolicy.h"
 #include "Page.h"
 #include "UserMediaClient.h"
 #include <wtf/CompletionHandler.h>

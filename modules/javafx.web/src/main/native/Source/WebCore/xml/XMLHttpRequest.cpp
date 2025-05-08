@@ -39,6 +39,7 @@
 #include "HTTPParsers.h"
 #include "InspectorInstrumentation.h"
 #include "JSDOMBinding.h"
+#include "JSLocalDOMWindow.h"
 #include "LocalDOMWindow.h"
 #include "MIMETypeRegistry.h"
 #include "MemoryCache.h"
@@ -61,15 +62,14 @@
 #include <JavaScriptCore/JSCInlines.h>
 #include <JavaScriptCore/JSLock.h>
 #include <pal/text/TextCodecUTF8.h>
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/RefCountedLeakCounter.h>
 #include <wtf/StdLibExtras.h>
-#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/CString.h>
-#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(XMLHttpRequest);
+WTF_MAKE_ISO_ALLOCATED_IMPL(XMLHttpRequest);
 
 DEFINE_DEBUG_ONLY_GLOBAL(WTF::RefCountedLeakCounter, xmlHttpRequestCounter, ("XMLHttpRequest"));
 
@@ -417,7 +417,7 @@ std::optional<ExceptionOr<void>> XMLHttpRequest::prepareToSend()
     auto& context = *scriptExecutionContext();
 
     if (RefPtr contextDocument = dynamicDowncast<Document>(context); contextDocument && contextDocument->shouldIgnoreSyncXHRs()) {
-        logConsoleError(&context, makeString("Ignoring XMLHttpRequest.send() call for '"_s, m_url.url().string(), "' because the maximum number of synchronous failures was reached."_s));
+        logConsoleError(&context, makeString("Ignoring XMLHttpRequest.send() call for '", m_url.url().string(), "' because the maximum number of synchronous failures was reached."));
         return ExceptionOr<void> { };
     }
 
@@ -558,7 +558,7 @@ ExceptionOr<void> XMLHttpRequest::send(DOMFormData& body)
     if (m_method != "GET"_s && m_method != "HEAD"_s) {
         m_requestEntityBody = FormData::createMultiPart(body);
         if (!m_requestHeaders.contains(HTTPHeaderName::ContentType))
-            m_requestHeaders.set(HTTPHeaderName::ContentType, makeString("multipart/form-data; boundary="_s, m_requestEntityBody->boundary()));
+            m_requestHeaders.set(HTTPHeaderName::ContentType, makeString("multipart/form-data; boundary=", m_requestEntityBody->boundary().data()));
     }
 
     return createRequest();
@@ -568,21 +568,21 @@ ExceptionOr<void> XMLHttpRequest::send(ArrayBuffer& body)
 {
     ASCIILiteral consoleMessage { "ArrayBuffer is deprecated in XMLHttpRequest.send(). Use ArrayBufferView instead."_s };
     scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Warning, consoleMessage);
-    return sendBytesData(body.span());
+    return sendBytesData(body.data(), body.byteLength());
 }
 
 ExceptionOr<void> XMLHttpRequest::send(ArrayBufferView& body)
 {
-    return sendBytesData(body.span());
+    return sendBytesData(body.baseAddress(), body.byteLength());
 }
 
-ExceptionOr<void> XMLHttpRequest::sendBytesData(std::span<const uint8_t> data)
+ExceptionOr<void> XMLHttpRequest::sendBytesData(const void* data, size_t length)
 {
     if (auto result = prepareToSend())
         return WTFMove(result.value());
 
     if (m_method != "GET"_s && m_method != "HEAD"_s) {
-        m_requestEntityBody = FormData::create(data);
+        m_requestEntityBody = FormData::create(data, length);
         if (m_upload)
             m_requestEntityBody->setAlwaysStream(true);
     }
@@ -661,10 +661,8 @@ ExceptionOr<void> XMLHttpRequest::createRequest()
         // Either loader is null or some error was synchronously sent to us.
         ASSERT(m_loadingActivity || !m_sendFlag);
     } else {
-        if (RefPtr document = dynamicDowncast<Document>(scriptExecutionContext())) {
-            if (!PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::SyncXHR, *document))
+        if (scriptExecutionContext()->isDocument() && !isFeaturePolicyAllowedByDocumentAndAllOwners(FeaturePolicy::Type::SyncXHR, *document()))
             return Exception { ExceptionCode::NetworkError };
-        }
 
         request.setDomainForCachePartition(scriptExecutionContext()->domainForCachePartition());
         InspectorInstrumentation::willLoadXHRSynchronously(scriptExecutionContext());
@@ -807,7 +805,7 @@ ExceptionOr<void> XMLHttpRequest::setRequestHeader(const String& name, const Str
     if (securityOrigin()->canLoadLocalResources() && scriptExecutionContext()->isDocument() && document()->settings().allowSettingAnyXHRHeaderFromFileURLs())
         allowUnsafeHeaderField = true;
     if (!allowUnsafeHeaderField && isForbiddenHeader(name, normalizedValue)) {
-        logConsoleError(scriptExecutionContext(), makeString("Refused to set unsafe header \""_s, name, '"'));
+        logConsoleError(scriptExecutionContext(), "Refused to set unsafe header \"" + name + "\"");
         return { };
     }
 
@@ -840,7 +838,7 @@ String XMLHttpRequest::getAllResponseHeaders() const
 
         StringBuilder stringBuilder;
         for (auto& header : headers)
-            stringBuilder.append(asASCIILowercase(header.first), ": "_s, header.second, "\r\n"_s);
+            stringBuilder.append(asASCIILowercase(header.first), ": ", header.second, "\r\n");
 
         m_allResponseHeaders = stringBuilder.toString();
     }
@@ -895,7 +893,7 @@ void XMLHttpRequest::handleCancellation()
     }));
 }
 
-void XMLHttpRequest::didFail(ScriptExecutionContextIdentifier, const ResourceError& error)
+void XMLHttpRequest::didFail(const ResourceError& error)
 {
     // If we are already in an error state, for instance we called abort(), bail out early.
     if (m_error)
@@ -932,7 +930,7 @@ void XMLHttpRequest::didFail(ScriptExecutionContextIdentifier, const ResourceErr
     networkError();
 }
 
-void XMLHttpRequest::didFinishLoading(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const NetworkLoadMetrics&)
+void XMLHttpRequest::didFinishLoading(ResourceLoaderIdentifier, const NetworkLoadMetrics&)
 {
     Ref protectedThis { *this };
 
@@ -983,7 +981,7 @@ void XMLHttpRequest::didSendData(unsigned long long bytesSent, unsigned long lon
     }
 }
 
-void XMLHttpRequest::didReceiveResponse(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const ResourceResponse& response)
+void XMLHttpRequest::didReceiveResponse(ResourceLoaderIdentifier, const ResourceResponse& response)
 {
     m_response = response;
 }
@@ -1076,7 +1074,7 @@ void XMLHttpRequest::didReceiveData(const SharedBuffer& buffer)
         return;
 
     if (useDecoder)
-        m_responseBuilder.append(m_decoder->decode(buffer.span()));
+        m_responseBuilder.append(m_decoder->decode(buffer.data(), buffer.size()));
     else {
         // Buffer binary data.
         m_binaryResponseBuilder.append(buffer);
@@ -1164,6 +1162,11 @@ void XMLHttpRequest::didReachTimeout()
     changeState(DONE);
 
     dispatchErrorEvents(eventNames().timeoutEvent);
+}
+
+const char* XMLHttpRequest::activeDOMObjectName() const
+{
+    return "XMLHttpRequest";
 }
 
 void XMLHttpRequest::suspend(ReasonForSuspension)

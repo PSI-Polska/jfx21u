@@ -27,7 +27,7 @@
 #include "UserAgent.h"
 
 #include <wtf/NeverDestroyed.h>
-#include <wtf/text/MakeString.h>
+#include <wtf/text/StringConcatenate.h>
 
 // WARNING! WARNING! WARNING!
 //
@@ -58,17 +58,17 @@ static String getSystemSoftwareVersion()
     return "0.00"_s;
 }
 
-static constexpr ASCIILiteral versionForUAString()
+static constexpr const char* versionForUAString()
 {
     // https://bugs.webkit.org/show_bug.cgi?id=180365
-    return "605.1.15"_s;
+    return "605.1.15";
 }
 
 static String standardUserAgentStatic()
 {
     // Version/X is mandatory *before* Safari/X to be a valid Safari UA. See
     // https://bugs.webkit.org/show_bug.cgi?id=133403 for details.
-    static NeverDestroyed<String> uaStatic(makeString("Mozilla/5.0 (PlayStation; "_s, getSystemSoftwareName(), '/', getSystemSoftwareVersion(), ") AppleWebKit/"_s, versionForUAString(), " (KHTML, like Gecko) "_s, "Version/17.0 Safari/"_s, versionForUAString()));
+    static NeverDestroyed<String> uaStatic(makeString("Mozilla/5.0 (PlayStation; ", getSystemSoftwareName(), '/', getSystemSoftwareVersion(), ") AppleWebKit/", versionForUAString(), " (KHTML, like Gecko) ", "Version/14.0 Safari/", versionForUAString()));
     return uaStatic;
 }
 
@@ -85,8 +85,11 @@ String standardUserAgent(const String& applicationName, const String& applicatio
     if (applicationName.isEmpty())
         return standardUserAgentStatic();
 
+    String finalApplicationVersion = applicationVersion;
+    if (finalApplicationVersion.isEmpty())
+        finalApplicationVersion = String::fromUTF8(versionForUAString());
 
-    return makeString(standardUserAgentStatic(), ' ', applicationName, '/', applicationVersion.isEmpty() ? versionForUAString() : applicationVersion);
+    return makeString(standardUserAgentStatic(), ' ', applicationName, '/', finalApplicationVersion);
 }
 
 String standardUserAgentForURL(const URL&)

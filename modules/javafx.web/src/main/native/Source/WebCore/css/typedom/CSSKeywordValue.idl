@@ -25,6 +25,7 @@
 
 // https://drafts.css-houdini.org/css-typed-om/#csskeywordvalue
 [
+    EnabledBySetting=CSSTypedOMEnabled,
     Exposed=(Window,Worker,PaintWorklet),
     JSGenerateToJSObject,
     JSGenerateToNativeObject,

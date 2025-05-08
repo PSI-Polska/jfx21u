@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include <tuple>
 #include <type_traits>
 
 namespace WTF {
@@ -77,21 +76,9 @@ struct FunctionTraits<Result(Args...)> {
 
 };
 
-#if OS(WINDOWS) && (!PLATFORM(JAVA) || !CPU(X86))
-template<typename Result, typename... Args>
-struct FunctionTraits<Result SYSV_ABI(Args...)> : public FunctionTraits<Result(Args...)> {
-};
-#endif
-
 template<typename Result, typename... Args>
 struct FunctionTraits<Result(*)(Args...)> : public FunctionTraits<Result(Args...)> {
 };
-
-#if OS(WINDOWS) && (!PLATFORM(JAVA) || !CPU(X86))
-template<typename Result, typename... Args>
-struct FunctionTraits<Result SYSV_ABI (*)(Args...)> : public FunctionTraits<Result(Args...)> {
-};
-#endif
 
 template<typename Result, typename... Args>
 struct FunctionTraits<Result(Args...) noexcept> : public FunctionTraits<Result(Args...)> {

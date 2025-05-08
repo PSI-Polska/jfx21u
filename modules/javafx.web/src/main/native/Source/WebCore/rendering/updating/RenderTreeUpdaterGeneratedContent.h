@@ -38,11 +38,10 @@ class RenderTreeUpdater::GeneratedContent {
 public:
     GeneratedContent(RenderTreeUpdater&);
 
-    void updateBackdropRenderer(RenderElement&, StyleDifference minimalStyleDifference);
+    void updateBackdropRenderer(RenderElement&);
     void updatePseudoElement(Element&, const Style::ElementUpdate&, PseudoId);
     void updateRemainingQuotes();
     void updateCounters();
-    void updateWritingSuggestionsRenderer(RenderElement&, StyleDifference minimalStyleDifference);
 
     static void removeBeforePseudoElement(Element&, RenderTreeBuilder&);
     static void removeAfterPseudoElement(Element&, RenderTreeBuilder&);

@@ -24,4 +24,7 @@
  */
 
 // https://drafts.csswg.org/resize-observer/#resize-observer-callback
-[ CallbackThisObject=ResizeObserver ] callback ResizeObserverCallback = undefined (sequence<ResizeObserverEntry> entries, ResizeObserver observer);
+[
+    CallbackThisObject=ResizeObserver,
+    IsWeakCallback,
+] callback ResizeObserverCallback = undefined (sequence<ResizeObserverEntry> entries, ResizeObserver observer);

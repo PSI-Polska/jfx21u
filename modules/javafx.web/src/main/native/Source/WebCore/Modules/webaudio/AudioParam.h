@@ -126,7 +126,7 @@ private:
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger.get(); }
     const void* logIdentifier() const final { return m_logIdentifier; }
-    ASCIILiteral logClassName() const final { return "AudioParam"_s; }
+    const char* logClassName() const final { return "AudioParam"; }
     WTFLogChannel& logChannel() const final;
 #endif
 

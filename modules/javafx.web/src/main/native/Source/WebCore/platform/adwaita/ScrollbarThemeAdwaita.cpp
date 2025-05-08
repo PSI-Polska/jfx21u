@@ -354,7 +354,7 @@ ScrollbarButtonPressAction ScrollbarThemeAdwaita::handleMousePressEvent(Scrollba
     return ScrollbarButtonPressAction::None;
 }
 
-#if !PLATFORM(GTK) || USE(GTK4) || USE(SKIA)
+#if !PLATFORM(GTK) || USE(GTK4)
 ScrollbarTheme& ScrollbarTheme::nativeTheme()
 {
     static ScrollbarThemeAdwaita theme;

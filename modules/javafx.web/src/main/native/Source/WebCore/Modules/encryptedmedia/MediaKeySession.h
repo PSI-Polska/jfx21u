@@ -63,18 +63,16 @@ class SharedBuffer;
 template<typename IDLType> class DOMPromiseProxy;
 
 class MediaKeySession final : public RefCounted<MediaKeySession>, public EventTarget, public ActiveDOMObject, public CDMInstanceSessionClient {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(MediaKeySession, WEBCORE_EXPORT);
+    WTF_MAKE_ISO_ALLOCATED(MediaKeySession);
 public:
     static Ref<MediaKeySession> create(Document&, WeakPtr<MediaKeys>&&, MediaKeySessionType, bool useDistinctiveIdentifier, Ref<CDM>&&, Ref<CDMInstanceSession>&&);
-    WEBCORE_EXPORT virtual ~MediaKeySession();
+    virtual ~MediaKeySession();
 
     using CDMInstanceSessionClient::weakPtrFactory;
     using CDMInstanceSessionClient::WeakValueType;
     using CDMInstanceSessionClient::WeakPtrImplType;
-
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
+    using RefCounted<MediaKeySession>::ref;
+    using RefCounted<MediaKeySession>::deref;
 
     bool isClosed() const { return m_closed; }
 
@@ -110,12 +108,13 @@ private:
     PlatformDisplayID displayID() final;
 
     // EventTarget
-    enum EventTargetInterfaceType eventTargetInterface() const override { return EventTargetInterfaceType::MediaKeySession; }
+    EventTargetInterface eventTargetInterface() const override { return MediaKeySessionEventTargetInterfaceType; }
     ScriptExecutionContext* scriptExecutionContext() const override { return ActiveDOMObject::scriptExecutionContext(); }
     void refEventTarget() override { ref(); }
     void derefEventTarget() override { deref(); }
 
     // ActiveDOMObject
+    const char* activeDOMObjectName() const final;
     bool virtualHasPendingActivity() const final;
     void stop() final;
 
@@ -125,7 +124,7 @@ private:
 #if !RELEASE_LOG_DISABLED
     // LoggerHelper
     const Logger& logger() const { return m_logger; }
-    ASCIILiteral logClassName() const { return "MediaKeySession"_s; }
+    const char* logClassName() const { return "MediaKeySession"; }
     WTFLogChannel& logChannel() const;
     const void* logIdentifier() const { return m_logIdentifier; }
 

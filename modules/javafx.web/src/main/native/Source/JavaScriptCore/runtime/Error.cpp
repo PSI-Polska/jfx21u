@@ -30,7 +30,6 @@
 #include "JSGlobalObject.h"
 #include "SourceCode.h"
 #include "StackFrame.h"
-#include <wtf/text/MakeString.h>
 
 namespace JSC {
 
@@ -291,17 +290,15 @@ JSObject* createTypeErrorCopy(JSGlobalObject* globalObject, JSValue error)
 
 String makeDOMAttributeGetterTypeErrorMessage(const char* interfaceName, const String& attributeName)
 {
-    auto interfaceNameSpan = span(interfaceName);
-    return makeString("The "_s, interfaceNameSpan, '.', attributeName, " getter can only be used on instances of "_s, interfaceNameSpan);
+    return makeString("The "_s, interfaceName, '.', attributeName, " getter can only be used on instances of "_s, interfaceName);
 }
 
 String makeDOMAttributeSetterTypeErrorMessage(const char* interfaceName, const String& attributeName)
 {
-    auto interfaceNameSpan = span(interfaceName);
-    return makeString("The "_s, interfaceNameSpan, '.', attributeName, " setter can only be used on instances of "_s, interfaceNameSpan);
+    return makeString("The "_s, interfaceName, '.', attributeName, " setter can only be used on instances of "_s, interfaceName);
 }
 
-Exception* throwConstructorCannotBeCalledAsFunctionTypeError(JSGlobalObject* globalObject, ThrowScope& scope, ASCIILiteral constructorName)
+Exception* throwConstructorCannotBeCalledAsFunctionTypeError(JSGlobalObject* globalObject, ThrowScope& scope, const char* constructorName)
 {
     return throwTypeError(globalObject, scope, makeString("calling "_s, constructorName, " constructor without new is invalid"_s));
 }

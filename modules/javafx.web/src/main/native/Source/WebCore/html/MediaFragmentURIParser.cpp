@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2011-2024 Apple Inc. All rights reserved.
- * Copyright (C) 2023 Google Inc. All rights reserved.
+ * Copyright (C) 2011, 2012 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,18 +44,18 @@ constexpr int secondsPerHour = 3600;
 constexpr int secondsPerMinute = 60;
 constexpr unsigned nptIdentifierLength = 4; // "npt:"
 
-static String collectDigits(std::span<const LChar> input, unsigned& position)
+static String collectDigits(const LChar* input, unsigned length, unsigned& position)
 {
     StringBuilder digits;
 
     // http://www.ietf.org/rfc/rfc2326.txt
     // DIGIT ; any positive number
-    while (position < input.size() && isASCIIDigit(input[position]))
+    while (position < length && isASCIIDigit(input[position]))
         digits.append(input[position++]);
     return digits.toString();
 }
 
-static StringView collectFraction(std::span<const LChar> input, unsigned& position)
+static StringView collectFraction(const LChar* input, unsigned length, unsigned& position)
 {
     // http://www.ietf.org/rfc/rfc2326.txt
     // [ "." *DIGIT ]
@@ -64,9 +63,9 @@ static StringView collectFraction(std::span<const LChar> input, unsigned& positi
         return { };
 
     unsigned start = position++;
-    while (position < input.size() && isASCIIDigit(input[position]))
+    while (position < length && isASCIIDigit(input[position]))
         ++position;
-    return input.subspan(start, position - start);
+    return StringView { input + start, position - start };
 }
 
 MediaFragmentURIParser::MediaFragmentURIParser(const URL& url)
@@ -176,7 +175,7 @@ void MediaFragmentURIParser::parseTimeFragment()
 
         MediaTime start = MediaTime::invalidTime();
         MediaTime end = MediaTime::invalidTime();
-        if (parseNPTFragment(fragment.second.span8(), start, end)) {
+        if (parseNPTFragment(fragment.second.characters8(), fragment.second.length(), start, end)) {
             m_startTime = start;
             m_endTime = end;
             m_timeFormat = NormalPlayTime;
@@ -192,13 +191,13 @@ void MediaFragmentURIParser::parseTimeFragment()
     m_fragments.clear();
 }
 
-bool MediaFragmentURIParser::parseNPTFragment(std::span<const LChar> timeString, MediaTime& startTime, MediaTime& endTime)
+bool MediaFragmentURIParser::parseNPTFragment(const LChar* timeString, unsigned length, MediaTime& startTime, MediaTime& endTime)
 {
     unsigned offset = 0;
-    if (timeString.size() >= nptIdentifierLength && timeString[0] == 'n' && timeString[1] == 'p' && timeString[2] == 't' && timeString[3] == ':')
+    if (length >= nptIdentifierLength && timeString[0] == 'n' && timeString[1] == 'p' && timeString[2] == 't' && timeString[3] == ':')
         offset += nptIdentifierLength;
 
-    if (offset == timeString.size())
+    if (offset == length)
         return false;
 
     // http://www.w3.org/2008/WebVideo/Fragments/WD-media-fragments-spec/#naming-time
@@ -207,22 +206,22 @@ bool MediaFragmentURIParser::parseNPTFragment(std::span<const LChar> timeString,
     if (timeString[offset] == ',')
         startTime = MediaTime::zeroTime();
     else {
-        if (!parseNPTTime(timeString, offset, startTime))
+        if (!parseNPTTime(timeString, length, offset, startTime))
             return false;
     }
 
-    if (offset == timeString.size())
+    if (offset == length)
         return true;
 
     if (timeString[offset] != ',')
         return false;
-    if (++offset == timeString.size())
+    if (++offset == length)
         return false;
 
-    if (!parseNPTTime(timeString, offset, endTime))
+    if (!parseNPTTime(timeString, length, offset, endTime))
         return false;
 
-    if (offset != timeString.size())
+    if (offset != length)
         return false;
 
     if (startTime >= endTime)
@@ -231,12 +230,12 @@ bool MediaFragmentURIParser::parseNPTFragment(std::span<const LChar> timeString,
     return true;
 }
 
-bool MediaFragmentURIParser::parseNPTTime(std::span<const LChar> timeString, unsigned& offset, MediaTime& time)
+bool MediaFragmentURIParser::parseNPTTime(const LChar* timeString, unsigned length, unsigned& offset, MediaTime& time)
 {
     enum Mode { minutes, hours };
     Mode mode = minutes;
 
-    if (offset >= timeString.size() || !isASCIIDigit(timeString[offset]))
+    if (offset >= length || !isASCIIDigit(timeString[offset]))
         return false;
 
     // http://www.w3.org/2008/WebVideo/Fragments/WD-media-fragments-spec/#npttimedef
@@ -258,68 +257,59 @@ bool MediaFragmentURIParser::parseNPTTime(std::span<const LChar> timeString, uns
     // npt-mm        =   2DIGIT      ; 0-59
     // npt-ss        =   2DIGIT      ; 0-59
 
-    String digits1 = collectDigits(timeString, offset);
+    String digits1 = collectDigits(timeString, length, offset);
     int value1 = parseInteger<int>(digits1).value_or(0);
-    if (offset >= timeString.size() || timeString[offset] == ',') {
+    if (offset >= length || timeString[offset] == ',') {
         time = MediaTime::createWithDouble(value1);
         return true;
     }
 
     MediaTime fraction;
     if (timeString[offset] == '.') {
-        if (offset == timeString.size())
+        if (offset == length)
             return true;
-        auto digits = collectFraction(timeString, offset);
+        auto digits = collectFraction(timeString, length, offset);
         bool isValid;
         fraction = MediaTime::createWithDouble(digits.toDouble(isValid));
         time = MediaTime::createWithDouble(value1) + fraction;
         return true;
     }
 
-    if (digits1.length() < 1)
+    if (digits1.length() < 2)
         return false;
+    if (digits1.length() > 2)
+        mode = hours;
 
     // Collect the next sequence of 0-9 after ':'
-    if (offset >= timeString.size() || timeString[offset++] != ':')
+    if (offset >= length || timeString[offset++] != ':')
         return false;
-    if (offset >= timeString.size() || !isASCIIDigit(timeString[(offset)]))
+    if (offset >= length || !isASCIIDigit(timeString[(offset)]))
         return false;
-    String digits2 = collectDigits(timeString, offset);
+    String digits2 = collectDigits(timeString, length, offset);
     if (digits2.length() != 2)
         return false;
     int value2 = parseInteger<int>(digits2).value();
 
     // Detect whether this timestamp includes hours.
-    if (offset < timeString.size() && timeString[offset] == ':')
-        mode = hours;
-    if (mode == minutes) {
-        if (digits1.length() != 2)
-            return false;
-        if (value1 > 59 || value2 > 59)
-            return false;
-    }
-
     int value3;
-    if (mode == hours || (offset < timeString.size() && timeString[offset] == ':')) {
-        if (offset >= timeString.size() || timeString[offset++] != ':')
+    if (mode == hours || (offset < length && timeString[offset] == ':')) {
+        if (offset >= length || timeString[offset++] != ':')
             return false;
-        if (offset >= timeString.size() || !isASCIIDigit(timeString[offset]))
+        if (offset >= length || !isASCIIDigit(timeString[offset]))
             return false;
-        String digits3 = collectDigits(timeString, offset);
+        String digits3 = collectDigits(timeString, length, offset);
         if (digits3.length() != 2)
             return false;
         value3 = parseInteger<int>(digits3).value();
-        if (value2 > 59 || value3 > 59)
-            return false;
     } else {
         value3 = value2;
         value2 = value1;
         value1 = 0;
     }
 
-    if (offset < timeString.size() && timeString[offset] == '.') {
+    if (offset < length && timeString[offset] == '.') {
         bool isValid;
-        fraction = MediaTime::createWithDouble(collectFraction(timeString, offset).toDouble(isValid));
+        fraction = MediaTime::createWithDouble(collectFraction(timeString, length, offset).toDouble(isValid));
     }
 
     time = MediaTime::createWithDouble((value1 * secondsPerHour) + (value2 * secondsPerMinute) + value3) + fraction;

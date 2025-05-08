@@ -63,8 +63,8 @@ namespace JSC { namespace DFG {
 static constexpr bool dumpOSRAvailabilityData = false;
 
 // Creates an array of stringized names.
-static constexpr ASCIILiteral dfgOpNames[] = {
-#define STRINGIZE_DFG_OP_ENUM(opcode, flags) #opcode ## _s ,
+static const char* const dfgOpNames[] = {
+#define STRINGIZE_DFG_OP_ENUM(opcode, flags) #opcode ,
     FOR_EACH_DFG_OP(STRINGIZE_DFG_OP_ENUM)
 #undef STRINGIZE_DFG_OP_ENUM
 };
@@ -94,9 +94,11 @@ Graph::Graph(VM& vm, Plan& plan)
     this->symbolStructure = registerStructure(vm.symbolStructure.get());
 }
 
-Graph::~Graph() = default;
+Graph::~Graph()
+{
+}
 
-ASCIILiteral Graph::opName(NodeType op)
+const char *Graph::opName(NodeType op)
 {
     return dfgOpNames[op];
 }
@@ -203,8 +205,8 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
     if (node->hasResult() && node->hasVirtualRegister() && node->virtualRegister().isValid())
         out.print(node->virtualRegister());
     else
-        out.print("-"_s);
-    out.print(">\t"_s, opName(op), "("_s);
+        out.print("-");
+    out.print(">\t", opName(op), "(");
     CommaPrinter comma;
     if (node->flags() & NodeHasVarArgs) {
         for (unsigned childIdx = node->firstChild(); childIdx < node->firstChild() + node->numChildren(); childIdx++) {
@@ -226,17 +228,17 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
     if (node->prediction())
         out.print(comma, SpeculationDump(node->prediction()));
     if (node->hasNumberOfArgumentsToSkip())
-        out.print(comma, "numberOfArgumentsToSkip = "_s, node->numberOfArgumentsToSkip());
+        out.print(comma, "numberOfArgumentsToSkip = ", node->numberOfArgumentsToSkip());
     if (node->hasNumberOfBoundArguments())
-        out.print(comma, "numberOfBoundArguments = "_s, node->numberOfBoundArguments());
+        out.print(comma, "numberOfBoundArguments = ", node->numberOfBoundArguments());
     if (node->hasArrayMode())
         out.print(comma, node->arrayMode());
     if (node->hasArithUnaryType())
-        out.print(comma, "Type:"_s, node->arithUnaryType());
+        out.print(comma, "Type:", node->arithUnaryType());
     if (node->hasArithMode())
         out.print(comma, node->arithMode());
     if (node->hasArithRoundingMode())
-        out.print(comma, "Rounding:"_s, node->arithRoundingMode());
+        out.print(comma, "Rounding:", node->arithRoundingMode());
     if (node->hasScopeOffset())
         out.print(comma, node->scopeOffset());
     if (node->hasDirectArgumentsOffset())
@@ -244,13 +246,11 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
     if (node->hasArgumentIndex())
         out.print(comma, node->argumentIndex());
     if (node->hasRegisterPointer())
-        out.print(comma, "global", "("_s, RawPointer(node->variablePointer()), ")"_s);
+        out.print(comma, "global", "(", RawPointer(node->variablePointer()), ")");
     if (node->hasIdentifier() && node->identifierNumber() != UINT32_MAX)
-        out.print(comma, "id"_s, node->identifierNumber(), "{"_s, identifiers()[node->identifierNumber()], "}"_s);
+        out.print(comma, "id", node->identifierNumber(), "{", identifiers()[node->identifierNumber()], "}");
     if (node->hasCacheableIdentifier() && node->cacheableIdentifier())
-        out.print(comma, "cachable-id {"_s, node->cacheableIdentifier(), "}"_s);
-    if (node->hasCacheType())
-        out.print(comma, node->cacheType());
+        out.print(comma, "cachable-id {", node->cacheableIdentifier(), "}");
     if (node->hasPromotedLocationDescriptor())
         out.print(comma, node->promotedLocationDescriptor());
     if (node->hasClassInfo())
@@ -264,25 +264,25 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
     if (node->hasTransition()) {
         out.print(comma, pointerDumpInContext(node->transition(), context));
 #if USE(JSVALUE64)
-        out.print(", ID:"_s, node->transition()->next->id().bits());
+        out.print(", ID:", node->transition()->next->id().bits());
 #else
-        out.print(", ID:"_s, RawPointer(node->transition()->next.get()));
+        out.print(", ID:", RawPointer(node->transition()->next.get()));
 #endif
     }
     if (node->hasCellOperand()) {
         if (!node->cellOperand()->value() || !node->cellOperand()->value().isCell())
-            out.print(comma, "invalid cell operand: "_s, node->cellOperand()->value());
+            out.print(comma, "invalid cell operand: ", node->cellOperand()->value());
         else {
             out.print(comma, pointerDump(node->cellOperand()->value().asCell()));
             if (node->cellOperand()->value().isCell()) {
                 CallVariant variant(node->cellOperand()->value().asCell());
                 if (ExecutableBase* executable = variant.executable()) {
                     if (executable->isHostFunction())
-                        out.print(comma, "<host function>"_s);
+                        out.print(comma, "<host function>");
                     else if (FunctionExecutable* functionExecutable = jsDynamicCast<FunctionExecutable*>(executable))
                         out.print(comma, FunctionExecutableDump(functionExecutable));
                     else
-                        out.print(comma, "<non-function executable>"_s);
+                        out.print(comma, "<non-function executable>");
                 }
             }
         }
@@ -293,8 +293,8 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
         out.print(comma, node->structureFlags());
     if (node->hasStorageAccessData()) {
         StorageAccessData& storageAccessData = node->storageAccessData();
-        out.print(comma, "id"_s, storageAccessData.identifierNumber, "{"_s, identifiers()[storageAccessData.identifierNumber], "}"_s);
-        out.print(", "_s, static_cast<ptrdiff_t>(storageAccessData.offset));
+        out.print(comma, "id", storageAccessData.identifierNumber, "{", identifiers()[storageAccessData.identifierNumber], "}");
+        out.print(", ", static_cast<ptrdiff_t>(storageAccessData.offset));
     }
     if (node->hasMultiGetByOffsetData()) {
         MultiGetByOffsetData& data = node->multiGetByOffsetData();
@@ -304,42 +304,42 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
     }
     if (node->hasMultiPutByOffsetData()) {
         MultiPutByOffsetData& data = node->multiPutByOffsetData();
-        out.print(comma, "id"_s, data.identifierNumber, "{"_s, identifiers()[data.identifierNumber], "}"_s);
+        out.print(comma, "id", data.identifierNumber, "{", identifiers()[data.identifierNumber], "}");
         for (unsigned i = 0; i < data.variants.size(); ++i)
             out.print(comma, inContext(data.variants[i], context));
     }
     if (node->hasMultiDeleteByOffsetData()) {
         MultiDeleteByOffsetData& data = node->multiDeleteByOffsetData();
-        out.print(comma, "id"_s, data.identifierNumber, "{"_s, identifiers()[data.identifierNumber], "}"_s);
+        out.print(comma, "id", data.identifierNumber, "{", identifiers()[data.identifierNumber], "}");
         for (unsigned i = 0; i < data.variants.size(); ++i)
             out.print(comma, inContext(data.variants[i], context));
     }
     if (node->hasMatchStructureData()) {
         for (MatchStructureVariant& variant : node->matchStructureData().variants)
-            out.print(comma, inContext(*variant.structure.get(), context), "=>"_s, variant.result);
+            out.print(comma, inContext(*variant.structure.get(), context), "=>", variant.result);
     }
     ASSERT(node->hasVariableAccessData(*this) == node->accessesStack(*this));
     if (node->hasVariableAccessData(*this)) {
         VariableAccessData* variableAccessData = node->tryGetVariableAccessData();
         if (variableAccessData) {
             Operand operand = variableAccessData->operand();
-            out.print(comma, variableAccessData->operand(), "("_s, VariableAccessDataDump(*this, variableAccessData), ")"_s);
+            out.print(comma, variableAccessData->operand(), "(", VariableAccessDataDump(*this, variableAccessData), ")");
             operand = variableAccessData->machineLocal();
             if (operand.isValid())
-                out.print(comma, "machine:"_s, operand);
+                out.print(comma, "machine:", operand);
         }
     }
     if (node->hasStackAccessData()) {
         StackAccessData* data = node->stackAccessData();
         out.print(comma, data->operand);
         if (data->machineLocal.isValid())
-            out.print(comma, "machine:"_s, data->machineLocal);
+            out.print(comma, "machine:", data->machineLocal);
         out.print(comma, data->format);
     }
     if (node->hasUnlinkedOperand())
         out.print(comma, node->unlinkedOperand());
     if (node->hasVectorLengthHint())
-        out.print(comma, "vectorLengthHint = "_s, node->vectorLengthHint());
+        out.print(comma, "vectorLengthHint = ", node->vectorLengthHint());
     if (node->hasLazyJSValue())
         out.print(comma, node->lazyJSValue());
     if (node->hasIndexingType())
@@ -347,7 +347,7 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
     if (node->hasTypedArrayType())
         out.print(comma, node->typedArrayType());
     if (node->hasPhi())
-        out.print(comma, "^"_s, node->phi()->index());
+        out.print(comma, "^", node->phi()->index());
     if (node->hasExecutionCounter())
         out.print(comma, RawPointer(node->executionCounter()));
     if (node->hasWatchpointSet())
@@ -357,30 +357,30 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
     if (node->hasObjectMaterializationData())
         out.print(comma, node->objectMaterializationData());
     if (node->hasCallVarargsData())
-        out.print(comma, "firstVarArgOffset = "_s, node->callVarargsData()->firstVarArgOffset);
+        out.print(comma, "firstVarArgOffset = ", node->callVarargsData()->firstVarArgOffset);
     if (node->hasLoadVarargsData()) {
         LoadVarargsData* data = node->loadVarargsData();
-        out.print(comma, "start = "_s, data->start, ", count = "_s, data->count);
+        out.print(comma, "start = ", data->start, ", count = ", data->count);
         if (data->machineStart.isValid())
             out.print(", machineStart = ", data->machineStart);
         if (data->machineCount.isValid())
-            out.print(", machineCount = "_s, data->machineCount);
-        out.print(", offset = "_s, data->offset, ", mandatoryMinimum = "_s, data->mandatoryMinimum);
-        out.print(", limit = "_s, data->limit);
+            out.print(", machineCount = ", data->machineCount);
+        out.print(", offset = ", data->offset, ", mandatoryMinimum = ", data->mandatoryMinimum);
+        out.print(", limit = ", data->limit);
     }
     if (node->hasIsInternalPromise())
-        out.print(comma, "isInternalPromise = "_s, node->isInternalPromise());
+        out.print(comma, "isInternalPromise = ", node->isInternalPromise());
     if (node->hasInternalFieldIndex())
-        out.print(comma, "internalFieldIndex = "_s, node->internalFieldIndex());
+        out.print(comma, "internalFieldIndex = ", node->internalFieldIndex());
     if (node->hasCallDOMGetterData()) {
         CallDOMGetterData* data = node->callDOMGetterData();
-        out.print(comma, "id"_s, data->identifierNumber, "{"_s, identifiers()[data->identifierNumber], "}"_s);
-        out.print(", domJIT = "_s, RawPointer(data->domJIT));
+        out.print(comma, "id", data->identifierNumber, "{", identifiers()[data->identifierNumber], "}");
+        out.print(", domJIT = ", RawPointer(data->domJIT));
     }
     if (node->hasIgnoreLastIndexIsWritable())
-        out.print(comma, "ignoreLastIndexIsWritable = "_s, node->ignoreLastIndexIsWritable());
+        out.print(comma, "ignoreLastIndexIsWritable = ", node->ignoreLastIndexIsWritable());
     if (node->hasIntrinsic())
-        out.print(comma, "intrinsic = "_s, node->intrinsic());
+        out.print(comma, "intrinsic = ", node->intrinsic());
     if (node->isConstant())
         out.print(comma, pointerDumpInContext(node->constant(), context));
     if (node->hasCallLinkStatus())
@@ -392,19 +392,19 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
     if (node->hasPutByStatus())
         out.print(comma, *node->putByStatus());
     if (node->hasEnumeratorMetadata())
-        out.print(comma, "enumeratorModes = "_s, node->enumeratorMetadata().toRaw());
+        out.print(comma, "enumeratorModes = ", node->enumeratorMetadata().toRaw());
     if (node->hasExtractOffset())
-        out.print(comma, "<<"_s, node->extractOffset());
+        out.print(comma, "<<", node->extractOffset());
     if (node->isJump())
-        out.print(comma, "T:"_s, *node->targetBlock());
+        out.print(comma, "T:", *node->targetBlock());
     if (node->isBranch())
-        out.print(comma, "T:"_s, node->branchData()->taken, ", F:"_s, node->branchData()->notTaken);
+        out.print(comma, "T:", node->branchData()->taken, ", F:", node->branchData()->notTaken);
     if (node->isSwitch()) {
         SwitchData* data = node->switchData();
         out.print(comma, data->kind);
         for (unsigned i = 0; i < data->cases.size(); ++i)
-            out.print(comma, inContext(data->cases[i].value, context), ":"_s, data->cases[i].target);
-        out.print(comma, "default:"_s, data->fallThrough);
+            out.print(comma, inContext(data->cases[i].value, context), ":", data->cases[i].target);
+        out.print(comma, "default:", data->fallThrough);
     }
     if (node->isEntrySwitch()) {
         EntrySwitchData* data = node->entrySwitchData();
@@ -415,30 +415,30 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
     ClobberSet writes;
     addReadsAndWrites(*this, node, reads, writes);
     if (!reads.isEmpty())
-        out.print(comma, "R:"_s, sortedListDump(reads.direct(), ","_s));
+        out.print(comma, "R:", sortedListDump(reads.direct(), ","));
     if (!writes.isEmpty())
-        out.print(comma, "W:"_s, sortedListDump(writes.direct(), ","_s));
+        out.print(comma, "W:", sortedListDump(writes.direct(), ","));
     ExitMode exitMode = mayExit(*this, node);
     if (exitMode != DoesNotExit)
         out.print(comma, exitMode);
     if (clobbersExitState(*this, node))
-        out.print(comma, "ClobbersExit"_s);
+        out.print(comma, "ClobbersExit");
     if (node->origin.isSet()) {
         out.print(comma, node->origin.semantic.bytecodeIndex());
         if (node->origin.semantic != node->origin.forExit && node->origin.forExit.isSet())
-            out.print(comma, "exit: "_s, node->origin.forExit);
+            out.print(comma, "exit: ", node->origin.forExit);
     }
-    out.print(comma, node->origin.exitOK ? "ExitValid"_s : "ExitInvalid"_s);
+    out.print(comma, node->origin.exitOK ? "ExitValid" : "ExitInvalid");
     if (node->origin.wasHoisted)
-        out.print(comma, "WasHoisted"_s);
+        out.print(comma, "WasHoisted");
     out.print(")");
 
     if (node->accessesStack(*this) && node->tryGetVariableAccessData())
-        out.print("  predicting "_s, SpeculationDump(node->tryGetVariableAccessData()->prediction()));
+        out.print("  predicting ", SpeculationDump(node->tryGetVariableAccessData()->prediction()));
     else if (node->hasHeapPrediction())
-        out.print("  predicting "_s, SpeculationDump(node->getHeapPrediction()));
+        out.print("  predicting ", SpeculationDump(node->getHeapPrediction()));
 
-    out.print("\n"_s);
+    out.print("\n");
 }
 
 bool Graph::terminalsAreValid()

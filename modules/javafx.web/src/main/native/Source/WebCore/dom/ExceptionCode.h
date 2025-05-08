@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include <wtf/EnumTraits.h>
+
 namespace WebCore {
 
 enum class ExceptionCode : uint8_t {

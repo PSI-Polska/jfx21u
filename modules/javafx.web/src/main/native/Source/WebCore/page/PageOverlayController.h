@@ -25,12 +25,11 @@
 
 #pragma once
 
-#include "GraphicsLayer.h"
 #include "GraphicsLayerClient.h"
 #include "PageOverlay.h"
+#include <wtf/HashMap.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
-#include <wtf/WeakHashMap.h>
 
 namespace WebCore {
 
@@ -50,7 +49,6 @@ public:
 
     GraphicsLayer& layerWithDocumentOverlays();
     GraphicsLayer& layerWithViewOverlays();
-    Ref<GraphicsLayer> protectedLayerWithViewOverlays();
 
     const Vector<RefPtr<PageOverlay>>& pageOverlays() const { return m_pageOverlays; }
 
@@ -72,7 +70,7 @@ public:
     void didChangeOverlayFrame(PageOverlay&);
     void didChangeOverlayBackgroundColor(PageOverlay&);
 
-    int overlayCount() const { return m_overlayGraphicsLayers.computeSize(); }
+    int overlayCount() const { return m_overlayGraphicsLayers.size(); }
 
     bool handleMouseEvent(const PlatformMouseEvent&);
 
@@ -98,16 +96,14 @@ private:
     void paintContents(const GraphicsLayer*, GraphicsContext&, const FloatRect& clipRect, OptionSet<GraphicsLayerPaintBehavior>) override;
     float deviceScaleFactor() const override;
     bool shouldSkipLayerInDump(const GraphicsLayer*, OptionSet<LayerTreeAsTextOptions>) const override;
-    bool shouldDumpPropertyForLayer(const GraphicsLayer*, ASCIILiteral propertyName, OptionSet<LayerTreeAsTextOptions>) const override;
+    bool shouldDumpPropertyForLayer(const GraphicsLayer*, const char* propertyName, OptionSet<LayerTreeAsTextOptions>) const override;
     void tiledBackingUsageChanged(const GraphicsLayer*, bool) override;
 
-    Ref<Page> protectedPage() const;
-
-    WeakRef<Page> m_page;
+    Page& m_page;
     RefPtr<GraphicsLayer> m_documentOverlayRootLayer;
     RefPtr<GraphicsLayer> m_viewOverlayRootLayer;
 
-    WeakHashMap<PageOverlay, Ref<GraphicsLayer>> m_overlayGraphicsLayers;
+    HashMap<PageOverlay*, Ref<GraphicsLayer>> m_overlayGraphicsLayers;
     Vector<RefPtr<PageOverlay>> m_pageOverlays;
     bool m_initialized { false };
 };

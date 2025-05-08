@@ -90,8 +90,6 @@ public:
 
         bool isClosed() const { return m_isClosed; }
 
-        virtual void removeNavigationFetch(SWServerConnectionIdentifier, FetchIdentifier) = 0;
-
     protected:
         void setAsClosed() { m_isClosed = true; }
 
@@ -135,7 +133,6 @@ public:
     WEBCORE_EXPORT void fireUpdateFoundEvent(ServiceWorkerRegistrationIdentifier);
     WEBCORE_EXPORT void setRegistrationLastUpdateTime(ServiceWorkerRegistrationIdentifier, WallTime);
     WEBCORE_EXPORT void setRegistrationUpdateViaCache(ServiceWorkerRegistrationIdentifier, ServiceWorkerUpdateViaCache);
-    WEBCORE_EXPORT void removeFetch(ServiceWorkerIdentifier, SWServerConnectionIdentifier, FetchIdentifier, bool isNavigationFetch);
 
 private:
     SWContextManager() = default;

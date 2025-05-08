@@ -24,11 +24,9 @@
 #include "QualifiedName.h"
 #include "SVGStringList.h"
 #include <wtf/RobinHoodHashSet.h>
-#include <wtf/WeakRef.h>
 
 namespace WebCore {
 
-class QualifiedName;
 class SVGElement;
 class SVGStringList;
 class WeakPtrImplWithEventTargetData;
@@ -73,19 +71,14 @@ public:
 
     // These methods are called from DOM through the super classes.
     SVGStringList& requiredFeatures() { return conditionalProcessingAttributes().requiredFeatures(); }
-    Ref<SVGStringList> protectedRequiredFeatures();
     SVGStringList& requiredExtensions() { return conditionalProcessingAttributes().requiredExtensions(); }
-    Ref<SVGStringList> protectedRequiredExtensions();
     SVGStringList& systemLanguage() { return conditionalProcessingAttributes().systemLanguage(); }
-    Ref<SVGStringList> protectedSystemLanguage();
 
 protected:
     SVGTests(SVGElement* contextElement);
 
 private:
-    Ref<SVGElement> protectedContextElement() const;
-
-    WeakRef<SVGElement, WeakPtrImplWithEventTargetData> m_contextElement;
+    SVGElement& m_contextElement;
 };
 
 } // namespace WebCore

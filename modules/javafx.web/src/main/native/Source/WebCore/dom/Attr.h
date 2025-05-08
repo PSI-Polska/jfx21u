@@ -34,8 +34,7 @@ class CSSStyleDeclaration;
 class MutableStyleProperties;
 
 class Attr final : public Node {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(Attr);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(Attr);
+    WTF_MAKE_ISO_ALLOCATED(Attr);
 public:
     static Ref<Attr> create(Element&, const QualifiedName&);
     static Ref<Attr> create(Document&, const QualifiedName&, const AtomString& value);
@@ -50,7 +49,7 @@ public:
 #endif
 
     WEBCORE_EXPORT AtomString value() const;
-    WEBCORE_EXPORT ExceptionOr<void> setValue(const AtomString&);
+    WEBCORE_EXPORT void setValue(const AtomString&);
 
     const QualifiedName& qualifiedName() const { return m_name; }
 
@@ -70,7 +69,7 @@ private:
     String nodeName() const final { return name(); }
 
     String nodeValue() const final { return value(); }
-    ExceptionOr<void> setNodeValue(const String&) final;
+    void setNodeValue(const String&) final;
 
     ExceptionOr<void> setPrefix(const AtomString&) final;
 

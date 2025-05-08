@@ -29,7 +29,7 @@
 
 namespace WebCore {
 
-class CSSQuadValue final : public CSSValue {
+class CSSQuadValue : public CSSValue {
 public:
     static Ref<CSSQuadValue> create(Quad);
 

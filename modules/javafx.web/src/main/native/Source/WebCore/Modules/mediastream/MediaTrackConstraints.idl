@@ -25,7 +25,6 @@
 [
     Conditional=MEDIA_STREAM,
     JSGenerateToJSObject,
-    JSGenerateToNativeObject,
 ] dictionary MediaTrackConstraints : MediaTrackConstraintSet {
     sequence<MediaTrackConstraintSet> advanced;
 };
@@ -33,7 +32,6 @@
 [
     Conditional=MEDIA_STREAM,
     JSGenerateToJSObject,
-    JSGenerateToNativeObject,
     ImplementedAs=MediaTrackConstraintSet
 ] dictionary MediaTrackConstraintSet {
     ConstrainLong width;
@@ -72,8 +70,6 @@
 
     ConstrainBoolean torch;
 
-    ConstrainBoolean backgroundBlur;
-    ConstrainBoolean powerEfficient;
 };
 
 typedef (double or ConstrainDoubleRange) ConstrainDouble;
@@ -84,7 +80,6 @@ typedef (DOMString or sequence<DOMString> or ConstrainDOMStringParameters) Const
 [
     Conditional=MEDIA_STREAM,
     JSGenerateToJSObject,
-    JSGenerateToNativeObject,
     ImplementedAs=ConstrainBooleanParameters
 ] dictionary ConstrainBooleanParameters {
     boolean exact;
@@ -94,7 +89,6 @@ typedef (DOMString or sequence<DOMString> or ConstrainDOMStringParameters) Const
 [
     Conditional=MEDIA_STREAM,
     JSGenerateToJSObject,
-    JSGenerateToNativeObject,
     ImplementedAs=ConstrainDOMStringParameters
 ] dictionary ConstrainDOMStringParameters {
     (DOMString or sequence<DOMString>) exact;
@@ -104,7 +98,6 @@ typedef (DOMString or sequence<DOMString> or ConstrainDOMStringParameters) Const
 [
     Conditional=MEDIA_STREAM,
     JSGenerateToJSObject,
-    JSGenerateToNativeObject,
     ImplementedAs=ConstrainDoubleRange
 ] dictionary ConstrainDoubleRange : DoubleRange {
     double exact;
@@ -114,7 +107,6 @@ typedef (DOMString or sequence<DOMString> or ConstrainDOMStringParameters) Const
 [
     Conditional=MEDIA_STREAM,
     JSGenerateToJSObject,
-    JSGenerateToNativeObject,
     ImplementedAs=ConstrainLongRange
 ] dictionary ConstrainLongRange : LongRange {
     long exact;

@@ -52,7 +52,7 @@ CString FileSystem::fileSystemRepresentation(const String& path)
         return CString();
     }
 
-    return buffer.data();
+    return CString(buffer.data(), strlen(buffer.data()));
 }
 
 String FileSystem::stringFromFileSystemRepresentation(const char* fileSystemRepresentation)

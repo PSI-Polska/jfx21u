@@ -28,7 +28,6 @@
 
 #include "InstrumentingAgents.h"
 #include "WebConsoleAgent.h"
-#include <JavaScriptCore/InspectorProtocolTypes.h>
 #include <wtf/Lock.h>
 #include <wtf/RunLoop.h>
 
@@ -37,7 +36,7 @@ namespace WebCore {
 using namespace Inspector;
 
 struct GarbageCollectionData {
-    Inspector::Protocol::Heap::GarbageCollection::Type type;
+    Protocol::Heap::GarbageCollection::Type type;
     Seconds startTime;
     Seconds endTime;
 };
@@ -105,7 +104,7 @@ WebHeapAgent::WebHeapAgent(WebAgentContext& context)
 
 WebHeapAgent::~WebHeapAgent() = default;
 
-Inspector::Protocol::ErrorStringOr<void> WebHeapAgent::enable()
+Protocol::ErrorStringOr<void> WebHeapAgent::enable()
 {
     auto result = InspectorHeapAgent::enable();
 
@@ -115,7 +114,7 @@ Inspector::Protocol::ErrorStringOr<void> WebHeapAgent::enable()
     return result;
 }
 
-Inspector::Protocol::ErrorStringOr<void> WebHeapAgent::disable()
+Protocol::ErrorStringOr<void> WebHeapAgent::disable()
 {
     m_sendGarbageCollectionEventsTask->reset();
 
@@ -125,7 +124,7 @@ Inspector::Protocol::ErrorStringOr<void> WebHeapAgent::disable()
     return InspectorHeapAgent::disable();
 }
 
-void WebHeapAgent::dispatchGarbageCollectedEvent(Inspector::Protocol::Heap::GarbageCollection::Type type, Seconds startTime, Seconds endTime)
+void WebHeapAgent::dispatchGarbageCollectedEvent(Protocol::Heap::GarbageCollection::Type type, Seconds startTime, Seconds endTime)
 {
     // Dispatch the event asynchronously because this method may be
     // called between collection and sweeping and we don't want to

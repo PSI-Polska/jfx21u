@@ -28,6 +28,7 @@
 #pragma once
 
 #include "ActiveDOMObject.h"
+#include "CSSParserContext.h"
 #include "CanvasBase.h"
 #include "Document.h"
 #include "FloatRect.h"
@@ -62,8 +63,7 @@ struct ImageBitmapRenderingContextSettings;
 struct UncachedString;
 
 class HTMLCanvasElement final : public HTMLElement, public CanvasBase, public ActiveDOMObject {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLCanvasElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLCanvasElement);
+    WTF_MAKE_ISO_ALLOCATED(HTMLCanvasElement);
 public:
     static Ref<HTMLCanvasElement> create(Document&);
     static Ref<HTMLCanvasElement> create(const QualifiedName&, Document&);
@@ -118,15 +118,13 @@ public:
     ExceptionOr<Ref<MediaStream>> captureStream(std::optional<double>&& frameRequestRate);
 #endif
 
-    const CSSParserContext& cssParserContext() const final;
-
     Image* copiedImage() const final;
     void clearCopiedImage() const final;
     RefPtr<ImageData> getImageData();
 
     SecurityOrigin* securityOrigin() const final;
 
-    // FIXME(https://bugs.webkit.org/show_bug.cgi?id=275100): Only some canvas rendering contexts need an ImageBuffer.
+    // FIXME: Only some canvas rendering contexts need an ImageBuffer.
     // It would be better to have the contexts own the buffers.
     void setImageBufferAndMarkDirty(RefPtr<ImageBuffer>&&) final;
 
@@ -141,11 +139,10 @@ public:
     void queueTaskKeepingObjectAlive(TaskSource, Function<void()>&&) final;
     void dispatchEvent(Event&) final;
 
-    // ActiveDOMObject.
-    void ref() const final { HTMLElement::ref(); }
-    void deref() const final { HTMLElement::deref(); }
+    CSSParserContext& cssParserContext();
 
-    using HTMLElement::scriptExecutionContext;
+    using HTMLElement::ref;
+    using HTMLElement::deref;
 
 private:
     HTMLCanvasElement(const QualifiedName&, Document&);
@@ -153,6 +150,7 @@ private:
     bool isHTMLCanvasElement() const final { return true; }
 
     // ActiveDOMObject.
+    const char* activeDOMObjectName() const final;
     bool virtualHasPendingActivity() const final;
 
     // EventTarget.
@@ -171,12 +169,16 @@ private:
     void createImageBuffer() const final;
     void clearImageBuffer() const;
 
+    bool hasCreatedImageBuffer() const final { return m_hasCreatedImageBuffer; }
+
     void setSurfaceSize(const IntSize&);
 
-    bool usesContentsAsLayerContents() const;
+    bool paintsIntoCanvasBuffer() const;
 
-    void refCanvasBase() const final { HTMLElement::ref(); }
-    void derefCanvasBase() const final { HTMLElement::deref(); }
+    bool isGPUBased() const;
+
+    void refCanvasBase() final { HTMLElement::ref(); }
+    void derefCanvasBase() final { HTMLElement::deref(); }
 
     ScriptExecutionContext* canvasBaseScriptExecutionContext() const final { return HTMLElement::scriptExecutionContext(); }
 
@@ -184,14 +186,23 @@ private:
 
     std::unique_ptr<CanvasRenderingContext> m_context;
     mutable RefPtr<Image> m_copiedImage; // FIXME: This is temporary for platforms that have to copy the image buffer to render (and for CSSCanvasValue).
-    mutable std::unique_ptr<CSSParserContext> m_cssParserContext;
+    std::unique_ptr<CSSParserContext> m_cssParserContext;
     bool m_ignoreReset { false };
+    // m_hasCreatedImageBuffer means we tried to malloc the buffer. We didn't necessarily get it.
+    mutable bool m_hasCreatedImageBuffer { false };
     mutable bool m_didClearImageBuffer { false };
 #if ENABLE(WEBGL)
     bool m_hasRelevantWebGLEventListener { false };
 #endif
     bool m_isSnapshotting { false };
 };
+
+inline CSSParserContext& HTMLCanvasElement::cssParserContext()
+{
+    if (!m_cssParserContext)
+        m_cssParserContext = WTF::makeUnique<CSSParserContext>(document());
+    return *m_cssParserContext;
+}
 
 WebCoreOpaqueRoot root(HTMLCanvasElement*);
 

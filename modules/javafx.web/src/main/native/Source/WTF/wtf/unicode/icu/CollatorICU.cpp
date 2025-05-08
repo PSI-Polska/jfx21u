@@ -211,14 +211,14 @@ static void setStateLatin1(UCharIterator* iterator, uint32_t state, UErrorCode*)
     iterator->index = state;
 }
 
-static UCharIterator createLatin1Iterator(std::span<const LChar> characters)
+static UCharIterator createLatin1Iterator(const LChar* characters, int length)
 {
     UCharIterator iterator;
-    iterator.context = characters.data();
-    iterator.length = characters.size();
+    iterator.context = characters;
+    iterator.length = length;
     iterator.start = 0;
     iterator.index = 0;
-    iterator.limit = characters.size();
+    iterator.limit = length;
     iterator.reservedField = 0;
     iterator.getIndex = getIndexLatin1;
     iterator.move = moveLatin1;
@@ -236,10 +236,9 @@ static UCharIterator createLatin1Iterator(std::span<const LChar> characters)
 UCharIterator createIterator(StringView string)
 {
     if (string.is8Bit())
-        return createLatin1Iterator(string.span8());
+        return createLatin1Iterator(string.characters8(), string.length());
     UCharIterator iterator;
-    auto characters = string.span16();
-    uiter_setString(&iterator, characters.data(), characters.size());
+    uiter_setString(&iterator, string.characters16(), string.length());
     return iterator;
 }
 
@@ -253,17 +252,17 @@ int Collator::collate(StringView a, StringView b) const
     return result;
 }
 
-static UCharIterator createIterator(const char8_t* string)
+static UCharIterator createIteratorUTF8(const char* string)
 {
     UCharIterator iterator;
-    uiter_setUTF8(&iterator, byteCast<char>(string), strlen(byteCast<char>(string)));
+    uiter_setUTF8(&iterator, string, strlen(string));
     return iterator;
 }
 
-int Collator::collate(const char8_t* a, const char8_t* b) const
+int Collator::collateUTF8(const char* a, const char* b) const
 {
-    UCharIterator iteratorA = createIterator(a);
-    UCharIterator iteratorB = createIterator(b);
+    UCharIterator iteratorA = createIteratorUTF8(a);
+    UCharIterator iteratorB = createIteratorUTF8(b);
     UErrorCode status = U_ZERO_ERROR;
     int result = ucol_strcollIter(m_collator, &iteratorA, &iteratorB, &status);
     ASSERT(U_SUCCESS(status));

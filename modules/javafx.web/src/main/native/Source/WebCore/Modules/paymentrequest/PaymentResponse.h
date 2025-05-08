@@ -47,7 +47,7 @@ enum class PaymentComplete;
 template<typename IDLType> class DOMPromiseDeferred;
 
 class PaymentResponse final : public ActiveDOMObject, public EventTarget, public RefCounted<PaymentResponse> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(PaymentResponse);
+    WTF_MAKE_ISO_ALLOCATED(PaymentResponse);
 public:
     using DetailsFunction = Function<JSC::Strong<JSC::JSObject>(JSC::JSGlobalObject&)>;
 
@@ -92,20 +92,20 @@ public:
     bool hasRetryPromise() const { return !!m_retryPromise; }
     void settleRetryPromise(ExceptionOr<void>&& = { });
 
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
+    using RefCounted<PaymentResponse>::ref;
+    using RefCounted<PaymentResponse>::deref;
 
 private:
     PaymentResponse(ScriptExecutionContext*, PaymentRequest&);
     void finishConstruction();
 
     // ActiveDOMObject
+    const char* activeDOMObjectName() const final { return "PaymentResponse"; }
     void stop() final;
     void suspend(ReasonForSuspension) final;
 
     // EventTarget
-    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::PaymentResponse; }
+    EventTargetInterface eventTargetInterface() const final { return PaymentResponseEventTargetInterfaceType; }
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }

@@ -43,7 +43,6 @@ struct CSSCustomPropertySyntax {
         Image,
         URL,
         CustomIdent,
-        String,
         TransformFunction,
         TransformList,
         Unknown
@@ -71,7 +70,7 @@ struct CSSCustomPropertySyntax {
     static CSSCustomPropertySyntax universal() { return { }; }
 
 private:
-    template<typename CharacterType> static std::optional<Component> parseComponent(std::span<const CharacterType>);
+    template<typename CharacterType> static std::optional<Component> parseComponent(StringParsingBuffer<CharacterType>);
     static Type typeForTypeName(StringView);
 };
 

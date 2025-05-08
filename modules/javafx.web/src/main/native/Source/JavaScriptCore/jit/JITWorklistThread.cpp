@@ -62,13 +62,12 @@ JITWorklistThread::JITWorklistThread(const AbstractLocker& locker, JITWorklist& 
     , m_worklist(worklist)
 {
 }
-
-ASCIILiteral JITWorklistThread::name() const
+const char* JITWorklistThread::name() const
 {
 #if OS(LINUX)
-    return "JITWorker"_s;
+    return "JITWorker";
 #else
-    return "JIT Worklist Helper Thread"_s;
+    return "JIT Worklist Helper Thread";
 #endif
 }
 
@@ -110,7 +109,6 @@ auto JITWorklistThread::work() -> WorkResult
         Locker locker { *m_worklist.m_lock };
         if (m_plan->stage() == JITPlanStage::Canceled)
             return WorkResult::Continue;
-        m_state = State::Compiling;
         m_plan->notifyCompiling();
     }
 
@@ -132,7 +130,6 @@ auto JITWorklistThread::work() -> WorkResult
 
     {
         Locker locker { *m_worklist.m_lock };
-        m_state = State::NotCompiling;
         if (m_plan->stage() == JITPlanStage::Canceled)
             return WorkResult::Continue;
 

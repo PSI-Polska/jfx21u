@@ -20,6 +20,7 @@
 
 #pragma once
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "AffineTransform.h"
 #include "RadialGradientAttributes.h"
 #include "RenderSVGResourceGradient.h"
@@ -31,8 +32,7 @@ namespace WebCore {
 class SVGRadialGradientElement;
 
 class RenderSVGResourceRadialGradient final : public RenderSVGResourceGradient {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGResourceRadialGradient);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGResourceRadialGradient);
+    WTF_MAKE_ISO_ALLOCATED(RenderSVGResourceRadialGradient);
 public:
     RenderSVGResourceRadialGradient(SVGRadialGradientElement&, RenderStyle&&);
     virtual ~RenderSVGResourceRadialGradient();
@@ -62,3 +62,5 @@ private:
 }
 
 SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGResourceRadialGradient, isRenderSVGResourceRadialGradient())
+
+#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

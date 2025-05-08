@@ -30,8 +30,8 @@
 #include "IDBCursorDirection.h"
 #include "IDBKeyPath.h"
 #include "IDBObjectStoreInfo.h"
+#include <wtf/IsoMalloc.h>
 #include <wtf/Lock.h>
-#include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 
 namespace JSC {
@@ -59,7 +59,7 @@ enum class ObjectStoreOverwriteMode : uint8_t;
 }
 
 class IDBObjectStore final : public ActiveDOMObject {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(IDBObjectStore);
+    WTF_MAKE_ISO_ALLOCATED(IDBObjectStore);
 public:
     static UniqueRef<IDBObjectStore> create(ScriptExecutionContext&, const IDBObjectStoreInfo&, IDBTransaction&);
     ~IDBObjectStore();
@@ -108,9 +108,8 @@ public:
 
     void rollbackForVersionChangeAbort();
 
-    // ActiveDOMObject.
-    void ref() const final;
-    void deref() const final;
+    void ref();
+    void deref();
 
     template<typename Visitor> void visitReferencedIndexes(Visitor&) const;
     void renameReferencedIndex(IDBIndex&, const String& newName);
@@ -128,6 +127,7 @@ private:
     ExceptionOr<Ref<IDBRequest>> doGetAllKeys(std::optional<uint32_t> count, Function<ExceptionOr<RefPtr<IDBKeyRange>>()> &&);
 
     // ActiveDOMObject.
+    const char* activeDOMObjectName() const final;
     bool virtualHasPendingActivity() const final;
 
     IDBObjectStoreInfo m_info;

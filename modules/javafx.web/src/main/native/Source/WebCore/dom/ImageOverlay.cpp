@@ -64,7 +64,6 @@
 #include <wtf/Scope.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/AtomString.h>
-#include <wtf/text/MakeString.h>
 
 #if ENABLE(DATA_DETECTION)
 #include "DataDetection.h"
@@ -127,7 +126,7 @@ static RefPtr<HTMLElement> imageOverlayHost(const Node& node)
 
 bool isDataDetectorResult(const HTMLElement& element)
 {
-    return imageOverlayHost(element) && element.hasClassName(imageOverlayDataDetectorClass());
+    return imageOverlayHost(element) && element.hasClass() && element.classNames().contains(imageOverlayDataDetectorClass());
 }
 
 std::optional<CharacterRange> characterRange(const VisibleSelection& selection)
@@ -171,7 +170,7 @@ bool isInsideOverlay(const SimpleRange& range)
 bool isInsideOverlay(const Node& node)
 {
     RefPtr host = imageOverlayHost(node);
-    return host && host->protectedUserAgentShadowRoot()->contains(node);
+    return host && host->userAgentShadowRoot()->contains(node);
 }
 
 bool isOverlayText(const Node* node)
@@ -185,7 +184,7 @@ bool isOverlayText(const Node& node)
     if (!host)
         return false;
 
-    if (RefPtr overlay = host->protectedUserAgentShadowRoot()->getElementById(imageOverlayElementIdentifier()))
+    if (RefPtr overlay = host->userAgentShadowRoot()->getElementById(imageOverlayElementIdentifier()))
         return node.isDescendantOf(*overlay);
 
     return false;
@@ -196,7 +195,7 @@ void removeOverlaySoonIfNeeded(HTMLElement& element)
     if (!hasOverlay(element))
         return;
 
-    element.protectedDocument()->checkedEventLoop()->queueTask(TaskSource::InternalAsyncTask, [weakElement = WeakPtr { element }] {
+    element.protectedDocument()->eventLoop().queueTask(TaskSource::InternalAsyncTask, [weakElement = WeakPtr { element }] {
         RefPtr element = weakElement.get();
         if (!element)
             return;
@@ -231,7 +230,7 @@ IntRect containerRect(HTMLElement& element)
 
 static void installImageOverlayStyleSheet(ShadowRoot& shadowRoot)
 {
-    static MainThreadNeverDestroyed<const String> shadowStyle(StringImpl::createWithoutCopying(imageOverlayUserAgentStyleSheet));
+    static MainThreadNeverDestroyed<const String> shadowStyle(StringImpl::createWithoutCopying(imageOverlayUserAgentStyleSheet, sizeof(imageOverlayUserAgentStyleSheet)));
     Ref style = HTMLStyleElement::create(HTMLNames::styleTag, shadowRoot.protectedDocument(), false);
     style->setTextContent(String { shadowStyle });
     shadowRoot.appendChild(WTFMove(style));
@@ -261,19 +260,19 @@ static Elements updateSubtree(HTMLElement& element, const TextRecognitionResult&
         if (!mediaElement)
             return nullptr;
 
-        RefPtr shadowRoot = mediaElement->userAgentShadowRoot();
-        if (!shadowRoot)
-            return nullptr;
-
+        Ref shadowRoot = mediaElement->ensureUserAgentShadowRoot();
         RefPtr controlsHost = mediaElement->mediaControlsHost();
-        if (!controlsHost)
+        if (!controlsHost) {
+            ASSERT_NOT_REACHED();
             return nullptr;
+        }
 
         auto& containerClass = controlsHost->mediaControlsContainerClassName();
-        for (Ref child : childrenOfType<HTMLDivElement>(*shadowRoot)) {
-            if (child->hasClassName(containerClass))
-                return &child.get();
+        for (auto& child : childrenOfType<HTMLDivElement>(shadowRoot.get())) {
+            if (child.hasClass() && child.classNames().contains(containerClass))
+                return &child;
         }
+        ASSERT_NOT_REACHED();
         return nullptr;
     })();
 #endif // ENABLE(MODERN_MEDIA_CONTROLS)
@@ -288,9 +287,9 @@ static Elements updateSubtree(HTMLElement& element, const TextRecognitionResult&
                 containerForImageOverlay = mediaControlsContainer;
             else
                 containerForImageOverlay = shadowRoot;
-            for (Ref child : childrenOfType<HTMLDivElement>(*containerForImageOverlay)) {
-                if (child->getIdAttribute() == imageOverlayElementIdentifier()) {
-                    elements.root = &child.get();
+            for (auto& child : childrenOfType<HTMLDivElement>(*containerForImageOverlay)) {
+                if (child.getIdAttribute() == imageOverlayElementIdentifier()) {
+                    elements.root = &child;
                     hadExistingElements = true;
                     continue;
                 }
@@ -300,26 +299,26 @@ static Elements updateSubtree(HTMLElement& element, const TextRecognitionResult&
 
     bool canUseExistingElements = false;
     if (elements.root) {
-        for (Ref childElement : childrenOfType<HTMLDivElement>(*elements.root)) {
-            if (!childElement->hasClass())
+        for (auto& childElement : childrenOfType<HTMLDivElement>(*elements.root)) {
+            if (!childElement.hasClass())
                 continue;
 
-            auto& classes = childElement->classList();
+            auto& classes = childElement.classList();
             if (classes.contains(imageOverlayDataDetectorClass())) {
-                elements.dataDetectors.append(childElement.get());
+                elements.dataDetectors.append(childElement);
                 continue;
             }
 
             if (classes.contains(imageOverlayBlockClass())) {
-                elements.blocks.append(childElement.get());
+                elements.blocks.append(childElement);
                 continue;
             }
 
             ASSERT(classes.contains(imageOverlayLineClass()));
             Vector<Ref<HTMLElement>> lineChildren;
-            for (Ref text : childrenOfType<HTMLDivElement>(childElement.get()))
-                lineChildren.append(text.get());
-            elements.lines.append({ childElement.get(), WTFMove(lineChildren), childrenOfType<HTMLBRElement>(childElement.get()).first() });
+            for (auto& text : childrenOfType<HTMLDivElement>(childElement))
+                lineChildren.append(text);
+            elements.lines.append({ childElement, WTFMove(lineChildren), childrenOfType<HTMLBRElement>(childElement).first() });
         }
 
         canUseExistingElements = ([&] {
@@ -353,11 +352,11 @@ static Elements updateSubtree(HTMLElement& element, const TextRecognitionResult&
             for (size_t index = 0; index < result.blocks.size(); ++index) {
                 auto textContentByLine = result.blocks[index].text.split(newlineCharacter);
                 size_t lineIndex = 0;
-                for (Ref text : childrenOfType<Text>(elements.blocks[index])) {
+                for (auto& text : childrenOfType<Text>(elements.blocks[index])) {
                     if (textContentByLine.size() <= lineIndex)
                         return false;
 
-                    if (StringView(textContentByLine[lineIndex++]).trim(deprecatedIsSpaceOrNewline) != StringView(text->wholeText()).trim(deprecatedIsSpaceOrNewline))
+                    if (StringView(textContentByLine[lineIndex++]).trim(deprecatedIsSpaceOrNewline) != StringView(text.wholeText()).trim(deprecatedIsSpaceOrNewline))
                         return false;
                 }
             }

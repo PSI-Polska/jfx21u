@@ -55,7 +55,9 @@ UseCounts::UseCounts(Procedure& procedure)
     }
 }
 
-UseCounts::~UseCounts() = default;
+UseCounts::~UseCounts()
+{
+}
 
 } } // namespace JSC::B3
 

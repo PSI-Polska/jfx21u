@@ -37,7 +37,6 @@
 #include <unicode/ucal.h>
 #include <unicode/uenum.h>
 #include <wtf/Range.h>
-#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/unicode/CharacterNames.h>
 #include <wtf/unicode/icu/ICUHelpers.h>
@@ -124,7 +123,7 @@ static String canonicalizeTimeZoneName(const String& timeZoneName)
         if (!ianaTimeZone)
             break;
 
-        StringView ianaTimeZoneView(std::span(ianaTimeZone, ianaTimeZoneLength));
+        StringView ianaTimeZoneView(ianaTimeZone, ianaTimeZoneLength);
         if (!equalIgnoringASCIICase(timeZoneName, ianaTimeZoneView))
             continue;
 
@@ -140,7 +139,7 @@ static String canonicalizeTimeZoneName(const String& timeZoneName)
     } while (canonical.isNull());
     uenum_close(timeZones);
 
-    // 3. If ianaTimeZone is "Etc/UTC", "Etc/GMT", or "GMT", then return "UTC".
+    // 3. If ianaTimeZone is "Etc/UTC" or "Etc/GMT", then return "UTC".
     if (isUTCEquivalent(canonical))
         return "UTC"_s;
 
@@ -160,7 +159,7 @@ Vector<String> IntlDateTimeFormat::localeData(const String& locale, RelevantExte
         int32_t nameLength;
         while (const char* availableName = uenum_next(calendars, &nameLength, &status)) {
             ASSERT(U_SUCCESS(status));
-            String calendar = String({ availableName, static_cast<size_t>(nameLength) });
+            String calendar = String(availableName, nameLength);
             keyLocaleData.append(calendar);
             // Adding "islamicc" candidate for backward compatibility.
             if (calendar == "islamic-civil"_s)
@@ -475,13 +474,13 @@ String IntlDateTimeFormat::buildSkeleton(Weekday weekday, Era era, Year year, Mo
 
     switch (weekday) {
     case Weekday::Narrow:
-        skeletonBuilder.append("EEEEE"_s);
+        skeletonBuilder.append("EEEEE");
         break;
     case Weekday::Short:
-        skeletonBuilder.append("EEE"_s);
+        skeletonBuilder.append("EEE");
         break;
     case Weekday::Long:
-        skeletonBuilder.append("EEEE"_s);
+        skeletonBuilder.append("EEEE");
         break;
     case Weekday::None:
         break;
@@ -489,13 +488,13 @@ String IntlDateTimeFormat::buildSkeleton(Weekday weekday, Era era, Year year, Mo
 
     switch (era) {
     case Era::Narrow:
-        skeletonBuilder.append("GGGGG"_s);
+        skeletonBuilder.append("GGGGG");
         break;
     case Era::Short:
-        skeletonBuilder.append("GGG"_s);
+        skeletonBuilder.append("GGG");
         break;
     case Era::Long:
-        skeletonBuilder.append("GGGG"_s);
+        skeletonBuilder.append("GGGG");
         break;
     case Era::None:
         break;
@@ -503,7 +502,7 @@ String IntlDateTimeFormat::buildSkeleton(Weekday weekday, Era era, Year year, Mo
 
     switch (year) {
     case Year::TwoDigit:
-        skeletonBuilder.append("yy"_s);
+        skeletonBuilder.append("yy");
         break;
     case Year::Numeric:
         skeletonBuilder.append('y');
@@ -514,19 +513,19 @@ String IntlDateTimeFormat::buildSkeleton(Weekday weekday, Era era, Year year, Mo
 
     switch (month) {
     case Month::TwoDigit:
-        skeletonBuilder.append("MM"_s);
+        skeletonBuilder.append("MM");
         break;
     case Month::Numeric:
         skeletonBuilder.append('M');
         break;
     case Month::Narrow:
-        skeletonBuilder.append("MMMMM"_s);
+        skeletonBuilder.append("MMMMM");
         break;
     case Month::Short:
-        skeletonBuilder.append("MMM"_s);
+        skeletonBuilder.append("MMM");
         break;
     case Month::Long:
-        skeletonBuilder.append("MMMM"_s);
+        skeletonBuilder.append("MMMM");
         break;
     case Month::None:
         break;
@@ -534,7 +533,7 @@ String IntlDateTimeFormat::buildSkeleton(Weekday weekday, Era era, Year year, Mo
 
     switch (day) {
     case Day::TwoDigit:
-        skeletonBuilder.append("dd"_s);
+        skeletonBuilder.append("dd");
         break;
     case Day::Numeric:
         skeletonBuilder.append('d');
@@ -594,13 +593,13 @@ String IntlDateTimeFormat::buildSkeleton(Weekday weekday, Era era, Year year, Mo
     // https://unicode-org.atlassian.net/browse/ICU-20731
     switch (dayPeriod) {
     case DayPeriod::Narrow:
-        skeletonBuilder.append("BBBBB"_s);
+        skeletonBuilder.append("BBBBB");
         break;
     case DayPeriod::Short:
         skeletonBuilder.append('B');
         break;
     case DayPeriod::Long:
-        skeletonBuilder.append("BBBB"_s);
+        skeletonBuilder.append("BBBB");
         break;
     case DayPeriod::None:
         break;
@@ -608,7 +607,7 @@ String IntlDateTimeFormat::buildSkeleton(Weekday weekday, Era era, Year year, Mo
 
     switch (minute) {
     case Minute::TwoDigit:
-        skeletonBuilder.append("mm"_s);
+        skeletonBuilder.append("mm");
         break;
     case Minute::Numeric:
         skeletonBuilder.append('m');
@@ -619,7 +618,7 @@ String IntlDateTimeFormat::buildSkeleton(Weekday weekday, Era era, Year year, Mo
 
     switch (second) {
     case Second::TwoDigit:
-        skeletonBuilder.append("ss"_s);
+        skeletonBuilder.append("ss");
         break;
     case Second::Numeric:
         skeletonBuilder.append('s');
@@ -636,19 +635,19 @@ String IntlDateTimeFormat::buildSkeleton(Weekday weekday, Era era, Year year, Mo
         skeletonBuilder.append('z');
         break;
     case TimeZoneName::Long:
-        skeletonBuilder.append("zzzz"_s);
+        skeletonBuilder.append("zzzz");
         break;
     case TimeZoneName::ShortOffset:
         skeletonBuilder.append('O');
         break;
     case TimeZoneName::LongOffset:
-        skeletonBuilder.append("OOOO"_s);
+        skeletonBuilder.append("OOOO");
         break;
     case TimeZoneName::ShortGeneric:
         skeletonBuilder.append('v');
         break;
     case TimeZoneName::LongGeneric:
-        skeletonBuilder.append("vvvv"_s);
+        skeletonBuilder.append("vvvv");
         break;
     case TimeZoneName::None:
         break;
@@ -744,7 +743,7 @@ void IntlDateTimeFormat::initializeDateTimeFormat(JSGlobalObject* globalObject, 
             int64_t minutes = minutesValue.value();
             int64_t absMinutes = std::abs(minutes);
             tz = makeString(minutes < 0 ? '-' : '+', pad('0', 2, absMinutes / 60), ':', pad('0', 2, absMinutes % 60));
-            timeZoneForICU = makeString("GMT"_s, minutes < 0 ? '-' : '+', pad('0', 2, absMinutes / 60), pad('0', 2, absMinutes % 60));
+            timeZoneForICU = makeString("GMT", minutes < 0 ? '-' : '+', pad('0', 2, absMinutes / 60), pad('0', 2, absMinutes % 60));
         } else {
             tz = canonicalizeTimeZoneName(originalTz);
             if (tz.isNull()) {
@@ -889,9 +888,9 @@ void IntlDateTimeFormat::initializeDateTimeFormat(JSGlobalObject* globalObject, 
                     return;
                 }
                 replaceHourCycleInSkeleton(skeleton, specifiedHour12);
-                dataLogLnIf(IntlDateTimeFormatInternal::verbose, "replaced:(", StringView { skeleton.span() }, ")");
+                dataLogLnIf(IntlDateTimeFormatInternal::verbose, "replaced:(", StringView(skeleton.data(), skeleton.size()), ")");
 
-                patternBuffer = vm.intlCache().getBestDateTimePattern(dataLocaleWithExtensions, skeleton.span(), status);
+                patternBuffer = vm.intlCache().getBestDateTimePattern(dataLocaleWithExtensions, skeleton.data(), skeleton.size(), status);
                 if (U_FAILURE(status)) {
                     throwTypeError(globalObject, scope, "failed to initialize DateTimeFormat"_s);
                     return;
@@ -930,7 +929,7 @@ void IntlDateTimeFormat::initializeDateTimeFormat(JSGlobalObject* globalObject, 
 
         String skeleton = buildSkeleton(weekday, era, year, month, day, hour12, hourCycle, hour, dayPeriod, minute, second, fractionalSecondDigits, timeZoneName);
         UErrorCode status = U_ZERO_ERROR;
-        patternBuffer = vm.intlCache().getBestDateTimePattern(dataLocaleWithExtensions, StringView(skeleton).upconvertedCharacters(), status);
+        patternBuffer = vm.intlCache().getBestDateTimePattern(dataLocaleWithExtensions, StringView(skeleton).upconvertedCharacters().get(), skeleton.length(), status);
         if (U_FAILURE(status)) {
             throwTypeError(globalObject, scope, "failed to initialize DateTimeFormat"_s);
             return;
@@ -941,7 +940,7 @@ void IntlDateTimeFormat::initializeDateTimeFormat(JSGlobalObject* globalObject, 
     if (hourCycle != HourCycle::None)
         replaceHourCycleInPattern(patternBuffer, hourCycle);
 
-    StringView pattern(patternBuffer.span());
+    StringView pattern(patternBuffer.data(), patternBuffer.size());
     setFormatsFromPattern(pattern);
 
     dataLogLnIf(IntlDateTimeFormatInternal::verbose, "locale:(", m_locale, "),dataLocale:(", dataLocaleWithExtensions, "),pattern:(", pattern, ")");
@@ -1357,7 +1356,7 @@ JSValue IntlDateTimeFormat::formatToParts(JSGlobalObject* globalObject, double v
     if (!parts)
         return throwOutOfMemoryError(globalObject, scope);
 
-    StringView resultStringView(result.span());
+    StringView resultStringView(result.data(), result.size());
     auto literalString = jsNontrivialString(vm, "literal"_s);
 
     int32_t resultLength = result.size();
@@ -1430,9 +1429,9 @@ UDateIntervalFormat* IntlDateTimeFormat::createDateIntervalFormatIfNecessary(JSG
     // While the pattern is including right HourCycle patterns, UDateIntervalFormat does not follow.
     // We need to enforce HourCycle by setting "hc" extension if it is specified.
     StringBuilder localeBuilder;
-    localeBuilder.append(m_dataLocale, "-u-ca-"_s, m_calendar, "-nu-"_s, m_numberingSystem);
+    localeBuilder.append(m_dataLocale, "-u-ca-", m_calendar, "-nu-", m_numberingSystem);
     if (m_hourCycle != HourCycle::None)
-        localeBuilder.append("-hc-"_s, hourCycleString(m_hourCycle));
+        localeBuilder.append("-hc-", hourCycleString(m_hourCycle));
     CString dataLocaleWithExtensions = localeBuilder.toString().utf8();
 
     UErrorCode status = U_ZERO_ERROR;
@@ -1579,7 +1578,7 @@ JSValue IntlDateTimeFormat::formatRange(JSGlobalObject* globalObject, double sta
         throwTypeError(globalObject, scope, "Failed to format date interval"_s);
         return { };
     }
-    Vector<UChar, 32> buffer(std::span<const UChar> { formattedStringPointer, static_cast<size_t>(formattedStringLength) });
+    Vector<UChar, 32> buffer(formattedStringPointer, formattedStringLength);
     replaceNarrowNoBreakSpaceOrThinSpaceWithNormalSpace(buffer);
 
     return jsString(vm, String(WTFMove(buffer)));
@@ -1695,10 +1694,10 @@ JSValue IntlDateTimeFormat::formatRangeToParts(JSGlobalObject* globalObject, dou
         throwTypeError(globalObject, scope, "Failed to format date interval"_s);
         return { };
     }
-    Vector<UChar, 32> buffer(std::span<const UChar> { formattedStringPointer, static_cast<size_t>(formattedStringLength) });
+    Vector<UChar, 32> buffer(formattedStringPointer, formattedStringLength);
     replaceNarrowNoBreakSpaceOrThinSpaceWithNormalSpace(buffer);
 
-    StringView resultStringView(buffer.span());
+    StringView resultStringView(buffer.data(), buffer.size());
 
     // We care multiple categories (UFIELD_CATEGORY_DATE and UFIELD_CATEGORY_DATE_INTERVAL_SPAN).
     // So we do not constraint iterator.

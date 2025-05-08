@@ -59,7 +59,7 @@ namespace {
 
 void reportTransactionFailed(ExecuteSQLCallback& requestCallback, SQLError& error)
 {
-    auto errorObject = Inspector::Protocol::Database::Error::create()
+    auto errorObject = Protocol::Database::Error::create()
         .setMessage(error.messageIsolatedCopy())
         .setCode(error.code())
         .release();
@@ -72,8 +72,6 @@ public:
     {
         return adoptRef(*new StatementCallback(context, WTFMove(requestCallback)));
     }
-
-    bool hasCallback() const final { return true; }
 
 private:
     StatementCallback(ScriptExecutionContext* context, Ref<ExecuteSQLCallback>&& requestCallback)
@@ -113,8 +111,6 @@ public:
         return adoptRef(*new StatementErrorCallback(context, WTFMove(requestCallback)));
     }
 
-    bool hasCallback() const final { return true; }
-
 private:
     StatementErrorCallback(ScriptExecutionContext* context, Ref<ExecuteSQLCallback>&& requestCallback)
         : SQLStatementErrorCallback(context)
@@ -137,8 +133,6 @@ public:
     {
         return adoptRef(*new TransactionCallback(context, sqlStatement, WTFMove(requestCallback)));
     }
-
-    bool hasCallback() const final { return true; }
 
 private:
     TransactionCallback(ScriptExecutionContext* context, const String& sqlStatement, Ref<ExecuteSQLCallback>&& requestCallback)
@@ -170,8 +164,6 @@ public:
         return adoptRef(*new TransactionErrorCallback(context, WTFMove(requestCallback)));
     }
 
-    bool hasCallback() const final { return true; }
-
 private:
     TransactionErrorCallback(ScriptExecutionContext* context, Ref<ExecuteSQLCallback>&& requestCallback)
         : SQLTransactionErrorCallback(context)
@@ -196,8 +188,6 @@ public:
     }
 
     CallbackResult<void> handleEvent() final { return { }; }
-
-    bool hasCallback() const final { return true; }
 
 private:
     TransactionSuccessCallback(ScriptExecutionContext* context)
@@ -243,7 +233,7 @@ void InspectorDatabaseAgent::willDestroyFrontendAndBackend(Inspector::Disconnect
     disable();
 }
 
-Inspector::Protocol::ErrorStringOr<void> InspectorDatabaseAgent::enable()
+Protocol::ErrorStringOr<void> InspectorDatabaseAgent::enable()
 {
     if (m_instrumentingAgents.enabledDatabaseAgent() == this)
         return makeUnexpected("Database domain already enabled"_s);
@@ -256,7 +246,7 @@ Inspector::Protocol::ErrorStringOr<void> InspectorDatabaseAgent::enable()
     return { };
 }
 
-Inspector::Protocol::ErrorStringOr<void> InspectorDatabaseAgent::disable()
+Protocol::ErrorStringOr<void> InspectorDatabaseAgent::disable()
 {
     if (m_instrumentingAgents.enabledDatabaseAgent() != this)
         return makeUnexpected("Database domain already disabled"_s);
@@ -268,7 +258,7 @@ Inspector::Protocol::ErrorStringOr<void> InspectorDatabaseAgent::disable()
     return { };
 }
 
-Inspector::Protocol::ErrorStringOr<Ref<JSON::ArrayOf<String>>> InspectorDatabaseAgent::getDatabaseTableNames(const Inspector::Protocol::Database::DatabaseId& databaseId)
+Protocol::ErrorStringOr<Ref<JSON::ArrayOf<String>>> InspectorDatabaseAgent::getDatabaseTableNames(const Protocol::Database::DatabaseId& databaseId)
 {
     if (m_instrumentingAgents.enabledDatabaseAgent() != this)
         return makeUnexpected("Database domain must be enabled"_s);
@@ -281,7 +271,7 @@ Inspector::Protocol::ErrorStringOr<Ref<JSON::ArrayOf<String>>> InspectorDatabase
     return names;
 }
 
-void InspectorDatabaseAgent::executeSQL(const Inspector::Protocol::Database::DatabaseId& databaseId, const String& query, Ref<ExecuteSQLCallback>&& requestCallback)
+void InspectorDatabaseAgent::executeSQL(const Protocol::Database::DatabaseId& databaseId, const String& query, Ref<ExecuteSQLCallback>&& requestCallback)
 {
     if (m_instrumentingAgents.enabledDatabaseAgent() != this) {
         requestCallback->sendFailure("Database domain must be enabled"_s);

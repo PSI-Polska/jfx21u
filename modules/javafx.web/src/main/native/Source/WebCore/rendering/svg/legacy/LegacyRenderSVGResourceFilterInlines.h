@@ -35,11 +35,6 @@ inline SVGFilterElement& LegacyRenderSVGResourceFilter::filterElement() const
     return downcast<SVGFilterElement>(LegacyRenderSVGResourceContainer::element());
 }
 
-inline Ref<SVGFilterElement> LegacyRenderSVGResourceFilter::protectedFilterElement() const
-{
-    return filterElement();
-}
-
 inline SVGUnitTypes::SVGUnitType LegacyRenderSVGResourceFilter::filterUnits() const
 {
     return filterElement().filterUnits();

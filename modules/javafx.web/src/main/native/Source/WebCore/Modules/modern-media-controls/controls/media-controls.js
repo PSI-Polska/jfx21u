@@ -228,10 +228,4 @@ class MediaControls extends LayoutNode
         else
             super.commitProperty(propertyName);
     }
-
-    disable()
-    {
-        this.element.removeEventListener("focusin", this);
-        window.removeEventListener("dragstart", this, true);
-    }
 }

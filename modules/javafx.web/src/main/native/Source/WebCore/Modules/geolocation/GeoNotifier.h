@@ -63,8 +63,6 @@ public:
     void timerFired();
     bool hasZeroTimeout() const;
 
-    Ref<PositionCallback> protectedSuccessCallback() { return m_successCallback; }
-
 private:
     GeoNotifier(Geolocation&, Ref<PositionCallback>&&, RefPtr<PositionErrorCallback>&&, PositionOptions&&);
 

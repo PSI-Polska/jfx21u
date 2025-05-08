@@ -155,9 +155,9 @@ void HeapSnapshotBuilder::analyzeIndexEdge(JSCell* from, JSCell* to, uint32_t in
     m_edges.append(HeapSnapshotEdge(from, to, index));
 }
 
-void HeapSnapshotBuilder::setOpaqueRootReachabilityReasonForCell(JSCell* cell, ASCIILiteral reason)
+void HeapSnapshotBuilder::setOpaqueRootReachabilityReasonForCell(JSCell* cell, const char* reason)
 {
-    if (reason.isEmpty() || m_snapshotType != SnapshotType::GCDebuggingSnapshot)
+    if (!reason || !*reason || m_snapshotType != SnapshotType::GCDebuggingSnapshot)
         return;
 
     Locker locker { m_buildingEdgeMutex };
@@ -280,32 +280,32 @@ static uint8_t edgeTypeToNumber(EdgeType type)
     return static_cast<uint8_t>(type);
 }
 
-static ASCIILiteral edgeTypeToString(EdgeType type)
+static const char* edgeTypeToString(EdgeType type)
 {
     switch (type) {
     case EdgeType::Internal:
-        return "Internal"_s;
+        return "Internal";
     case EdgeType::Property:
-        return "Property"_s;
+        return "Property";
     case EdgeType::Index:
-        return "Index"_s;
+        return "Index";
     case EdgeType::Variable:
-        return "Variable"_s;
+        return "Variable";
     }
     ASSERT_NOT_REACHED();
-    return "Internal"_s;
+    return "Internal";
 }
 
-static ASCIILiteral snapshotTypeToString(HeapSnapshotBuilder::SnapshotType type)
+static const char* snapshotTypeToString(HeapSnapshotBuilder::SnapshotType type)
 {
     switch (type) {
     case HeapSnapshotBuilder::SnapshotType::InspectorSnapshot:
-        return "Inspector"_s;
+        return "Inspector";
     case HeapSnapshotBuilder::SnapshotType::GCDebuggingSnapshot:
-        return "GCDebugging"_s;
+        return "GCDebugging";
     }
     ASSERT_NOT_REACHED();
-    return "Inspector"_s;
+    return "Inspector";
 }
 
 String HeapSnapshotBuilder::json()
@@ -427,7 +427,7 @@ String HeapSnapshotBuilder::json(Function<bool (const HeapSnapshotNode&)> allowN
         // <nodeId>, <sizeInBytes>, <nodeClassNameIndex>, <flags>, [<labelIndex>, <cellAddress>, <wrappedAddress>]
         json.append(',', node.identifier, ',', node.cell->estimatedSizeInBytes(vm), ',', classNameIndex, ',', flags);
         if (m_snapshotType == SnapshotType::GCDebuggingSnapshot)
-            json.append(',', labelIndex, ",\"0x"_s, hex(reinterpret_cast<uintptr_t>(node.cell), Lowercase), "\",\"0x"_s, hex(reinterpret_cast<uintptr_t>(wrappedAddress), Lowercase), '"');
+            json.append(',', labelIndex, ",\"0x", hex(reinterpret_cast<uintptr_t>(node.cell), Lowercase), "\",\"0x", hex(reinterpret_cast<uintptr_t>(wrappedAddress), Lowercase), '"');
     };
 
     bool firstEdge = true;
@@ -459,18 +459,18 @@ String HeapSnapshotBuilder::json(Function<bool (const HeapSnapshotNode&)> allowN
     };
 
     // version
-    json.append("{\"version\":2"_s);
+    json.append("{\"version\":2");
 
     // type
-    json.append(",\"type\":\""_s, snapshotTypeToString(m_snapshotType), '"');
+    json.append(",\"type\":\"", snapshotTypeToString(m_snapshotType), '"');
 
     // nodes
-    json.append(",\"nodes\":["_s);
+    json.append(",\"nodes\":[");
     // <root>
     if (m_snapshotType == SnapshotType::GCDebuggingSnapshot)
-        json.append("0,0,0,0,0,\"0x0\",\"0x0\""_s);
+        json.append("0,0,0,0,0,\"0x0\",\"0x0\"");
     else
-        json.append("0,0,0,0"_s);
+        json.append("0,0,0,0");
 
     for (HeapSnapshot* snapshot = m_profiler.mostRecentSnapshot(); snapshot; snapshot = snapshot->previous()) {
         for (auto& node : snapshot->m_nodes)
@@ -479,7 +479,7 @@ String HeapSnapshotBuilder::json(Function<bool (const HeapSnapshotNode&)> allowN
     json.append(']');
 
     // node class names
-    json.append(",\"nodeClassNames\":["_s);
+    json.append(",\"nodeClassNames\":[");
     Vector<String> orderedClassNames(classNameIndexes.size());
     for (auto& entry : classNameIndexes)
         orderedClassNames[entry.value] = entry.key;
@@ -539,16 +539,16 @@ String HeapSnapshotBuilder::json(Function<bool (const HeapSnapshotNode&)> allowN
     });
 
     // edges
-    json.append(",\"edges\":["_s);
+    json.append(",\"edges\":[");
     for (auto& edge : m_edges)
         appendEdgeJSON(edge);
     json.append(']');
 
     // edge types
-    json.append(",\"edgeTypes\":[\""_s, edgeTypeToString(EdgeType::Internal), "\",\""_s, edgeTypeToString(EdgeType::Property), "\",\""_s, edgeTypeToString(EdgeType::Index), "\",\""_s, edgeTypeToString(EdgeType::Variable), "\"]"_s);
+    json.append(",\"edgeTypes\":[\"", edgeTypeToString(EdgeType::Internal), "\",\"", edgeTypeToString(EdgeType::Property), "\",\"", edgeTypeToString(EdgeType::Index), "\",\"", edgeTypeToString(EdgeType::Variable), "\"]");
 
     // edge names
-    json.append(",\"edgeNames\":["_s);
+    json.append(",\"edgeNames\":[");
     Vector<UniquedStringImpl*> orderedEdgeNames(edgeNameIndexes.size());
     for (auto& entry : edgeNameIndexes)
         orderedEdgeNames[entry.value] = entry.key;
@@ -564,7 +564,7 @@ String HeapSnapshotBuilder::json(Function<bool (const HeapSnapshotNode&)> allowN
     json.append(']');
 
     if (m_snapshotType == SnapshotType::GCDebuggingSnapshot) {
-        json.append(",\"roots\":["_s);
+        json.append(",\"roots\":[");
 
         HeapSnapshot* snapshot = m_profiler.mostRecentSnapshot();
 
@@ -591,8 +591,8 @@ String HeapSnapshotBuilder::json(Function<bool (const HeapSnapshotNode&)> allowN
             json.append(',', result.iterator->value);
 
             unsigned reachabilityReasonIndex = 0;
-            if (!it.value.reachabilityFromOpaqueRootReasons.isNull()) {
-                auto result = labelIndexes.add(it.value.reachabilityFromOpaqueRootReasons, nextLabelIndex);
+            if (it.value.reachabilityFromOpaqueRootReasons) {
+                auto result = labelIndexes.add(String::fromLatin1(it.value.reachabilityFromOpaqueRootReasons), nextLabelIndex);
                 if (result.isNewEntry)
                     nextLabelIndex++;
                 reachabilityReasonIndex = result.iterator->value;
@@ -605,7 +605,7 @@ String HeapSnapshotBuilder::json(Function<bool (const HeapSnapshotNode&)> allowN
 
     if (m_snapshotType == SnapshotType::GCDebuggingSnapshot) {
         // internal node descriptions
-        json.append(",\"labels\":["_s);
+        json.append(",\"labels\":[");
 
         Vector<String> orderedLabels(labelIndexes.size());
         for (auto& entry : labelIndexes)

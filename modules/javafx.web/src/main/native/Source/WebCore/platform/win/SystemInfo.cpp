@@ -27,7 +27,7 @@
 #include "SystemInfo.h"
 
 #include <windows.h>
-#include <wtf/text/MakeString.h>
+#include <wtf/text/StringConcatenateNumbers.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -102,7 +102,7 @@ static String osVersionForUAString()
         break;
     }
 
-    auto familyName = (version >= WindowsNT3) ? "Windows NT "_s : "Windows CE "_s;
+    const char* familyName = (version >= WindowsNT3) ? "Windows NT " : "Windows CE ";
     return makeString(familyName, major, '.', minor);
 }
 
@@ -163,7 +163,7 @@ static String architectureTokenForUAString()
 
 String windowsVersionForUAString()
 {
-    return makeString(osVersionForUAString(), architectureTokenForUAString());
+    return osVersionForUAString() + architectureTokenForUAString();
 }
 
 } // namespace WebCore

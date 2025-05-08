@@ -44,7 +44,7 @@ class JSImmutableButterfly : public JSCell {
 public:
     static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
 
-    DECLARE_EXPORT_INFO;
+    DECLARE_INFO;
 
     inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue, IndexingType);
 
@@ -161,7 +161,7 @@ public:
     static CompleteSubspace* subspaceFor(VM& vm)
     {
         // We allocate out of the JSValue gigacage as other code expects all butterflies to live there.
-        return &vm.immutableButterflyAuxiliarySpace();
+        return &vm.immutableButterflyJSValueGigacageAuxiliarySpace();
     }
 
     // Only call this if you just allocated this butterfly.
@@ -178,12 +178,12 @@ public:
         return WTF::roundUpToMultipleOf<sizeof(WriteBarrier<Unknown>)>(sizeof(JSImmutableButterfly));
     }
 
-    static constexpr ptrdiff_t offsetOfPublicLength()
+    static ptrdiff_t offsetOfPublicLength()
     {
         return OBJECT_OFFSETOF(JSImmutableButterfly, m_header) + IndexingHeader::offsetOfPublicLength();
     }
 
-    static constexpr ptrdiff_t offsetOfVectorLength()
+    static ptrdiff_t offsetOfVectorLength()
     {
         return OBJECT_OFFSETOF(JSImmutableButterfly, m_header) + IndexingHeader::offsetOfVectorLength();
     }

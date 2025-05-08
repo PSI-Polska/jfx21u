@@ -35,7 +35,6 @@
 #include <wtf/Lock.h>
 #include <wtf/Threading.h>
 #include <wtf/WTFProcess.h>
-#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 #if HAVE(MACH_EXCEPTIONS)
@@ -185,7 +184,7 @@ int testExecutionTimeLimit()
         timeLimit = 100_ms + tierAdjustment;
         JSContextGroupSetExecutionTimeLimit(contextGroup, timeLimit.seconds(), shouldTerminateCallback, nullptr);
         {
-#if OS(LINUX) && CPU(ARM_THUMB2)
+#if OS(LINUX) && (CPU(MIPS) || CPU(ARM_THUMB2))
             Seconds timeAfterWatchdogShouldHaveFired = 500_ms + tierAdjustment;
 #else
             Seconds timeAfterWatchdogShouldHaveFired = 300_ms + tierAdjustment;
@@ -195,7 +194,7 @@ int testExecutionTimeLimit()
             exception = nullptr;
             JSValueRef* exn = &exception;
             shouldTerminateCallbackWasCalled = false;
-            auto thread = Thread::create("Rogue thread"_s, [=] {
+            auto thread = Thread::create("Rogue thread", [=] {
                 JSEvaluateScript(context, script, nullptr, nullptr, 1, exn);
             });
 
@@ -502,10 +501,10 @@ int testExecutionTimeLimit()
                     "var startTime = currentCPUTime();"
                     "while (true) {"
                         "for (var i = 0; i < 1000; i++);"
-                            "if (currentCPUTime() - startTime > "_s, timeAfterWatchdogShouldHaveFired.seconds(), ") break;"
+                            "if (currentCPUTime() - startTime > ", timeAfterWatchdogShouldHaveFired.seconds(), ") break;"
                     "}"
                 "}"
-                "foo();"_s
+                "foo();"
             ).utf8();
 
             JSStringRef script = JSStringCreateWithUTF8CString(scriptText.data());

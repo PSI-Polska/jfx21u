@@ -121,10 +121,10 @@ public:
 
     bool hadRulesMutation() const { return m_mutatedRules; }
     void clearHadRulesMutation() { m_mutatedRules = false; }
-    RefPtr<StyleRuleWithNesting> prepareChildStyleRuleForNesting(StyleRule&);
+    RefPtr<StyleRuleWithNesting> prepareChildStyleRuleForNesting(StyleRule&&);
 
     enum RuleMutationType { OtherMutation, RuleInsertion, KeyframesRuleMutation, RuleReplace };
-    enum class ContentsClonedForMutation : bool { No, Yes };
+    enum WhetherContentsWereClonedForMutation { ContentsWereNotClonedForMutation = 0, ContentsWereClonedForMutation };
 
     class RuleMutationScope {
         WTF_MAKE_NONCOPYABLE(RuleMutationScope);
@@ -136,13 +136,13 @@ public:
     private:
         CSSStyleSheet* m_styleSheet;
         RuleMutationType m_mutationType;
-        ContentsClonedForMutation m_contentsClonedForMutation;
+        WhetherContentsWereClonedForMutation m_contentsWereClonedForMutation;
         RefPtr<StyleRuleKeyframes> m_insertedKeyframesRule;
         String m_modifiedKeyframesRuleName;
     };
 
-    ContentsClonedForMutation willMutateRules();
-    void didMutateRules(RuleMutationType, ContentsClonedForMutation, StyleRuleKeyframes* insertedKeyframesRule, const String& modifiedKeyframesRuleName);
+    WhetherContentsWereClonedForMutation willMutateRules();
+    void didMutateRules(RuleMutationType, WhetherContentsWereClonedForMutation, StyleRuleKeyframes* insertedKeyframesRule, const String& modifiedKeyframesRuleName);
     void didMutateRuleFromCSSStyleDeclaration();
     void didMutate();
 

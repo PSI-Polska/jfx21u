@@ -33,8 +33,7 @@
 namespace WebCore {
 
 class LegacyRenderSVGRect final : public LegacyRenderSVGShape {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(LegacyRenderSVGRect);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LegacyRenderSVGRect);
+    WTF_MAKE_ISO_ALLOCATED(LegacyRenderSVGRect);
 public:
     LegacyRenderSVGRect(SVGRectElement&, RenderStyle&&);
     virtual ~LegacyRenderSVGRect();
@@ -60,5 +59,3 @@ private:
 };
 
 } // namespace WebCore
-
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(LegacyRenderSVGRect, isLegacyRenderSVGRect())

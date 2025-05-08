@@ -82,12 +82,10 @@ FontPlatformData FontPlatformData::cloneWithSize(const FontPlatformData& source,
     return copy;
 }
 
-#if !USE(SKIA)
 void FontPlatformData::updateSize(float size)
 {
     m_size = size;
 }
-#endif
 #endif
 
 void FontPlatformData::updateSizeWithFontSizeAdjust(const FontSizeAdjust& fontSizeAdjust, float computedSize)
@@ -114,7 +112,7 @@ const FontPlatformData::CreationData* FontPlatformData::creationData() const
 #endif
 }
 
-#if !PLATFORM(COCOA) && !USE(FREETYPE) && !USE(SKIA)
+#if !PLATFORM(COCOA) && !USE(FREETYPE)
 Vector<FontPlatformData::FontVariationAxis> FontPlatformData::variationAxes(ShouldLocalizeAxisNames) const
 {
     // FIXME: <webkit.org/b/219614> Not implemented yet.

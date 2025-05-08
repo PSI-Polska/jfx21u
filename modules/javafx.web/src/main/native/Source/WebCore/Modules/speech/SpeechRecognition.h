@@ -36,8 +36,8 @@ namespace WebCore {
 class Document;
 class SpeechRecognitionResult;
 
-class SpeechRecognition final : public SpeechRecognitionConnectionClient, public ActiveDOMObject, public RefCounted<SpeechRecognition>, public EventTarget  {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SpeechRecognition);
+class SpeechRecognition : public SpeechRecognitionConnectionClient, public ActiveDOMObject, public RefCounted<SpeechRecognition>, public EventTarget  {
+    WTF_MAKE_ISO_ALLOCATED(SpeechRecognition);
 public:
     static Ref<SpeechRecognition> create(Document&);
 
@@ -61,9 +61,8 @@ public:
     void stopRecognition();
     void abortRecognition();
 
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
+    using RefCounted::ref;
+    using RefCounted::deref;
 
     virtual ~SpeechRecognition();
 
@@ -92,15 +91,15 @@ private:
     void didEnd() final;
 
     // ActiveDOMObject
+    const char* activeDOMObjectName() const final;
     void suspend(ReasonForSuspension) final;
     void stop() final;
 
     // EventTarget
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
-    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::SpeechRecognition; }
+    EventTargetInterface eventTargetInterface() const final { return SpeechRecognitionEventTargetInterfaceType; }
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
-    bool virtualHasPendingActivity() const final;
 
     String m_lang;
     bool m_continuous { false };

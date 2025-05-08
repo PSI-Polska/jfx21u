@@ -48,24 +48,12 @@
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
-struct SameSizeAsScrollableArea;
-}
 
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::SameSizeAsScrollableArea> : std::true_type { };
-}
-
-namespace WebCore {
-
-struct SameSizeAsScrollableArea final : public CanMakeWeakPtr<SameSizeAsScrollableArea> {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
-
+struct SameSizeAsScrollableArea : public CanMakeWeakPtr<SameSizeAsScrollableArea>, public CanMakeCheckedPtr {
     ~SameSizeAsScrollableArea() { }
     SameSizeAsScrollableArea() { }
     void* pointer[3];
     IntPoint origin;
-    Markable<ScrollingNodeID> testID;
     bool bytes[9];
 };
 
@@ -88,7 +76,7 @@ ScrollbarsController& ScrollableArea::scrollbarsController() const
 {
     if (!m_scrollbarsController)
         const_cast<ScrollableArea&>(*this).internalCreateScrollbarsController();
-    RELEASE_ASSERT(m_scrollbarsController);
+
     return *m_scrollbarsController.get();
 }
 
@@ -787,12 +775,12 @@ IntSize ScrollableArea::totalContentsSize() const
 
 IntRect ScrollableArea::visibleContentRect(VisibleContentRectBehavior visibleContentRectBehavior) const
 {
-    return visibleContentRectInternal(VisibleContentRectIncludesScrollbars::No, visibleContentRectBehavior);
+    return visibleContentRectInternal(ExcludeScrollbars, visibleContentRectBehavior);
 }
 
 IntRect ScrollableArea::visibleContentRectIncludingScrollbars(VisibleContentRectBehavior visibleContentRectBehavior) const
 {
-    return visibleContentRectInternal(VisibleContentRectIncludesScrollbars::Yes, visibleContentRectBehavior);
+    return visibleContentRectInternal(IncludeScrollbars, visibleContentRectBehavior);
 }
 
 IntRect ScrollableArea::visibleContentRectInternal(VisibleContentRectIncludesScrollbars scrollbarInclusion, VisibleContentRectBehavior) const
@@ -800,7 +788,7 @@ IntRect ScrollableArea::visibleContentRectInternal(VisibleContentRectIncludesScr
     int verticalScrollbarWidth = 0;
     int horizontalScrollbarHeight = 0;
 
-    if (scrollbarInclusion == VisibleContentRectIncludesScrollbars::Yes) {
+    if (scrollbarInclusion == IncludeScrollbars) {
         if (Scrollbar* verticalBar = verticalScrollbar())
             verticalScrollbarWidth = verticalBar->occupiedWidth();
         if (Scrollbar* horizontalBar = horizontalScrollbar())
@@ -1007,16 +995,6 @@ bool ScrollableArea::shouldBlockScrollPropagation(const FloatSize& biasedDelta) 
         && ((horizontalOverscrollBehaviorPreventsPropagation() && verticalOverscrollBehaviorPreventsPropagation())
         || (horizontalOverscrollBehaviorPreventsPropagation() && !biasedDelta.height()) || (verticalOverscrollBehaviorPreventsPropagation()
         && !biasedDelta.width())));
-}
-
-ScrollingNodeID ScrollableArea::scrollingNodeIDForTesting()
-{
-    if (m_scrollingNodeIDForTesting)
-        return *m_scrollingNodeIDForTesting;
-    auto testingNodeID = scrollingNodeID();
-    if (!testingNodeID)
-        m_scrollingNodeIDForTesting = testingNodeID = ScrollingNodeID::generate();
-    return testingNodeID;
 }
 
 } // namespace WebCore

@@ -3,9 +3,7 @@
 @compute
 @workgroup_size(1, 1, 1)
 fn testForStatement() {
-    for (var i = -1; i <= 1; i++)
-    @diagnostic(off,derivative_uniformity)
-    {
+    for (var i = -1; i <= 1; i++) {
     }
 
     var i = 0;

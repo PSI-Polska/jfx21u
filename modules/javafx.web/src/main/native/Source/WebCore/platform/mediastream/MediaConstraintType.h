@@ -47,8 +47,6 @@ enum class MediaConstraintType : uint8_t {
     WhiteBalanceMode,
     Zoom,
     Torch,
-    BackgroundBlur,
-    PowerEfficient
 };
 
 #if ENABLE(MEDIA_STREAM)

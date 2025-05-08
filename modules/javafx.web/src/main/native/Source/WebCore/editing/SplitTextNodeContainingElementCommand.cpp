@@ -52,17 +52,15 @@ void SplitTextNodeContainingElementCommand::doApply()
     if (!parent || !parent->parentElement() || !parent->parentElement()->hasEditableStyle())
         return;
 
-    bool parentRendererIsNoneOrNotInline = false;
     {
     CheckedPtr parentRenderer = parent->renderer();
-        parentRendererIsNoneOrNotInline = !parentRenderer || !parentRenderer->isInline();
-    }
-    if (parentRendererIsNoneOrNotInline) {
+    if (!parentRenderer || !parentRenderer->isInline()) {
         wrapContentsInDummySpan(*parent);
-        RefPtr firstChild = parent->firstChild();
-        if (!is<Element>(firstChild))
+        RefPtr firstChild = dynamicDowncast<Element>(parent->firstChild());
+        if (!firstChild)
             return;
-        parent = downcast<Element>(WTFMove(firstChild));
+        parent = WTFMove(firstChild);
+    }
     }
 
     splitElement(*parent, m_text);

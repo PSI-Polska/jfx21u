@@ -162,11 +162,11 @@ static void uTextUTF16ContextAwareClose(UText* text)
     text->context = nullptr;
 }
 
-UText* openUTF16ContextAwareUTextProvider(UText* text, std::span<const UChar> string, std::span<const UChar> priorContext, UErrorCode* status)
+UText* openUTF16ContextAwareUTextProvider(UText* text, const UChar* string, unsigned length, const UChar* priorContext, int priorContextLength, UErrorCode* status)
 {
     if (U_FAILURE(*status))
         return nullptr;
-    if (!string.data() || string.size() > static_cast<unsigned>(std::numeric_limits<int32_t>::max())) {
+    if (!string || length > static_cast<unsigned>(std::numeric_limits<int32_t>::max())) {
         *status = U_ILLEGAL_ARGUMENT_ERROR;
         return nullptr;
     }
@@ -176,7 +176,7 @@ UText* openUTF16ContextAwareUTextProvider(UText* text, std::span<const UChar> st
         return nullptr;
     }
 
-    initializeContextAwareUTextProvider(text, &textUTF16ContextAwareFuncs, string, priorContext);
+    initializeContextAwareUTextProvider(text, &textUTF16ContextAwareFuncs, string, length, priorContext, priorContextLength);
     return text;
 }
 

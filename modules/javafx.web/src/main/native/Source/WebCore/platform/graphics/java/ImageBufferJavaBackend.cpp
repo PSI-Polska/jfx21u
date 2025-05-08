@@ -131,8 +131,7 @@ Vector<uint8_t> ImageBufferJavaBackend::toDataJava(const String& mimeType, std::
         if (!WTF::CheckAndClearException(env) && jdata) {
             uint8_t* dataArray = (uint8_t*)env->GetPrimitiveArrayCritical((jbyteArray)jdata, 0);
             Vector<uint8_t> data;
-            std::span<uint8_t> span(dataArray, env->GetArrayLength(jdata));
-            data.append(span);
+            data.append(dataArray, env->GetArrayLength(jdata));
             env->ReleasePrimitiveArrayCritical(jdata, dataArray, 0);
             return data;
         }
@@ -197,33 +196,37 @@ RefPtr<NativeImage> ImageBufferJavaBackend::createNativeImageReference()
      return copyNativeImage();
 }
 
-void ImageBufferJavaBackend::getPixelBuffer(const IntRect& srcRect, PixelBuffer& destination) //overide method
+void ImageBufferJavaBackend::getPixelBuffer(const IntRect& srcRect, PixelBuffer& destination)
 {
     void *data = getData();
     if (!data)
         return;
-    return getPixelBuffer(srcRect, static_cast<const uint8_t*>(data), destination);
+    return getPixelBuffer(srcRect, data, destination);
 
 }
 
-void ImageBufferJavaBackend::getPixelBuffer(const IntRect& srcRect, const uint8_t* data, PixelBuffer& destination)
+void ImageBufferJavaBackend::getPixelBuffer(const IntRect& srcRect, void* data, PixelBuffer& destination)
 {
+
     return ImageBufferBackend::getPixelBuffer(srcRect, data,destination);
+
 }
 
-void ImageBufferJavaBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat, uint8_t* destination)
+void ImageBufferJavaBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat, void* destination)
 {
     ImageBufferBackend::putPixelBuffer(sourcePixelBuffer, srcRect, destPoint, destFormat, destination);
     update();
+
 }
 
-void ImageBufferJavaBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) //override
+void ImageBufferJavaBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
 {
     void *data = getData();
     if (!data)
         return;
-    putPixelBuffer(sourcePixelBuffer, srcRect, destPoint, destFormat, static_cast<uint8_t*>(data));
+    putPixelBuffer(sourcePixelBuffer, srcRect, destPoint, destFormat, data);
     update();
+
 }
 
 size_t ImageBufferJavaBackend::calculateMemoryCost(const Parameters& parameters)
@@ -247,13 +250,8 @@ unsigned ImageBufferJavaBackend::bytesPerRow() const
 String ImageBufferJavaBackend::debugDescription() const
 {
      StringBuilder builder;
-     builder.append(WTF::String::fromUTF8("ImageBufferBackendJava"));
+     builder.append("ImageBufferBackendJava");
      return builder.toString();
-}
-
-bool ImageBufferJavaBackend::canMapBackingStore() const
-{
-    return true;
 }
 
 } // namespace WebCore

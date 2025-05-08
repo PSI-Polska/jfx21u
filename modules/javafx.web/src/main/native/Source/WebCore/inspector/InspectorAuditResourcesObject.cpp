@@ -36,7 +36,6 @@
 #include "FrameDestructionObserverInlines.h"
 #include "InspectorPageAgent.h"
 #include <wtf/Vector.h>
-#include <wtf/text/MakeString.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -106,7 +105,7 @@ ExceptionOr<InspectorAuditResourcesObject::ResourceContent> InspectorAuditResour
     if (!cachedResource)
         return Exception { ExceptionCode::NotFoundError, makeString("Unknown identifier "_s, id) };
 
-    Inspector::Protocol::ErrorString errorString;
+    Protocol::ErrorString errorString;
     ResourceContent resourceContent;
     InspectorPageAgent::resourceContent(errorString, frame, cachedResource->url(), &resourceContent.data, &resourceContent.base64Encoded);
     if (!errorString.isEmpty())

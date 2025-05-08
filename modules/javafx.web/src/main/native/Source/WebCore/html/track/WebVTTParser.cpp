@@ -125,9 +125,9 @@ void WebVTTParser::parseFileHeader(String&& data)
         m_client.newStyleSheetsParsed();
 }
 
-void WebVTTParser::parseBytes(std::span<const uint8_t> data)
+void WebVTTParser::parseBytes(const uint8_t* data, unsigned length)
 {
-    m_lineReader.append(m_decoder->decode(data));
+    m_lineReader.append(m_decoder->decode(data, length));
     parse();
 }
 
@@ -231,7 +231,8 @@ void WebVTTParser::parse()
 void WebVTTParser::fileFinished()
 {
     ASSERT(m_state != Finished);
-    parseBytes("\n\n"_span);
+    constexpr uint8_t endLines[] = { '\n', '\n' };
+    parseBytes(endLines, 2);
     m_state = Finished;
 }
 
@@ -406,7 +407,7 @@ bool WebVTTParser::checkAndStoreStyleSheet(StringView line)
         if (styleRule->properties().isEmpty())
             continue;
 
-        sanitizedStyleSheetBuilder.append(selectorText, " { "_s, styleRule->properties().asText(), "  }\n"_s);
+        sanitizedStyleSheetBuilder.append(selectorText, " { ", styleRule->properties().asText(), "  }\n");
     }
 
     // It would be more stylish to parse the stylesheet only once instead of serializing a sanitized version.
@@ -702,7 +703,7 @@ void WebVTTTreeBuilder::constructTreeFromToken(Document& document)
             break;
 
         auto language = !m_languageStack.isEmpty() ? m_languageStack.last() : emptyAtom();
-        auto child = WebVTTElement::create(nodeType, language, document);
+        auto child = WebVTTElementImpl::create(nodeType, language, document);
         if (!m_token.classes().isEmpty())
             child->setAttributeWithoutSynchronization(classAttr, m_token.classes());
 

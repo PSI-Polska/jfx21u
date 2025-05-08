@@ -26,7 +26,6 @@
 #pragma once
 
 #include "SQLTransactionState.h"
-#include <wtf/Forward.h>
 
 namespace WebCore {
 
@@ -59,7 +58,7 @@ protected:
 };
 
 #if !LOG_DISABLED
-extern ASCIILiteral nameForSQLTransactionState(SQLTransactionState);
+extern const char* nameForSQLTransactionState(SQLTransactionState);
 #endif
 
 template<typename T>

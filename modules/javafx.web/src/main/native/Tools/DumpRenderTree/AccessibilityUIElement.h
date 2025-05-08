@@ -251,6 +251,7 @@ public:
     bool scrollPageLeft();
     bool scrollPageRight();
 
+    bool hasContainedByFieldsetTrait();
     bool hasTextEntryTrait();
     AccessibilityUIElement fieldsetAncestorElement();
     JSRetainPtr<JSStringRef> attributedStringForElement();
@@ -259,6 +260,8 @@ public:
     bool isInsertion();
     bool isFirstItemInSuggestion();
     bool isLastItemInSuggestion();
+
+    bool isInNonNativeTextControl() const;
 #endif
 
     // Table-specific

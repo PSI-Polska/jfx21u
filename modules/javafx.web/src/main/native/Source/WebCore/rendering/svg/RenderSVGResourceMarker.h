@@ -19,7 +19,7 @@
  */
 
 #pragma once
-
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "RenderSVGResourceContainer.h"
 #include "SVGMarkerTypes.h"
 
@@ -29,8 +29,7 @@ class GraphicsContext;
 class SVGMarkerElement;
 
 class RenderSVGResourceMarker final : public RenderSVGResourceContainer {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGResourceMarker);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGResourceMarker);
+    WTF_MAKE_ISO_ALLOCATED(RenderSVGResourceMarker);
 public:
     RenderSVGResourceMarker(SVGMarkerElement&, RenderStyle&&);
     virtual ~RenderSVGResourceMarker();
@@ -48,7 +47,6 @@ private:
     ASCIILiteral renderName() const final { return "RenderSVGResourceMarker"_s; }
 
     inline SVGMarkerElement& markerElement() const;
-    inline Ref<SVGMarkerElement> protectedMarkerElement() const;
     inline FloatPoint referencePoint() const;
     inline std::optional<float> angle() const;
     inline SVGMarkerUnitsType markerUnits() const;
@@ -78,3 +76,4 @@ private:
 }
 
 SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGResourceMarker, isRenderSVGResourceMarker())
+#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

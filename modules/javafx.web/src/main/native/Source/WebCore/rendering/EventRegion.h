@@ -27,7 +27,6 @@
 
 #include "AffineTransform.h"
 #include "FloatRoundedRect.h"
-#include "IntRect.h"
 #include "IntRectHash.h"
 #include "InteractionRegion.h"
 #include "Node.h"
@@ -47,9 +46,7 @@ class Path;
 class RenderObject;
 class RenderStyle;
 
-class EventRegionContext final : public RegionContext {
-    WTF_MAKE_FAST_ALLOCATED;
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(EventRegionContext);
+class EventRegionContext : public RegionContext {
 public:
     WEBCORE_EXPORT explicit EventRegionContext(EventRegion&);
     WEBCORE_EXPORT virtual ~EventRegionContext();
@@ -60,12 +57,11 @@ public:
     bool contains(const IntRect&) const;
 
 #if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
-    void uniteInteractionRegions(RenderObject&, const FloatRect&, const FloatSize&, const std::optional<AffineTransform>&);
-    bool shouldConsolidateInteractionRegion(RenderObject&, const IntRect&, const ElementIdentifier&);
-    void convertGuardContainersToInterationIfNeeded(float minimumCornerRadius);
+    void uniteInteractionRegions(RenderObject&, const FloatRect&);
+    bool shouldConsolidateInteractionRegion(RenderObject&, const IntRect&);
     void removeSuperfluousInteractionRegions();
     void shrinkWrapInteractionRegions();
-    void copyInteractionRegionsToEventRegion(float minimumCornerRadius);
+    void copyInteractionRegionsToEventRegion();
 #endif
 
 private:
@@ -73,13 +69,11 @@ private:
 
 #if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
     Vector<InteractionRegion> m_interactionRegions;
-    HashMap<IntRect, InteractionRegion::ContentHint> m_interactionRectsAndContentHints;
+    HashSet<IntRect> m_interactionRects;
     HashSet<IntRect> m_occlusionRects;
-    enum class Inflated : bool { No, Yes };
-    HashMap<IntRect, Inflated> m_guardRects;
     HashSet<ElementIdentifier> m_containerRemovalCandidates;
     HashSet<ElementIdentifier> m_containersToRemove;
-    HashMap<ElementIdentifier, Vector<InteractionRegion>> m_discoveredRegionsByElement;
+    HashMap<ElementIdentifier, Vector<FloatRect>> m_discoveredRectsByElement;
 #endif
 };
 
@@ -108,7 +102,7 @@ public:
 
     friend bool operator==(const EventRegion&, const EventRegion&) = default;
 
-    void unite(const Region&, RenderObject&, const RenderStyle&, bool overrideUserModifyIsEditable = false);
+    void unite(const Region&, const RenderStyle&, bool overrideUserModifyIsEditable = false);
     void translate(const IntSize&);
 
     bool contains(const IntPoint& point) const { return m_region.contains(point); }

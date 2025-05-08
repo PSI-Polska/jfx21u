@@ -13,7 +13,6 @@ BeforeUnloadEvent
 BufferedChangeEvent conditional=MEDIA_SOURCE
 ClipboardEvent
 CloseEvent
-CommandEvent
 CompositionEvent
 CookieChangeEvent
 CSSAnimationEvent
@@ -30,6 +29,7 @@ FormDataEvent
 HashChangeEvent
 InputEvent
 InputEvents interfaceName=InputEvent
+InvokeEvent
 KeyboardEvent
 KeyboardEvents interfaceName=KeyboardEvent
 MediaQueryListEvent
@@ -40,8 +40,7 @@ MutationEvent
 MutationEvents interfaceName=MutationEvent
 NavigateEvent
 NavigationCurrentEntryChangeEvent
-PageRevealEvent
-PageSwapEvent
+OverflowEvent
 PageTransitionEvent
 PopStateEvent
 ProgressEvent
@@ -105,7 +104,6 @@ PointerEvent
 PictureInPictureEvent conditional=PICTURE_IN_PICTURE_API
 XRInputSourceEvent conditional=WEBXR
 XRInputSourcesChangeEvent conditional=WEBXR
-XRLayerEvent conditional=WEBXR_LAYERS
 XRReferenceSpaceEvent conditional=WEBXR
 XRSessionEvent conditional=WEBXR
 NotificationEvent conditional=NOTIFICATION_EVENT

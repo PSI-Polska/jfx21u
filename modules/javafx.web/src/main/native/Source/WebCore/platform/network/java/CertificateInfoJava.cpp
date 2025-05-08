@@ -44,8 +44,7 @@ CertificateInfo CertificateInfo::isolatedCopy() const
 CertificateInfo::Certificate CertificateInfo::makeCertificate(const uint8_t* buffer, size_t size)
 {
     Certificate certificate;
-    std::span<uint8_t> createSpan(const_cast<uint8_t*>(buffer), size);
-    certificate.append(createSpan);
+    certificate.append(buffer, size);
     return certificate;
 }
 

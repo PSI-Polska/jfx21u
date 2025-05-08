@@ -85,9 +85,32 @@ JSObject* JSWebAssemblyGlobal::type(JSGlobalObject* globalObject)
     result->putDirect(vm, Identifier::fromString(vm, "mutable"_s), jsBoolean(m_global->mutability() == Wasm::Mutable));
 
     Wasm::Type valueType = m_global->type();
-    JSString* valueString = typeToJSAPIString(vm, valueType);
-    if (!valueString)
-        return nullptr;
+    JSString* valueString = nullptr;
+    switch (valueType.kind) {
+    case Wasm::TypeKind::I32:
+        valueString = jsNontrivialString(vm, "i32"_s);
+        break;
+    case Wasm::TypeKind::I64:
+        valueString = jsNontrivialString(vm, "i64"_s);
+        break;
+    case Wasm::TypeKind::F32:
+        valueString = jsNontrivialString(vm, "f32"_s);
+        break;
+    case Wasm::TypeKind::F64:
+        valueString = jsNontrivialString(vm, "f64"_s);
+        break;
+    case Wasm::TypeKind::V128:
+        valueString = jsNontrivialString(vm, "v128"_s);
+        break;
+    default: {
+        if (Wasm::isFuncref(valueType))
+            valueString = jsNontrivialString(vm, "funcref"_s);
+        else if (Wasm::isExternref(valueType))
+            valueString = jsNontrivialString(vm, "externref"_s);
+        else
+            RELEASE_ASSERT_NOT_REACHED();
+    }
+    }
     result->putDirect(vm, Identifier::fromString(vm, "value"_s), valueString);
 
     return result;

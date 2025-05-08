@@ -28,7 +28,6 @@
 
 #include "NetworkStorageSession.h"
 #include <wtf/URL.h>
-#include <wtf/text/MakeString.h>
 
 #if PLATFORM(IOS_FAMILY)
 #include "WebCoreThread.h"
@@ -38,7 +37,7 @@ namespace WebCore {
 
 static String originStringFromURL(const URL& url)
 {
-    return makeString(url.protocol(), "://"_s, url.hostAndPort(), '/');
+    return makeString(url.protocol(), "://", url.hostAndPort(), '/');
 }
 
 static String protectionSpaceMapKeyFromURL(const URL& url)

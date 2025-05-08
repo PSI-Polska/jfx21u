@@ -38,13 +38,9 @@
 #include "DeviceOrientationOrMotionPermissionState.h"
 #include "DocumentLoadTiming.h"
 #include "DocumentWriter.h"
-#include "ElementTargetingTypes.h"
 #include "FrameDestructionObserver.h"
-#include "FrameLoaderTypes.h"
-#include "HTTPSByDefaultMode.h"
 #include "LinkIcon.h"
 #include "NavigationAction.h"
-#include "NavigationIdentifier.h"
 #include "ResourceError.h"
 #include "ResourceLoaderIdentifier.h"
 #include "ResourceLoaderOptions.h"
@@ -71,15 +67,6 @@
 #if PLATFORM(COCOA)
 #include <wtf/SchedulePair.h>
 #endif
-
-namespace WebCore {
-class DataLoadToken;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::DataLoadToken> : std::true_type { };
-}
 
 namespace WebCore {
 
@@ -175,11 +162,6 @@ enum class ColorSchemePreference : uint8_t {
 enum class ContentExtensionDefaultEnablement : bool { Disabled, Enabled };
 using ContentExtensionEnablement = std::pair<ContentExtensionDefaultEnablement, HashSet<String>>;
 
-class DataLoadToken : public CanMakeWeakPtr<DataLoadToken> {
-public:
-    void clear() { weakPtrFactory().revokeAll(); }
-};
-
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(DocumentLoader);
 class DocumentLoader
     : public RefCounted<DocumentLoader>
@@ -272,7 +254,6 @@ public:
     RefPtr<Archive> popArchiveForSubframe(const String& frameName, const URL&);
     WEBCORE_EXPORT SharedBuffer* parsedArchiveData() const;
 
-    bool hasArchiveResourceCollection() const { return !!m_archiveResourceCollection; }
     WEBCORE_EXPORT bool scheduleArchiveLoad(ResourceLoader&, const ResourceRequest&);
 #endif
 
@@ -332,7 +313,7 @@ public:
     void setMainResourceDataBufferingPolicy(DataBufferingPolicy);
 
     void startLoadingMainResource();
-    WEBCORE_EXPORT void cancelMainResourceLoad(const ResourceError&, LoadWillContinueInAnotherProcess = LoadWillContinueInAnotherProcess::No);
+    WEBCORE_EXPORT void cancelMainResourceLoad(const ResourceError&);
     void willContinueMainResourceLoadAfterRedirect(const ResourceRequest&);
 
     bool isLoadingMainResource() const { return m_loadingMainResource; }
@@ -349,9 +330,6 @@ public:
 
     bool allowsActiveContentRuleListActionsForURL(const String& contentRuleListIdentifier, const URL&) const;
     WEBCORE_EXPORT void setActiveContentRuleListActionPatterns(const HashMap<String, Vector<String>>&);
-
-    const Vector<TargetedElementSelectors>& visibilityAdjustmentSelectors() const { return m_visibilityAdjustmentSelectors; }
-    void setVisibilityAdjustmentSelectors(Vector<TargetedElementSelectors>&& selectors) { m_visibilityAdjustmentSelectors = WTFMove(selectors); }
 
 #if ENABLE(DEVICE_ORIENTATION)
     DeviceOrientationOrMotionPermissionState deviceOrientationAndMotionAccessState() const { return m_deviceOrientationAndMotionAccessState; }
@@ -401,11 +379,8 @@ public:
     WEBCORE_EXPORT ColorSchemePreference colorSchemePreference() const;
     void setColorSchemePreference(ColorSchemePreference preference) { m_colorSchemePreference = preference; }
 
-    HTTPSByDefaultMode httpsByDefaultMode() { return m_httpsByDefaultMode; }
-    WEBCORE_EXPORT void setHTTPSByDefaultMode(HTTPSByDefaultMode);
-
-    void addSubresourceLoader(SubresourceLoader&);
-    void removeSubresourceLoader(LoadCompletionType, SubresourceLoader&);
+    void addSubresourceLoader(ResourceLoader&);
+    void removeSubresourceLoader(LoadCompletionType, ResourceLoader*);
     void addPlugInStreamLoader(ResourceLoader&);
     void removePlugInStreamLoader(ResourceLoader&);
 
@@ -479,12 +454,14 @@ public:
 
     WEBCORE_EXPORT void applyPoliciesToSettings();
 
+    void setAllowContentChangeObserverQuirk(bool allow) { m_allowContentChangeObserverQuirk = allow; }
+    bool allowContentChangeObserverQuirk() const { return m_allowContentChangeObserverQuirk; }
+
     void setAdvancedPrivacyProtections(OptionSet<AdvancedPrivacyProtections> policy) { m_advancedPrivacyProtections = policy; }
     OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections() const { return m_advancedPrivacyProtections; }
 
     void setOriginatorAdvancedPrivacyProtections(OptionSet<AdvancedPrivacyProtections> policy) { m_originatorAdvancedPrivacyProtections = policy; }
-    OptionSet<AdvancedPrivacyProtections> navigationalAdvancedPrivacyProtections() const { return m_originatorAdvancedPrivacyProtections.value_or(m_advancedPrivacyProtections); }
-    std::optional<OptionSet<AdvancedPrivacyProtections>> originatorAdvancedPrivacyProtections() const { return m_originatorAdvancedPrivacyProtections; }
+    OptionSet<AdvancedPrivacyProtections> originatorAdvancedPrivacyProtections() const { return m_originatorAdvancedPrivacyProtections; }
 
     void setIdempotentModeAutosizingOnlyHonorsPercentages(bool idempotentModeAutosizingOnlyHonorsPercentages) { m_idempotentModeAutosizingOnlyHonorsPercentages = idempotentModeAutosizingOnlyHonorsPercentages; }
     bool idempotentModeAutosizingOnlyHonorsPercentages() const { return m_idempotentModeAutosizingOnlyHonorsPercentages; }
@@ -511,12 +488,8 @@ public:
     void contentFilterHandleProvisionalLoadFailure(const ResourceError&);
 #endif
 
-    std::optional<NavigationIdentifier> navigationID() const { return m_navigationID.asOptional(); }
-    WEBCORE_EXPORT void setNavigationID(NavigationIdentifier);
-
-    bool isInitialAboutBlank() const { return m_isInitialAboutBlank; }
-
-    bool navigationCanTriggerCrossDocumentViewTransition(Document& oldDocument);
+    uint64_t navigationID() const { return m_navigationID; }
+    WEBCORE_EXPORT void setNavigationID(uint64_t);
 
 protected:
     WEBCORE_EXPORT DocumentLoader(const ResourceRequest&, const SubstituteData&);
@@ -524,6 +497,11 @@ protected:
     WEBCORE_EXPORT virtual void attachToFrame();
 
 private:
+    class DataLoadToken : public CanMakeWeakPtr<DataLoadToken> {
+    public:
+        void clear() { weakPtrFactory().revokeAll(); }
+    };
+
     Document* document() const;
 
     void matchRegistration(const URL&, CompletionHandler<void(std::optional<ServiceWorkerRegistrationData>&&)>&&);
@@ -550,11 +528,11 @@ private:
 
     void willSendRequest(ResourceRequest&&, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&&);
     void finishedLoading();
-    void mainReceivedError(const ResourceError&, LoadWillContinueInAnotherProcess = LoadWillContinueInAnotherProcess::No);
+    void mainReceivedError(const ResourceError&);
     WEBCORE_EXPORT void redirectReceived(CachedResource&, ResourceRequest&&, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&&) override;
     WEBCORE_EXPORT void responseReceived(CachedResource&, const ResourceResponse&, CompletionHandler<void()>&&) override;
     WEBCORE_EXPORT void dataReceived(CachedResource&, const SharedBuffer&) override;
-    WEBCORE_EXPORT void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) override;
+    WEBCORE_EXPORT void notifyFinished(CachedResource&, const NetworkLoadMetrics&) override;
 #if USE(QUICK_LOOK)
     WEBCORE_EXPORT void previewResponseReceived(CachedResource&, const ResourceResponse&) override;
 #endif
@@ -586,7 +564,7 @@ private:
     bool tryLoadingRedirectRequestFromApplicationCache(const ResourceRequest&);
     void continueAfterContentPolicy(PolicyAction);
 
-    void stopLoadingForPolicyChange(LoadWillContinueInAnotherProcess = LoadWillContinueInAnotherProcess::No);
+    void stopLoadingForPolicyChange();
     ResourceError interruptedForPolicyChangeError() const;
 
     void handleSubstituteDataLoadNow();
@@ -653,7 +631,7 @@ private:
     // benefit of the various policy handlers.
     NavigationAction m_triggeringAction;
 
-    Markable<NavigationIdentifier> m_navigationID;
+    uint64_t m_navigationID { 0 };
 
     // We retain all the received responses so we can play back the
     // WebResourceLoadDelegate messages if the item is loaded from the
@@ -718,8 +696,6 @@ private:
     MemoryCompactRobinHoodHashMap<String, Vector<UserContentURLPattern>> m_activeContentRuleListActionPatterns;
     ContentExtensionEnablement m_contentExtensionEnablement { ContentExtensionDefaultEnablement::Enabled, { } };
 
-    Vector<TargetedElementSelectors> m_visibilityAdjustmentSelectors;
-
     ScriptExecutionContextIdentifier m_resultingClientId;
 
     std::unique_ptr<ServiceWorkerRegistrationData> m_serviceWorkerRegistrationData;
@@ -729,7 +705,7 @@ private:
 #endif
 
     OptionSet<AdvancedPrivacyProtections> m_advancedPrivacyProtections;
-    std::optional<OptionSet<AdvancedPrivacyProtections>> m_originatorAdvancedPrivacyProtections;
+    OptionSet<AdvancedPrivacyProtections> m_originatorAdvancedPrivacyProtections;
     AutoplayPolicy m_autoplayPolicy { AutoplayPolicy::Default };
     OptionSet<AutoplayQuirk> m_allowedAutoplayQuirks;
     PopUpPolicy m_popUpPolicy { PopUpPolicy::Default };
@@ -740,9 +716,9 @@ private:
     MouseEventPolicy m_mouseEventPolicy { MouseEventPolicy::Default };
     ModalContainerObservationPolicy m_modalContainerObservationPolicy { ModalContainerObservationPolicy::Disabled };
     ColorSchemePreference m_colorSchemePreference { ColorSchemePreference::NoPreference };
-    HTTPSByDefaultMode m_httpsByDefaultMode { HTTPSByDefaultMode::Disabled };
     ShouldOpenExternalURLsPolicy m_shouldOpenExternalURLsPolicy { ShouldOpenExternalURLsPolicy::ShouldNotAllow };
 
+    bool m_allowContentChangeObserverQuirk { false };
     bool m_idempotentModeAutosizingOnlyHonorsPercentages { false };
 
     bool m_isRequestFromClientOrUserInput { false };
@@ -759,7 +735,6 @@ private:
     bool m_isLoadingMultipartContent { false };
     bool m_isContinuingLoadAfterProvisionalLoadStarted { false };
     bool m_isInFinishedLoadingOfEmptyDocument { false };
-    bool m_isInitialAboutBlank { false };
 
     // FIXME: Document::m_processingLoadEvent and DocumentLoader::m_wasOnloadDispatched are roughly the same
     // and should be merged.

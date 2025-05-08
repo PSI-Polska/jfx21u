@@ -26,7 +26,6 @@
 #include "config.h"
 #include <wtf/persistence/PersistentCoders.h>
 
-#include <wtf/StdLibExtras.h>
 #include <wtf/URL.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
@@ -60,7 +59,7 @@ void Coder<CString>::encodeForPersistence(Encoder& encoder, const CString& strin
 
     uint32_t length = string.length();
     encoder << length;
-    encoder.encodeFixedLengthData(string.span());
+    encoder.encodeFixedLengthData({ string.dataAsUInt8Ptr(), length });
 }
 
 std::optional<CString> Coder<CString>::decodeForPersistence(Decoder& decoder)
@@ -81,7 +80,7 @@ std::optional<CString> Coder<CString>::decodeForPersistence(Decoder& decoder)
 
     char* buffer;
     CString string = CString::newUninitialized(*length, buffer);
-    if (!decoder.decodeFixedLengthData({ byteCast<uint8_t>(buffer), *length }))
+    if (!decoder.decodeFixedLengthData({ reinterpret_cast<uint8_t*>(buffer), *length }))
         return std::nullopt;
 
     return string;
@@ -95,14 +94,15 @@ void Coder<String>::encodeForPersistence(Encoder& encoder, const String& string)
         return;
     }
 
+    uint32_t length = string.length();
     bool is8Bit = string.is8Bit();
 
-    encoder << string.length() << is8Bit;
+    encoder << length << is8Bit;
 
     if (is8Bit)
-        encoder.encodeFixedLengthData(string.span8());
+        encoder.encodeFixedLengthData({ string.characters8(), length });
     else
-        encoder.encodeFixedLengthData(asBytes(string.span16()));
+        encoder.encodeFixedLengthData({ reinterpret_cast<const uint8_t*>(string.characters16()), length * sizeof(UChar) });
 }
 
 template <typename CharacterType>

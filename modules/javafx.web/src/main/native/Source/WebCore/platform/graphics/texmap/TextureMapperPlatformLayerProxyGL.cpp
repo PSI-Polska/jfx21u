@@ -42,8 +42,8 @@ static const Seconds releaseUnusedBuffersTimerInterval = { 500_ms };
 
 namespace WebCore {
 
-TextureMapperPlatformLayerProxyGL::TextureMapperPlatformLayerProxyGL(ContentType contentType)
-    : TextureMapperPlatformLayerProxy(contentType)
+TextureMapperPlatformLayerProxyGL::TextureMapperPlatformLayerProxyGL(bool disableBufferInvalidation)
+    : m_disableBufferInvalidation(disableBufferInvalidation)
 {
 }
 
@@ -104,7 +104,7 @@ void TextureMapperPlatformLayerProxyGL::invalidate()
             m_targetLayer = nullptr;
         }
 
-        if (contentType() != ContentType::HolePunch) {
+        if (!m_disableBufferInvalidation) {
         m_currentBuffer = nullptr;
         m_pendingBuffer = nullptr;
         m_releaseUnusedBuffersTimer = nullptr;
@@ -132,18 +132,6 @@ void TextureMapperPlatformLayerProxyGL::pushNextBuffer(std::unique_ptr<TextureMa
 #endif
     m_pendingBuffer = WTFMove(newBuffer);
     m_wasBufferDropped = false;
-
-#if HAVE(DISPLAY_LINK)
-    // WebGL and Canvas changes will cause a composition request during layerFlush. We cannot request
-    // a new compostion here as well or we may trigger two compositions instead of one.
-    switch (contentType()) {
-    case ContentType::WebGL:
-    case ContentType::Canvas:
-        return;
-    default:
-        break;
-    }
-#endif
 
     if (m_compositor)
         m_compositor->onNewBufferAvailable();

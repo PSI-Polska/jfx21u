@@ -83,7 +83,7 @@ void SMILTimeContainer::notifyIntervalsChanged()
 
 Seconds SMILTimeContainer::animationFrameDelay() const
 {
-    RefPtr page = m_ownerSVGElement->document().page();
+    auto* page = m_ownerSVGElement.document().page();
     if (!page)
         return SMILAnimationFrameDelay;
     return page->isLowPowerModeEnabled() ? SMILAnimationFrameThrottledDelay : SMILAnimationFrameDelay;
@@ -217,8 +217,8 @@ void SMILTimeContainer::updateDocumentOrderIndexes()
 {
     unsigned timingElementCount = 0;
 
-    for (Ref smilElement : descendantsOfType<SVGSMILElement>(Ref { m_ownerSVGElement.get() }))
-        smilElement->setDocumentOrderIndex(timingElementCount++);
+    for (auto& smilElement : descendantsOfType<SVGSMILElement>(m_ownerSVGElement))
+        smilElement.setDocumentOrderIndex(timingElementCount++);
 
     m_documentOrderIndexesDirty = false;
 }
@@ -250,7 +250,7 @@ void SMILTimeContainer::sortByPriority(AnimationsVector& animations, SMILTime el
 void SMILTimeContainer::processScheduledAnimations(const Function<void(SVGSMILElement&)>& callback)
 {
     for (auto& animations : copyToVector(m_scheduledAnimations.values())) {
-        for (RefPtr animation : animations)
+        for (auto* animation : animations)
             callback(*animation);
     }
 }
@@ -280,7 +280,7 @@ void SMILTimeContainer::updateAnimations(SMILTime elapsed, bool seekToTime)
         sortByPriority(animations, elapsed);
 
         RefPtr<SVGSMILElement> firstAnimation;
-        for (RefPtr animation : animations) {
+        for (auto* animation : animations) {
             ASSERT(animation->timeContainer() == this);
             ASSERT(animation->targetElement());
             ASSERT(animation->hasValidAttributeName());
@@ -306,7 +306,7 @@ void SMILTimeContainer::updateAnimations(SMILTime elapsed, bool seekToTime)
     }
 
     // Apply results to target elements.
-    for (RefPtr animation : animationsToApply)
+    for (auto& animation : animationsToApply)
         animation->applyResultsToTarget();
 
     startTimer(elapsed, earliestFireTime, animationFrameDelay());

@@ -39,7 +39,7 @@ class PictureInPictureWindow final
     : public ActiveDOMObject
     , public EventTarget
     , public RefCounted<PictureInPictureWindow> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(PictureInPictureWindow);
+    WTF_MAKE_ISO_ALLOCATED(PictureInPictureWindow);
 public:
     static Ref<PictureInPictureWindow> create(Document&);
     virtual ~PictureInPictureWindow();
@@ -49,17 +49,19 @@ public:
     void setSize(const IntSize&);
     void close();
 
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
+    using RefCounted<PictureInPictureWindow>::ref;
+    using RefCounted<PictureInPictureWindow>::deref;
 
 private:
     PictureInPictureWindow(Document&);
 
-    // EventTarget.
+    // ActiveDOMObject
+    const char* activeDOMObjectName() const final { return "PictureInPictureWindow"; }
+
+    // EventTarget
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
-    enum EventTargetInterfaceType eventTargetInterface() const override { return EventTargetInterfaceType::PictureInPictureWindow; };
+    EventTargetInterface eventTargetInterface() const override { return PictureInPictureWindowEventTargetInterfaceType; };
     ScriptExecutionContext* scriptExecutionContext() const override { return ActiveDOMObject::scriptExecutionContext(); };
 
     IntSize m_size;

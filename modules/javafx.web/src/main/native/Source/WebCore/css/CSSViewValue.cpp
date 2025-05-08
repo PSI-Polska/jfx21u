@@ -30,7 +30,6 @@
 #include "CSSViewValue.h"
 
 #include "CSSPrimitiveValueMappings.h"
-#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 

@@ -56,7 +56,7 @@ ImageOverlayController::ImageOverlayController(Page& page)
 
 void ImageOverlayController::selectionQuadsDidChange(LocalFrame& frame, const Vector<FloatQuad>& quads)
 {
-    if (!m_page || !protectedPage()->chrome().client().needsImageOverlayControllerForSelectionPainting())
+    if (!m_page || !m_page->chrome().client().needsImageOverlayControllerForSelectionPainting())
         return;
 
     if (frame.editor().ignoreSelectionChanges() || frame.editor().isGettingDictionaryPopupInfo())
@@ -131,7 +131,7 @@ PageOverlay& ImageOverlayController::installPageOverlayIfNeeded()
         return *m_overlay;
 
     m_overlay = PageOverlay::create(*this, PageOverlay::OverlayType::Document);
-    protectedPage()->pageOverlayController().installPageOverlay(*protectedOverlay(), PageOverlay::FadeMode::DoNotFade);
+    m_page->pageOverlayController().installPageOverlay(*m_overlay, PageOverlay::FadeMode::DoNotFade);
     return *m_overlay;
 }
 
@@ -150,12 +150,7 @@ void ImageOverlayController::uninstallPageOverlay()
     if (!m_page || !overlayToUninstall)
         return;
 
-    protectedPage()->pageOverlayController().uninstallPageOverlay(*overlayToUninstall, PageOverlay::FadeMode::DoNotFade);
-}
-
-RefPtr<Page> ImageOverlayController::protectedPage() const
-{
-    return m_page.get();
+    m_page->pageOverlayController().uninstallPageOverlay(*overlayToUninstall, PageOverlay::FadeMode::DoNotFade);
 }
 
 void ImageOverlayController::uninstallPageOverlayIfNeeded()

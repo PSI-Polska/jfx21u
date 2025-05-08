@@ -62,10 +62,9 @@ StyleMiscNonInheritedData::StyleMiscNonInheritedData()
     , justifySelf(RenderStyle::initialSelfAlignment())
     , objectPosition(RenderStyle::initialObjectPosition())
     , order(RenderStyle::initialOrder())
-    , tableLayout(static_cast<unsigned>(RenderStyle::initialTableLayout()))
     , aspectRatioType(static_cast<unsigned>(RenderStyle::initialAspectRatioType()))
     , appearance(static_cast<unsigned>(RenderStyle::initialAppearance()))
-    , usedAppearance(static_cast<unsigned>(RenderStyle::initialAppearance()))
+    , effectiveAppearance(static_cast<unsigned>(RenderStyle::initialAppearance()))
     , textOverflow(static_cast<unsigned>(RenderStyle::initialTextOverflow()))
     , userDrag(static_cast<unsigned>(RenderStyle::initialUserDrag()))
     , objectFit(static_cast<unsigned>(RenderStyle::initialObjectFit()))
@@ -99,16 +98,14 @@ StyleMiscNonInheritedData::StyleMiscNonInheritedData(const StyleMiscNonInherited
     , objectPosition(o.objectPosition)
     , order(o.order)
     , hasAttrContent(o.hasAttrContent)
-    , hasDisplayAffectedByAnimations(o.hasDisplayAffectedByAnimations)
 #if ENABLE(DARK_MODE_CSS)
     , hasExplicitlySetColorScheme(o.hasExplicitlySetColorScheme)
 #endif
     , hasExplicitlySetDirection(o.hasExplicitlySetDirection)
     , hasExplicitlySetWritingMode(o.hasExplicitlySetWritingMode)
-    , tableLayout(o.tableLayout)
     , aspectRatioType(o.aspectRatioType)
     , appearance(o.appearance)
-    , usedAppearance(o.usedAppearance)
+    , effectiveAppearance(o.effectiveAppearance)
     , textOverflow(o.textOverflow)
     , userDrag(o.userDrag)
     , objectFit(o.objectFit)
@@ -149,16 +146,14 @@ bool StyleMiscNonInheritedData::operator==(const StyleMiscNonInheritedData& o) c
         && objectPosition == o.objectPosition
         && order == o.order
         && hasAttrContent == o.hasAttrContent
-        && hasDisplayAffectedByAnimations == o.hasDisplayAffectedByAnimations
 #if ENABLE(DARK_MODE_CSS)
         && hasExplicitlySetColorScheme == o.hasExplicitlySetColorScheme
 #endif
         && hasExplicitlySetDirection == o.hasExplicitlySetDirection
         && hasExplicitlySetWritingMode == o.hasExplicitlySetWritingMode
         && aspectRatioType == o.aspectRatioType
-        && tableLayout == o.tableLayout
         && appearance == o.appearance
-        && usedAppearance == o.usedAppearance
+        && effectiveAppearance == o.effectiveAppearance
         && textOverflow == o.textOverflow
         && userDrag == o.userDrag
         && objectFit == o.objectFit

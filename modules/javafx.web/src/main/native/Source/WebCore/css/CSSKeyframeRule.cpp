@@ -32,7 +32,6 @@
 #include "PropertySetCSSStyleDeclaration.h"
 #include "StyleProperties.h"
 #include "StylePropertiesInlines.h"
-#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -96,8 +95,8 @@ bool StyleRuleKeyframe::setKeyText(const String& keyText)
 String StyleRuleKeyframe::cssText() const
 {
     if (auto declarations = m_properties->asText(); !declarations.isEmpty())
-        return makeString(keyText(), " { "_s, declarations, " }"_s);
-    return makeString(keyText(), " { }"_s);
+        return makeString(keyText(), " { ", declarations, " }");
+    return makeString(keyText(), " { }");
 }
 
 CSSKeyframeRule::CSSKeyframeRule(StyleRuleKeyframe& keyframe, CSSKeyframesRule* parent)

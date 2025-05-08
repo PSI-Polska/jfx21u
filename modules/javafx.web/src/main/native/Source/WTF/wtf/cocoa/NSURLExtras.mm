@@ -36,7 +36,6 @@
 #import <wtf/URLHelpers.h>
 #import <wtf/Vector.h>
 #import <wtf/cf/CFURLExtras.h>
-#import <wtf/cocoa/SpanCocoa.h>
 #import <wtf/cocoa/TypeCastsCocoa.h>
 
 namespace WTF {
@@ -317,7 +316,8 @@ NSData *originalURLData(NSURL *URL)
 
 NSString *userVisibleString(NSURL *URL)
 {
-    return URLHelpers::userVisibleURL(span(originalURLData(URL)));
+    NSData *data = originalURLData(URL);
+    return URLHelpers::userVisibleURL(CString(static_cast<const char*>([data bytes]), [data length]));
 }
 
 BOOL isUserVisibleURL(NSString *string)

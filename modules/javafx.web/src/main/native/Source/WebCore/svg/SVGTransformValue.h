@@ -76,7 +76,7 @@ public:
 
     SVGTransformValue(const SVGTransformValue& other)
         : m_type(other.m_type)
-        , m_matrix(SVGMatrix::create(other.matrix().value()))
+        , m_matrix(SVGMatrix::create(other.matrix()->value()))
         , m_angle(other.m_angle)
         , m_rotationCenter(other.m_rotationCenter)
     {
@@ -108,8 +108,7 @@ public:
     }
 
     SVGTransformType type() const { return m_type; }
-    SVGMatrix& matrix() const { return m_matrix; }
-    Ref<SVGMatrix> protectedMatrix() const { return m_matrix; }
+    const Ref<SVGMatrix>& matrix() const { return m_matrix; }
     float angle() const { return m_angle; }
     FloatPoint rotationCenter() const { return m_rotationCenter; }
 
@@ -120,7 +119,7 @@ public:
         m_type = SVG_TRANSFORM_MATRIX;
         m_angle = 0;
         m_rotationCenter = { };
-        protectedMatrix()->setValue(matrix);
+        m_matrix->setValue(matrix);
     }
 
     void matrixDidChange()
@@ -216,26 +215,26 @@ public:
         return builder.toString();
     }
 
-    static ASCIILiteral prefixForTransformType(SVGTransformType type)
+    static const char* prefixForTransformType(SVGTransformType type)
     {
         switch (type) {
         case SVG_TRANSFORM_UNKNOWN:
-            return ""_s;
+            return "";
         case SVG_TRANSFORM_MATRIX:
-            return "matrix("_s;
+            return "matrix(";
         case SVG_TRANSFORM_TRANSLATE:
-            return "translate("_s;
+            return "translate(";
         case SVG_TRANSFORM_SCALE:
-            return "scale("_s;
+            return "scale(";
         case SVG_TRANSFORM_ROTATE:
-            return "rotate("_s;
+            return "rotate(";
         case SVG_TRANSFORM_SKEWX:
-            return "skewX("_s;
+            return "skewX(";
         case SVG_TRANSFORM_SKEWY:
-            return "skewY("_s;
+            return "skewY(";
         }
         ASSERT_NOT_REACHED();
-        return ""_s;
+        return "";
     }
 
 private:

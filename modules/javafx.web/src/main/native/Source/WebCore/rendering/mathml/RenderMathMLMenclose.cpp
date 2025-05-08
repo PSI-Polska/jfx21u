@@ -35,14 +35,14 @@
 #include "RenderBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
 #include "RoundedRect.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/MathExtras.h>
-#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace MathMLNames;
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderMathMLMenclose);
+WTF_MAKE_ISO_ALLOCATED_IMPL(RenderMathMLMenclose);
 
 // The MathML in HTML5 implementation note suggests drawing the left part of longdiv with a parenthesis.
 // For now, we use a Bezier curve and this somewhat arbitrary value.
@@ -53,8 +53,6 @@ RenderMathMLMenclose::RenderMathMLMenclose(MathMLMencloseElement& element, Rende
 {
     ASSERT(isRenderMathMLMenclose());
 }
-
-RenderMathMLMenclose::~RenderMathMLMenclose() = default;
 
 // This arbitrary thickness value is used for the parameter \xi_8 from the MathML in HTML5 implementation note.
 // For now, we take:
@@ -162,10 +160,12 @@ void RenderMathMLMenclose::computePreferredLogicalWidths()
 {
     ASSERT(preferredLogicalWidthsDirty());
 
-    LayoutUnit preferredWidth = preferredLogicalWidthOfRowItems();
+    RenderMathMLRow::computePreferredLogicalWidths();
+
+    LayoutUnit preferredWidth = m_maxPreferredLogicalWidth;
     SpaceAroundContent space = spaceAroundContent(preferredWidth, 0);
-    preferredWidth += space.left + space.right + borderAndPaddingLogicalWidth();
-    m_maxPreferredLogicalWidth = m_minPreferredLogicalWidth = preferredWidth;
+    m_maxPreferredLogicalWidth = space.left + preferredWidth + space.right;
+    m_maxPreferredLogicalWidth = m_minPreferredLogicalWidth;
 
     setPreferredLogicalWidthsDirty(false);
 }
@@ -177,22 +177,18 @@ void RenderMathMLMenclose::layoutBlock(bool relayoutChildren, LayoutUnit)
     if (!relayoutChildren && simplifiedLayout())
         return;
 
-    recomputeLogicalWidth();
-    computeAndSetBlockDirectionMarginsOfChildren();
-
     LayoutUnit contentWidth, contentAscent, contentDescent;
     stretchVerticalOperatorsAndLayoutChildren();
     getContentBoundingBox(contentWidth, contentAscent, contentDescent);
     layoutRowItems(contentWidth, contentAscent);
 
     SpaceAroundContent space = spaceAroundContent(contentWidth, contentAscent + contentDescent);
-    space.left += borderLeft() + paddingLeft();
-    space.right += borderRight() + paddingRight();
-    space.top += borderAndPaddingBefore();
-    space.bottom += borderAndPaddingAfter();
     setLogicalWidth(space.left + contentWidth + space.right);
     setLogicalHeight(space.top + contentAscent + contentDescent + space.bottom);
-    shiftRowItems(space.left, space.top);
+
+    LayoutPoint contentLocation(space.left, space.top);
+    for (auto* child = firstChildBox(); child; child = child->nextSiblingBox())
+        child->setLocation(child->location() + contentLocation);
 
     m_contentRect = LayoutRect(space.left, space.top, contentWidth, contentAscent + contentDescent);
 
@@ -217,7 +213,7 @@ void RenderMathMLMenclose::paint(PaintInfo& info, const LayoutPoint& paintOffset
 {
     RenderMathMLRow::paint(info, paintOffset);
 
-    if (info.context().paintingDisabled() || info.phase != PaintPhase::Foreground || style().usedVisibility() != Visibility::Visible)
+    if (info.context().paintingDisabled() || info.phase != PaintPhase::Foreground || style().visibility() != Visibility::Visible)
         return;
 
     LayoutUnit thickness = ruleThickness();

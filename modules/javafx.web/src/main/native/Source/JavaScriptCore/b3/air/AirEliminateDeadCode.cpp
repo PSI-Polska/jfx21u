@@ -39,7 +39,7 @@ namespace JSC { namespace B3 { namespace Air {
 
 bool eliminateDeadCode(Code& code)
 {
-    PhaseScope phaseScope(code, "eliminateDeadCode"_s);
+    PhaseScope phaseScope(code, "eliminateDeadCode");
 
     TmpSet liveTmps;
     IndexSet<StackSlot*> liveStackSlots;

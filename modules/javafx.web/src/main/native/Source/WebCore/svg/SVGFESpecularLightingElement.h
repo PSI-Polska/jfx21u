@@ -29,8 +29,7 @@
 namespace WebCore {
 
 class SVGFESpecularLightingElement final : public SVGFilterPrimitiveStandardAttributes {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGFESpecularLightingElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGFESpecularLightingElement);
+    WTF_MAKE_ISO_ALLOCATED(SVGFESpecularLightingElement);
 public:
     static Ref<SVGFESpecularLightingElement> create(const QualifiedName&, Document&);
     void lightElementAttributeChanged(const SVGFELightElement*, const QualifiedName&);

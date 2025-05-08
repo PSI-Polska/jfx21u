@@ -146,13 +146,13 @@ bool MockMediaPlayerMediaSource::hasAudio() const
     return m_mediaSourcePrivate ? m_mediaSourcePrivate->hasAudio() : false;
 }
 
-void MockMediaPlayerMediaSource::setPageIsVisible(bool)
+void MockMediaPlayerMediaSource::setPageIsVisible(bool, String&&)
 {
 }
 
 bool MockMediaPlayerMediaSource::seeking() const
 {
-    return !!m_lastSeekTarget;
+    return !m_seekCompleted;
 }
 
 bool MockMediaPlayerMediaSource::paused() const
@@ -170,15 +170,14 @@ MediaPlayer::ReadyState MockMediaPlayerMediaSource::readyState() const
     return m_readyState;
 }
 
-MediaTime MockMediaPlayerMediaSource::maxTimeSeekable() const
+MediaTime MockMediaPlayerMediaSource::maxMediaTimeSeekable() const
 {
     return m_duration;
 }
 
 const PlatformTimeRanges& MockMediaPlayerMediaSource::buffered() const
 {
-    ASSERT_NOT_REACHED();
-    return PlatformTimeRanges::emptyRanges();
+    return m_mediaSourcePrivate ? m_mediaSourcePrivate->buffered() : PlatformTimeRanges::emptyRanges();
 }
 
 bool MockMediaPlayerMediaSource::didLoadingProgress() const
@@ -194,14 +193,14 @@ void MockMediaPlayerMediaSource::paint(GraphicsContext&, const FloatRect&)
 {
 }
 
-MediaTime MockMediaPlayerMediaSource::currentTime() const
+MediaTime MockMediaPlayerMediaSource::currentMediaTime() const
 {
-    return m_lastSeekTarget ? m_lastSeekTarget->time : m_currentTime;
+    return m_currentTime;
 }
 
-bool MockMediaPlayerMediaSource::timeIsProgressing() const
+bool MockMediaPlayerMediaSource::currentMediaTimeMayProgress() const
 {
-    return m_playing && m_mediaSourcePrivate && m_mediaSourcePrivate->hasFutureTime(currentTime());
+    return m_mediaSourcePrivate && m_mediaSourcePrivate->hasFutureTime(currentMediaTime());
 }
 
 void MockMediaPlayerMediaSource::notifyActiveSourceBuffersChanged()
@@ -210,14 +209,14 @@ void MockMediaPlayerMediaSource::notifyActiveSourceBuffersChanged()
         player->activeSourceBuffersChanged();
 }
 
-MediaTime MockMediaPlayerMediaSource::duration() const
+MediaTime MockMediaPlayerMediaSource::durationMediaTime() const
 {
     return m_mediaSourcePrivate ? m_mediaSourcePrivate->duration() : MediaTime::zeroTime();
 }
 
 void MockMediaPlayerMediaSource::seekToTarget(const SeekTarget& target)
 {
-    m_lastSeekTarget = target;
+    m_seekCompleted = false;
     m_mediaSourcePrivate->waitForTarget(target)->whenSettled(RunLoop::current(), [this, weakThis = WeakPtr { this }](auto&& result) {
         if (!weakThis || !result)
             return;
@@ -226,7 +225,7 @@ void MockMediaPlayerMediaSource::seekToTarget(const SeekTarget& target)
             RefPtr protectedThis = weakThis.get();
             if (!protectedThis)
                 return;
-            m_lastSeekTarget.reset();
+            m_seekCompleted = true;
             m_currentTime = seekTime;
 
             if (auto player = m_player.get()) {
@@ -248,7 +247,7 @@ void MockMediaPlayerMediaSource::advanceCurrentTime()
     if (!m_mediaSourcePrivate)
         return;
 
-    auto buffered = m_mediaSourcePrivate->buffered();
+    auto& buffered = m_mediaSourcePrivate->buffered();
     size_t pos = buffered.find(m_currentTime);
     if (pos == notFound)
         return;

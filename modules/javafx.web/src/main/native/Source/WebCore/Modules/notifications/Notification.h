@@ -58,7 +58,7 @@ class NotificationResourcesLoader;
 struct NotificationData;
 
 class Notification final : public RefCounted<Notification>, public ActiveDOMObject, public EventTarget {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(Notification, WEBCORE_EXPORT);
+    WTF_MAKE_ISO_ALLOCATED_EXPORT(Notification, WEBCORE_EXPORT);
 public:
     using Permission = NotificationPermission;
     using Direction = NotificationDirection;
@@ -119,9 +119,8 @@ public:
     WEBCORE_EXPORT NotificationData data() const;
     RefPtr<NotificationResources> resources() const { return m_resources; }
 
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
+    using RefCounted::ref;
+    using RefCounted::deref;
 
     void markAsShown();
     void showSoon();
@@ -137,11 +136,12 @@ private:
     Notification(ScriptExecutionContext&, WTF::UUID, const String& title, Options&&, Ref<SerializedScriptValue>&&);
 
     NotificationClient* clientFromContext();
-    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::Notification; }
+    EventTargetInterface eventTargetInterface() const final { return NotificationEventTargetInterfaceType; }
 
     void stopResourcesLoader();
 
     // ActiveDOMObject
+    const char* activeDOMObjectName() const final;
     void suspend(ReasonForSuspension);
     void stop() final;
     bool virtualHasPendingActivity() const final;

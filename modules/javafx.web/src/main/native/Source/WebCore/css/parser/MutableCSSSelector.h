@@ -84,7 +84,7 @@ public:
 
     bool matchesPseudoElement() const;
 
-    bool isHostPseudoClass() const { return m_selector->isHostPseudoClass(); }
+    bool isHostPseudoSelector() const;
 
     bool hasExplicitNestingParent() const;
     bool hasExplicitPseudoClassScope() const;

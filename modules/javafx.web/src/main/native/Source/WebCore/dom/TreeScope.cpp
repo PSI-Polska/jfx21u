@@ -69,16 +69,6 @@ static_assert(sizeof(TreeScope) == sizeof(SameSizeAsTreeScope), "treescope shoul
 
 using namespace HTMLNames;
 
-struct SVGResourcesMap {
-    WTF_MAKE_NONCOPYABLE(SVGResourcesMap);
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
-    SVGResourcesMap() = default;
-
-    MemoryCompactRobinHoodHashMap<AtomString, WeakHashSet<SVGElement, WeakPtrImplWithEventTargetData>> pendingResources;
-    MemoryCompactRobinHoodHashMap<AtomString, WeakHashSet<SVGElement, WeakPtrImplWithEventTargetData>> pendingResourcesForRemoval;
-    MemoryCompactRobinHoodHashMap<AtomString, LegacyRenderSVGResourceContainer*> legacyResources;
-};
-
 TreeScope::TreeScope(ShadowRoot& shadowRoot, Document& document)
     : m_rootNode(shadowRoot)
     , m_documentScope(document)
@@ -97,20 +87,20 @@ TreeScope::TreeScope(Document& document)
 
 TreeScope::~TreeScope() = default;
 
-void TreeScope::ref() const
+void TreeScope::incrementPtrCount() const
 {
-    if (auto* document = dynamicDowncast<Document>(m_rootNode.get()))
-        document->ref();
+    if (auto* document = dynamicDowncast<Document>(m_rootNode))
+        document->incrementPtrCount();
     else
-        downcast<ShadowRoot>(m_rootNode.get()).ref();
+        checkedDowncast<ShadowRoot>(m_rootNode).incrementPtrCount();
 }
 
-void TreeScope::deref() const
+void TreeScope::decrementPtrCount() const
 {
-    if (auto* document = dynamicDowncast<Document>(m_rootNode.get()))
-        document->deref();
+    if (auto* document = dynamicDowncast<Document>(m_rootNode))
+        document->decrementPtrCount();
     else
-        downcast<ShadowRoot>(m_rootNode.get()).deref();
+        checkedDowncast<ShadowRoot>(m_rootNode).decrementPtrCount();
 }
 
 IdTargetObserverRegistry& TreeScope::ensureIdTargetObserverRegistry()
@@ -132,7 +122,7 @@ void TreeScope::destroyTreeScopeData()
 void TreeScope::setParentTreeScope(TreeScope& newParentScope)
 {
     // A document node cannot be re-parented.
-    ASSERT(!m_rootNode->isDocumentNode());
+    ASSERT(!m_rootNode.isDocumentNode());
 
     m_parentTreeScope = &newParentScope;
     setDocumentScope(newParentScope.documentScope());
@@ -342,7 +332,7 @@ const Vector<WeakRef<Element, WeakPtrImplWithEventTargetData>>* TreeScope::label
         // Populate the map on first access.
         m_labelsByForAttribute = makeUnique<TreeScopeOrderedMap>();
 
-        for (Ref label : descendantsOfType<HTMLLabelElement>(m_rootNode.get())) {
+        for (Ref label : descendantsOfType<HTMLLabelElement>(m_rootNode)) {
             const AtomString& forValue = label->attributeWithoutSynchronization(forAttr);
             if (!forValue.isEmpty())
                 addLabel(forValue, label);
@@ -389,7 +379,7 @@ static std::optional<LayoutPoint> absolutePointIfNotClipped(Document& document, 
     return std::nullopt;
 }
 
-RefPtr<Node> TreeScope::nodeFromPoint(const LayoutPoint& clientPoint, LayoutPoint* localPoint, HitTestSource source)
+RefPtr<Node> TreeScope::nodeFromPoint(const LayoutPoint& clientPoint, LayoutPoint* localPoint)
 {
     Ref document = protectedDocumentScope();
     auto absolutePoint = absolutePointIfNotClipped(document, clientPoint);
@@ -397,18 +387,18 @@ RefPtr<Node> TreeScope::nodeFromPoint(const LayoutPoint& clientPoint, LayoutPoin
         return nullptr;
 
     HitTestResult result(absolutePoint.value());
-    document->hitTest({ source, HitTestRequest::defaultTypes }, result);
+    document->hitTest(HitTestRequest(), result);
     if (localPoint)
         *localPoint = result.localPoint();
     return result.innerNode();
 }
 
-RefPtr<Element> TreeScope::elementFromPoint(double clientX, double clientY, HitTestSource source)
+RefPtr<Element> TreeScope::elementFromPoint(double clientX, double clientY)
 {
     if (!protectedDocumentScope()->hasLivingRenderTree())
         return nullptr;
 
-    auto node = nodeFromPoint(LayoutPoint { clientX, clientY }, nullptr, source);
+    auto node = nodeFromPoint(LayoutPoint { clientX, clientY }, nullptr);
     if (!node)
         return nullptr;
 
@@ -423,7 +413,7 @@ RefPtr<Element> TreeScope::elementFromPoint(double clientX, double clientY, HitT
     return static_pointer_cast<Element>(WTFMove(node));
 }
 
-Vector<RefPtr<Element>> TreeScope::elementsFromPoint(double clientX, double clientY, HitTestSource source)
+Vector<RefPtr<Element>> TreeScope::elementsFromPoint(double clientX, double clientY)
 {
     Vector<RefPtr<Element>> elements;
 
@@ -435,16 +425,9 @@ Vector<RefPtr<Element>> TreeScope::elementsFromPoint(double clientX, double clie
     if (!absolutePoint)
         return elements;
 
-    static constexpr OptionSet hitTypes {
-        HitTestRequest::Type::ReadOnly,
-        HitTestRequest::Type::Active,
-        HitTestRequest::Type::DisallowUserAgentShadowContent,
-        HitTestRequest::Type::CollectMultipleElements,
-        HitTestRequest::Type::IncludeAllElementsUnderPoint
-    };
-
+    constexpr OptionSet<HitTestRequest::Type> hitType { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::Active, HitTestRequest::Type::DisallowUserAgentShadowContent, HitTestRequest::Type::CollectMultipleElements, HitTestRequest::Type::IncludeAllElementsUnderPoint };
     HitTestResult result { absolutePoint.value() };
-    document->hitTest({ source, hitTypes }, result);
+    document->hitTest(hitType, result);
 
     RefPtr<Node> lastNode;
     auto& nodeSet = result.listBasedTestResult();
@@ -473,7 +456,7 @@ Vector<RefPtr<Element>> TreeScope::elementsFromPoint(double clientX, double clie
         lastNode = node;
     }
 
-    if (auto* rootDocument = dynamicDowncast<Document>(m_rootNode.get())) {
+    if (auto* rootDocument = dynamicDowncast<Document>(m_rootNode)) {
         if (Element* rootElement = rootDocument->documentElement()) {
             if (elements.isEmpty() || elements.last() != rootElement)
                 elements.append(rootElement);
@@ -481,6 +464,11 @@ Vector<RefPtr<Element>> TreeScope::elementsFromPoint(double clientX, double clie
     }
 
     return elements;
+}
+
+Vector<RefPtr<Element>> TreeScope::elementsFromPoint(const FloatPoint& p)
+{
+    return elementsFromPoint(p.x(), p.y());
 }
 
 // FIXME: Would be nice to change this to take a StringView, since that's what callers have
@@ -492,7 +480,7 @@ RefPtr<Element> TreeScope::findAnchor(StringView name)
     if (RefPtr element = getElementById(name))
         return element;
     auto inQuirksMode = documentScope().inQuirksMode();
-    Ref rootNode = m_rootNode.get();
+    Ref rootNode = m_rootNode;
     for (Ref anchor : descendantsOfType<HTMLAnchorElement>(rootNode)) {
         if (inQuirksMode) {
             // Quirks mode, ASCII case-insensitive comparison of names.
@@ -592,13 +580,13 @@ RadioButtonGroups& TreeScope::radioButtonGroups()
 CSSStyleSheetObservableArray& TreeScope::ensureAdoptedStyleSheets()
 {
     if (UNLIKELY(!m_adoptedStyleSheets))
-        m_adoptedStyleSheets = CSSStyleSheetObservableArray::create(m_rootNode.get());
+        m_adoptedStyleSheets = CSSStyleSheetObservableArray::create(m_rootNode);
     return *m_adoptedStyleSheets;
 }
 
-std::span<const Ref<CSSStyleSheet>> TreeScope::adoptedStyleSheets() const
+std::span<const RefPtr<CSSStyleSheet>> TreeScope::adoptedStyleSheets() const
 {
-    return m_adoptedStyleSheets ? m_adoptedStyleSheets->sheets().span() : std::span<const Ref<CSSStyleSheet>> { };
+    return m_adoptedStyleSheets ? m_adoptedStyleSheets->sheets().span() : std::span<const RefPtr<CSSStyleSheet>> { };
 }
 
 JSC::JSValue TreeScope::adoptedStyleSheetWrapper(JSDOMGlobalObject& lexicalGlobalObject)
@@ -606,12 +594,21 @@ JSC::JSValue TreeScope::adoptedStyleSheetWrapper(JSDOMGlobalObject& lexicalGloba
     return JSC::JSObservableArray::create(&lexicalGlobalObject, ensureAdoptedStyleSheets());
 }
 
-ExceptionOr<void> TreeScope::setAdoptedStyleSheets(Vector<Ref<CSSStyleSheet>>&& sheets)
+ExceptionOr<void> TreeScope::setAdoptedStyleSheets(Vector<RefPtr<CSSStyleSheet>>&& sheets)
 {
     if (!m_adoptedStyleSheets && sheets.isEmpty())
         return { };
     return ensureAdoptedStyleSheets().setSheets(WTFMove(sheets));
 }
+
+struct SVGResourcesMap {
+    WTF_MAKE_NONCOPYABLE(SVGResourcesMap); WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    SVGResourcesMap() = default;
+
+    MemoryCompactRobinHoodHashMap<AtomString, WeakHashSet<SVGElement, WeakPtrImplWithEventTargetData>> pendingResources;
+    MemoryCompactRobinHoodHashMap<AtomString, WeakHashSet<SVGElement, WeakPtrImplWithEventTargetData>> pendingResourcesForRemoval;
+    MemoryCompactRobinHoodHashMap<AtomString, LegacyRenderSVGResourceContainer*> legacyResources;
+};
 
 SVGResourcesMap& TreeScope::svgResourcesMap() const
 {

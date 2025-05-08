@@ -49,7 +49,7 @@ void ExecutableBase::dump(PrintStream& out) const
     switch (type()) {
     case NativeExecutableType: {
         NativeExecutable* native = jsCast<NativeExecutable*>(realThis);
-        out.print("NativeExecutable:"_s, RawPointer(native->function().taggedPtr()), "/"_s, RawPointer(native->constructor().taggedPtr()));
+        out.print("NativeExecutable:", RawPointer(native->function().taggedPtr()), "/", RawPointer(native->constructor().taggedPtr()));
         return;
     }
     case EvalExecutableType: {
@@ -57,7 +57,7 @@ void ExecutableBase::dump(PrintStream& out) const
         if (CodeBlock* codeBlock = eval->codeBlock())
             out.print(*codeBlock);
         else
-            out.print("EvalExecutable w/o CodeBlock"_s);
+            out.print("EvalExecutable w/o CodeBlock");
         return;
     }
     case ProgramExecutableType: {
@@ -65,7 +65,7 @@ void ExecutableBase::dump(PrintStream& out) const
         if (CodeBlock* codeBlock = eval->codeBlock())
             out.print(*codeBlock);
         else
-            out.print("ProgramExecutable w/o CodeBlock"_s);
+            out.print("ProgramExecutable w/o CodeBlock");
         return;
     }
     case ModuleProgramExecutableType: {
@@ -73,15 +73,15 @@ void ExecutableBase::dump(PrintStream& out) const
         if (CodeBlock* codeBlock = executable->codeBlock())
             out.print(*codeBlock);
         else
-            out.print("ModuleProgramExecutable w/o CodeBlock"_s);
+            out.print("ModuleProgramExecutable w/o CodeBlock");
         return;
     }
     case FunctionExecutableType: {
         FunctionExecutable* function = jsCast<FunctionExecutable*>(realThis);
         if (!function->eitherCodeBlock())
-            out.print("FunctionExecutable w/o CodeBlock"_s);
+            out.print("FunctionExecutable w/o CodeBlock");
         else {
-            CommaPrinter comma("/"_s);
+            CommaPrinter comma("/");
             if (function->codeBlockForCall())
                 out.print(comma, *function->codeBlockForCall());
             if (function->codeBlockForConstruct())

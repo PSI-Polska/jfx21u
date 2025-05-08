@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include "CSSParserContext.h"
 #include "CSSSelectorEnums.h"
 #include "QualifiedName.h"
 #include "RenderStyleConstants.h"
@@ -38,8 +39,6 @@ struct PossiblyQuotedIdentifier {
 
     bool isNull() const { return identifier.isNull(); }
 };
-
-WTF::TextStream& operator<<(WTF::TextStream&, PossiblyQuotedIdentifier);
 
 enum class SelectorSpecificityIncrement {
         ClassA = 0x10000,
@@ -119,6 +118,7 @@ public:
     static PseudoId pseudoId(PseudoElement);
     static bool isPseudoClassEnabled(PseudoClass, const CSSSelectorParserContext&);
     static bool isPseudoElementEnabled(PseudoElement, StringView, const CSSSelectorParserContext&);
+    static std::optional<PseudoId> parsePseudoElement(const String&, const CSSSelectorParserContext&);
     static std::optional<PseudoElement> parsePseudoElementName(StringView, const CSSSelectorParserContext&);
     static bool pseudoClassRequiresArgument(PseudoClass);
     static bool pseudoElementRequiresArgument(PseudoElement);
@@ -159,7 +159,6 @@ public:
         bool matchesPseudoElement() const;
         bool isSiblingSelector() const;
         bool isAttributeSelector() const;
-    bool isHostPseudoClass() const;
 
     Relation relation() const { return static_cast<Relation>(m_relation); }
         Match match() const { return static_cast<Match>(m_match); }
@@ -239,7 +238,7 @@ private:
             int b { 0 }; // Used for :nth-*
             QualifiedName attribute; // used for attribute selector
             AtomString argument; // Used for :contains and :nth-*
-        FixedVector<PossiblyQuotedIdentifier> argumentList; // Used for :lang, :active-view-transition-type, and ::part arguments.
+            FixedVector<PossiblyQuotedIdentifier> argumentList; // Used for :lang and ::part arguments.
             std::unique_ptr<CSSSelectorList> selectorList; // Used for :is(), :matches(), and :not().
 
             Ref<RareData> deepCopy() const;

@@ -39,7 +39,7 @@ class ResourceResponse;
 class WebSocketChannel;
 class WebSocketChannelInspector;
 
-using WebSocketChannelIdentifier = LegacyNullableAtomicObjectIdentifier<WebSocketChannel>;
+using WebSocketChannelIdentifier = AtomicObjectIdentifier<WebSocketChannel>;
 
 class WEBCORE_EXPORT WebSocketChannelInspector {
 public:
@@ -56,7 +56,7 @@ public:
 
     WebSocketChannelIdentifier progressIdentifier() const;
 
-    static WebSocketFrame createFrame(std::span<const uint8_t> data, WebSocketFrame::OpCode);
+    static WebSocketFrame createFrame(const uint8_t* data, size_t length, WebSocketFrame::OpCode);
 
 private:
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;

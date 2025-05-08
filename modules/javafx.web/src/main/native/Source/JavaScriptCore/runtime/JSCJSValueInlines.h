@@ -38,7 +38,6 @@
 #include "JSObject.h"
 #include "JSStringInlines.h"
 #include "MathCommon.h"
-#include <wtf/text/MakeString.h>
 #include <wtf/text/StringImpl.h>
 
 namespace JSC {
@@ -59,7 +58,7 @@ inline uint32_t JSValue::toUInt32(JSGlobalObject* globalObject) const
     return toInt32(globalObject);
 }
 
-inline uint32_t JSValue::toIndex(JSGlobalObject* globalObject, ASCIILiteral errorName) const
+inline uint32_t JSValue::toIndex(JSGlobalObject* globalObject, const char* errorName) const
 {
     VM& vm = getVM(globalObject);
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -734,28 +733,6 @@ inline int32_t JSValue::bigInt32AsInt32() const
 }
 #endif // USE(BIGINT32)
 
-inline bool JSValue::isZeroBigInt() const
-{
-    ASSERT(isBigInt());
-#if USE(BIGINT32)
-    if (isBigInt32())
-        return !bigInt32AsInt32();
-#endif
-    ASSERT(isHeapBigInt());
-    return asHeapBigInt()->isZero();
-}
-
-inline bool JSValue::isNegativeBigInt() const
-{
-    ASSERT(isBigInt());
-#if USE(BIGINT32)
-    if (isBigInt32())
-        return bigInt32AsInt32() < 0;
-#endif
-    ASSERT(isHeapBigInt());
-    return asHeapBigInt()->sign();
-}
-
 inline bool JSValue::isSymbol() const
 {
     return isCell() && asCell()->isSymbol();
@@ -865,7 +842,7 @@ inline PreferredPrimitiveType toPreferredPrimitiveType(JSGlobalObject* globalObj
         return NoPreference;
     }
 
-    auto hintString = asString(value)->view(globalObject);
+    String hintString = asString(value)->value(globalObject);
     RETURN_IF_EXCEPTION(scope, NoPreference);
 
     if (WTF::equal(hintString, "default"_s))
@@ -1287,7 +1264,7 @@ ALWAYS_INLINE bool JSValue::equalSlowCaseInline(JSGlobalObject* globalObject, JS
         if (s1 || s2) {
             // We are guaranteed that the string is v2 (thanks to the swap above)
             if (v1.isBigInt()) {
-                auto v2String = asString(v2)->value(globalObject);
+                String v2String = asString(v2)->value(globalObject);
                 RETURN_IF_EXCEPTION(scope, false);
                 v2 = JSBigInt::stringToBigInt(globalObject, v2String);
                 RETURN_IF_EXCEPTION(scope, false);
@@ -1457,9 +1434,6 @@ ALWAYS_INLINE bool isThisValueAltered(const PutPropertySlot& slot, JSObject* bas
 // See section 7.2.9: https://tc39.github.io/ecma262/#sec-samevalue
 ALWAYS_INLINE bool sameValue(JSGlobalObject* globalObject, JSValue a, JSValue b)
 {
-    if (a == b)
-        return true;
-
     if (!a.isNumber())
         return JSValue::strictEqual(globalObject, a, b);
     if (!b.isNumber())

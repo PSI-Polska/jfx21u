@@ -62,16 +62,9 @@ enum class TextIteratorBehavior : uint16_t {
 
     EntersImageOverlays = 1 << 10,
 
-    IgnoresUserSelectNone = 1 << 11,
+    IgnoresWhiteSpaceAtEndOfRun = 1 << 11,
 
-    EmitsObjectReplacementCharactersForImages = 1 << 12,
-
-#if ENABLE(ATTACHMENT_ELEMENT)
-    EmitsObjectReplacementCharactersForAttachments = 1 << 13,
-#endif
-
-    // Used by accessibility to expose untransformed kana text.
-    IgnoresFullSizeKana = 1 << 14
+    IgnoresUserSelectNone = 1 << 12,
 };
 
 using TextIteratorBehaviors = OptionSet<TextIteratorBehavior>;

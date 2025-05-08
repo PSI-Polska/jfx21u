@@ -46,7 +46,7 @@ public:
     JS_EXPORT_PRIVATE static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName, DeletePropertySlot&);
     JS_EXPORT_PRIVATE static void getOwnSpecialPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
 
-    static constexpr ptrdiff_t offsetOfSymbolTable() { return OBJECT_OFFSETOF(JSSymbolTableObject, m_symbolTable); }
+    static ptrdiff_t offsetOfSymbolTable() { return OBJECT_OFFSETOF(JSSymbolTableObject, m_symbolTable); }
 
     DECLARE_EXPORT_INFO;
 
@@ -58,10 +58,9 @@ protected:
 
     JSSymbolTableObject(VM& vm, Structure* structure, JSScope* scope, SymbolTable* symbolTable)
         : Base(vm, structure, scope)
-        , m_symbolTable(symbolTable, WriteBarrierEarlyInit)
     {
         ASSERT(symbolTable);
-        symbolTable->notifyCreation(vm, this, "Allocated a scope");
+        setSymbolTable(vm, symbolTable);
     }
 
     void setSymbolTable(VM& vm, SymbolTable* symbolTable)

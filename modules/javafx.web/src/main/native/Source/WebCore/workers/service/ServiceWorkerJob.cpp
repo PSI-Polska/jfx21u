@@ -37,7 +37,6 @@
 #include "ServiceWorkerRegistration.h"
 #include "WorkerFetchResult.h"
 #include "WorkerRunLoop.h"
-#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -151,7 +150,7 @@ ResourceError ServiceWorkerJob::validateServiceWorkerResponse(const ServiceWorke
     return { };
 }
 
-void ServiceWorkerJob::didReceiveResponse(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const ResourceResponse& response)
+void ServiceWorkerJob::didReceiveResponse(ResourceLoaderIdentifier, const ResourceResponse& response)
 {
     ASSERT(m_creationThread.ptr() == &Thread::current());
     ASSERT(!m_completed);
@@ -168,7 +167,7 @@ void ServiceWorkerJob::didReceiveResponse(ScriptExecutionContextIdentifier, Reso
     m_client.jobFailedLoadingScript(*this, WTFMove(error), WTFMove(exception));
 }
 
-void ServiceWorkerJob::notifyFinished(ScriptExecutionContextIdentifier)
+void ServiceWorkerJob::notifyFinished()
 {
     ASSERT(m_creationThread.ptr() == &Thread::current());
     ASSERT(m_scriptLoader);
@@ -183,7 +182,7 @@ void ServiceWorkerJob::notifyFinished(ScriptExecutionContextIdentifier)
     auto& error = scriptLoader->error();
     ASSERT(!error.isNull());
 
-    m_client.jobFailedLoadingScript(*this, error, Exception { error.isAccessControl() ? ExceptionCode::SecurityError : ExceptionCode::TypeError, makeString("Script "_s, scriptLoader->url().string(), " load failed"_s) });
+    m_client.jobFailedLoadingScript(*this, error, Exception { error.isAccessControl() ? ExceptionCode::SecurityError : ExceptionCode::TypeError, makeString("Script ", scriptLoader->url().string(), " load failed") });
 }
 
 bool ServiceWorkerJob::cancelPendingLoad()

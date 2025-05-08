@@ -194,7 +194,7 @@ bool lowerMacrosImpl(Procedure& proc)
 
 bool lowerMacrosAfterOptimizations(Procedure& proc)
 {
-    PhaseScope phaseScope(proc, "lowerMacrosAfterOptimizations"_s);
+    PhaseScope phaseScope(proc, "lowerMacrosAfterOptimizations");
     bool result = lowerMacrosImpl(proc);
     if (shouldValidateIR())
         RELEASE_ASSERT(!lowerMacrosImpl(proc));

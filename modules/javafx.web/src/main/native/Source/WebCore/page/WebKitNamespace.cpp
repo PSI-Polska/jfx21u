@@ -41,7 +41,7 @@ namespace WebCore {
 
 WebKitNamespace::WebKitNamespace(LocalDOMWindow& window, UserContentProvider& userContentProvider)
     : LocalDOMWindowProperty(&window)
-    , m_messageHandlerNamespace(UserMessageHandlersNamespace::create(*window.protectedFrame(), userContentProvider))
+    , m_messageHandlerNamespace(UserMessageHandlersNamespace::create(*window.frame(), userContentProvider))
 {
     ASSERT(window.frame());
 }

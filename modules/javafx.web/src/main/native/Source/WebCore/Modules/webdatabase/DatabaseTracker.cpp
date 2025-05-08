@@ -49,7 +49,6 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/UUID.h>
 #include <wtf/text/CString.h>
-#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 #if PLATFORM(IOS_FAMILY)

@@ -87,27 +87,27 @@ bool Effects::interferes(const Effects& other) const
 
 void Effects::dump(PrintStream& out) const
 {
-    CommaPrinter comma("|"_s);
+    CommaPrinter comma("|");
     if (terminal)
-        out.print(comma, "Terminal"_s);
+        out.print(comma, "Terminal");
     if (exitsSideways)
-        out.print(comma, "ExitsSideways"_s);
+        out.print(comma, "ExitsSideways");
     if (controlDependent)
-        out.print(comma, "ControlDependent"_s);
+        out.print(comma, "ControlDependent");
     if (writesLocalState)
-        out.print(comma, "WritesLocalState"_s);
+        out.print(comma, "WritesLocalState");
     if (readsLocalState)
-        out.print(comma, "ReadsLocalState"_s);
+        out.print(comma, "ReadsLocalState");
     if (writesPinned)
-        out.print(comma, "WritesPinned"_s);
+        out.print(comma, "WritesPinned");
     if (readsPinned)
-        out.print(comma, "ReadsPinned"_s);
+        out.print(comma, "ReadsPinned");
     if (fence)
-        out.print(comma, "Fence"_s);
+        out.print(comma, "Fence");
     if (writes)
-        out.print(comma, "Writes:"_s, writes);
+        out.print(comma, "Writes:", writes);
     if (reads)
-        out.print(comma, "Reads:"_s, reads);
+        out.print(comma, "Reads:", reads);
 }
 
 } } // namespace JSC::B3

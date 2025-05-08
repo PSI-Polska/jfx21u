@@ -65,26 +65,30 @@ private:
     void writeBuffer(
         const Buffer&,
         Size64 bufferOffset,
-        std::span<const uint8_t> source,
+        const void* source,
+        size_t byteLength,
         Size64 dataOffset,
         std::optional<Size64>) final;
 
     void writeTexture(
         const ImageCopyTexture& destination,
-        std::span<const uint8_t> source,
+        const void* source,
+        size_t byteLength,
         const ImageDataLayout&,
         const Extent3D& size) final;
 
-    void writeBufferNoCopy(
+    void writeBuffer(
         const Buffer&,
         Size64 bufferOffset,
-        std::span<uint8_t> source,
+        void* source,
+        size_t byteLength,
         Size64 dataOffset,
         std::optional<Size64>) final;
 
     void writeTexture(
         const ImageCopyTexture& destination,
-        std::span<uint8_t> source,
+        void* source,
+        size_t byteLength,
         const ImageDataLayout&,
         const Extent3D& size) final;
 

@@ -40,22 +40,16 @@ enum class SpeciesConstructResult : uint8_t {
     CreatedObject
 };
 
-ALWAYS_INLINE bool arraySpeciesWatchpointIsValid(VM& vm, JSObject* thisObject)
+ALWAYS_INLINE bool arraySpeciesWatchpointIsValid(JSObject* thisObject)
 {
     JSGlobalObject* globalObject = thisObject->globalObject();
     ArrayPrototype* arrayPrototype = globalObject->arrayPrototype();
 
     ASSERT(globalObject->arraySpeciesWatchpointSet().state() != ClearWatchpoint);
-    if (arrayPrototype != thisObject->getPrototypeDirect())
-        return false;
 
-    if (globalObject->arraySpeciesWatchpointSet().state() != IsWatched)
-        return false;
-
-    if (!thisObject->hasCustomProperties())
-        return true;
-
-    return thisObject->getDirectOffset(vm, vm.propertyNames->constructor) == invalidOffset;
+    return !thisObject->hasCustomProperties()
+        && arrayPrototype == thisObject->getPrototypeDirect()
+        && globalObject->arraySpeciesWatchpointSet().state() == IsWatched;
 }
 
 ALWAYS_INLINE std::pair<SpeciesConstructResult, JSObject*> speciesConstructArray(JSGlobalObject* globalObject, JSObject* thisObject, uint64_t length)
@@ -72,7 +66,7 @@ ALWAYS_INLINE std::pair<SpeciesConstructResult, JSObject*> speciesConstructArray
     if (LIKELY(thisIsArray)) {
         // Fast path in the normal case where the user has not set an own constructor and the Array.prototype.constructor is normal.
         // We need prototype check for subclasses of Array, which are Array objects but have a different prototype by default.
-        bool isValid = arraySpeciesWatchpointIsValid(vm, thisObject);
+        bool isValid = arraySpeciesWatchpointIsValid(thisObject);
         RETURN_IF_EXCEPTION(scope, exceptionResult);
         if (LIKELY(isValid))
             return std::pair { SpeciesConstructResult::FastPath, nullptr };

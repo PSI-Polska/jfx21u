@@ -175,7 +175,7 @@ struct CLASS_INFO_ALIGNMENT ClassInfo {
     const unsigned staticClassSize;
     const bool isResizableOrGrowableSharedTypedArray;
 
-    static constexpr ptrdiff_t offsetOfParentClass()
+    static ptrdiff_t offsetOfParentClass()
     {
         return OBJECT_OFFSETOF(ClassInfo, parentClass);
     }

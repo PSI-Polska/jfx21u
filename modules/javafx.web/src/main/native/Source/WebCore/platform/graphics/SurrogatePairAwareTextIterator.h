@@ -29,12 +29,12 @@ class SurrogatePairAwareTextIterator {
 public:
     // The passed in UChar pointer starts at 'currentIndex'. The iterator operates on the range [currentIndex, lastIndex].
     // 'endIndex' denotes the maximum length of the UChar array, which might exceed 'lastIndex'.
-    SurrogatePairAwareTextIterator(std::span<const UChar> characters, unsigned currentIndex, unsigned lastIndex)
-        : m_characters(characters.data())
+    SurrogatePairAwareTextIterator(const UChar* characters, unsigned currentIndex, unsigned lastIndex, unsigned endIndex)
+        : m_characters(characters)
         , m_currentIndex(currentIndex)
         , m_originalIndex(currentIndex)
         , m_lastIndex(lastIndex)
-        , m_endIndex(characters.size() + currentIndex)
+        , m_endIndex(endIndex)
     {
     }
 

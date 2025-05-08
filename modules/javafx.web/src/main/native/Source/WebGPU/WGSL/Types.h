@@ -27,7 +27,6 @@
 
 #include "ASTForward.h"
 #include "WGSLEnums.h"
-#include <functional>
 #include <wtf/FixedVector.h>
 #include <wtf/HashMap.h>
 #include <wtf/Markable.h>
@@ -47,11 +46,9 @@ enum Packing : uint8_t {
     Either       = Packed | Unpacked,
 
     PStruct = 1 << 2,
-    PArray = 1 << 3,
-    Vec3   = 1 << 4,
+    Vec3   = 1 << 3,
 
     PackedStruct = Packed | PStruct,
-    PackedArray = Packed | PArray,
     PackedVec3   = Packed | Vec3,
 };
 
@@ -216,14 +213,12 @@ public:
 struct Function {
     WTF::Vector<const Type*> parameters;
     const Type* result;
-    bool mustUse;
 };
 
 struct Reference {
     AddressSpace addressSpace;
     AccessMode accessMode;
     const Type* element;
-    bool isVectorComponent;
 };
 
 struct Pointer {
@@ -292,8 +287,6 @@ struct Type : public std::variant<
     bool hasCreationFixedFootprint() const;
     bool containsRuntimeArray() const;
     bool containsOverrideArray() const;
-    bool isSampler() const;
-    bool isTexture() const;
 };
 
 using ConversionRank = Markable<unsigned, IntegralMarkableTraits<unsigned, std::numeric_limits<unsigned>::max()>>;

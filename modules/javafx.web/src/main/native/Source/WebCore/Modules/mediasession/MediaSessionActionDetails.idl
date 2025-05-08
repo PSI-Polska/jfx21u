@@ -25,15 +25,13 @@
 
 [
     Conditional=MEDIA_SESSION,
-    ExportMacro=WEBCORE_EXPORT,
     JSGenerateToJSObject,
-    JSGenerateToNativeObject,
+    ExportMacro=WEBCORE_EXPORT,
 ] dictionary MediaSessionActionDetails {
     required MediaSessionAction action;
     double? seekOffset;
     double? seekTime;
     boolean? fastSeek;
-    boolean? isActivating;
 
     [Conditional=MEDIA_SESSION_PLAYLIST, EnabledBySetting=MediaSessionPlaylistEnabled] DOMString? trackIdentifier;
 };

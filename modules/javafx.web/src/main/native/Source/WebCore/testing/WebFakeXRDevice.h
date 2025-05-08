@@ -32,7 +32,6 @@
 #include "FakeXRBoundsPoint.h"
 #include "FakeXRInputSourceInit.h"
 #include "FakeXRViewInit.h"
-#include "IntSizeHash.h"
 #include "JSDOMPromiseDeferredForward.h"
 #include "PlatformXR.h"
 #include "Timer.h"
@@ -104,12 +103,8 @@ private:
     bool m_supportsShutdownNotification { false };
     Timer m_frameTimer;
     RequestFrameCallback m_FrameCallback;
-#if PLATFORM(COCOA)
-    HashMap<PlatformXR::LayerHandle, WebCore::IntSize> m_layers;
-#else
-    HashMap<PlatformXR::LayerHandle, PlatformGLObject> m_layers;
     RefPtr<WebCore::GraphicsContextGL> m_gl;
-#endif
+    HashMap<PlatformXR::LayerHandle, PlatformGLObject> m_layers;
     uint32_t m_layerIndex { 0 };
     Vector<Ref<WebFakeXRInputController>> m_inputConnections;
 };

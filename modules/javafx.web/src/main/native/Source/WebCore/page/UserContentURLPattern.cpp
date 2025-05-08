@@ -29,7 +29,6 @@
 #include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/URL.h>
-#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -41,10 +40,8 @@ UserContentURLPattern::UserContentURLPattern(StringView scheme, StringView host,
         return;
     }
 
-    bool isFileScheme = equalLettersIgnoringASCIICase(m_scheme, "file"_s);
-
     m_host = host.toString();
-    if (!isFileScheme && m_host.isEmpty()) {
+    if (m_host.isEmpty()) {
         m_error = Error::MissingHost;
         return;
     }

@@ -27,10 +27,14 @@
 #include "CSSSelector.h"
 
 #include "CSSMarkup.h"
+#include "CSSParserTokenRange.h"
 #include "CSSSelectorInlines.h"
 #include "CSSSelectorList.h"
+#include "CSSSelectorParserContext.h"
+#include "CSSTokenizer.h"
 #include "CommonAtomStrings.h"
 #include "HTMLNames.h"
+#include "MutableCSSSelector.h"
 #include "SelectorPseudoTypeMap.h"
 #include <memory>
 #include <queue>
@@ -38,7 +42,6 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/Vector.h>
 #include <wtf/text/AtomStringHash.h>
-#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/TextStream.h>
 
@@ -198,23 +201,10 @@ SelectorSpecificity simpleSelectorSpecificity(const CSSSelector& simpleSelector)
             return 0;
         return SelectorSpecificityIncrement::ClassC;
     case CSSSelector::Match::PseudoElement:
-        switch (simpleSelector.pseudoElement()) {
         // Slotted only competes with other slotted selectors for specificity,
         // so whether we add the ClassC specificity shouldn't be observable.
-        case CSSSelector::PseudoElement::Slotted:
+        if (simpleSelector.pseudoElement() == CSSSelector::PseudoElement::Slotted)
             return maxSpecificity(simpleSelector.selectorList());
-        case CSSSelector::PseudoElement::ViewTransitionGroup:
-        case CSSSelector::PseudoElement::ViewTransitionImagePair:
-        case CSSSelector::PseudoElement::ViewTransitionNew:
-        case CSSSelector::PseudoElement::ViewTransitionOld:
-            ASSERT(simpleSelector.argumentList() && simpleSelector.argumentList()->size());
-            // Standalone universal selector gets 0 specificity.
-            if (simpleSelector.argumentList()->first().identifier == starAtom() && simpleSelector.argumentList()->size() == 1)
-                return 0;
-            break;
-        default:
-            break;
-        }
         return SelectorSpecificityIncrement::ClassC;
     case CSSSelector::Match::HasScope:
     case CSSSelector::Match::Unknown:
@@ -279,8 +269,6 @@ PseudoId CSSSelector::pseudoId(PseudoElement type)
         return PseudoId::SpellingError;
     case PseudoElement::Selection:
         return PseudoId::Selection;
-    case PseudoElement::TargetText:
-        return PseudoId::TargetText;
     case PseudoElement::Highlight:
         return PseudoId::Highlight;
     case PseudoElement::Marker:
@@ -315,8 +303,6 @@ PseudoId CSSSelector::pseudoId(PseudoElement type)
         return PseudoId::ViewTransitionOld;
     case PseudoElement::ViewTransitionNew:
         return PseudoId::ViewTransitionNew;
-    case PseudoElement::InternalWritingSuggestions:
-        return PseudoId::InternalWritingSuggestions;
 #if ENABLE(VIDEO)
     case PseudoElement::Cue:
 #endif
@@ -350,6 +336,35 @@ std::optional<CSSSelector::PseudoElement> CSSSelector::parsePseudoElementName(St
     return *type;
 }
 
+// FIXME: We should eventually deduplicate this with CSSSelectorParser::consumePseudo() somehow.
+std::optional<PseudoId> CSSSelector::parsePseudoElement(const String& input, const CSSSelectorParserContext& context)
+{
+    // FIXME: Add support for FunctionToken (webkit.org/b/264103).
+    auto tokenizer = CSSTokenizer { input };
+    auto range = tokenizer.tokenRange();
+    auto token = range.consume();
+    if (token.type() != ColonToken)
+        return std::nullopt;
+    token = range.consume();
+    if (token.type() == IdentToken) {
+        if (!range.atEnd())
+            return std::nullopt;
+        auto pseudoClassOrElement = findPseudoClassAndCompatibilityElementName(token.value());
+        if (!pseudoClassOrElement.compatibilityPseudoElement)
+            return std::nullopt;
+        ASSERT(CSSSelector::isPseudoElementEnabled(*pseudoClassOrElement.compatibilityPseudoElement, token.value(), context));
+        return pseudoId(*pseudoClassOrElement.compatibilityPseudoElement);
+    }
+    if (token.type() != ColonToken)
+        return std::nullopt;
+    token = range.consume();
+    if (token.type() != IdentToken || !range.atEnd())
+        return std::nullopt;
+    if (auto pseudoElement = parsePseudoElementName(token.value(), context))
+        return pseudoId(*pseudoElement);
+    return std::nullopt;
+}
+
 const CSSSelector* CSSSelector::firstInCompound() const
 {
     auto* selector = this;
@@ -377,24 +392,16 @@ static void appendPseudoClassFunctionTail(StringBuilder& builder, const CSSSelec
 
 }
 
-static void appendPossiblyQuotedIdentifier(StringBuilder& builder, const PossiblyQuotedIdentifier& identifier)
+static void appendLangArgumentList(StringBuilder& builder, const FixedVector<PossiblyQuotedIdentifier>& list)
 {
-    if (!identifier.wasQuoted)
-        serializeIdentifier(identifier.identifier, builder);
+    for (unsigned i = 0, size = list.size(); i < size; ++i) {
+        if (!list[i].wasQuoted)
+            serializeIdentifier(list[i].identifier, builder);
         else
-        serializeString(identifier.identifier, builder);
-}
-
-WTF::TextStream& operator<<(WTF::TextStream& ts, PossiblyQuotedIdentifier identifier)
-{
-    StringBuilder builder;
-    appendPossiblyQuotedIdentifier(builder, identifier);
-    return ts << builder.toString();
-}
-
-static void appendCommaSeparatedPossiblyQuotedIdentifierList(StringBuilder& builder, const FixedVector<PossiblyQuotedIdentifier>& list)
-{
-    builder.append(interleave(list, appendPossiblyQuotedIdentifier, ", "_s));
+            serializeString(list[i].identifier, builder);
+        if (i != size - 1)
+            builder.append(", "_s);
+    }
 }
 
 // http://dev.w3.org/csswg/css-syntax/#serializing-anb
@@ -435,50 +442,50 @@ static void outputNthChildAnPlusB(const CSSSelector& selector, StringBuilder& bu
 
 String CSSSelector::selectorText(StringView separator, StringView rightSide) const
 {
-    auto serializeIdentifierOrStar = [](const AtomString& identifier, StringBuilder& builder) {
+    StringBuilder builder;
+
+    auto serializeIdentifierOrStar = [&] (const AtomString& identifier) {
         if (identifier == starAtom())
             builder.append('*');
         else
             serializeIdentifier(identifier, builder);
     };
 
-    StringBuilder builder;
-
     if (match() == Match::Tag && !m_tagIsForNamespaceRule) {
         if (auto& prefix = tagQName().prefix(); !prefix.isNull()) {
-            serializeIdentifierOrStar(prefix, builder);
+            serializeIdentifierOrStar(prefix);
             builder.append('|');
         }
-        serializeIdentifierOrStar(tagQName().localName(), builder);
+        serializeIdentifierOrStar(tagQName().localName());
     }
 
-    const auto* selector = this;
+    const CSSSelector* cs = this;
     while (true) {
-        if (selector->isImplicit()) {
+        if (cs->isImplicit()) {
             // Remove the space before the implicit selector.
             separator = separator.substring(1);
             break;
         }
-        if (selector->match() == Match::Id) {
+        if (cs->match() == Match::Id) {
             builder.append('#');
-            serializeIdentifier(selector->serializingValue(), builder);
-        } else if (selector->match() == Match::NestingParent) {
+            serializeIdentifier(cs->serializingValue(), builder);
+        } else if (cs->match() == Match::NestingParent) {
             builder.append('&');
-        } else if (selector->match() == Match::Class) {
+        } else if (cs->match() == Match::Class) {
             builder.append('.');
-            serializeIdentifier(selector->serializingValue(), builder);
-        } else if (selector->match() == Match::ForgivingUnknown || selector->match() == Match::ForgivingUnknownNestContaining) {
-            builder.append(selector->value());
-        } else if (selector->match() == Match::HasScope) {
+            serializeIdentifier(cs->serializingValue(), builder);
+        } else if (cs->match() == Match::ForgivingUnknown || cs->match() == Match::ForgivingUnknownNestContaining) {
+            builder.append(cs->value());
+        } else if (cs->match() == Match::HasScope) {
             // Remove the space from the start to generate a relative selector string like in ":has(> foo)".
             return makeString(separator.substring(1), rightSide);
-        } else if (selector->match() == Match::PseudoClass) {
-            builder.append(selectorTextForPseudoClass(selector->pseudoClass()));
+        } else if (cs->match() == Match::PseudoClass) {
+            builder.append(selectorTextForPseudoClass(cs->pseudoClass()));
 
             // Handle serialization of functional variants.
-            switch (selector->pseudoClass()) {
+            switch (cs->pseudoClass()) {
             case PseudoClass::Host:
-                if (auto* selectorList = selector->selectorList()) {
+                if (auto* selectorList = cs->selectorList()) {
                     builder.append('(');
                     selectorList->buildSelectorsText(builder);
                 builder.append(')');
@@ -486,15 +493,15 @@ String CSSSelector::selectorText(StringView separator, StringView rightSide) con
                 break;
             case PseudoClass::Lang:
                 builder.append('(');
-                ASSERT_WITH_MESSAGE(selector->argumentList() && !selector->argumentList()->isEmpty(), "An empty :lang() is invalid and should never be generated by the parser.");
-                appendCommaSeparatedPossiblyQuotedIdentifierList(builder, *selector->argumentList());
+                ASSERT_WITH_MESSAGE(cs->argumentList() && !cs->argumentList()->isEmpty(), "An empty :lang() is invalid and should never be generated by the parser.");
+                appendLangArgumentList(builder, *cs->argumentList());
                 builder.append(')');
                 break;
             case PseudoClass::NthChild:
             case PseudoClass::NthLastChild:
                 builder.append('(');
-                outputNthChildAnPlusB(*selector, builder);
-                if (auto* selectorList = selector->selectorList()) {
+                outputNthChildAnPlusB(*cs, builder);
+                if (auto* selectorList = cs->selectorList()) {
                     builder.append(" of "_s);
                     selectorList->buildSelectorsText(builder);
                 }
@@ -504,7 +511,7 @@ String CSSSelector::selectorText(StringView separator, StringView rightSide) con
             case PseudoClass::NthOfType:
             case PseudoClass::NthLastOfType:
                 builder.append('(');
-                appendPseudoClassFunctionTail(builder, selector);
+                appendPseudoClassFunctionTail(builder, cs);
                 break;
             case PseudoClass::Has:
             case PseudoClass::Is:
@@ -512,55 +519,52 @@ String CSSSelector::selectorText(StringView separator, StringView rightSide) con
             case PseudoClass::Where:
             case PseudoClass::WebKitAny: {
                 builder.append('(');
-                selector->selectorList()->buildSelectorsText(builder);
+                cs->selectorList()->buildSelectorsText(builder);
                 builder.append(')');
                 break;
             }
             case PseudoClass::State:
                     builder.append('(');
-                serializeIdentifier(selector->argument(), builder);
-                builder.append(')');
-                break;
-            case PseudoClass::ActiveViewTransitionType:
-                builder.append('(');
-                ASSERT_WITH_MESSAGE(selector->argumentList() && !selector->argumentList()->isEmpty(), "An empty :active-view-transition-type() is invalid and should never be generated by the parser.");
-                appendCommaSeparatedPossiblyQuotedIdentifierList(builder, *selector->argumentList());
+                serializeIdentifier(cs->argument(), builder);
                     builder.append(')');
                 break;
             default:
-                ASSERT(!pseudoClassMayHaveArgument(selector->pseudoClass()), "Missing serialization for pseudo-class argument");
+                ASSERT(!pseudoClassMayHaveArgument(cs->pseudoClass()), "Missing serialization for pseudo-class argument");
                 break;
             }
-        } else if (selector->match() == Match::PseudoElement) {
-            switch (selector->pseudoElement()) {
+        } else if (cs->match() == Match::PseudoElement) {
+            switch (cs->pseudoElement()) {
             case PseudoElement::Slotted:
                 builder.append("::slotted("_s);
-                selector->selectorList()->buildSelectorsText(builder);
+                cs->selectorList()->buildSelectorsText(builder);
                 builder.append(')');
                 break;
             case PseudoElement::Highlight:
             case PseudoElement::ViewTransitionGroup:
             case PseudoElement::ViewTransitionImagePair:
             case PseudoElement::ViewTransitionOld:
-            case PseudoElement::ViewTransitionNew:
-                // Name or universal selector always comes first, followed by classes.
-                builder.append("::"_s, selector->serializingValue(), '(',
-                    interleave(*selector->argumentList(), [&](auto& builder, auto& nameOrClass) {
-                        serializeIdentifierOrStar(nameOrClass.identifier, builder);
-                    }, '.'),
-                ')');
+            case PseudoElement::ViewTransitionNew: {
+                builder.append("::"_s, cs->serializingValue(), '(');
+                serializeIdentifierOrStar(cs->argumentList()->first().identifier);
+                builder.append(')');
                 break;
-            case PseudoElement::Part:
-                builder.append("::part("_s,
-                    interleave(*selector->argumentList(), [&](auto& builder, auto& partName) {
+            }
+            case PseudoElement::Part: {
+                builder.append("::part("_s);
+                bool isFirst = true;
+                for (auto& partName : *cs->argumentList()) {
+                    if (!isFirst)
+                        builder.append(' ');
+                    isFirst = false;
                     serializeIdentifier(partName.identifier, builder);
-                    }, ' '),
-                ')');
+                }
+                builder.append(')');
                 break;
+            }
 #if ENABLE(VIDEO)
             case PseudoElement::Cue: {
                 builder.append("::cue"_s);
-                if (auto* selectorList = selector->selectorList()) {
+                if (auto* selectorList = cs->selectorList()) {
                     builder.append('(');
                     selectorList->buildSelectorsText(builder);
                     builder.append(')');
@@ -569,19 +573,18 @@ String CSSSelector::selectorText(StringView separator, StringView rightSide) con
             }
 #endif
             default:
-                ASSERT(!pseudoElementMayHaveArgument(selector->pseudoElement()), "Missing serialization for pseudo-element argument");
+                ASSERT(!pseudoElementMayHaveArgument(cs->pseudoElement()), "Missing serialization for pseudo-element argument");
                 builder.append("::"_s);
-                serializeIdentifier(selector->serializingValue(), builder);
-                break;
+                serializeIdentifier(cs->serializingValue(), builder);
             }
-        } else if (selector->isAttributeSelector()) {
+        } else if (cs->isAttributeSelector()) {
             builder.append('[');
-            if (auto& prefix = selector->attribute().prefix(); !prefix.isEmpty()) {
-                serializeIdentifierOrStar(prefix, builder);
+            if (auto& prefix = cs->attribute().prefix(); !prefix.isEmpty()) {
+                serializeIdentifierOrStar(prefix);
                 builder.append('|');
             }
-            serializeIdentifierOrStar(selector->attribute().localName(), builder);
-            switch (selector->match()) {
+            serializeIdentifierOrStar(cs->attribute().localName());
+            switch (cs->match()) {
             case Match::Exact:
                     builder.append('=');
                     break;
@@ -607,15 +610,15 @@ String CSSSelector::selectorText(StringView separator, StringView rightSide) con
                 default:
                     break;
             }
-            if (selector->match() != Match::Set) {
-                serializeString(selector->serializingValue(), builder);
-                if (selector->attributeValueMatchingIsCaseInsensitive())
+            if (cs->match() != Match::Set) {
+                serializeString(cs->serializingValue(), builder);
+                if (cs->attributeValueMatchingIsCaseInsensitive())
                     builder.append(" i]"_s);
                 else
                     builder.append(']');
             }
-        } else if (selector->match() == Match::PagePseudoClass) {
-            switch (selector->pagePseudoClass()) {
+        } else if (cs->match() == Match::PagePseudoClass) {
+            switch (cs->pagePseudoClass()) {
             case PagePseudoClass::First:
                 builder.append(":first"_s);
                 break;
@@ -628,15 +631,15 @@ String CSSSelector::selectorText(StringView separator, StringView rightSide) con
             }
         }
 
-        if (selector->relation() != Relation::Subselector || !selector->tagHistory())
+        if (cs->relation() != Relation::Subselector || !cs->tagHistory())
             break;
-        selector = selector->tagHistory();
+        cs = cs->tagHistory();
     }
 
     builder.append(separator, rightSide);
 
     auto separatorTextForNestingRelative = [&] () -> String {
-        switch (selector->relation()) {
+        switch (cs->relation()) {
         case Relation::Child:
             return "> "_s;
         case Relation::DirectAdjacent:
@@ -648,9 +651,9 @@ String CSSSelector::selectorText(StringView separator, StringView rightSide) con
         }
     };
 
-    if (auto* previousSelector = selector->tagHistory()) {
+    if (auto* previousSelector = cs->tagHistory()) {
         ASCIILiteral separator = ""_s;
-        switch (selector->relation()) {
+        switch (cs->relation()) {
         case Relation::DescendantSpace:
             separator = " "_s;
             break;
@@ -674,7 +677,7 @@ String CSSSelector::selectorText(StringView separator, StringView rightSide) con
         return previousSelector->selectorText(separator, builder);
     } else if (auto separatorText = separatorTextForNestingRelative(); !separatorText.isNull()) {
         // We have a separator but no tag history which can happen with implicit relative nesting selector
-        return makeString(separatorText, builder.toString());
+        return separatorText + builder.toString();
     }
 
     return builder.toString();
@@ -878,11 +881,6 @@ bool CSSSelector::hasExplicitPseudoClassScope() const
     };
 
     return visitAllSimpleSelectors(check);
-}
-
-bool CSSSelector::isHostPseudoClass() const
-{
-    return match() == Match::PseudoClass && pseudoClass() == PseudoClass::Host;
 }
 
 } // namespace WebCore

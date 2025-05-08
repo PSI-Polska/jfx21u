@@ -26,20 +26,17 @@
 #pragma once
 
 #import "PresentationContext.h"
-#import <wtf/MachSendRight.h>
-#import <wtf/TZoneMalloc.h>
 #import <wtf/Vector.h>
 #import <wtf/spi/cocoa/IOSurfaceSPI.h>
 
 namespace WebGPU {
 
 class Device;
-class Instance;
 
 class PresentationContextIOSurface : public PresentationContext {
-    WTF_MAKE_TZONE_ALLOCATED(PresentationContextIOSurface);
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Ref<PresentationContextIOSurface> create(const WGPUSurfaceDescriptor&, const Instance&);
+    static Ref<PresentationContextIOSurface> create(const WGPUSurfaceDescriptor&);
 
     virtual ~PresentationContextIOSurface();
 
@@ -52,30 +49,20 @@ public:
 
     bool isPresentationContextIOSurface() const override { return true; }
 
-    bool isValid() override { return true; }
 private:
-    PresentationContextIOSurface(const WGPUSurfaceDescriptor&, const Instance&);
+    PresentationContextIOSurface(const WGPUSurfaceDescriptor&);
 
     void renderBuffersWereRecreated(NSArray<IOSurface *> *renderBuffers);
-    void onSubmittedWorkScheduled(Function<void()>&&);
-    RetainPtr<CGImageRef> getTextureAsNativeImage(uint32_t bufferIndex) final;
+    void onSubmittedWorkScheduled(CompletionHandler<void()>&&);
 
     NSArray<IOSurface *> *m_ioSurfaces { nil };
     struct RenderBuffer {
         Ref<Texture> texture;
-        RefPtr<Texture> luminanceClampTexture;
+        Ref<TextureView> textureView;
     };
     Vector<RenderBuffer> m_renderBuffers;
     RefPtr<Device> m_device;
-    RefPtr<Texture> m_invalidTexture;
     size_t m_currentIndex { 0 };
-    id<MTLFunction> m_luminanceClampFunction;
-    id<MTLComputePipelineState> m_computePipelineState;
-#if HAVE(IOSURFACE_SET_OWNERSHIP_IDENTITY) && HAVE(TASK_IDENTITY_TOKEN)
-    std::optional<const MachSendRight> m_webProcessID;
-#endif
-    WGPUColorSpace m_colorSpace { WGPUColorSpace::SRGB };
-    WGPUCompositeAlphaMode m_alphaMode { WGPUCompositeAlphaMode_Premultiplied };
 };
 
 } // namespace WebGPU

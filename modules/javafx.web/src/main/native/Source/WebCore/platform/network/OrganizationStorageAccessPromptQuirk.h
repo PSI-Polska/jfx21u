@@ -33,15 +33,13 @@ namespace WebCore {
 
 struct OrganizationStorageAccessPromptQuirk {
     String organizationName;
-    HashMap<RegistrableDomain, Vector<RegistrableDomain>> quirkDomains;
-    Vector<URL> triggerPages;
+    HashMap<RegistrableDomain, Vector<RegistrableDomain>> domainPairings;
 
     bool isHashTableDeletedValue() const { return organizationName.isHashTableDeletedValue(); }
 
-    OrganizationStorageAccessPromptQuirk(String&& organizationName, HashMap<RegistrableDomain, Vector<RegistrableDomain>>&& quirkDomains, Vector<URL>&& triggerPages)
+    OrganizationStorageAccessPromptQuirk(String&& organizationName, HashMap<RegistrableDomain, Vector<RegistrableDomain>>&& domainPairings)
         : organizationName { WTFMove(organizationName) }
-        , quirkDomains { WTFMove(quirkDomains) }
-        , triggerPages { WTFMove(triggerPages) }
+        , domainPairings { WTFMove(domainPairings) }
         { }
 
     OrganizationStorageAccessPromptQuirk(WTF::HashTableDeletedValueType)

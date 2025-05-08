@@ -23,23 +23,35 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-function next() {
+// We keep this function small very carefully to encourage inlining.
+@linkTimeConstant
+function mapIteratorNext(bucket, kind)
+{
+    "use strict";
+    var value;
+
+    bucket = @mapBucketNext(bucket);
+    @putMapIteratorInternalField(this, @mapIteratorFieldMapBucket, bucket);
+    var done = bucket === @sentinelMapBucket;
+    if (!done) {
+        var key = @mapBucketKey(bucket);
+        value = @mapBucketValue(bucket);
+        if (kind === @iterationKindEntries)
+            value = [ key, value ]
+        else if (kind === @iterationKindKey)
+            value = key;
+    }
+    return { value, done };
+}
+
+function next()
+{
     "use strict";
 
     if (!@isMapIterator(this))
         @throwTypeError("%MapIteratorPrototype%.next requires that |this| be an Map Iterator instance");
 
-    var value;
-    var done = @mapIteratorNext(this);
-
-    if (!done) {
+    var bucket = @getMapIteratorInternalField(this, @mapIteratorFieldMapBucket);
     var kind = @getMapIteratorInternalField(this, @mapIteratorFieldKind);
-        if (kind === @iterationKindKey)
-            value = @mapIteratorKey(this);
-        else if (kind === @iterationKindValue)
-            value = @mapIteratorValue(this);
-        else
-            value = [@mapIteratorKey(this), @mapIteratorValue(this)];
-    }
-    return { value, done };
+    return @mapIteratorNext.@call(this, bucket, kind);
 }

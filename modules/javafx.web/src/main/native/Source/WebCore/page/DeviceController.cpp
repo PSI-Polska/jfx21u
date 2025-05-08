@@ -38,8 +38,6 @@ DeviceController::DeviceController(DeviceClient& client)
 {
 }
 
-DeviceController::~DeviceController() = default;
-
 void DeviceController::addDeviceEventListener(LocalDOMWindow& window)
 {
     bool wasEmpty = m_listeners.isEmpty();
@@ -52,7 +50,7 @@ void DeviceController::addDeviceEventListener(LocalDOMWindow& window)
     }
 
     if (wasEmpty)
-        m_client->startUpdating();
+        m_client.startUpdating();
 }
 
 void DeviceController::removeDeviceEventListener(LocalDOMWindow& window)
@@ -60,7 +58,7 @@ void DeviceController::removeDeviceEventListener(LocalDOMWindow& window)
     m_listeners.remove(&window);
     m_lastEventListeners.remove(&window);
     if (m_listeners.isEmpty())
-        m_client->stopUpdating();
+        m_client.stopUpdating();
 }
 
 void DeviceController::removeAllDeviceEventListeners(LocalDOMWindow& window)
@@ -68,7 +66,7 @@ void DeviceController::removeAllDeviceEventListeners(LocalDOMWindow& window)
     m_listeners.removeAll(&window);
     m_lastEventListeners.removeAll(&window);
     if (m_listeners.isEmpty())
-        m_client->stopUpdating();
+        m_client.stopUpdating();
 }
 
 bool DeviceController::hasDeviceEventListener(LocalDOMWindow& window) const
@@ -79,15 +77,10 @@ bool DeviceController::hasDeviceEventListener(LocalDOMWindow& window) const
 void DeviceController::dispatchDeviceEvent(Event& event)
 {
     for (auto& listener : copyToVector(m_listeners.values())) {
-        RefPtr document = listener->document();
+        auto document = listener->document();
         if (document && !document->activeDOMObjectsAreSuspended() && !document->activeDOMObjectsAreStopped())
             listener->dispatchEvent(event);
     }
-}
-
-DeviceClient& DeviceController::client()
-{
-    return m_client.get();
 }
 
 void DeviceController::fireDeviceEvent()
@@ -100,7 +93,7 @@ void DeviceController::fireDeviceEvent()
     for (auto& listener : listenerVector) {
         auto document = listener->document();
         if (document && !document->activeDOMObjectsAreSuspended() && !document->activeDOMObjectsAreStopped()) {
-            if (RefPtr lastEvent = getLastEvent())
+            if (auto lastEvent = getLastEvent())
                 listener->dispatchEvent(*lastEvent);
         }
     }

@@ -28,42 +28,41 @@
 
 #include "Logging.h"
 #include <wtf/Assertions.h>
-#include <wtf/text/ASCIILiteral.h>
 
 namespace WebCore {
 
 #if !LOG_DISABLED
-ASCIILiteral nameForSQLTransactionState(SQLTransactionState state)
+const char* nameForSQLTransactionState(SQLTransactionState state)
 {
     switch (state) {
     case SQLTransactionState::End:
-        return "end"_s;
+        return "end";
     case SQLTransactionState::Idle:
-        return "idle"_s;
+        return "idle";
     case SQLTransactionState::AcquireLock:
-        return "acquireLock"_s;
+        return "acquireLock";
     case SQLTransactionState::OpenTransactionAndPreflight:
-        return "openTransactionAndPreflight"_s;
+        return "openTransactionAndPreflight";
     case SQLTransactionState::RunStatements:
-        return "runStatements"_s;
+        return "runStatements";
     case SQLTransactionState::PostflightAndCommit:
-        return "postflightAndCommit"_s;
+        return "postflightAndCommit";
     case SQLTransactionState::CleanupAndTerminate:
-        return "cleanupAndTerminate"_s;
+        return "cleanupAndTerminate";
     case SQLTransactionState::CleanupAfterTransactionErrorCallback:
-        return "cleanupAfterTransactionErrorCallback"_s;
+        return "cleanupAfterTransactionErrorCallback";
     case SQLTransactionState::DeliverTransactionCallback:
-        return "deliverTransactionCallback"_s;
+        return "deliverTransactionCallback";
     case SQLTransactionState::DeliverTransactionErrorCallback:
-        return "deliverTransactionErrorCallback"_s;
+        return "deliverTransactionErrorCallback";
     case SQLTransactionState::DeliverStatementCallback:
-        return "deliverStatementCallback"_s;
+        return "deliverStatementCallback";
     case SQLTransactionState::DeliverQuotaIncreaseCallback:
-        return "deliverQuotaIncreaseCallback"_s;
+        return "deliverQuotaIncreaseCallback";
     case SQLTransactionState::DeliverSuccessCallback:
-        return "deliverSuccessCallback"_s;
+        return "deliverSuccessCallback";
     default:
-        return "UNKNOWN"_s;
+        return "UNKNOWN";
     }
 }
 #endif

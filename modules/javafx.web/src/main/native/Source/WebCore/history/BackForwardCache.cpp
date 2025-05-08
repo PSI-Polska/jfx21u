@@ -42,6 +42,7 @@
 #include "FrameLoader.h"
 #include "HTTPParsers.h"
 #include "HistoryController.h"
+#include "IgnoreOpensDuringUnloadCountIncrementer.h"
 #include "LocalDOMWindow.h"
 #include "LocalFrame.h"
 #include "LocalFrameLoaderClient.h"
@@ -53,13 +54,12 @@
 #include "SecurityOriginHash.h"
 #include "Settings.h"
 #include "SubframeLoader.h"
-#include "UnloadCountIncrementer.h"
 #include <pal/Logging.h>
 #include <wtf/MemoryPressureHandler.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/SetForScope.h>
 #include <wtf/text/CString.h>
-#include <wtf/text/MakeString.h>
+#include <wtf/text/StringConcatenate.h>
 
 namespace WebCore {
 
@@ -80,42 +80,42 @@ static inline void logBackForwardCacheFailureDiagnosticMessage(Page* page, const
 
 static bool canCacheFrame(LocalFrame& frame, DiagnosticLoggingClient& diagnosticLoggingClient, unsigned indentLevel)
 {
-    PCLOG("+---"_s);
+    PCLOG("+---");
     CheckedRef frameLoader = frame.loader();
 
     // Prevent page caching if a subframe is still in provisional load stage.
     // We only do this check for subframes because the main frame is reused when navigating to a new page.
     if (!frame.isMainFrame() && frameLoader->state() == FrameState::Provisional) {
-        PCLOG("   -Frame is in provisional load stage"_s);
+        PCLOG("   -Frame is in provisional load stage");
         logBackForwardCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::provisionalLoadKey());
         return false;
     }
 
     if (frame.isMainFrame() && frameLoader->stateMachine().isDisplayingInitialEmptyDocument()) {
-        PCLOG("   -MainFrame is displaying initial empty document"_s);
+        PCLOG("   -MainFrame is displaying initial empty document");
         return false;
     }
 
     RefPtr document = frame.document();
     if (!document) {
-        PCLOG("   -Frame has no document"_s);
+        PCLOG("   -Frame has no document");
         return false;
     }
 
     if (document->shouldPreventEnteringBackForwardCacheForTesting()) {
-        PCLOG("   -Back/Forward caching is disabled for testing"_s);
+        PCLOG("   -Back/Forward caching is disabled for testing");
         return false;
     }
 
     if (!document->frame()) {
-        PCLOG("   -Document is detached from frame"_s);
+        PCLOG("   -Document is detached from frame");
         ASSERT_NOT_REACHED();
         return false;
     }
 
     RefPtr documentLoader = frameLoader->documentLoader();
     if (!documentLoader) {
-        PCLOG("   -There is no DocumentLoader object"_s);
+        PCLOG("   -There is no DocumentLoader object");
         logBackForwardCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::noDocumentLoaderKey());
         return false;
     }
@@ -123,51 +123,51 @@ static bool canCacheFrame(LocalFrame& frame, DiagnosticLoggingClient& diagnostic
     URL currentURL = documentLoader->url();
     URL newURL = frameLoader->provisionalDocumentLoader() ? frameLoader->provisionalDocumentLoader()->url() : URL();
     if (!newURL.isEmpty())
-        PCLOG(" Determining if frame can be cached navigating from ("_s, currentURL.string(), ") to ("_s, newURL.string(), "):"_s);
+        PCLOG(" Determining if frame can be cached navigating from (", currentURL.string(), ") to (", newURL.string(), "):");
     else
-        PCLOG(" Determining if subframe with URL ("_s, currentURL.string(), ") can be cached:"_s);
+        PCLOG(" Determining if subframe with URL (", currentURL.string(), ") can be cached:");
 
     bool isCacheable = true;
 
     if (frame.isMainFrame() && document->quirks().shouldBypassBackForwardCache()) {
-        PCLOG("   -Disabled by site-specific quirk"_s);
+        PCLOG("   -Disabled by site-specific quirk");
         logBackForwardCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::siteSpecificQuirkKey());
         isCacheable = false;
     }
 
     // Do not cache error pages (these can be recognized as pages with substitute data or unreachable URLs).
     if (documentLoader->substituteData().isValid() && !documentLoader->substituteData().failingURL().isEmpty()) {
-        PCLOG("   -Frame is an error page"_s);
+        PCLOG("   -Frame is an error page");
         logBackForwardCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::isErrorPageKey());
         isCacheable = false;
     }
     if (frame.isMainFrame() && document && document->url().protocolIs("https"_s) && documentLoader->response().cacheControlContainsNoStore()) {
-        PCLOG("   -Frame is HTTPS, and cache control prohibits storing"_s);
+        PCLOG("   -Frame is HTTPS, and cache control prohibits storing");
         logBackForwardCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::httpsNoStoreKey());
         isCacheable = false;
     }
-    if (frame.isMainFrame() && !frame.history().currentItem()) {
-        PCLOG("   -Main frame has no current history item"_s);
+    if (frame.isMainFrame() && !frameLoader->history().currentItem()) {
+        PCLOG("   -Main frame has no current history item");
         logBackForwardCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::noCurrentHistoryItemKey());
         isCacheable = false;
     }
     if (frame.isMainFrame() && frame.view() && !frame.view()->isVisuallyNonEmpty()) {
-        PCLOG("   -Main frame is visually empty"_s);
+        PCLOG("   -Main frame is visually empty");
         logBackForwardCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::visuallyEmptyKey());
         isCacheable = false;
     }
     if (frameLoader->quickRedirectComing()) {
-        PCLOG("   -Quick redirect is coming"_s);
+        PCLOG("   -Quick redirect is coming");
         logBackForwardCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::quirkRedirectComingKey());
         isCacheable = false;
     }
     if (documentLoader->isLoading()) {
-        PCLOG("   -DocumentLoader is still loading"_s);
+        PCLOG("   -DocumentLoader is still loading");
         logBackForwardCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::isLoadingKey());
         isCacheable = false;
     }
     if (documentLoader->isStopping()) {
-        PCLOG("   -DocumentLoader is in the middle of stopping"_s);
+        PCLOG("   -DocumentLoader is in the middle of stopping");
         logBackForwardCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::documentLoaderStoppingKey());
         isCacheable = false;
     }
@@ -175,12 +175,12 @@ static bool canCacheFrame(LocalFrame& frame, DiagnosticLoggingClient& diagnostic
     // FIXME: We should investigating caching frames that have an associated
     // application cache. <rdar://problem/5917899> tracks that work.
     if (!documentLoader->applicationCacheHost().canCacheInBackForwardCache()) {
-        PCLOG("   -The DocumentLoader uses an application cache"_s);
+        PCLOG("   -The DocumentLoader uses an application cache");
         logBackForwardCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::applicationCacheKey());
         isCacheable = false;
     }
     if (!frameLoader->client().canCachePage()) {
-        PCLOG("   -The client says this frame cannot be cached"_s);
+        PCLOG("   -The client says this frame cannot be cached");
         logBackForwardCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::deniedByClientKey());
         isCacheable = false;
     }
@@ -193,8 +193,8 @@ static bool canCacheFrame(LocalFrame& frame, DiagnosticLoggingClient& diagnostic
             isCacheable = false;
     }
 
-    PCLOG(isCacheable ? " Frame CAN be cached"_s : " Frame CANNOT be cached"_s);
-    PCLOG("+---"_s);
+    PCLOG(isCacheable ? " Frame CAN be cached" : " Frame CANNOT be cached");
+    PCLOG("+---");
 
     return isCacheable;
 }
@@ -204,7 +204,7 @@ static bool canCachePage(Page& page)
     RELEASE_ASSERT(!page.isRestoringCachedPage());
 
     unsigned indentLevel = 0;
-    PCLOG("--------\n Determining if page can be cached:"_s);
+    PCLOG("--------\n Determining if page can be cached:");
 
     CheckedRef diagnosticLoggingClient = page.diagnosticLoggingClient();
     RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page.mainFrame());
@@ -213,18 +213,18 @@ static bool canCachePage(Page& page)
     bool isCacheable = canCacheFrame(*localMainFrame, diagnosticLoggingClient, indentLevel + 1);
 
     if (!page.settings().usesBackForwardCache() || page.isResourceCachingDisabledByWebInspector() || page.settings().siteIsolationEnabled()) {
-        PCLOG("   -Page settings says b/f cache disabled"_s);
+        PCLOG("   -Page settings says b/f cache disabled");
         logBackForwardCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::isDisabledKey());
         isCacheable = false;
     }
 #if ENABLE(DEVICE_ORIENTATION) && !PLATFORM(IOS_FAMILY)
     if (DeviceMotionController::isActiveAt(&page)) {
-        PCLOG("   -Page is using DeviceMotion"_s);
+        PCLOG("   -Page is using DeviceMotion");
         logBackForwardCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::deviceMotionKey());
         isCacheable = false;
     }
     if (DeviceOrientationController::isActiveAt(&page)) {
-        PCLOG("   -Page is using DeviceOrientation"_s);
+        PCLOG("   -Page is using DeviceOrientation");
         logBackForwardCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::deviceOrientationKey());
         isCacheable = false;
     }
@@ -234,38 +234,38 @@ static bool canCachePage(Page& page)
     switch (loadType) {
     case FrameLoadType::Reload:
         // No point writing to the cache on a reload, since we will just write over it again when we leave that page.
-        PCLOG("   -Load type is: Reload"_s);
+        PCLOG("   -Load type is: Reload");
         logBackForwardCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::reloadKey());
         isCacheable = false;
         break;
     case FrameLoadType::Same: // user loads same URL again (but not reload button)
         // No point writing to the cache on a same load, since we will just write over it again when we leave that page.
-        PCLOG("   -Load type is: Same"_s);
+        PCLOG("   -Load type is: Same");
         logBackForwardCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::sameLoadKey());
         isCacheable = false;
         break;
     case FrameLoadType::RedirectWithLockedBackForwardList:
         // Don't write to the cache if in the middle of a redirect, since we will want to store the final page we end up on.
-        PCLOG("   -Load type is: RedirectWithLockedBackForwardList"_s);
+        PCLOG("   -Load type is: RedirectWithLockedBackForwardList");
         logBackForwardCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::redirectKey());
         isCacheable = false;
         break;
     case FrameLoadType::Replace:
         // No point writing to the cache on a replace, since we will just write over it again when we leave that page.
-        PCLOG("   -Load type is: Replace"_s);
+        PCLOG("   -Load type is: Replace");
         logBackForwardCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::replaceKey());
         isCacheable = false;
         break;
     case FrameLoadType::ReloadFromOrigin: {
         // No point writing to the cache on a reload, since we will just write over it again when we leave that page.
-        PCLOG("   -Load type is: ReloadFromOrigin"_s);
+        PCLOG("   -Load type is: ReloadFromOrigin");
         logBackForwardCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::reloadFromOriginKey());
         isCacheable = false;
         break;
     }
     case FrameLoadType::ReloadExpiredOnly: {
         // No point writing to the cache on a reload, since we will just write over it again when we leave that page.
-        PCLOG("   -Load type is: ReloadRevalidatingExpired"_s);
+        PCLOG("   -Load type is: ReloadRevalidatingExpired");
         logBackForwardCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::reloadRevalidatingExpiredKey());
         isCacheable = false;
         break;
@@ -284,7 +284,7 @@ static bool canCachePage(Page& page)
         if (provisionalDocumentLoader->responseClearSiteDataValues().contains(ClearSiteDataValue::Cache)) {
             if (RefPtr topDocument = localMainFrame->document()) {
                 if (topDocument->securityOrigin().isSameOriginAs(SecurityOrigin::create(provisionalDocumentLoader->response().url()))) {
-                    PCLOG("   -`Clear-Site-Data: cache` HTTP header is present"_s);
+                    PCLOG("   -`Clear-Site-Data: cache` HTTP header is present");
                     isCacheable = false;
                 }
             }
@@ -292,9 +292,9 @@ static bool canCachePage(Page& page)
     }
 
     if (isCacheable)
-        PCLOG(" Page CAN be cached\n--------"_s);
+        PCLOG(" Page CAN be cached\n--------");
     else
-        PCLOG(" Page CANNOT be cached\n--------"_s);
+        PCLOG(" Page CANNOT be cached\n--------");
 
     diagnosticLoggingClient->logDiagnosticMessageWithResult(DiagnosticLoggingKeys::backForwardCacheKey(), DiagnosticLoggingKeys::canCacheKey(), isCacheable ? DiagnosticLoggingResultPass : DiagnosticLoggingResultFail, ShouldSample::No);
     return isCacheable;
@@ -443,7 +443,7 @@ static void firePageHideEventRecursively(LocalFrame& frame)
     // that the parent document's ignore-opens-during-unload counter should be incremented while the
     // pagehide event is being fired in its subframes:
     // https://html.spec.whatwg.org/multipage/browsers.html#unload-a-document
-    UnloadCountIncrementer UnloadCountIncrementer(document.get());
+    IgnoreOpensDuringUnloadCountIncrementer ignoreOpensDuringUnloadCountIncrementer(document.get());
 
     frame.loader().stopLoading(UnloadEventPolicy::UnloadAndPageHide);
 
@@ -583,8 +583,6 @@ CachedPage* BackForwardCache::get(HistoryItem& item, Page* page)
     if (cachedPage->hasExpired() || (page && page->isResourceCachingDisabledByWebInspector())) {
         LOG(BackForwardCache, "Not restoring page for %s from back/forward cache because cache entry has expired", item.url().string().ascii().data());
         logBackForwardCacheFailureDiagnosticMessage(page, DiagnosticLoggingKeys::expiredKey());
-        // Make sure we clear our CheckedPtr before destroying the CachedPage in remove() below.
-        cachedPage = nullptr;
         remove(item);
         return nullptr;
     }

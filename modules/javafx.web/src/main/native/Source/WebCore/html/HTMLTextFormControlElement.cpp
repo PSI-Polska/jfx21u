@@ -39,7 +39,6 @@
 #include "EventLoop.h"
 #include "EventNames.h"
 #include "FrameSelection.h"
-#include "GCReachableRef.h"
 #include "HTMLBRElement.h"
 #include "HTMLFormElement.h"
 #include "HTMLInputElement.h"
@@ -62,13 +61,12 @@
 #include "ShadowRoot.h"
 #include "Text.h"
 #include "TextControlInnerElements.h"
-#include <wtf/TZoneMallocInlines.h>
-#include <wtf/text/MakeString.h>
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLTextFormControlElement);
+WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLTextFormControlElement);
 
 using namespace HTMLNames;
 
@@ -77,6 +75,11 @@ static Position positionForIndex(TextControlInnerTextElement*, unsigned);
 HTMLTextFormControlElement::HTMLTextFormControlElement(const QualifiedName& tagName, Document& document, HTMLFormElement* form)
     : HTMLFormControlElement(tagName, document, form)
     , m_cachedSelectionDirection(document.frame() && document.frame()->editor().behavior().shouldConsiderSelectionAsDirectional() ? SelectionHasForwardDirection : SelectionHasNoDirection)
+    , m_lastChangeWasUserEdit(false)
+    , m_isPlaceholderVisible(false)
+    , m_canShowPlaceholder(true)
+    , m_cachedSelectionStart(0)
+    , m_cachedSelectionEnd(0)
 {
 }
 
@@ -325,7 +328,7 @@ bool HTMLTextFormControlElement::setSelectionRange(unsigned start, unsigned end,
             return cacheSelection(start, end, direction);
 
         // FIXME: Removing this synchronous layout requires fixing setSelectionWithoutUpdatingAppearance not needing up-to-date style.
-        protectedDocument()->updateLayoutIgnorePendingStylesheets();
+        document().updateLayoutIgnorePendingStylesheets();
 
         if (!isTextField())
             return false;
@@ -490,14 +493,14 @@ TextFieldSelectionDirection HTMLTextFormControlElement::computeSelectionDirectio
     return selection.isDirectional() ? (selection.isBaseFirst() ? SelectionHasForwardDirection : SelectionHasBackwardDirection) : SelectionHasNoDirection;
 }
 
-static void setContainerAndOffsetForRange(Node& node, unsigned offset, RefPtr<Node>& containerNode, unsigned& offsetInContainer)
+static void setContainerAndOffsetForRange(Node* node, unsigned offset, Node*& containerNode, unsigned& offsetInContainer)
 {
-    if (node.isTextNode()) {
-        containerNode = &node;
+    if (node->isTextNode()) {
+        containerNode = node;
         offsetInContainer = offset;
     } else {
-        containerNode = node.parentNode();
-        offsetInContainer = node.computeNodeIndex() + offset;
+        containerNode = node->parentNode();
+        offsetInContainer = node->computeNodeIndex() + offset;
     }
 }
 
@@ -518,8 +521,8 @@ std::optional<SimpleRange> HTMLTextFormControlElement::selection() const
         return SimpleRange { { *innerText, 0 }, { *innerText, 0 } };
 
     unsigned offset = 0;
-    RefPtr<Node> startNode;
-    RefPtr<Node> endNode;
+    Node* startNode = nullptr;
+    Node* endNode = nullptr;
     for (RefPtr<Node> node = innerText->firstChild(); node; node = NodeTraversal::next(*node, innerText.get())) {
         ASSERT(!node->firstChild());
         ASSERT(node->isTextNode() || node->hasTagName(brTag));
@@ -530,10 +533,10 @@ std::optional<SimpleRange> HTMLTextFormControlElement::selection() const
         }();
 
         if (offset <= start && start <= offset + length)
-            setContainerAndOffsetForRange(*node, start - offset, startNode, start);
+            setContainerAndOffsetForRange(node.get(), start - offset, startNode, start);
 
         if (offset <= end && end <= offset + length) {
-            setContainerAndOffsetForRange(*node, end - offset, endNode, end);
+            setContainerAndOffsetForRange(node.get(), end - offset, endNode, end);
             break;
         }
 
@@ -543,7 +546,7 @@ std::optional<SimpleRange> HTMLTextFormControlElement::selection() const
     if (!startNode || !endNode)
         return std::nullopt;
 
-    return SimpleRange { { startNode.releaseNonNull(), start }, { endNode.releaseNonNull(), end } };
+    return SimpleRange { { *startNode, start }, { *endNode, end } };
 }
 
 void HTMLTextFormControlElement::restoreCachedSelection(SelectionRevealMode revealMode, const AXTextStateChangeIntent& intent)
@@ -552,41 +555,24 @@ void HTMLTextFormControlElement::restoreCachedSelection(SelectionRevealMode reve
         scheduleSelectEvent();
 }
 
-bool HTMLTextFormControlElement::selectionChanged(bool shouldFireSelectEvent)
+void HTMLTextFormControlElement::selectionChanged(bool shouldFireSelectEvent)
 {
     if (!isTextField())
-        return false;
+        return;
 
     // FIXME: Don't re-compute selection start and end if this function was called inside setSelectionRange.
     // selectionStart() or selectionEnd() will return cached selection when this node doesn't have focus
-    unsigned previousSelectionStart = m_cachedSelectionStart;
-    unsigned previousSelectionEnd = m_cachedSelectionEnd;
     cacheSelection(computeSelectionStart(), computeSelectionEnd(), computeSelectionDirection());
 
     document().setHasEverHadSelectionInsideTextFormControl();
 
     if (shouldFireSelectEvent && m_cachedSelectionStart != m_cachedSelectionEnd)
         dispatchEvent(Event::create(eventNames().selectEvent, Event::CanBubble::Yes, Event::IsCancelable::No));
-
-    return previousSelectionStart != m_cachedSelectionStart || previousSelectionEnd != m_cachedSelectionEnd;
-}
-
-void HTMLTextFormControlElement::scheduleSelectionChangeEvent()
-{
-    if (m_hasScheduledSelectionChangeEvent)
-        return;
-
-    m_hasScheduledSelectionChangeEvent = true;
-    document().eventLoop().queueTask(TaskSource::UserInteraction, [textControl = GCReachableRef { *this }] {
-        textControl->m_hasScheduledSelectionChangeEvent = false;
-        textControl->dispatchEvent(Event::create(eventNames().selectionchangeEvent, Event::CanBubble::Yes, Event::IsCancelable::No));
-    });
 }
 
 void HTMLTextFormControlElement::scheduleSelectEvent()
 {
     queueTaskToDispatchEvent(TaskSource::UserInteraction, Event::create(eventNames().selectEvent, Event::CanBubble::Yes, Event::IsCancelable::No));
-    scheduleSelectionChangeEvent();
 }
 
 void HTMLTextFormControlElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
@@ -695,7 +681,7 @@ void HTMLTextFormControlElement::setInnerTextValue(String&& value)
 
         {
             // Events dispatched on the inner text element cannot execute arbitrary author scripts.
-            ScriptDisallowedScope::EventAllowedScope allowedScope(*protectedUserAgentShadowRoot());
+            ScriptDisallowedScope::EventAllowedScope allowedScope(*userAgentShadowRoot());
 
             bool endsWithNewLine = value.endsWith('\n') || value.endsWith('\r');
             innerText->setInnerText(WTFMove(value));
@@ -908,9 +894,6 @@ void HTMLTextFormControlElement::adjustInnerTextStyle(const RenderStyle& parentS
                 textBlockStyle.setUserModify(fromCSSValueID<UserModify>(*value));
         }
     }
-
-    if (parentStyle.fieldSizing() == FieldSizing::Content)
-        textBlockStyle.setLogicalMinWidth(Length { caretWidth(), LengthType::Fixed });
 
 #if PLATFORM(IOS_FAMILY)
     if (textBlockStyle.textSecurity() != TextSecurity::None && !textBlockStyle.isLeftToRightDirection()) {

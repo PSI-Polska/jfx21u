@@ -25,11 +25,11 @@
 #include "DocumentSVG.h"
 #include "SVGSVGElement.h"
 #include "SVGViewSpec.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGDocument);
+WTF_MAKE_ISO_ALLOCATED_IMPL(SVGDocument);
 
 SVGDocument::SVGDocument(LocalFrame* frame, const Settings& settings, const URL& url)
     : XMLDocument(frame, settings, url, { DocumentClass::SVG })
@@ -38,7 +38,7 @@ SVGDocument::SVGDocument(LocalFrame* frame, const Settings& settings, const URL&
 
 bool SVGDocument::zoomAndPanEnabled() const
 {
-    RefPtr element = DocumentSVG::rootElement(*this);
+    auto element = DocumentSVG::rootElement(*this);
     if (!element)
         return false;
     return (element->useCurrentView() ? element->currentView().zoomAndPan() : element->zoomAndPan()) == SVGZoomAndPanMagnify;
@@ -46,7 +46,7 @@ bool SVGDocument::zoomAndPanEnabled() const
 
 void SVGDocument::startPan(const FloatPoint& start)
 {
-    RefPtr element = DocumentSVG::rootElement(*this);
+    auto element = DocumentSVG::rootElement(*this);
     if (!element)
         return;
     m_panningOffset = start - element->currentTranslateValue();
@@ -54,7 +54,7 @@ void SVGDocument::startPan(const FloatPoint& start)
 
 void SVGDocument::updatePan(const FloatPoint& position) const
 {
-    RefPtr element = DocumentSVG::rootElement(*this);
+    auto element = DocumentSVG::rootElement(*this);
     if (!element)
         return;
     element->setCurrentTranslate(position - m_panningOffset);
@@ -62,7 +62,7 @@ void SVGDocument::updatePan(const FloatPoint& position) const
 
 Ref<Document> SVGDocument::cloneDocumentWithoutChildren() const
 {
-    return create(nullptr, protectedSettings(), url());
+    return create(nullptr, settings(), url());
 }
 
 }

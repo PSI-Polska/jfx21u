@@ -315,7 +315,7 @@ void ConfigFile::parse()
                     while (*p && !isUnicodeCompatibleASCIIWhitespace(*p) && *p != '=')
                         p++;
 
-                    builder.append(std::span { optionNameStart, p });
+                    builder.appendCharacters(optionNameStart, p - optionNameStart);
 
                     while (*p && isUnicodeCompatibleASCIIWhitespace(*p) && *p != '=')
                         p++;
@@ -337,7 +337,8 @@ void ConfigFile::parse()
                     while (*p && !isUnicodeCompatibleASCIIWhitespace(*p))
                         p++;
 
-                    builder.append(std::span { optionValueStart, p }, '\n');
+                    builder.appendCharacters(optionValueStart, p - optionValueStart);
+                    builder.append('\n');
 
                     while (*p && isUnicodeCompatibleASCIIWhitespace(*p))
                         p++;

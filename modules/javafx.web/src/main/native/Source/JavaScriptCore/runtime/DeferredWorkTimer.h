@@ -25,71 +25,52 @@
 
 #pragma once
 
+#include "JSCast.h"
 #include "JSRunLoopTimer.h"
-#include "WeakInlines.h"
+#include "Strong.h"
 
 #include <wtf/Deque.h>
 #include <wtf/FixedVector.h>
 #include <wtf/HashSet.h>
-#include <wtf/RefPtr.h>
-#include <wtf/ThreadSafeWeakPtr.h>
+#include <wtf/Lock.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 
 namespace JSC {
 
+class JSPromise;
 class VM;
 class JSCell;
-class JSObject;
-class JSGlobalObject;
 
 class DeferredWorkTimer final : public JSRunLoopTimer {
 public:
     using Base = JSRunLoopTimer;
 
-    enum class WorkType : uint8_t {
-        ImminentlyScheduled,
-        AtSomePoint,
-    };
-
-    class TicketData : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<TicketData>  {
+    struct TicketData {
     private:
         WTF_MAKE_TZONE_ALLOCATED(TicketData);
-        WTF_MAKE_NONCOPYABLE(TicketData);
     public:
-        inline static Ref<TicketData> create(WorkType, JSGlobalObject*, JSObject* scriptExecutionOwner, Vector<Weak<JSCell>>&& dependencies);
+        inline TicketData(VM&, JSObject* scriptExecutionOwner, Vector<Strong<JSCell>>&& dependencies);
 
-        WorkType type() const { return m_type; }
         inline VM& vm();
         JSObject* target();
-        inline bool hasValidTarget() const;
-        inline FixedVector<Weak<JSCell>>& dependencies();
-        inline JSObject* scriptExecutionOwner();
-        inline JSGlobalObject* globalObject();
 
         inline void cancel();
-        bool isCancelled() const { return !m_scriptExecutionOwner.get() || !m_globalObject.get() || !hasValidTarget(); }
+        bool isCancelled() const { return !scriptExecutionOwner.get(); }
 
-    private:
-        inline TicketData(WorkType, JSGlobalObject*, JSObject* scriptExecutionOwner, Vector<Weak<JSCell>>&& dependencies);
-
-        WorkType m_type;
-        FixedVector<Weak<JSCell>> m_dependencies;
-        Weak<JSObject> m_scriptExecutionOwner;
-        Weak<JSGlobalObject> m_globalObject;
+        FixedVector<Strong<JSCell>> dependencies;
+        Strong<JSObject> scriptExecutionOwner;
     };
 
     using Ticket = TicketData*;
 
     void doWork(VM&) final;
 
-    JS_EXPORT_PRIVATE Ticket addPendingWork(WorkType, VM&, JSObject* target, Vector<Weak<JSCell>>&& dependencies);
-
-    JS_EXPORT_PRIVATE bool hasAnyPendingWork() const;
-    JS_EXPORT_PRIVATE bool hasImminentlyScheduledWork() const;
+    JS_EXPORT_PRIVATE Ticket addPendingWork(VM&, JSObject* target, Vector<Strong<JSCell>>&& dependencies);
+    bool hasAnyPendingWork() const;
     bool hasPendingWork(Ticket);
-    bool hasDependencyInPendingWork(Ticket, JSCell* dependency);
+    bool hasDependancyInPendingWork(Ticket, JSCell* dependency);
     bool cancelPendingWork(Ticket);
-    void cancelPendingWorkSafe(JSGlobalObject*);
 
     // If the script execution owner your ticket is associated with gets canceled
     // the Task will not be called and will be deallocated. So it's important
@@ -112,36 +93,13 @@ private:
     bool m_shouldStopRunLoopWhenAllTicketsFinish { false };
     bool m_currentlyRunningTask { false };
     Deque<std::tuple<Ticket, Task>> m_tasks WTF_GUARDED_BY_LOCK(m_taskLock);
-    HashSet<Ref<TicketData>> m_pendingTickets;
+    HashSet<std::unique_ptr<TicketData>> m_pendingTickets;
 };
 
 inline JSObject* DeferredWorkTimer::TicketData::target()
 {
     ASSERT(!isCancelled());
-    return jsCast<JSObject*>(m_dependencies.last().get());
-}
-
-inline bool DeferredWorkTimer::TicketData::hasValidTarget() const
-{
-    return !m_dependencies.isEmpty() && !!m_dependencies.last().get();
-}
-
-inline FixedVector<Weak<JSCell>>& DeferredWorkTimer::TicketData::dependencies()
-{
-    ASSERT(!isCancelled());
-    return m_dependencies;
-}
-
-inline JSObject* DeferredWorkTimer::TicketData::scriptExecutionOwner()
-{
-    ASSERT(!isCancelled());
-    return m_scriptExecutionOwner.get();
-}
-
-inline JSGlobalObject* DeferredWorkTimer::TicketData::globalObject()
-{
-    ASSERT(!isCancelled());
-    return m_globalObject.get();
+    return jsCast<JSObject*>(dependencies.last().get());
 }
 
 } // namespace JSC

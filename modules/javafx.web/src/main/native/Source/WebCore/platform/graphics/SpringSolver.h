@@ -46,7 +46,7 @@ public:
         }
     }
 
-    double solve(double t) const
+    double solve(double t)
     {
         if (m_zeta < 1) {
             // Under-damped

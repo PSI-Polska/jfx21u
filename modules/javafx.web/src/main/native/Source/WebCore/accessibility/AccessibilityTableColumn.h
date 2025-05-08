@@ -43,7 +43,7 @@ public:
 
     AccessibilityRole determineAccessibilityRole() final { return AccessibilityRole::Column; }
 
-    void setColumnIndex(unsigned);
+    void setColumnIndex(unsigned columnIndex) { m_columnIndex = columnIndex; }
     unsigned columnIndex() const override { return m_columnIndex; }
 
     void addChildren() override;

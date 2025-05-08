@@ -30,7 +30,6 @@
 
 #include <wtf/Forward.h>
 #include <wtf/Vector.h>
-#include <wtf/cocoa/SpanCocoa.h>
 
 namespace WTF {
 
@@ -113,12 +112,13 @@ template<typename MapFunctionType> Vector<typename std::invoke_result_t<MapFunct
     return vector;
 }
 
-inline Vector<uint8_t> makeVector(NSData *data)
+inline Vector<uint8_t> vectorFromNSData(NSData* data)
 {
-    return span(data);
+    return { reinterpret_cast<const uint8_t*>(data.bytes), data.length };
 }
 
 } // namespace WTF
 
 using WTF::createNSArray;
 using WTF::makeVector;
+using WTF::vectorFromNSData;

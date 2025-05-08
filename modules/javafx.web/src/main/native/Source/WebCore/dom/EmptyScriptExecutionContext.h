@@ -31,7 +31,8 @@
 #include "ReferrerPolicy.h"
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
-#include <wtf/TZoneMalloc.h>
+
+#include <wtf/IsoMalloc.h>
 
 namespace WebCore {
 
@@ -61,7 +62,6 @@ public:
 
     void disableEval(const String&) final { };
     void disableWebAssembly(const String&) final { };
-    void setRequiresTrustedTypes(bool) final { };
 
     IDBClient::IDBConnectionProxy* idbConnectionProxy() final { return nullptr; }
     SocketProvider* socketProvider() final { return nullptr; }
@@ -76,9 +76,10 @@ public:
 
     void postTask(Task&&) final { ASSERT_NOT_REACHED(); }
     EventTarget* errorEventTarget() final { return nullptr; };
+
 #if ENABLE(WEB_CRYPTO)
-    std::optional<Vector<uint8_t>> wrapCryptoKey(const Vector<uint8_t>&) final { return std::nullopt; }
-    std::optional<Vector<uint8_t>> unwrapCryptoKey(const Vector<uint8_t>&) final { return std::nullopt; }
+    bool wrapCryptoKey(const Vector<uint8_t>&, Vector<uint8_t>&) final { return false; }
+    bool unwrapCryptoKey(const Vector<uint8_t>&, Vector<uint8_t>&) final { return false; }
 #endif
 
     JSC::VM& vm() final { return m_vm; }

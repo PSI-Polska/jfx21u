@@ -50,7 +50,7 @@ public:
         if (!labelBuffer.length())
             return m_labelVector;
 
-        m_labelVector.append(labelBuffer.span());
+        m_labelVector.append(labelBuffer.data(), labelBuffer.length());
         return m_labelVector;
     }
 

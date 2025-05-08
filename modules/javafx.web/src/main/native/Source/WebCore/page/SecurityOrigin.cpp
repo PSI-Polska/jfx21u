@@ -32,7 +32,7 @@
 #include "BlobURL.h"
 #include "LegacySchemeRegistry.h"
 #include "OriginAccessEntry.h"
-#include "PublicSuffixStore.h"
+#include "PublicSuffix.h"
 #include "RuntimeApplicationChecks.h"
 #include "SecurityPolicy.h"
 #include <pal/text/TextEncoding.h>
@@ -42,7 +42,6 @@
 #include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/URL.h>
-#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 #if PLATFORM(COCOA)
@@ -209,12 +208,6 @@ Ref<SecurityOrigin> SecurityOrigin::createOpaque()
     return origin;
 }
 
-SecurityOrigin& SecurityOrigin::opaqueOrigin()
-{
-    static NeverDestroyed<Ref<SecurityOrigin>> origin { createOpaque() };
-    return origin.get();
-}
-
 Ref<SecurityOrigin> SecurityOrigin::createNonLocalWithAllowedFilePath(const URL& url, const String& filePath)
 {
     ASSERT(!url.protocolIsFile());
@@ -289,12 +282,12 @@ bool SecurityOrigin::isSameOriginDomain(const SecurityOrigin& other) const
     }
 
     if (canAccess && isLocal())
-        canAccess = hasLocalUnseparatedPath(other);
+        canAccess = passesFileCheck(other);
 
     return canAccess;
 }
 
-bool SecurityOrigin::hasLocalUnseparatedPath(const SecurityOrigin& other) const
+bool SecurityOrigin::passesFileCheck(const SecurityOrigin& other) const
 {
     ASSERT(isLocal() && other.isLocal());
 
@@ -421,6 +414,7 @@ bool SecurityOrigin::isSameOriginAs(const SecurityOrigin& other) const
 
 bool SecurityOrigin::isSameSiteAs(const SecurityOrigin& other) const
 {
+#if ENABLE(PUBLIC_SUFFIX_LIST)
     // https://html.spec.whatwg.org/#same-site
     if (isOpaque() != other.isOpaque())
         return false;
@@ -430,11 +424,14 @@ bool SecurityOrigin::isSameSiteAs(const SecurityOrigin& other) const
     if (isOpaque())
         return isSameOriginAs(other);
 
-    auto topDomain = PublicSuffixStore::singleton().topPrivatelyControlledDomain(domain());
+    auto topDomain = topPrivatelyControlledDomain(domain());
     if (topDomain.isEmpty())
         return host() == other.host();
 
-    return topDomain == PublicSuffixStore::singleton().topPrivatelyControlledDomain(other.domain());
+    return topDomain == topPrivatelyControlledDomain(other.domain());
+#else
+    return isSameOriginAs(other);
+#endif // ENABLE(PUBLIC_SUFFIX_LIST)
 }
 
 bool SecurityOrigin::isMatchingRegistrableDomainSuffix(const String& domainSuffix, bool treatIPAddressAsDomain) const
@@ -451,7 +448,11 @@ bool SecurityOrigin::isMatchingRegistrableDomainSuffix(const String& domainSuffi
     if (domainSuffix.length() == host().length())
         return true;
 
-    return !PublicSuffixStore::singleton().isPublicSuffix(domainSuffix);
+#if ENABLE(PUBLIC_SUFFIX_LIST)
+    return !isPublicSuffix(domainSuffix);
+#else
+    return true;
+#endif
 }
 
 bool SecurityOrigin::isPotentiallyTrustworthy() const
@@ -561,7 +562,7 @@ Ref<SecurityOrigin> SecurityOrigin::createFromString(const String& originString)
 Ref<SecurityOrigin> SecurityOrigin::create(const String& protocol, const String& host, std::optional<uint16_t> port)
 {
     String decodedHost = PAL::decodeURLEscapeSequences(host);
-    auto origin = create(URL { makeString(protocol, "://"_s, host, '/') });
+    auto origin = create(URL { protocol + "://" + host + "/" });
     if (port && !WTF::isDefaultPortForProtocol(*port, protocol))
         origin->m_data.setPort(port);
     return origin;
@@ -614,16 +615,10 @@ bool SecurityOrigin::isSameSchemeHostPort(const SecurityOrigin& other) const
     if (m_data != other.m_data)
         return false;
 
-    if (isLocal() && !hasLocalUnseparatedPath(other))
+    if (isLocal() && !passesFileCheck(other))
         return false;
 
     return true;
-}
-
-bool SecurityOrigin::isLocalhostAddress(StringView host)
-{
-    // FIXME: Ensure that localhost resolves to the loopback address.
-    return equalLettersIgnoringASCIICase(host, "localhost"_s) || host.endsWithIgnoringASCIICase(".localhost"_s);
 }
 
 bool SecurityOrigin::isLocalHostOrLoopbackIPAddress(StringView host)
@@ -631,7 +626,8 @@ bool SecurityOrigin::isLocalHostOrLoopbackIPAddress(StringView host)
     if (isLoopbackIPAddress(host))
         return true;
 
-    if (isLocalhostAddress(host))
+    // FIXME: Ensure that localhost resolves to the loopback address.
+    if (equalLettersIgnoringASCIICase(host, "localhost"_s) || host.endsWithIgnoringASCIICase(".localhost"_s))
         return true;
 
     return false;

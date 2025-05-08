@@ -1,6 +1,5 @@
 /*
  * Copyright (C) 2018 Yusuke Suzuki <utatane.tea@gmail.com>
- * Copyright (C) 2024 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +26,6 @@
 #pragma once
 
 #include <span>
-#include <string>
 #include <type_traits>
 #include <wtf/ASCIICType.h>
 #include <wtf/Forward.h>
@@ -43,52 +41,37 @@ class PrintStream;
 
 class ASCIILiteral final {
 public:
-    constexpr operator const char*() const { return m_charactersWithNullTerminator.data(); }
+    constexpr operator const char*() const { return m_characters; }
 
     static constexpr ASCIILiteral fromLiteralUnsafe(const char* string)
     {
-        ASSERT_UNDER_CONSTEXPR_CONTEXT(string);
         return ASCIILiteral { string };
     }
 
     WTF_EXPORT_PRIVATE void dump(PrintStream& out) const;
 
     ASCIILiteral() = default;
-    constexpr ASCIILiteral(std::nullptr_t)
-        : ASCIILiteral()
-    { }
 
     unsigned hash() const;
-    constexpr bool isNull() const { return m_charactersWithNullTerminator.empty(); }
+    constexpr bool isNull() const { return !m_characters; }
 
-    constexpr const char* characters() const { return m_charactersWithNullTerminator.data(); }
-    constexpr size_t length() const { return !m_charactersWithNullTerminator.empty() ? m_charactersWithNullTerminator.size() - 1 : 0; }
-    std::span<const LChar> span8() const { return { bitwise_cast<const LChar*>(characters()), length() }; }
-    std::span<const char> spanIncludingNullTerminator() const { return m_charactersWithNullTerminator; }
-    size_t isEmpty() const { return m_charactersWithNullTerminator.size() <= 1; }
+    constexpr const char* characters() const { return m_characters; }
+    const LChar* characters8() const { return bitwise_cast<const LChar*>(m_characters); }
+    constexpr size_t length() const;
+    std::span<const LChar> span8() const { return { characters8(), length() }; }
+    size_t isEmpty() const { return !m_characters || !*m_characters; }
 
-    constexpr char operator[](size_t index) const { return m_charactersWithNullTerminator[index]; }
-    constexpr char characterAt(size_t index) const { return m_charactersWithNullTerminator[index]; }
+    constexpr char characterAt(unsigned index) const { return m_characters[index]; }
 
 #ifdef __OBJC__
     // This function convert null strings to empty strings.
     WTF_EXPORT_PRIVATE RetainPtr<NSString> createNSString() const;
 #endif
 
-    static ASCIILiteral deletedValue();
-    bool isDeletedValue() const { return characters() == reinterpret_cast<char*>(-1); }
-
 private:
-    constexpr explicit ASCIILiteral(const char* characters)
-        : m_charactersWithNullTerminator(characters, std::char_traits<char>::length(characters) + 1)
-    {
-#if ASSERT_ENABLED
-    for (size_t i = 0; i < length(); ++i)
-        ASSERT_UNDER_CONSTEXPR_CONTEXT(isASCII(m_charactersWithNullTerminator[i]));
-#endif
-    }
+    constexpr explicit ASCIILiteral(const char* characters) : m_characters(characters) { }
 
-    std::span<const char> m_charactersWithNullTerminator;
+    const char* m_characters { nullptr };
 };
 
 inline bool operator==(ASCIILiteral a, const char* b)
@@ -103,6 +86,23 @@ inline bool operator==(ASCIILiteral a, ASCIILiteral b)
     if (!a || !b)
         return a.characters() == b.characters();
     return !strcmp(a.characters(), b.characters());
+}
+
+inline constexpr size_t ASCIILiteral::length() const
+{
+    if (std::is_constant_evaluated()) {
+        if (!m_characters)
+            return 0;
+
+        size_t length = 0;
+        while (true) {
+            if (!m_characters[length])
+                return length;
+            ++length;
+        }
+        return length;
+    }
+    return strlen(m_characters);
 }
 
 inline unsigned ASCIILiteral::hash() const
@@ -123,33 +123,28 @@ struct ASCIILiteralHash {
 template<typename T> struct DefaultHash;
 template<> struct DefaultHash<ASCIILiteral> : ASCIILiteralHash { };
 
-inline ASCIILiteral ASCIILiteral::deletedValue()
-{
-    ASCIILiteral result;
-    result.m_charactersWithNullTerminator = { reinterpret_cast<char*>(-1), static_cast<size_t>(0) };
-    return result;
-}
+struct ASCIILiteralPtrHash {
+    static unsigned hash(const ASCIILiteral& key) { return IntHash<uintptr_t>::hash(reinterpret_cast<uintptr_t>(key.characters())); }
+    static bool equal(const ASCIILiteral& a, const ASCIILiteral& b) { return a.characters() == b.characters(); }
+    static constexpr bool safeToCompareToEmptyOrDeleted = false;
+};
 
 inline namespace StringLiterals {
 
-constexpr ASCIILiteral operator"" _s(const char* characters, size_t)
-{
-    auto result = ASCIILiteral::fromLiteralUnsafe(characters);
-    ASSERT_UNDER_CONSTEXPR_CONTEXT(result.characters() == characters);
-    return result;
-}
-
-constexpr std::span<const LChar> operator"" _span(const char* characters, size_t n)
+constexpr ASCIILiteral operator"" _s(const char* characters, size_t n)
 {
 #if ASSERT_ENABLED
     for (size_t i = 0; i < n; ++i)
         ASSERT_UNDER_CONSTEXPR_CONTEXT(isASCII(characters[i]));
+#else
+    UNUSED_PARAM(n);
 #endif
-    return std::span { bitwise_cast<const LChar*>(characters), n };
+    return ASCIILiteral::fromLiteralUnsafe(characters);
 }
 
 } // inline StringLiterals
 
 } // namespace WTF
 
+using WTF::ASCIILiteralPtrHash;
 using namespace WTF::StringLiterals;

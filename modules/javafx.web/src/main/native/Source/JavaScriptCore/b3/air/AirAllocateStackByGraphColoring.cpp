@@ -365,7 +365,7 @@ bool tryTrivialStackAllocation(Code& code)
 
 void allocateStackByGraphColoring(Code& code)
 {
-    PhaseScope phaseScope(code, "allocateStackByGraphColoring"_s);
+    PhaseScope phaseScope(code, "allocateStackByGraphColoring");
 
     handleCalleeSaves(code);
 

@@ -27,7 +27,7 @@
     SkipVTableValidation,
     Exposed=Window
 ] interface SVGAnimatedString {
-    attribute (DOMString or TrustedScriptURL) baseVal;
+    attribute DOMString baseVal;
     readonly attribute DOMString animVal;
 };
 

@@ -25,7 +25,6 @@
 #pragma once
 
 #include "CSSPrimitiveValue.h"
-#include "CSSProperty.h"
 #include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
 #include "Element.h"
@@ -41,24 +40,21 @@ class StyleProperties;
 class StylePropertyMap;
 
 class StyledElement : public Element {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(StyledElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(StyledElement);
+    WTF_MAKE_ISO_ALLOCATED(StyledElement);
 public:
     virtual ~StyledElement();
 
-    void dirtyStyleAttribute();
     void invalidateStyleAttribute();
 
     const StyleProperties* inlineStyle() const { return elementData() ? elementData()->m_inlineStyle.get() : nullptr; }
-    RefPtr<StyleProperties> protectedInlineStyle() const;
 
-    bool setInlineStyleProperty(CSSPropertyID, CSSValueID identifier, IsImportant = IsImportant::No);
-    bool setInlineStyleProperty(CSSPropertyID, CSSPropertyID identifier, IsImportant = IsImportant::No);
-    WEBCORE_EXPORT bool setInlineStyleProperty(CSSPropertyID, double value, CSSUnitType, IsImportant = IsImportant::No);
-    WEBCORE_EXPORT bool setInlineStyleProperty(CSSPropertyID, const String& value, IsImportant = IsImportant::No, bool* didFailParsing = nullptr);
-    bool setInlineStyleCustomProperty(const AtomString& property, const String& value, IsImportant = IsImportant::No);
-    bool setInlineStyleCustomProperty(Ref<CSSValue>&&, IsImportant = IsImportant::No);
-    bool setInlineStyleProperty(CSSPropertyID, Ref<CSSValue>&&, IsImportant = IsImportant::No);
+    bool setInlineStyleProperty(CSSPropertyID, CSSValueID identifier, bool important = false);
+    bool setInlineStyleProperty(CSSPropertyID, CSSPropertyID identifier, bool important = false);
+    WEBCORE_EXPORT bool setInlineStyleProperty(CSSPropertyID, double value, CSSUnitType, bool important = false);
+    WEBCORE_EXPORT bool setInlineStyleProperty(CSSPropertyID, const String& value, bool important = false, bool* didFailParsing = nullptr);
+    bool setInlineStyleCustomProperty(const AtomString& property, const String& value, bool important = false);
+    bool setInlineStyleCustomProperty(Ref<CSSValue>&&, bool important = false);
+    bool setInlineStyleProperty(CSSPropertyID, Ref<CSSValue>&&, bool important = false);
     bool removeInlineStyleProperty(CSSPropertyID);
     bool removeInlineStyleCustomProperty(const AtomString&);
     void removeAllInlineStyleProperties();
@@ -72,7 +68,6 @@ public:
     const ImmutableStyleProperties* presentationalHintStyle() const;
     virtual void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) { }
     virtual const MutableStyleProperties* additionalPresentationalHintStyle() const { return nullptr; }
-    virtual void collectExtraStyleForPresentationalHints(MutableStyleProperties&) { }
 
 protected:
     StyledElement(const QualifiedName& name, Document& document, OptionSet<TypeFlag> type)
@@ -87,7 +82,6 @@ protected:
     void addPropertyToPresentationalHintStyle(MutableStyleProperties&, CSSPropertyID, CSSValueID identifier);
     void addPropertyToPresentationalHintStyle(MutableStyleProperties&, CSSPropertyID, double value, CSSUnitType);
     void addPropertyToPresentationalHintStyle(MutableStyleProperties&, CSSPropertyID, const String& value);
-    void addPropertyToPresentationalHintStyle(MutableStyleProperties&, CSSPropertyID, RefPtr<CSSValue>&&);
 
     void addSubresourceAttributeURLs(ListHashSet<URL>&) const override;
     Attribute replaceURLsInAttributeValue(const Attribute&, const HashMap<String, String>&) const override;

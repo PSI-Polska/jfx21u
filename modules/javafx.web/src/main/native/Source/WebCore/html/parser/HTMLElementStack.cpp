@@ -146,7 +146,14 @@ bool HTMLElementStack::ElementRecord::isAbove(ElementRecord& other) const
     return false;
 }
 
-HTMLElementStack::~HTMLElementStack() = default;
+HTMLElementStack::~HTMLElementStack()
+{
+#if PLATFORM(JAVA) // RT-26487
+    while (m_top) {
+        m_top = m_top->releaseNext();
+    }
+#endif
+}
 
 bool HTMLElementStack::hasOnlyOneElement() const
 {

@@ -39,13 +39,13 @@
 #include "PushSubscriptionOwner.h"
 #include "ScriptExecutionContext.h"
 #include "ServiceWorkerRegistration.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/Vector.h>
 #include <wtf/text/Base64.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(PushManager);
+WTF_MAKE_ISO_ALLOCATED_IMPL(PushManager);
 
 PushManager::PushManager(PushSubscriptionOwner& pushSubscriptionOwner)
     : m_pushSubscriptionOwner(pushSubscriptionOwner)
@@ -86,9 +86,13 @@ void PushManager::subscribe(ScriptExecutionContext& context, std::optional<PushS
 
         using KeyDataResult = ExceptionOr<Vector<uint8_t>>;
         auto keyDataResult = WTF::switchOn(*options->applicationServerKey, [](RefPtr<JSC::ArrayBuffer>& value) -> KeyDataResult {
-            return value ? value->toVector() : Vector<uint8_t>();
+            if (!value)
+                return Vector<uint8_t> { };
+            return Vector<uint8_t> { reinterpret_cast<const uint8_t*>(value->data()), value->byteLength() };
         }, [](RefPtr<JSC::ArrayBufferView>& value) -> KeyDataResult {
-            return value ? value->toVector() : Vector<uint8_t>();
+            if (!value)
+                return Vector<uint8_t> { };
+            return Vector<uint8_t> { reinterpret_cast<const uint8_t*>(value->baseAddress()), value->byteLength() };
         }, [](String& value) -> KeyDataResult {
             auto decoded = base64URLDecode(value);
             if (!decoded)

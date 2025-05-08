@@ -58,7 +58,6 @@
 #include <JavaScriptCore/IdentifiersFactory.h>
 #include <JavaScriptCore/RuntimeFlags.h>
 #include <wtf/NeverDestroyed.h>
-#include <wtf/text/MakeString.h>
 
 using namespace PAL;
 
@@ -89,7 +88,7 @@ static WorkerParameters generateWorkerParameters(const ServiceWorkerContextData&
         contextData.scriptURL,
         URL(), // FIXME: Should pass owner URL.
         emptyString(),
-        makeString("serviceworker:"_s, Inspector::IdentifiersFactory::createIdentifier()),
+        "serviceworker:" + Inspector::IdentifiersFactory::createIdentifier(),
         WTFMove(userAgent),
         platformStrategies()->loaderStrategy()->isOnLine(),
         contextData.contentSecurityPolicy,
@@ -129,7 +128,7 @@ ServiceWorkerThread::~ServiceWorkerThread() = default;
 Ref<WorkerGlobalScope> ServiceWorkerThread::createWorkerGlobalScope(const WorkerParameters& params, Ref<SecurityOrigin>&& origin, Ref<SecurityOrigin>&& topOrigin)
 {
     RELEASE_ASSERT(m_contextData);
-    return ServiceWorkerGlobalScope::create(*std::exchange(m_contextData, std::nullopt), *std::exchange(m_workerData, std::nullopt), params, WTFMove(origin), *this, WTFMove(topOrigin), idbConnectionProxy(), socketProvider(), WTFMove(m_notificationClient), WTFMove(m_workerClient));
+    return ServiceWorkerGlobalScope::create(*std::exchange(m_contextData, std::nullopt), *std::exchange(m_workerData, std::nullopt), params, WTFMove(origin), *this, WTFMove(topOrigin), idbConnectionProxy(), socketProvider(), WTFMove(m_notificationClient));
 }
 
 void ServiceWorkerThread::runEventLoop()
@@ -138,29 +137,21 @@ void ServiceWorkerThread::runEventLoop()
     WorkerThread::runEventLoop();
 }
 
-void ServiceWorkerThread::queueTaskToFireFetchEvent(Ref<ServiceWorkerFetch::Client>&& client, ResourceRequest&& request, String&& referrer, FetchOptions&& options, SWServerConnectionIdentifier connectionIdentifier, FetchIdentifier fetchIdentifier, bool isServiceWorkerNavigationPreloadEnabled, String&& clientIdentifier, String&& resultingClientIdentifier)
+void ServiceWorkerThread::queueTaskToFireFetchEvent(Ref<ServiceWorkerFetch::Client>&& client, ResourceRequest&& request, String&& referrer, FetchOptions&& options, FetchIdentifier fetchIdentifier, bool isServiceWorkerNavigationPreloadEnabled, String&& clientIdentifier, String&& resultingClientIdentifier)
 {
     Ref serviceWorkerGlobalScope = downcast<ServiceWorkerGlobalScope>(*globalScope());
-    serviceWorkerGlobalScope->eventLoop().queueTask(TaskSource::DOMManipulation, [serviceWorkerGlobalScope, client = WTFMove(client), request = WTFMove(request), referrer = WTFMove(referrer), options = WTFMove(options), connectionIdentifier, fetchIdentifier, isServiceWorkerNavigationPreloadEnabled, clientIdentifier = WTFMove(clientIdentifier), resultingClientIdentifier = WTFMove(resultingClientIdentifier)]() mutable {
-        if (client->isCancelled()) {
-            RELEASE_LOG_INFO(ServiceWorker, "Skipping fetch event dispatching since client cancelled it");
-            return;
-        }
-
-        ServiceWorkerFetch::dispatchFetchEvent(WTFMove(client), serviceWorkerGlobalScope, WTFMove(request), WTFMove(referrer), WTFMove(options), connectionIdentifier, fetchIdentifier, isServiceWorkerNavigationPreloadEnabled, WTFMove(clientIdentifier), WTFMove(resultingClientIdentifier));
+    serviceWorkerGlobalScope->eventLoop().queueTask(TaskSource::DOMManipulation, [serviceWorkerGlobalScope, client = WTFMove(client), request = WTFMove(request), referrer = WTFMove(referrer), options = WTFMove(options), fetchIdentifier, isServiceWorkerNavigationPreloadEnabled, clientIdentifier = WTFMove(clientIdentifier), resultingClientIdentifier = WTFMove(resultingClientIdentifier)]() mutable {
+        ServiceWorkerFetch::dispatchFetchEvent(WTFMove(client), serviceWorkerGlobalScope, WTFMove(request), WTFMove(referrer), WTFMove(options), fetchIdentifier, isServiceWorkerNavigationPreloadEnabled, WTFMove(clientIdentifier), WTFMove(resultingClientIdentifier));
     });
 }
 
 static void fireMessageEvent(ServiceWorkerGlobalScope& scope, MessageWithMessagePorts&& message, ExtendableMessageEventSource&& source, const URL& sourceURL)
 {
-    auto* globalObject = scope.globalObject();
-    if (!globalObject)
-        return;
-
     auto ports = MessagePort::entanglePorts(scope, WTFMove(message.transferredPorts));
-    auto messageEvent = ExtendableMessageEvent::create(*globalObject, WTFMove(ports), message.message.releaseNonNull(), SecurityOriginData::fromURL(sourceURL).toString(), { }, source);
-    scope.dispatchEvent(messageEvent.event);
-    scope.updateExtendedEventsSet(messageEvent.event.ptr());
+    // FIXME: Add support for messageerror event when message deserialization fails.
+    auto messageEvent = ExtendableMessageEvent::create(WTFMove(ports), WTFMove(message.message), SecurityOriginData::fromURL(sourceURL).toString(), { }, source);
+    scope.dispatchEvent(messageEvent);
+    scope.updateExtendedEventsSet(messageEvent.ptr());
 }
 
 void ServiceWorkerThread::queueTaskToPostMessage(MessageWithMessagePorts&& message, ServiceWorkerOrClientData&& sourceData)
@@ -196,7 +187,7 @@ void ServiceWorkerThread::queueTaskToFireInstallEvent()
 {
     Ref serviceWorkerGlobalScope = downcast<ServiceWorkerGlobalScope>(*globalScope());
     serviceWorkerGlobalScope->eventLoop().queueTask(TaskSource::DOMManipulation, [weakThis = WeakPtr { *this }, serviceWorkerGlobalScope]() mutable {
-        RELEASE_LOG(ServiceWorker, "ServiceWorkerThread::queueTaskToFireInstallEvent firing event for worker %" PRIu64, serviceWorkerGlobalScope->thread().identifier().toUInt64());
+        RELEASE_LOG(ServiceWorker, "ServiceWorkerThread::queueTaskToFireInstallEvent firing event for worker %llu", serviceWorkerGlobalScope->thread().identifier().toUInt64());
 
         auto installEvent = ExtendableEvent::create(eventNames().installEvent, { }, ExtendableEvent::IsTrusted::Yes);
         serviceWorkerGlobalScope->dispatchEvent(installEvent);
@@ -210,7 +201,7 @@ void ServiceWorkerThread::queueTaskToFireInstallEvent()
                 }
             }
             callOnMainThread([weakThis = WTFMove(weakThis), hasRejectedAnyPromise] {
-                RELEASE_LOG(ServiceWorker, "ServiceWorkerThread::queueTaskToFireInstallEvent finishing for worker %" PRIu64, weakThis ? weakThis->identifier().toUInt64() : 0);
+                RELEASE_LOG(ServiceWorker, "ServiceWorkerThread::queueTaskToFireInstallEvent finishing for worker %llu", weakThis ? weakThis->identifier().toUInt64() : 0);
                 if (weakThis)
                     weakThis->finishedFiringInstallEvent(hasRejectedAnyPromise);
             });
@@ -222,14 +213,14 @@ void ServiceWorkerThread::queueTaskToFireActivateEvent()
 {
     Ref serviceWorkerGlobalScope = downcast<ServiceWorkerGlobalScope>(*globalScope());
     serviceWorkerGlobalScope->eventLoop().queueTask(TaskSource::DOMManipulation, [weakThis = WeakPtr { *this }, serviceWorkerGlobalScope]() mutable {
-        RELEASE_LOG(ServiceWorker, "ServiceWorkerThread::queueTaskToFireActivateEvent firing event for worker %" PRIu64, serviceWorkerGlobalScope->thread().identifier().toUInt64());
+        RELEASE_LOG(ServiceWorker, "ServiceWorkerThread::queueTaskToFireActivateEvent firing event for worker %llu", serviceWorkerGlobalScope->thread().identifier().toUInt64());
 
         auto activateEvent = ExtendableEvent::create(eventNames().activateEvent, { }, ExtendableEvent::IsTrusted::Yes);
         serviceWorkerGlobalScope->dispatchEvent(activateEvent);
 
         activateEvent->whenAllExtendLifetimePromisesAreSettled([weakThis = WTFMove(weakThis)](auto&&) mutable {
             callOnMainThread([weakThis = WTFMove(weakThis)] {
-                RELEASE_LOG(ServiceWorker, "ServiceWorkerThread::queueTaskToFireActivateEvent finishing for worker %" PRIu64, weakThis ? weakThis->identifier().toUInt64() : 0);
+                RELEASE_LOG(ServiceWorker, "ServiceWorkerThread::queueTaskToFireActivateEvent finishing for worker %llu", weakThis ? weakThis->identifier().toUInt64() : 0);
                 if (weakThis)
                     weakThis->finishedFiringActivateEvent();
             });
@@ -346,7 +337,7 @@ void ServiceWorkerThread::queueTaskToFirePushSubscriptionChangeEvent(std::option
 
         pushSubscriptionChangeEvent->whenAllExtendLifetimePromisesAreSettled([weakThis = WTFMove(weakThis)](auto&&) mutable {
             callOnMainThread([weakThis = WTFMove(weakThis)] {
-                RELEASE_LOG(ServiceWorker, "ServiceWorkerThread::queueTaskToFirePushSubscriptionChangeEvent finishing for worker %" PRIu64, weakThis ? weakThis->identifier().toUInt64() : 0);
+                RELEASE_LOG(ServiceWorker, "ServiceWorkerThread::queueTaskToFirePushSubscriptionChangeEvent finishing for worker %llu", weakThis ? weakThis->identifier().toUInt64() : 0);
                 if (weakThis)
                     weakThis->finishedFiringPushSubscriptionChangeEvent();
             });

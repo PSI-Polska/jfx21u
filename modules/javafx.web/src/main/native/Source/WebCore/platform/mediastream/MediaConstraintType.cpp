@@ -68,10 +68,6 @@ String convertToString(MediaConstraintType type)
         return "zoom"_s;
     case MediaConstraintType::Torch:
         return "torch"_s;
-    case MediaConstraintType::BackgroundBlur:
-        return "backgroundBlur"_s;
-    case MediaConstraintType::PowerEfficient:
-        return "powerEfficient"_s;
     }
 
     ASSERT_NOT_REACHED();

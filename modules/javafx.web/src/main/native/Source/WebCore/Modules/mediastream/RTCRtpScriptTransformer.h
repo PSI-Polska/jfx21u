@@ -51,7 +51,7 @@ class WritableStream;
 struct MessageWithMessagePorts;
 
 enum class RTCRtpScriptTransformerIdentifierType { };
-using RTCRtpScriptTransformerIdentifier = LegacyNullableAtomicObjectIdentifier<RTCRtpScriptTransformerIdentifierType>;
+using RTCRtpScriptTransformerIdentifier = AtomicObjectIdentifier<RTCRtpScriptTransformerIdentifierType>;
 
 class RTCRtpScriptTransformer
     : public RefCounted<RTCRtpScriptTransformer>
@@ -60,10 +60,6 @@ class RTCRtpScriptTransformer
 public:
     static ExceptionOr<Ref<RTCRtpScriptTransformer>> create(ScriptExecutionContext&, MessageWithMessagePorts&&);
     ~RTCRtpScriptTransformer();
-
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
 
     ReadableStream& readable();
     ExceptionOr<Ref<WritableStream>> writable();
@@ -79,9 +75,10 @@ public:
     void clear(ClearCallback);
 
 private:
-    RTCRtpScriptTransformer(ScriptExecutionContext&, Ref<SerializedScriptValue>&&, Vector<Ref<MessagePort>>&&, Ref<ReadableStream>&&, Ref<SimpleReadableStreamSource>&&);
+    RTCRtpScriptTransformer(ScriptExecutionContext&, Ref<SerializedScriptValue>&&, Vector<RefPtr<MessagePort>>&&, Ref<ReadableStream>&&, Ref<SimpleReadableStreamSource>&&);
 
-    // ActiveDOMObject.
+    // ActiveDOMObject
+    const char* activeDOMObjectName() const final { return "RTCRtpScriptTransformer"; }
     void stop() final { stopPendingActivity(); }
 
     void stopPendingActivity() { auto pendingActivity = WTFMove(m_pendingActivity); }
@@ -89,7 +86,7 @@ private:
     void enqueueFrame(ScriptExecutionContext&, Ref<RTCRtpTransformableFrame>&&);
 
     Ref<SerializedScriptValue> m_options;
-    Vector<Ref<MessagePort>> m_ports;
+    Vector<RefPtr<MessagePort>> m_ports;
 
     Ref<SimpleReadableStreamSource> m_readableSource;
     Ref<ReadableStream> m_readable;

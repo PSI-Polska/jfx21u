@@ -71,7 +71,7 @@ bool PlatformImageNativeImageBackend::hasAlpha() const
     return true;
 }
 
-std::optional<Color> NativeImage::singlePixelSolidColor() const
+Color NativeImage::singlePixelSolidColor() const
 {
     return {};
 }

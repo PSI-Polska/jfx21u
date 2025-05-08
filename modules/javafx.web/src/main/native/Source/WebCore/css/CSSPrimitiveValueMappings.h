@@ -150,7 +150,7 @@ template<> inline LineClampValue fromCSSValue(const CSSValue& value)
     if (primitiveValue.primitiveType() == CSSUnitType::CSS_PERCENTAGE)
         return LineClampValue(primitiveValue.value<int>(), LineClamp::Percentage);
 
-    ASSERT(primitiveValue.valueID() == CSSValueNone);
+    ASSERT_NOT_REACHED();
     return LineClampValue();
 }
 
@@ -373,6 +373,7 @@ constexpr CSSValueID toCSSValueID(StyleAppearance e)
     case StyleAppearance::ApplePayButton:
         return CSSValueApplePayButton;
 #endif
+    case StyleAppearance::CapsLockIndicator:
 #if ENABLE(INPUT_TYPE_COLOR)
     case StyleAppearance::ColorWell:
 #endif
@@ -418,12 +419,6 @@ DEFINE_TO_FROM_CSS_VALUE_ID_FUNCTIONS
 #undef TYPE
 #undef FOR_EACH
 
-#define TYPE FieldSizing
-#define FOR_EACH(CASE) CASE(Fixed) CASE(Content)
-DEFINE_TO_FROM_CSS_VALUE_ID_FUNCTIONS
-#undef TYPE
-#undef FOR_EACH
-
 constexpr CSSValueID toCSSValueID(FillAttachment e)
 {
     switch (e) {
@@ -457,14 +452,12 @@ template<> constexpr FillAttachment fromCSSValueID(CSSValueID valueID)
 constexpr CSSValueID toCSSValueID(FillBox e)
 {
     switch (e) {
-    case FillBox::BorderBox:
+    case FillBox::Border:
         return CSSValueBorderBox;
-    case FillBox::PaddingBox:
+    case FillBox::Padding:
         return CSSValuePaddingBox;
-    case FillBox::ContentBox:
+    case FillBox::Content:
         return CSSValueContentBox;
-    case FillBox::BorderArea:
-        return CSSValueBorderArea;
     case FillBox::Text:
         return CSSValueText;
     case FillBox::NoClip:
@@ -479,15 +472,13 @@ template<> constexpr FillBox fromCSSValueID(CSSValueID valueID)
     switch (valueID) {
     case CSSValueBorder:
     case CSSValueBorderBox:
-        return FillBox::BorderBox;
+        return FillBox::Border;
     case CSSValuePadding:
     case CSSValuePaddingBox:
-        return FillBox::PaddingBox;
+        return FillBox::Padding;
     case CSSValueContent:
     case CSSValueContentBox:
-        return FillBox::ContentBox;
-    case CSSValueBorderArea:
-        return FillBox::BorderArea;
+        return FillBox::Content;
     case CSSValueText:
     case CSSValueWebkitText:
         return FillBox::Text;
@@ -497,7 +488,7 @@ template<> constexpr FillBox fromCSSValueID(CSSValueID valueID)
         break;
     }
     ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT();
-    return FillBox::BorderBox;
+    return FillBox::Border;
 }
 
 #define TYPE FillRepeat
@@ -589,7 +580,7 @@ DEFINE_TO_FROM_CSS_VALUE_ID_FUNCTIONS
 #undef FOR_EACH
 
 #define TYPE TextBoxTrim
-#define FOR_EACH(CASE) CASE(None) CASE(TrimStart) CASE(TrimEnd) CASE(TrimBoth)
+#define FOR_EACH(CASE) CASE(None) CASE(Start) CASE(End) CASE(Both)
 DEFINE_TO_FROM_CSS_VALUE_ID_FUNCTIONS
 #undef TYPE
 #undef FOR_EACH
@@ -1250,6 +1241,13 @@ DEFINE_TO_FROM_CSS_VALUE_ID_FUNCTIONS
 #undef TYPE
 #undef FOR_EACH
 
+// FIXME: Implement support for 'under left' and 'under right' values.
+#define TYPE TextUnderlinePosition
+#define FOR_EACH(CASE) CASE(Auto) CASE(Under) CASE(FromFont) CASE(Left) CASE(Right)
+DEFINE_TO_FROM_CSS_VALUE_ID_FUNCTIONS
+#undef TYPE
+#undef FOR_EACH
+
 #define TYPE TextSecurity
 #define FOR_EACH(CASE) CASE(None) CASE(Disc) CASE(Circle) CASE(Square)
 DEFINE_TO_FROM_CSS_VALUE_ID_FUNCTIONS
@@ -1538,40 +1536,8 @@ template<> constexpr TextCombine fromCSSValueID(CSSValueID valueID)
     return TextCombine::None;
 }
 
-constexpr CSSValueID toCSSValueID(RubyPosition e)
-{
-    switch (e) {
-    case RubyPosition::Over:
-        return CSSValueOver;
-    case RubyPosition::Under:
-        return CSSValueUnder;
-    case RubyPosition::InterCharacter:
-        return CSSValueInterCharacter;
-    }
-    ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT();
-    return CSSValueInvalid;
-}
-
-template<> constexpr RubyPosition fromCSSValueID(CSSValueID valueID)
-{
-    switch (valueID) {
-    case CSSValueOver:
-    case CSSValueBefore: // -webkit-ruby-position only
-        return RubyPosition::Over;
-    case CSSValueUnder:
-    case CSSValueAfter: // -webkit-ruby-position only
-        return RubyPosition::Under;
-    case CSSValueInterCharacter:
-        return RubyPosition::InterCharacter;
-    default:
-        break;
-    }
-    ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT();
-    return RubyPosition::Over;
-}
-
-#define TYPE RubyAlign
-#define FOR_EACH(CASE) CASE(Start) CASE(Center) CASE(SpaceBetween) CASE(SpaceAround)
+#define TYPE RubyPosition
+#define FOR_EACH(CASE) CASE(Before) CASE(After) CASE(InterCharacter)
 DEFINE_TO_FROM_CSS_VALUE_ID_FUNCTIONS
 #undef TYPE
 #undef FOR_EACH
@@ -2297,54 +2263,50 @@ DEFINE_TO_FROM_CSS_VALUE_ID_FUNCTIONS
 #undef TYPE
 #undef FOR_EACH
 
-constexpr CSSValueID toCSSValueID(TextEdgeType textEdgeType)
+constexpr CSSValueID toCSSValueID(TextBoxEdgeType textBoxEdgeType)
 {
-    switch (textEdgeType) {
-    case TextEdgeType::Auto:
-        return CSSValueAuto;
-    case TextEdgeType::Leading:
+    switch (textBoxEdgeType) {
+    case TextBoxEdgeType::Leading:
         return CSSValueLeading;
-    case TextEdgeType::Text:
+    case TextBoxEdgeType::Text:
         return CSSValueText;
-    case TextEdgeType::CapHeight:
+    case TextBoxEdgeType::CapHeight:
         return CSSValueCap;
-    case TextEdgeType::ExHeight:
+    case TextBoxEdgeType::ExHeight:
         return CSSValueEx;
-    case TextEdgeType::Alphabetic:
+    case TextBoxEdgeType::Alphabetic:
         return CSSValueAlphabetic;
-    case TextEdgeType::CJKIdeographic:
+    case TextBoxEdgeType::CJKIdeographic:
         return CSSValueIdeographic;
-    case TextEdgeType::CJKIdeographicInk:
+    case TextBoxEdgeType::CJKIdeographicInk:
         return CSSValueIdeographicInk;
     }
     ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT();
     return CSSValueInvalid;
 }
 
-template<> constexpr TextEdgeType fromCSSValueID(CSSValueID valueID)
+template<> constexpr TextBoxEdgeType fromCSSValueID(CSSValueID valueID)
 {
     switch (valueID) {
-    case CSSValueAuto:
-        return TextEdgeType::Auto;
     case CSSValueLeading:
-        return TextEdgeType::Leading;
+        return TextBoxEdgeType::Leading;
     case CSSValueText:
-        return TextEdgeType::Text;
+        return TextBoxEdgeType::Text;
     case CSSValueCap:
-        return TextEdgeType::CapHeight;
+        return TextBoxEdgeType::CapHeight;
     case CSSValueEx:
-        return TextEdgeType::ExHeight;
+        return TextBoxEdgeType::ExHeight;
     case CSSValueAlphabetic:
-        return TextEdgeType::Alphabetic;
+        return TextBoxEdgeType::Alphabetic;
     case CSSValueIdeographic:
-        return TextEdgeType::CJKIdeographic;
+        return TextBoxEdgeType::CJKIdeographic;
     case CSSValueIdeographicInk:
-        return TextEdgeType::CJKIdeographicInk;
+        return TextBoxEdgeType::CJKIdeographicInk;
     default:
         break;
     }
     ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT();
-    return TextEdgeType::Auto;
+    return TextBoxEdgeType::Leading;
 }
 
 #if ENABLE(APPLE_PAY)

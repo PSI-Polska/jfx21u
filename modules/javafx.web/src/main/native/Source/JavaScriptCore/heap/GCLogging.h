@@ -26,7 +26,6 @@
 #pragma once
 
 #include <wtf/Assertions.h>
-#include <wtf/text/ASCIILiteral.h>
 
 namespace JSC {
 
@@ -40,6 +39,7 @@ public:
         Verbose
     };
 
+    static const char* levelAsString(Level);
     static void dumpObjectGraph(Heap*);
 };
 

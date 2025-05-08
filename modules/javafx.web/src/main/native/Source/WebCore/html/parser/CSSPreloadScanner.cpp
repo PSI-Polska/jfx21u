@@ -172,10 +172,10 @@ inline void CSSPreloadScanner::tokenize(UChar c)
     }
 }
 
-static String parseCSSStringOrURL(std::span<const UChar> characters)
+static String parseCSSStringOrURL(const UChar* characters, size_t length)
 {
     size_t offset = 0;
-    size_t reducedLength = characters.size();
+    size_t reducedLength = length;
 
     // Remove whitespace from the rule start
     while (reducedLength && isASCIIWhitespace(characters[offset])) {
@@ -213,7 +213,7 @@ static String parseCSSStringOrURL(std::span<const UChar> characters)
             reducedLength -= 2;
     }
 
-    return String(characters.subspan(offset, reducedLength));
+    return String(characters + offset, reducedLength);
 }
 
 static bool hasValidImportConditions(StringView conditions)
@@ -236,10 +236,10 @@ static bool hasValidImportConditions(StringView conditions)
 
 void CSSPreloadScanner::emitRule()
 {
-    StringView rule(m_rule.span());
+    StringView rule(m_rule.data(), m_rule.size());
     if (equalLettersIgnoringASCIICase(rule, "import"_s)) {
-        String url = parseCSSStringOrURL(m_ruleValue.span());
-        StringView conditions(m_ruleConditions.span());
+        String url = parseCSSStringOrURL(m_ruleValue.data(), m_ruleValue.size());
+        StringView conditions(m_ruleConditions.data(), m_ruleConditions.size());
         if (!url.isEmpty() && hasValidImportConditions(conditions)) {
             URL baseElementURL; // FIXME: This should be passed in from the HTMLPreloadScanner via scan(): without it we will get relative URLs wrong.
             // FIXME: Should this be including the charset in the preload request?

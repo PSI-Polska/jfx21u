@@ -28,7 +28,6 @@
 
 #include "AudioWorkletGlobalScope.h"
 #include "AudioWorkletProcessor.h"
-#include "WebCoreOpaqueRootInlines.h"
 
 #if ENABLE(WEB_AUDIO)
 
@@ -37,7 +36,6 @@ namespace WebCore {
 template<typename Visitor>
 void JSAudioWorkletGlobalScope::visitAdditionalChildren(Visitor& visitor)
 {
-    addWebCoreOpaqueRoot(visitor, static_cast<ScriptExecutionContext&>(wrapped()));
     wrapped().visitProcessors(visitor);
 }
 

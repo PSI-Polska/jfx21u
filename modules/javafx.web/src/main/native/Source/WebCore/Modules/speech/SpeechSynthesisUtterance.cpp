@@ -32,11 +32,11 @@
 #include "EventNames.h"
 #include "SpeechSynthesisErrorEvent.h"
 #include "SpeechSynthesisEvent.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SpeechSynthesisUtterance);
+WTF_MAKE_ISO_ALLOCATED_IMPL(SpeechSynthesisUtterance);
 
 Ref<SpeechSynthesisUtterance> SpeechSynthesisUtterance::create(ScriptExecutionContext& context, const String& text)
 {
@@ -113,6 +113,11 @@ void SpeechSynthesisUtterance::incrementActivityCountForEventDispatch()
 void SpeechSynthesisUtterance::decrementActivityCountForEventDispatch()
 {
     --m_activityCountForEventDispatch;
+}
+
+const char* SpeechSynthesisUtterance::activeDOMObjectName() const
+{
+    return "SpeechSynthesisUtterance";
 }
 
 bool SpeechSynthesisUtterance::virtualHasPendingActivity() const

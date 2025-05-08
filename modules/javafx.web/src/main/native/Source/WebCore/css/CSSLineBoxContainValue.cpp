@@ -40,19 +40,19 @@ String CSSLineBoxContainValue::customCSSText() const
 {
     StringBuilder text;
     if (m_value.contains(LineBoxContain::Block))
-        text.append("block"_s);
+        text.append("block");
     if (m_value.contains(LineBoxContain::Inline))
-        text.append(text.isEmpty() ? ""_s : " "_s, "inline"_s);
+        text.append(text.isEmpty() ? "" : " ", "inline");
     if (m_value.contains(LineBoxContain::Font))
-        text.append(text.isEmpty() ? ""_s : " "_s, "font"_s);
+        text.append(text.isEmpty() ? "" : " ", "font");
     if (m_value.contains(LineBoxContain::Glyphs))
-        text.append(text.isEmpty() ? ""_s : " "_s, "glyphs"_s);
+        text.append(text.isEmpty() ? "" : " ", "glyphs");
     if (m_value.contains(LineBoxContain::Replaced))
-        text.append(text.isEmpty() ? ""_s : " "_s, "replaced"_s);
+        text.append(text.isEmpty() ? "" : " ", "replaced");
     if (m_value.contains(LineBoxContain::InlineBox))
-        text.append(text.isEmpty() ? ""_s : " "_s, "inline-box"_s);
+        text.append(text.isEmpty() ? "" : " ", "inline-box");
     if (m_value.contains(LineBoxContain::InitialLetter))
-        text.append(text.isEmpty() ? ""_s : " "_s, "initial-letter"_s);
+        text.append(text.isEmpty() ? "" : " ", "initial-letter");
     return text.toString();
 }
 

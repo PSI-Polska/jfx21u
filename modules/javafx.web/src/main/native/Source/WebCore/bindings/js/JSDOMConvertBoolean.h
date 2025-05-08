@@ -27,24 +27,16 @@
 
 #include "IDLTypes.h"
 #include "JSDOMConvertBase.h"
-#include <JavaScriptCore/JSGlobalObject.h>
 
 namespace WebCore {
 
 template<> struct Converter<IDLBoolean> : DefaultConverter<IDLBoolean> {
+
     static constexpr bool conversionHasSideEffects = false;
-    using Result = ConversionResult<IDLBoolean>;
 
-    static Result convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
+    static bool convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
     {
-        auto& vm = lexicalGlobalObject.vm();
-        auto throwScope = DECLARE_THROW_SCOPE(vm);
-
-        auto conversionResult = value.toBoolean(&lexicalGlobalObject);
-
-        RETURN_IF_EXCEPTION(throwScope, Result::exception());
-
-        return Result { WTFMove(conversionResult) };
+        return value.toBoolean(&lexicalGlobalObject);
     }
 };
 

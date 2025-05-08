@@ -115,7 +115,12 @@ String CSSSelectorList::selectorsText() const
 
 void CSSSelectorList::buildSelectorsText(StringBuilder& stringBuilder) const
 {
-    stringBuilder.append(interleave(*this, [](auto& subSelector) { return subSelector.selectorText(); }, ", "_s));
+    const CSSSelector* firstSubselector = first();
+    for (const CSSSelector* subSelector = firstSubselector; subSelector; subSelector = CSSSelectorList::next(subSelector)) {
+        if (subSelector != firstSubselector)
+            stringBuilder.append(", ");
+        stringBuilder.append(subSelector->selectorText());
+    }
 }
 
 template <typename Functor>
@@ -127,8 +132,8 @@ static bool forEachTagSelector(Functor& functor, const CSSSelector* selector)
         if (functor(selector))
             return true;
         if (const CSSSelectorList* selectorList = selector->selectorList()) {
-            for (const auto& subSelector : *selectorList) {
-                if (forEachTagSelector(functor, &subSelector))
+            for (const CSSSelector* subSelector = selectorList->first(); subSelector; subSelector = CSSSelectorList::next(subSelector)) {
+                if (forEachTagSelector(functor, subSelector))
                     return true;
             }
         }
@@ -138,10 +143,10 @@ static bool forEachTagSelector(Functor& functor, const CSSSelector* selector)
 }
 
 template <typename Functor>
-static bool forEachSelector(Functor& functor, const CSSSelectorList& selectorList)
+static bool forEachSelector(Functor& functor, const CSSSelectorList* selectorList)
 {
-    for (const auto& selector : selectorList) {
-        if (forEachTagSelector(functor, &selector))
+    for (const CSSSelector* selector = selectorList->first(); selector; selector = CSSSelectorList::next(selector)) {
+        if (forEachTagSelector(functor, selector))
             return true;
     }
 
@@ -154,7 +159,7 @@ bool CSSSelectorList::hasExplicitNestingParent() const
         return selector->hasExplicitNestingParent();
     };
 
-    return forEachSelector(functor, *this);
+    return forEachSelector(functor, this);
 }
 
 bool CSSSelectorList::hasOnlyNestingSelector() const

@@ -947,7 +947,6 @@ class Instruction
             labelRef = operands[0]
             dest = operands[1]
             temp = operands[2]
-            raise "Destination interferes with scratch in #{self.inspect} at #{codeOriginString}" unless dest.armOperand != temp.armOperand
 
             uid = $asm.newUID
 

@@ -170,11 +170,4 @@ void UnlinkedMetadataTable::finalize()
     }
 }
 
-UnlinkedMetadataTable::~UnlinkedMetadataTable()
-{
-    ASSERT(!m_isLinked);
-    if (m_hasMetadata)
-        MetadataTableMalloc::free(m_rawBuffer);
-}
-
 } // namespace JSC

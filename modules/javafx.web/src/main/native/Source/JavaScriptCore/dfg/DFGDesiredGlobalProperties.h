@@ -50,7 +50,7 @@ public:
 
     bool isStillValidOnMainThread(VM&, DesiredIdentifiers&);
 
-    bool reallyAdd(CodeBlock*, DesiredIdentifiers&, WatchpointCollector&);
+    void reallyAdd(CodeBlock*, DesiredIdentifiers&, WatchpointCollector&);
 
 private:
     HashSet<DesiredGlobalProperty> m_set;

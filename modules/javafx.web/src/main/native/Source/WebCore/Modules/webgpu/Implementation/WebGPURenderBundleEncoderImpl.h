@@ -85,7 +85,7 @@ private:
     void popDebugGroup() final;
     void insertDebugMarker(String&& markerLabel) final;
 
-    RefPtr<RenderBundle> finish(const RenderBundleDescriptor&) final;
+    Ref<RenderBundle> finish(const RenderBundleDescriptor&) final;
 
     void setLabelInternal(const String&) final;
 

@@ -26,13 +26,13 @@
 #pragma once
 
 #include "SourceSpan.h"
-#include <wtf/TZoneMalloc.h>
+#include <wtf/FastMalloc.h>
 #include <wtf/text/WTFString.h>
 
 namespace WGSL {
 
 class CompilationMessage {
-    WTF_MAKE_TZONE_ALLOCATED(CompilationMessage);
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     CompilationMessage(String&& message, SourceSpan span)
         : m_message(WTFMove(message))

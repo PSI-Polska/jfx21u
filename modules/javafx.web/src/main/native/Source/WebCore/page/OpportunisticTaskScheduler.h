@@ -65,7 +65,6 @@ public:
 
     void willQueueIdleCallback() { m_mayHavePendingIdleCallbacks = true; }
 
-    bool isScheduled() const { return m_runLoopObserver->isScheduled(); }
     void rescheduleIfNeeded(MonotonicTime deadline);
     bool hasImminentlyScheduledWork() const { return m_imminentlyScheduledWorkCount; }
 

@@ -70,7 +70,7 @@ private:
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger.get(); }
-    ASCIILiteral logClassName() const override { return "MockSourceBufferPrivate"_s; }
+    const char* logClassName() const override { return "MockSourceBufferPrivate"; }
     const void* logIdentifier() const final { return m_logIdentifier; }
     WTFLogChannel& logChannel() const final;
 
@@ -78,6 +78,7 @@ private:
     const void* sourceBufferLogIdentifier() final { return logIdentifier(); }
 #endif
 
+    bool m_isActive { false };
     MediaTime m_minimumUpcomingPresentationTime;
     Vector<String> m_enqueuedSamples;
     std::optional<uint64_t> m_maxQueueDepth;

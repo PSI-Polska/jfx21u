@@ -45,12 +45,10 @@ class SVGPropertyAnimatorFactory;
 class SVGResourceElementClient;
 class SVGSVGElement;
 class SVGUseElement;
-class Settings;
 class Timer;
 
 class SVGElement : public StyledElement, public SVGPropertyOwner {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGElement);
+    WTF_MAKE_ISO_ALLOCATED(SVGElement);
 public:
     bool isInnerSVGSVGElement() const;
     bool isOutermostSVGSVGElement() const;
@@ -183,7 +181,7 @@ protected:
     SVGElementRareData& ensureSVGRareData();
 
     void reportAttributeParsingError(SVGParsingError, const QualifiedName&, const AtomString&);
-    static CSSPropertyID cssPropertyIdForSVGAttributeName(const QualifiedName&, const Settings&);
+    static CSSPropertyID cssPropertyIdForSVGAttributeName(const QualifiedName&);
 
     bool hasPresentationalHintsForAttribute(const QualifiedName&) const override;
     void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) override;
@@ -227,7 +225,7 @@ public:
     InstanceInvalidationGuard(SVGElement&);
     ~InstanceInvalidationGuard();
 private:
-    WeakRef<SVGElement, WeakPtrImplWithEventTargetData> m_element;
+    SVGElement& m_element;
 };
 
 class SVGElement::InstanceUpdateBlocker {
@@ -235,7 +233,7 @@ public:
     InstanceUpdateBlocker(SVGElement&);
     ~InstanceUpdateBlocker();
 private:
-    WeakRef<SVGElement, WeakPtrImplWithEventTargetData> m_element;
+    SVGElement& m_element;
 };
 
 inline SVGElement::InstanceInvalidationGuard::InstanceInvalidationGuard(SVGElement& element)
@@ -245,18 +243,18 @@ inline SVGElement::InstanceInvalidationGuard::InstanceInvalidationGuard(SVGEleme
 
 inline SVGElement::InstanceInvalidationGuard::~InstanceInvalidationGuard()
 {
-    m_element->invalidateInstances();
+    m_element.invalidateInstances();
 }
 
 inline SVGElement::InstanceUpdateBlocker::InstanceUpdateBlocker(SVGElement& element)
     : m_element(element)
 {
-    m_element->setInstanceUpdatesBlocked(true);
+    m_element.setInstanceUpdatesBlocked(true);
 }
 
 inline SVGElement::InstanceUpdateBlocker::~InstanceUpdateBlocker()
 {
-    m_element->setInstanceUpdatesBlocked(false);
+    m_element.setInstanceUpdatesBlocked(false);
 }
 
 
@@ -267,3 +265,4 @@ SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::SVGElement)
     static bool isType(const WebCore::EventTarget& eventTarget) { return eventTarget.isNode() && static_cast<const WebCore::Node&>(eventTarget).isSVGElement(); }
     static bool isType(const WebCore::Node& node) { return node.isSVGElement(); }
 SPECIALIZE_TYPE_TRAITS_END()
+

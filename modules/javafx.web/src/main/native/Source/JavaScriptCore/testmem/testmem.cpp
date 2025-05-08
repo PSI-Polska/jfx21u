@@ -36,7 +36,7 @@
 #include <wtf/MonotonicTime.h>
 
 #if PLATFORM(PLAYSTATION)
-#include <memory-extra/showmap.h>
+#include <showmap.h>
 #endif
 
 static void description()
@@ -51,16 +51,18 @@ struct Footprint {
     static std::optional<Footprint> now()
     {
 #if PLATFORM(PLAYSTATION)
-        memory_extra::showmap::Result<4> result;
-        auto* entry = result.entry("SceNKFastMalloc");
+        showmap::Result result;
         result.collect();
+        if (auto* entry = result.entry("SceNKFastMalloc")) {
             return Footprint {
-            static_cast<uint64_t>(entry->rss),
+                static_cast<uint64_t>(entry->effectiveRss()),
                 static_cast<uint64_t>(entry->vss)
             };
+        }
 #else
 #error "No testmem implementation for this platform."
 #endif
+        return std::nullopt;
     }
 };
 

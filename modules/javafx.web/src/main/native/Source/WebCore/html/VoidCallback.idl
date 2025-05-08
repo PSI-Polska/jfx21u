@@ -24,6 +24,5 @@
  */
 
 [
-    ExportMacro=WEBCORE_EXPORT,
-    GenerateIsReachable=ImplScriptExecutionContext
+    ExportMacro=WEBCORE_EXPORT
 ] callback VoidCallback = undefined ();

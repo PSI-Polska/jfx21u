@@ -27,13 +27,12 @@
 
 #if ENABLE(MATHML)
 
-#include "MathMLRowElement.h"
+#include "MathMLPresentationElement.h"
 
 namespace WebCore {
 
-class MathMLScriptsElement : public MathMLRowElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(MathMLScriptsElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(MathMLScriptsElement);
+class MathMLScriptsElement : public MathMLPresentationElement {
+    WTF_MAKE_ISO_ALLOCATED(MathMLScriptsElement);
 public:
     static Ref<MathMLScriptsElement> create(const QualifiedName& tagName, Document&);
 
@@ -47,7 +46,6 @@ protected:
 
 private:
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) override;
-    bool acceptsMathVariantAttribute() override { return false; };
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
 
     const ScriptType m_scriptType;

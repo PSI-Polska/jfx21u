@@ -24,11 +24,11 @@
 #include "FEDisplacementMap.h"
 #include "NodeName.h"
 #include "SVGNames.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGFEDisplacementMapElement);
+WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFEDisplacementMapElement);
 
 inline SVGFEDisplacementMapElement::SVGFEDisplacementMapElement(const QualifiedName& tagName, Document& document)
     : SVGFilterPrimitiveStandardAttributes(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -56,23 +56,23 @@ void SVGFEDisplacementMapElement::attributeChanged(const QualifiedName& name, co
     case AttributeNames::xChannelSelectorAttr: {
         auto propertyValue = SVGPropertyTraits<ChannelSelectorType>::fromString(newValue);
         if (enumToUnderlyingType(propertyValue))
-            Ref { m_xChannelSelector }->setBaseValInternal<ChannelSelectorType>(propertyValue);
+            m_xChannelSelector->setBaseValInternal<ChannelSelectorType>(propertyValue);
         break;
     }
     case AttributeNames::yChannelSelectorAttr: {
         auto propertyValue = SVGPropertyTraits<ChannelSelectorType>::fromString(newValue);
         if (enumToUnderlyingType(propertyValue))
-            Ref { m_yChannelSelector }->setBaseValInternal<ChannelSelectorType>(propertyValue);
+            m_yChannelSelector->setBaseValInternal<ChannelSelectorType>(propertyValue);
         break;
     }
     case AttributeNames::inAttr:
-        Ref { m_in1 }->setBaseValInternal(newValue);
+        m_in1->setBaseValInternal(newValue);
         break;
     case AttributeNames::in2Attr:
-        Ref { m_in2 }->setBaseValInternal(newValue);
+        m_in2->setBaseValInternal(newValue);
         break;
     case AttributeNames::scaleAttr:
-        Ref { m_scale }->setBaseValInternal(newValue.toFloat());
+        m_scale->setBaseValInternal(newValue.toFloat());
         break;
     default:
         break;

@@ -27,7 +27,8 @@
 
 [
     EnabledBySetting=WebGPUEnabled
-] enum GPUBufferMapState {
+]
+enum GPUBufferMapState {
     "unmapped",
     "pending",
     "mapped"

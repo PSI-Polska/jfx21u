@@ -28,7 +28,6 @@
 #include "JSDOMConvertNullable.h"
 #include "JSDOMConvertStrings.h"
 #include "JSDOMGlobalObject.h"
-#include "JSDOMWindow.h"
 #include "JSDocument.h"
 #include "JSEvent.h"
 #include "JSEventTarget.h"
@@ -159,9 +158,8 @@ void JSEventListener::handleEvent(ScriptExecutionContext& scriptExecutionContext
         return;
 
     if (scriptExecutionContext.isDocument()) {
-        auto* window = jsCast<JSDOMWindow*>(globalObject);
-        RefPtr localDOMWindow = dynamicDowncast<LocalDOMWindow>(window->wrapped());
-        if (!localDOMWindow || !localDOMWindow->isCurrentlyDisplayedInFrame())
+        auto* window = jsCast<JSLocalDOMWindow*>(globalObject);
+        if (!window->wrapped().isCurrentlyDisplayedInFrame())
             return;
         if (wasCreatedFromMarkup()) {
             RefPtr element = dynamicDowncast<Element>(*event.target());
@@ -169,9 +167,7 @@ void JSEventListener::handleEvent(ScriptExecutionContext& scriptExecutionContext
                 return;
         }
         // FIXME: Is this check needed for other contexts?
-        RefPtr frame = dynamicDowncast<LocalFrame>(window->wrapped().frame());
-        if (!frame)
-            return;
+        RefPtr frame = window->wrapped().frame();
         CheckedRef script = frame->script();
         if (!script->canExecuteScripts(ReasonForCallingCanExecuteScripts::AboutToExecuteScript) || script->isPaused())
             return;
@@ -180,7 +176,7 @@ void JSEventListener::handleEvent(ScriptExecutionContext& scriptExecutionContext
     auto* jsFunctionGlobalObject = jsFunction->globalObject();
 
     RefPtr<Event> savedEvent;
-    auto* jsFunctionWindow = jsDynamicCast<JSDOMWindow*>(jsFunctionGlobalObject);
+    auto* jsFunctionWindow = jsDynamicCast<JSLocalDOMWindow*>(jsFunctionGlobalObject);
     if (jsFunctionWindow) {
         savedEvent = jsFunctionWindow->currentEvent();
 
@@ -266,12 +262,12 @@ void JSEventListener::handleEvent(ScriptExecutionContext& scriptExecutionContext
     if (event.type() == eventNames().beforeunloadEvent) {
         // This is a OnBeforeUnloadEventHandler, and therefore the return value must be coerced into a String.
         if (auto* beforeUnloadEvent = dynamicDowncast<BeforeUnloadEvent>(event)) {
-            auto conversionResult = convert<IDLNullable<IDLDOMString>>(*lexicalGlobalObject, retval);
-            if (UNLIKELY(conversionResult.hasException(scope))) {
+            String resultStr = convert<IDLNullable<IDLDOMString>>(*lexicalGlobalObject, retval);
+            if (UNLIKELY(scope.exception())) {
                 if (handleExceptionIfNeeded(scope.exception()))
                     return;
             }
-            handleBeforeUnloadEventReturnValue(*beforeUnloadEvent, conversionResult.releaseReturnValue());
+            handleBeforeUnloadEventReturnValue(*beforeUnloadEvent, resultStr);
         }
         return;
     }

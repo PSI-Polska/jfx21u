@@ -63,13 +63,11 @@ public:
     void getPixelBuffer(const IntRect& srcRect, PixelBuffer& destination) override ;
     void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) override;
 
-    bool canMapBackingStore() const final;
-
 protected:
     ImageBufferJavaBackend(const Parameters&, PlatformImagePtr, std::unique_ptr<GraphicsContext>&&, IntSize);
 
-    void getPixelBuffer(const IntRect& srcRect, const uint8_t* data, PixelBuffer& destination);
-    void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat, uint8_t* destination);
+    void getPixelBuffer(const IntRect& srcRect, void* data, PixelBuffer& destination);
+    void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat, void* destination);
 
 
     unsigned bytesPerRow() const override;

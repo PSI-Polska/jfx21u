@@ -34,16 +34,13 @@ function forEach(callback /*, thisArg */)
         @throwTypeError("Set.prototype.forEach callback must be a function");
 
     var thisArg = @argument(1);
-    var storage = @setStorage(this);
-    var entry = 0;
+    var bucket = @setBucketHead(this);
 
     do {
-        storage = @setIterationNext(storage, entry);
-        if (storage == @orderedHashTableSentinel)
+        bucket = @setBucketNext(bucket);
+        if (bucket === @sentinelSetBucket)
             break;
-        entry = @setIterationEntry(storage) + 1;
-        var key = @setIterationEntryKey(storage);
-
+        var key = @setBucketKey(bucket);
         callback.@call(thisArg, key, key, this);
     } while (true);
 }
@@ -117,16 +114,13 @@ function intersection(other)
 
     var result = new @Set();
     if (this.@size <= size) {
-        var storage = @setStorage(this);
-        var entry = 0;
+        var bucket = @setBucketHead(this);
 
         do {
-            storage = @setIterationNext(storage, entry);
-            if (storage == @orderedHashTableSentinel)
+            bucket = @setBucketNext(bucket);
+            if (bucket === @sentinelSetBucket)
                 break;
-            entry = @setIterationEntry(storage) + 1;
-            var key = @setIterationEntryKey(storage);
-
+            var key = @setBucketKey(bucket);
             if (has.@call(other, key))
                 result.@add(key);
         } while (true);
@@ -165,16 +159,13 @@ function difference(other)
 
     var result = @setClone(this);
     if (this.@size <= size) {
-        var storage = @setStorage(this);
-        var entry = 0;
+        var bucket = @setBucketHead(this);
 
         while (true) {
-            storage = @setIterationNext(storage, entry);
-            if (storage == @orderedHashTableSentinel)
+            bucket = @setBucketNext(bucket);
+            if (bucket === @sentinelSetBucket)
                 break;
-            entry = @setIterationEntry(storage) + 1;
-            var key = @setIterationEntryKey(storage);
-
+            var key = @setBucketKey(bucket);
             if (has.@call(other, key))
                 result.@delete(key);
         }
@@ -218,7 +209,7 @@ function symmetricDifference(other)
 
     var result = @setClone(this);
     for (var key of wrapper) {
-        if (this.@has(key))
+        if (result.@has(key))
             result.@delete(key);
         else
             result.@add(key);
@@ -248,16 +239,13 @@ function isSubsetOf(other)
     if (this.@size > size)
         return false;
 
-    var storage = @setStorage(this);
-    var entry = 0;
+    var bucket = @setBucketHead(this);
 
     do {
-        storage = @setIterationNext(storage, entry);
-        if (storage == @orderedHashTableSentinel)
+        bucket = @setBucketNext(bucket);
+        if (bucket === @sentinelSetBucket)
             break;
-        entry = @setIterationEntry(storage) + 1;
-        var key = @setIterationEntryKey(storage);
-
+        var key = @setBucketKey(bucket);
         if (!has.@call(other, key))
             return false;
     } while (true);
@@ -317,16 +305,13 @@ function isDisjointFrom(other)
         @throwTypeError("Set.prototype.isDisjointFrom expects other.keys to be callable");
 
     if (this.@size <= size) {
-        var storage = @setStorage(this);
-        var entry = 0;
+        var bucket = @setBucketHead(this);
 
         do {
-            storage = @setIterationNext(storage, entry);
-            if (storage == @orderedHashTableSentinel)
+            bucket = @setBucketNext(bucket);
+            if (bucket === @sentinelSetBucket)
                 break;
-            entry = @setIterationEntry(storage) + 1;
-            var key = @setIterationEntryKey(storage);
-
+            var key = @setBucketKey(bucket);
             if (has.@call(other, key))
                 return false;
         } while (true);

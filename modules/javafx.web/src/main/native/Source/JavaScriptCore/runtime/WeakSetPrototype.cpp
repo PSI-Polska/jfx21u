@@ -26,7 +26,7 @@
 #include "config.h"
 #include "WeakSetPrototype.h"
 
-#include "HashMapHelper.h"
+#include "HashMapImplInlines.h"
 #include "JSCInlines.h"
 #include "JSWeakSet.h"
 #include "WeakMapImplInlines.h"

@@ -23,7 +23,6 @@
 #include "config.h"
 #include "DocumentFragment.h"
 
-#include "CSSTokenizerInputStream.h"
 #include "Document.h"
 #include "ElementIterator.h"
 #include "HTMLDocumentParser.h"
@@ -32,11 +31,11 @@
 #include "TypedElementDescendantIteratorInlines.h"
 #include "XMLDocumentParser.h"
 #include "markup.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DocumentFragment);
+WTF_MAKE_ISO_ALLOCATED_IMPL(DocumentFragment);
 
 DocumentFragment::DocumentFragment(Document& document, OptionSet<TypeFlag> typeFlags)
     : ContainerNode(document, DOCUMENT_FRAGMENT_NODE, typeFlags)

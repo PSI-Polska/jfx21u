@@ -72,7 +72,8 @@ void QueueImpl::onSubmittedWorkDone(CompletionHandler<void()>&& callback)
 void QueueImpl::writeBuffer(
     const Buffer&,
     Size64,
-    std::span<const uint8_t>,
+    const void*,
+    size_t,
     Size64,
     std::optional<Size64>)
 {
@@ -81,26 +82,30 @@ void QueueImpl::writeBuffer(
 
 void QueueImpl::writeTexture(
     const ImageCopyTexture&,
-    std::span<const uint8_t>,
+    const void*,
+    size_t,
     const ImageDataLayout&,
     const Extent3D&)
 {
     RELEASE_ASSERT_NOT_REACHED();
 }
 
-void QueueImpl::writeBufferNoCopy(
+void QueueImpl::writeBuffer(
     const Buffer& buffer,
     Size64 bufferOffset,
-    std::span<uint8_t> source,
+    void* source,
+    size_t byteLength,
     Size64 dataOffset,
     std::optional<Size64> size)
 {
-    wgpuQueueWriteBuffer(m_backing.get(), m_convertToBackingContext->convertToBacking(buffer), bufferOffset, source.subspan(dataOffset, size.value_or(source.size() - dataOffset)));
+    // FIXME: Use checked arithmetic and check the cast
+    wgpuQueueWriteBuffer(m_backing.get(), m_convertToBackingContext->convertToBacking(buffer), bufferOffset, static_cast<uint8_t*>(source) + dataOffset, static_cast<size_t>(size.value_or(byteLength - dataOffset)));
 }
 
 void QueueImpl::writeTexture(
     const ImageCopyTexture& destination,
-    std::span<uint8_t> source,
+    void* source,
+    size_t byteLength,
     const ImageDataLayout& dataLayout,
     const Extent3D& size)
 {
@@ -121,7 +126,7 @@ void QueueImpl::writeTexture(
 
     WGPUExtent3D backingSize = m_convertToBackingContext->convertToBacking(size);
 
-    wgpuQueueWriteTexture(m_backing.get(), &backingDestination, source, &backingDataLayout, &backingSize);
+    wgpuQueueWriteTexture(m_backing.get(), &backingDestination, source, byteLength, &backingDataLayout, &backingSize);
 }
 
 void QueueImpl::copyExternalImageToTexture(

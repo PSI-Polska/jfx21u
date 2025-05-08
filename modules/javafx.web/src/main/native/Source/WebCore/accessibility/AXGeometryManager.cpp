@@ -125,7 +125,7 @@ void AXGeometryManager::scheduleRenderingUpdate()
     if (!m_cache)
         return;
 
-    if (RefPtr page = m_cache->document().page())
+    if (auto* page = m_cache->document().page())
         page->scheduleRenderingUpdate(RenderingUpdateStep::AccessibilityRegionUpdate);
 }
 

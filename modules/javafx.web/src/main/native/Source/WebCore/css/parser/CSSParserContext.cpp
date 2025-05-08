@@ -28,7 +28,7 @@
 
 #include "CSSPropertyNames.h"
 #include "CSSValuePool.h"
-#include "DocumentInlines.h"
+#include "Document.h"
 #include "DocumentLoader.h"
 #include "OriginAccessPatterns.h"
 #include "Page.h"
@@ -55,9 +55,11 @@ CSSParserContext::CSSParserContext(CSSParserMode mode, const URL& baseURL)
 {
     // FIXME: We should turn all of the features on from their WebCore Settings defaults.
     if (isUASheetBehavior(mode)) {
-        cssTextUnderlinePositionLeftRightEnabled = true;
+        colorMixEnabled = true;
+        focusVisibleEnabled = true;
         lightDarkEnabled = true;
         popoverAttributeEnabled = true;
+        propertySettings.cssContainmentEnabled = true;
         propertySettings.cssInputSecurityEnabled = true;
         propertySettings.cssCounterStyleAtRulesEnabled = true;
         propertySettings.viewTransitionsEnabled = true;
@@ -70,33 +72,37 @@ CSSParserContext::CSSParserContext(CSSParserMode mode, const URL& baseURL)
     StaticCSSValuePool::init();
 }
 
-CSSParserContext::CSSParserContext(const Document& document)
-{
-    *this = document.cssParserContext();
-}
-
 CSSParserContext::CSSParserContext(const Document& document, const URL& sheetBaseURL, const String& charset)
     : baseURL { sheetBaseURL.isNull() ? document.baseURL() : sheetBaseURL }
     , charset { charset }
     , mode { document.inQuirksMode() ? HTMLQuirksMode : HTMLStandardMode }
     , isHTMLDocument { document.isHTMLDocument() }
-    , hasDocumentSecurityOrigin { sheetBaseURL.isNull() || document.protectedSecurityOrigin()->canRequest(baseURL, OriginAccessPatternsForWebProcess::singleton()) }
+    , hasDocumentSecurityOrigin { sheetBaseURL.isNull() || document.securityOrigin().canRequest(baseURL, OriginAccessPatternsForWebProcess::singleton()) }
     , useSystemAppearance { document.page() ? document.page()->useSystemAppearance() : false }
     , colorContrastEnabled { document.settings().cssColorContrastEnabled() }
+    , colorMixEnabled { document.settings().cssColorMixEnabled() }
+    , constantPropertiesEnabled { document.settings().constantPropertiesEnabled() }
     , counterStyleAtRuleImageSymbolsEnabled { document.settings().cssCounterStyleAtRuleImageSymbolsEnabled() }
+    , relativeColorSyntaxEnabled { document.settings().cssRelativeColorSyntaxEnabled() }
     , springTimingFunctionEnabled { document.settings().springTimingFunctionEnabled() }
 #if ENABLE(CSS_TRANSFORM_STYLE_OPTIMIZED_3D)
     , transformStyleOptimized3DEnabled { document.settings().cssTransformStyleOptimized3DEnabled() }
 #endif
+    , useLegacyBackgroundSizeShorthandBehavior { document.settings().useLegacyBackgroundSizeShorthandBehavior() }
+    , focusVisibleEnabled { document.settings().focusVisibleEnabled() }
+    , hasPseudoClassEnabled { document.settings().hasPseudoClassEnabled() }
+    , cascadeLayersEnabled { document.settings().cssCascadeLayersEnabled() }
+    , gradientPremultipliedAlphaInterpolationEnabled { document.settings().cssGradientPremultipliedAlphaInterpolationEnabled() }
+    , gradientInterpolationColorSpacesEnabled { document.settings().cssGradientInterpolationColorSpacesEnabled() }
+    , subgridEnabled { document.settings().subgridEnabled() }
     , masonryEnabled { document.settings().masonryEnabled() }
     , cssNestingEnabled { document.settings().cssNestingEnabled() }
+#if ENABLE(CSS_PAINTING_API)
     , cssPaintingAPIEnabled { document.settings().cssPaintingAPIEnabled() }
+#endif
     , cssScopeAtRuleEnabled { document.settings().cssScopeAtRuleEnabled() }
-    , cssShapeFunctionEnabled { document.settings().cssShapeFunctionEnabled() }
     , cssStartingStyleAtRuleEnabled { document.settings().cssStartingStyleAtRuleEnabled() }
-    , cssStyleQueriesEnabled { document.settings().cssStyleQueriesEnabled() }
     , cssTextUnderlinePositionLeftRightEnabled { document.settings().cssTextUnderlinePositionLeftRightEnabled() }
-    , cssBackgroundClipBorderAreaEnabled  { document.settings().cssBackgroundClipBorderAreaEnabled() }
     , cssWordBreakAutoPhraseEnabled { document.settings().cssWordBreakAutoPhraseEnabled() }
     , popoverAttributeEnabled { document.settings().popoverAttributeEnabled() }
     , sidewaysWritingModesEnabled { document.settings().sidewaysWritingModesEnabled() }
@@ -108,48 +114,50 @@ CSSParserContext::CSSParserContext(const Document& document, const URL& sheetBas
 #if ENABLE(SERVICE_CONTROLS)
     , imageControlsEnabled { document.settings().imageControlsEnabled() }
 #endif
-    , colorLayersEnabled { document.settings().cssColorLayersEnabled() }
     , lightDarkEnabled { document.settings().cssLightDarkEnabled() }
-    , targetTextPseudoElementEnabled { document.settings().targetTextPseudoElementEnabled() }
-    , viewTransitionTypesEnabled { document.settings().viewTransitionsEnabled() && document.settings().viewTransitionTypesEnabled() }
     , propertySettings { CSSPropertySettings { document.settings() } }
 {
 }
 
 void add(Hasher& hasher, const CSSParserContext& context)
 {
-    uint32_t bits = context.isHTMLDocument                  << 0
+    uint64_t bits = context.isHTMLDocument                  << 0
         | context.hasDocumentSecurityOrigin                 << 1
         | context.isContentOpaque                           << 2
         | context.useSystemAppearance                       << 3
         | context.colorContrastEnabled                      << 4
-        | context.springTimingFunctionEnabled               << 5
+        | context.colorMixEnabled                           << 5
+        | context.constantPropertiesEnabled                 << 6
+        | context.relativeColorSyntaxEnabled                << 7
+        | context.springTimingFunctionEnabled               << 8
 #if ENABLE(CSS_TRANSFORM_STYLE_OPTIMIZED_3D)
-        | context.transformStyleOptimized3DEnabled          << 6
+        | context.transformStyleOptimized3DEnabled          << 9
 #endif
-        | context.masonryEnabled                            << 7
-        | context.cssNestingEnabled                         << 8
-        | context.cssPaintingAPIEnabled                     << 9
-        | context.cssScopeAtRuleEnabled                     << 10
-        | context.cssShapeFunctionEnabled                   << 11
-        | context.cssTextUnderlinePositionLeftRightEnabled  << 12
-        | context.cssBackgroundClipBorderAreaEnabled        << 13
-        | context.cssWordBreakAutoPhraseEnabled             << 14
-        | context.popoverAttributeEnabled                   << 15
-        | context.sidewaysWritingModesEnabled               << 16
-        | context.cssTextWrapPrettyEnabled                  << 17
-        | context.highlightAPIEnabled                       << 18
-        | context.grammarAndSpellingPseudoElementsEnabled   << 19
-        | context.customStateSetEnabled                     << 20
-        | context.thumbAndTrackPseudoElementsEnabled        << 21
+        | context.useLegacyBackgroundSizeShorthandBehavior  << 10
+        | context.focusVisibleEnabled                       << 11
+        | context.hasPseudoClassEnabled                     << 12
+        | context.cascadeLayersEnabled                      << 13
+        | context.gradientPremultipliedAlphaInterpolationEnabled << 14
+        | context.gradientInterpolationColorSpacesEnabled   << 15
+        | context.subgridEnabled                            << 16
+        | context.masonryEnabled                            << 17
+        | context.cssNestingEnabled                         << 18
+        | context.cssPaintingAPIEnabled                     << 19
+        | context.cssScopeAtRuleEnabled                     << 20
+        | context.cssTextUnderlinePositionLeftRightEnabled  << 21
+        | context.cssWordBreakAutoPhraseEnabled             << 22
+        | context.popoverAttributeEnabled                   << 23
+        | context.sidewaysWritingModesEnabled               << 24
+        | context.cssTextWrapPrettyEnabled                  << 25
+        | context.highlightAPIEnabled                       << 26
+        | context.grammarAndSpellingPseudoElementsEnabled   << 27
+        | context.customStateSetEnabled                     << 28
+        | context.thumbAndTrackPseudoElementsEnabled        << 29
 #if ENABLE(SERVICE_CONTROLS)
-        | context.imageControlsEnabled                      << 22
+        | context.imageControlsEnabled                      << 30
 #endif
-        | context.colorLayersEnabled                        << 23
-        | context.lightDarkEnabled                          << 24
-        | context.targetTextPseudoElementEnabled            << 25
-        | context.viewTransitionTypesEnabled                << 26
-        | (uint32_t)context.mode                            << 27; // This is multiple bits, so keep it last.
+        | context.lightDarkEnabled                          << 31
+        | (uint64_t)context.mode                            << 32; // This is multiple bits, so keep it last.
     add(hasher, context.baseURL, context.charset, context.propertySettings, bits);
 }
 
@@ -170,20 +178,6 @@ ResolvedURL CSSParserContext::completeURL(const String& string) const
         return { };
 
     return result;
-}
-
-bool mayDependOnBaseURL(const ResolvedURL& resolved)
-{
-    if (resolved.specifiedURLString.isEmpty())
-        return false;
-
-    if (CSSValue::isCSSLocalURL(resolved.specifiedURLString))
-        return false;
-
-    if (protocolIs(resolved.specifiedURLString, "data"_s))
-        return false;
-
-    return true;
 }
 
 }

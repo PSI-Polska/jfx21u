@@ -64,26 +64,30 @@ public:
     virtual void writeBuffer(
         const Buffer&,
         Size64 bufferOffset,
-        std::span<const uint8_t> source,
+        const void* source,
+        size_t byteLength,
         Size64 dataOffset = 0,
         std::optional<Size64> = std::nullopt) = 0;
 
     virtual void writeTexture(
         const ImageCopyTexture& destination,
-        std::span<const uint8_t> source,
+        const void* source,
+        size_t byteLength,
         const ImageDataLayout&,
         const Extent3D& size) = 0;
 
-    virtual void writeBufferNoCopy(
+    virtual void writeBuffer(
         const Buffer&,
         Size64 bufferOffset,
-        std::span<uint8_t> source,
+        void* source,
+        size_t byteLength,
         Size64 dataOffset = 0,
         std::optional<Size64> = std::nullopt) = 0;
 
     virtual void writeTexture(
         const ImageCopyTexture& destination,
-        std::span<uint8_t> source,
+        void* source,
+        size_t byteLength,
         const ImageDataLayout&,
         const Extent3D& size) = 0;
 

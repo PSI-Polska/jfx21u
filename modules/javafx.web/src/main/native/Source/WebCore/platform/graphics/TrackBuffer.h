@@ -56,9 +56,8 @@ public:
 
     bool reenqueueMediaForTime(const MediaTime&, const MediaTime& timeFudgeFactor);
     MediaTime findSeekTimeForTargetTime(const MediaTime& targetTime, const MediaTime& negativeThreshold, const MediaTime& positiveThreshold);
-    int64_t removeCodedFrames(const MediaTime& start, const MediaTime& end, const MediaTime& currentTime);
-    PlatformTimeRanges removeSamples(const DecodeOrderSampleMap::MapType&, ASCIILiteral);
-    int64_t codedFramesIntervalSize(const MediaTime& start, const MediaTime& end);
+    bool removeCodedFrames(const MediaTime& start, const MediaTime& end, const MediaTime& currentTime);
+    PlatformTimeRanges removeSamples(const DecodeOrderSampleMap::MapType&, const char*);
 
     void resetTimestampOffset();
     void reset();
@@ -113,7 +112,7 @@ public:
     void setLogger(const Logger&, const void*);
     const Logger& logger() const final { ASSERT(m_logger); return *m_logger.get(); }
     const void* logIdentifier() const final { return m_logIdentifier; }
-    ASCIILiteral logClassName() const final { return "TrackBuffer"_s; }
+    const char* logClassName() const final { return "TrackBuffer"; }
     WTFLogChannel& logChannel() const final;
 #endif
 

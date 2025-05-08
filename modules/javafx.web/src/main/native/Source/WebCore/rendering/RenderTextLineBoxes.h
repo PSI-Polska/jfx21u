@@ -52,7 +52,7 @@ public:
     void deleteAll();
 
     void dirtyAll();
-    bool dirtyForTextChange(RenderText&);
+    bool dirtyRange(RenderText&, unsigned start, unsigned end, int lengthDelta);
 
     LegacyInlineTextBox* findNext(int offset, int& position) const;
 

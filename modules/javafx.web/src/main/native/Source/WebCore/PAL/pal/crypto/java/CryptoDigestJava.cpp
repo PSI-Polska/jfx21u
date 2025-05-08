@@ -109,7 +109,7 @@ std::unique_ptr<CryptoDigest> CryptoDigest::create(CryptoDigest::Algorithm algor
     return digest;
 }
 
-void CryptoDigest::addBytes(std::span<const uint8_t> input)
+void CryptoDigest::addBytes(const void* input, size_t length)
 {
     using namespace CryptoDigestInternal;
 
@@ -123,7 +123,7 @@ void CryptoDigest::addBytes(std::span<const uint8_t> input)
         "addBytes",
         "(Ljava/nio/ByteBuffer;)V");
     ASSERT(midUpdate);
-    env->CallVoidMethod(jobject(m_context->jDigest), midUpdate, env->NewDirectByteBuffer(const_cast<void*>(reinterpret_cast<const void*>(input.data())), input.size()));
+    env->CallVoidMethod(jobject(m_context->jDigest), midUpdate, env->NewDirectByteBuffer(const_cast<void*>(input), length));
 }
 
 Vector<uint8_t> CryptoDigest::computeHash()
@@ -148,8 +148,7 @@ Vector<uint8_t> CryptoDigest::computeHash()
     }
 
     Vector<uint8_t> result;
-    std::span<const uint8_t> createSpan(reinterpret_cast<const uint8_t*>(digest), env->GetArrayLength(jDigestBytes));
-    result.append(createSpan);
+    result.append(static_cast<uint8_t*>(digest), env->GetArrayLength(jDigestBytes));
     env->ReleasePrimitiveArrayCritical(jDigestBytes, digest, 0);
     return result;
 }

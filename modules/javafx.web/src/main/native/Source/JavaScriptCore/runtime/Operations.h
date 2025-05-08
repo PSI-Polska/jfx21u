@@ -25,7 +25,6 @@
 #include "ExceptionHelpers.h"
 #include "JSBigInt.h"
 #include "JSGlobalObject.h"
-#include <wtf/text/MakeString.h>
 
 namespace JSC {
 
@@ -102,9 +101,9 @@ ALWAYS_INLINE JSString* jsString(JSGlobalObject* globalObject, const String& u1,
         return JSRopeString::create(vm, jsString(vm, u1), s2);
 
     ASSERT(!s2->isRope());
-    auto u2 = s2->value(globalObject);
+    String u2 = s2->value(globalObject);
     scope.assertNoException();
-    String newString = tryMakeString(u1, u2.data);
+    String newString = tryMakeString(u1, WTFMove(u2));
     if (!newString) {
         throwOutOfMemoryError(globalObject, scope);
         return nullptr;
@@ -135,9 +134,9 @@ ALWAYS_INLINE JSString* jsString(JSGlobalObject* globalObject, JSString* s1, con
         return JSRopeString::create(vm, s1, jsString(vm, u2));
 
     ASSERT(!s1->isRope());
-    auto u1 = s1->value(globalObject);
+    String u1 = s1->value(globalObject);
     scope.assertNoException();
-    String newString = tryMakeString(u1.data, u2);
+    String newString = tryMakeString(WTFMove(u1), u2);
     if (!newString) {
         throwOutOfMemoryError(globalObject, scope);
         return nullptr;
@@ -306,7 +305,7 @@ ALWAYS_INLINE JSBigInt::ComparisonResult compareBigIntToOtherPrimitive(JSGlobalO
     ASSERT(!primValue.isBigInt());
 
     if (primValue.isString()) {
-        auto string = asString(primValue)->value(globalObject);
+        String string = asString(primValue)->value(globalObject);
         RETURN_IF_EXCEPTION(scope, JSBigInt::ComparisonResult::Undefined);
         JSValue bigIntValue = JSBigInt::stringToBigInt(globalObject, WTFMove(string));
         RETURN_IF_EXCEPTION(scope, JSBigInt::ComparisonResult::Undefined);
@@ -346,7 +345,7 @@ ALWAYS_INLINE JSBigInt::ComparisonResult compareBigInt32ToOtherPrimitive(JSGloba
     };
 
     if (primValue.isString()) {
-        auto string = asString(primValue)->value(globalObject);
+        String string = asString(primValue)->value(globalObject);
         RETURN_IF_EXCEPTION(scope, JSBigInt::ComparisonResult::Undefined);
         JSValue bigIntValue = JSBigInt::stringToBigInt(globalObject, WTFMove(string));
         RETURN_IF_EXCEPTION(scope, JSBigInt::ComparisonResult::Undefined);
@@ -452,9 +451,9 @@ ALWAYS_INLINE bool jsLess(JSGlobalObject* globalObject, JSValue v1, JSValue v2)
         return v1.asNumber() < v2.asNumber();
 
     if (isJSString(v1) && isJSString(v2)) {
-        auto s1 = asString(v1)->value(globalObject);
+        String s1 = asString(v1)->value(globalObject);
         RETURN_IF_EXCEPTION(scope, false);
-        auto s2 = asString(v2)->value(globalObject);
+        String s2 = asString(v2)->value(globalObject);
         RETURN_IF_EXCEPTION(scope, false);
         return codePointCompareLessThan(s1, s2);
     }
@@ -502,9 +501,9 @@ ALWAYS_INLINE bool jsLessEq(JSGlobalObject* globalObject, JSValue v1, JSValue v2
         return v1.asNumber() <= v2.asNumber();
 
     if (isJSString(v1) && isJSString(v2)) {
-        auto s1 = asString(v1)->value(globalObject);
+        String s1 = asString(v1)->value(globalObject);
         RETURN_IF_EXCEPTION(scope, false);
-        auto s2 = asString(v2)->value(globalObject);
+        String s2 = asString(v2)->value(globalObject);
         RETURN_IF_EXCEPTION(scope, false);
         return !codePointCompareLessThan(s2, s1);
     }

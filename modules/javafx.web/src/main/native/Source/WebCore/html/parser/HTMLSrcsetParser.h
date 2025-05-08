@@ -80,7 +80,7 @@ struct ImageCandidate {
     {
     }
 
-    ImageCandidate(StringViewWithUnderlyingString source, const DescriptorParsingResult& result, OriginAttribute originAttribute)
+    ImageCandidate(StringView source, const DescriptorParsingResult& result, OriginAttribute originAttribute)
         : string(source)
         , density(result.hasDensity() ? result.density() : UninitializedDescriptor)
         , resourceWidth(result.hasWidth() ? result.resourceWidth() : UninitializedDescriptor)
@@ -95,16 +95,16 @@ struct ImageCandidate {
 
     bool isEmpty() const
     {
-        return string.view.isEmpty();
+        return string.isEmpty();
     }
 
-    StringViewWithUnderlyingString string;
+    StringView string;
     float density;
     int resourceWidth;
     OriginAttribute originAttribute;
 };
 
-ImageCandidate bestFitSourceForImageAttributes(float deviceScaleFactor, const AtomString& srcAttribute, StringView srcsetAttribute, float sourceSize, Function<bool(const ImageCandidate&)>&& shouldIgnoreCandidateCallback = { });
+ImageCandidate bestFitSourceForImageAttributes(float deviceScaleFactor, StringView srcAttribute, StringView srcsetAttribute, float sourceSize);
 
 Vector<ImageCandidate> parseImageCandidatesFromSrcsetAttribute(StringView attribute);
 void getURLsFromSrcsetAttribute(const Element&, StringView attribute, ListHashSet<URL>&);

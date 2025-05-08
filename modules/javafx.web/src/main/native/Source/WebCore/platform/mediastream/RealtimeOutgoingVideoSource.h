@@ -32,7 +32,7 @@
 
 #include "LibWebRTCMacros.h"
 #include "MediaStreamTrackPrivate.h"
-#include "Timer.h"
+#include <Timer.h>
 #include <wtf/Lock.h>
 
 ALLOW_UNUSED_PARAMETERS_BEGIN
@@ -51,7 +51,7 @@ namespace WebCore {
 class RealtimeOutgoingVideoSource
     : public ThreadSafeRefCounted<RealtimeOutgoingVideoSource, WTF::DestructionThread::Main>
     , public webrtc::VideoTrackSourceInterface
-    , private MediaStreamTrackPrivateObserver
+    , private MediaStreamTrackPrivate::Observer
     , private RealtimeMediaSource::VideoFrameObserver
 #if !RELEASE_LOG_DISABLED
     , private LoggerHelper
@@ -67,10 +67,10 @@ public:
     MediaStreamTrackPrivate& source() const { return m_videoSource.get(); }
 
     void AddRef() const final { ref(); }
-    webrtc::RefCountReleaseStatus Release() const final
+    rtc::RefCountReleaseStatus Release() const final
     {
         deref();
-        return webrtc::RefCountReleaseStatus::kOtherRefsRemained;
+        return rtc::RefCountReleaseStatus::kOtherRefsRemained;
     }
 
     void applyRotation();
@@ -91,7 +91,7 @@ protected:
     // LoggerHelper API
     const Logger& logger() const final { return m_logger.get(); }
     const void* logIdentifier() const final { return m_logIdentifier; }
-    ASCIILiteral logClassName() const final { return "RealtimeOutgoingVideoSource"_s; }
+    const char* logClassName() const final { return "RealtimeOutgoingVideoSource"; }
     WTFLogChannel& logChannel() const final;
 #endif
 
@@ -106,9 +106,9 @@ private:
     void observeSource();
     void unobserveSource();
 
-    using MediaStreamTrackPrivateObserver::weakPtrFactory;
-    using MediaStreamTrackPrivateObserver::WeakValueType;
-    using MediaStreamTrackPrivateObserver::WeakPtrImplType;
+    using MediaStreamTrackPrivate::Observer::weakPtrFactory;
+    using MediaStreamTrackPrivate::Observer::WeakValueType;
+    using MediaStreamTrackPrivate::Observer::WeakPtrImplType;
 
     // Notifier API
     void RegisterObserver(webrtc::ObserverInterface*) final { }
@@ -135,7 +135,7 @@ private:
     void sourceEnabledChanged();
     void startObservingVideoFrames();
 
-    // MediaStreamTrackPrivateObserver API
+    // MediaStreamTrackPrivate::Observer API
     void trackMutedChanged(MediaStreamTrackPrivate&) final { sourceMutedChanged(); }
     void trackEnabledChanged(MediaStreamTrackPrivate&) final { sourceEnabledChanged(); }
     void trackSettingsChanged(MediaStreamTrackPrivate&) final { initializeFromSource(); }

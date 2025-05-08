@@ -25,6 +25,10 @@
 
 namespace WebCore {
 
+// FIXME: This should not start with "k".
+// FIXME: This is a shared tokenizer concept, not a SegmentedString concept, but this is the only common header for now.
+constexpr LChar kEndOfFileMarker = 0;
+
 class SegmentedString {
 public:
     SegmentedString() = default;
@@ -61,8 +65,8 @@ public:
     void advancePastNewline(); // Faster than calling advance when we know the current character is a newline.
 
     enum AdvancePastResult { DidNotMatch, DidMatch, NotEnoughCharacters };
-    AdvancePastResult advancePast(ASCIILiteral literal) { return advancePast<false>(literal); }
-    AdvancePastResult advancePastLettersIgnoringASCIICase(ASCIILiteral literal) { return advancePast<true>(literal); }
+    template<unsigned length> AdvancePastResult advancePast(const char (&literal)[length]) { return advancePast<length, false>(literal); }
+    template<unsigned length> AdvancePastResult advancePastLettersIgnoringASCIICase(const char (&literal)[length]) { return advancePast<length, true>(literal); }
 
     unsigned numberOfCharactersConsumed() const;
 
@@ -125,8 +129,8 @@ private:
     void decrementAndCheckLength();
 
     template<typename CharacterType> static bool characterMismatch(CharacterType, char, bool lettersIgnoringASCIICase);
-    template<bool lettersIgnoringASCIICase> AdvancePastResult advancePast(ASCIILiteral);
-    AdvancePastResult advancePastSlowCase(ASCIILiteral, bool lettersIgnoringASCIICase);
+    template<unsigned length, bool lettersIgnoringASCIICase> AdvancePastResult advancePast(const char (&literal)[length]);
+    AdvancePastResult advancePastSlowCase(const char* literal, bool lettersIgnoringASCIICase);
 
     Substring m_currentSubstring;
     Deque<Substring> m_otherSubstrings;
@@ -151,9 +155,9 @@ inline SegmentedString::Substring::Substring(StringView passedStringView)
     if (length) {
         is8Bit = passedStringView.is8Bit();
         if (is8Bit)
-            currentCharacter8 = passedStringView.span8().data();
+            currentCharacter8 = passedStringView.characters8();
         else
-            currentCharacter16 = passedStringView.span16().data();
+            currentCharacter16 = passedStringView.characters16();
     }
 }
 
@@ -165,9 +169,9 @@ inline SegmentedString::Substring::Substring(String&& passedString)
     if (length) {
         is8Bit = underlyingString.impl()->is8Bit();
         if (is8Bit)
-            currentCharacter8 = underlyingString.impl()->span8().data();
+            currentCharacter8 = underlyingString.impl()->characters8();
         else
-            currentCharacter16 = underlyingString.impl()->span16().data();
+            currentCharacter16 = underlyingString.impl()->characters16();
     }
 }
 
@@ -290,11 +294,11 @@ template<typename CharacterType> ALWAYS_INLINE bool SegmentedString::characterMi
     return lettersIgnoringASCIICase ? !isASCIIAlphaCaselessEqual(a, b) : a != b;
 }
 
-template<bool lettersIgnoringASCIICase> SegmentedString::AdvancePastResult SegmentedString::advancePast(ASCIILiteral literal)
+template<unsigned lengthIncludingTerminator, bool lettersIgnoringASCIICase> SegmentedString::AdvancePastResult SegmentedString::advancePast(const char (&literal)[lengthIncludingTerminator])
 {
-    unsigned length = literal.length();
+    constexpr unsigned length = lengthIncludingTerminator - 1;
     ASSERT(!literal[length]);
-    ASSERT(!strchr(literal.characters(), '\n'));
+    ASSERT(!strchr(literal, '\n'));
     if (length + 1 < m_currentSubstring.length) {
         if (m_currentSubstring.is8Bit) {
             for (unsigned i = 0; i < length; ++i) {

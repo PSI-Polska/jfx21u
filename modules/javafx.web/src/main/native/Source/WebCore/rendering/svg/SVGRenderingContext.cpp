@@ -32,7 +32,6 @@
 #include "LegacyRenderSVGResourceClipper.h"
 #include "LegacyRenderSVGResourceFilter.h"
 #include "LegacyRenderSVGResourceMasker.h"
-#include "LegacyRenderSVGRoot.h"
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
 #include "RenderLayer.h"
@@ -125,14 +124,19 @@ void SVGRenderingContext::prepareToRenderSVGContent(RenderElement& renderer, Pai
         }
     }
 
-    bool hasSimpleClip = is<ShapePathOperation>(style.clipPath()) || is<BoxPathOperation>(style.clipPath());
-    if (hasSimpleClip && !is<LegacyRenderSVGRoot>(renderer))
+    PathOperation* clipPathOperation = style.clipPath();
+    bool hasCSSClipping = is<ShapePathOperation>(clipPathOperation) || is<BoxPathOperation>(clipPathOperation);
+    if (hasCSSClipping)
         SVGRenderSupport::clipContextToCSSClippingArea(m_paintInfo->context(), renderer);
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
     // FIXME: Text painting under LBSE reaches this code path, since all text painting code is shared between legacy / LBSE.
     SVGResources* resources = nullptr;
     if (!renderer.document().settings().layerBasedSVGEngineEnabled())
         resources = SVGResourcesCache::cachedResourcesForRenderer(*m_renderer);
+#else
+    auto* resources = SVGResourcesCache::cachedResourcesForRenderer(*m_renderer);
+#endif
 
     if (!resources) {
         if (style.hasReferenceFilterOnly())
@@ -143,24 +147,22 @@ void SVGRenderingContext::prepareToRenderSVGContent(RenderElement& renderer, Pai
     }
 
     if (!isRenderingMask) {
-        if (auto* masker = resources->masker()) {
+        if (LegacyRenderSVGResourceMasker* masker = resources->masker()) {
             GraphicsContext* contextPtr = &m_paintInfo->context();
-            auto result = masker->applyResource(*m_renderer, style, contextPtr, { });
+            bool result = masker->applyResource(*m_renderer, style, contextPtr, { });
             m_paintInfo->setContext(*contextPtr);
-            if (!resourceWasApplied(result))
+            if (!result)
                 return;
         }
     }
 
-    auto* clipper = resources->clipper();
-    if (!hasSimpleClip && clipper && !is<LegacyRenderSVGRoot>(renderer)) {
+    LegacyRenderSVGResourceClipper* clipper = resources->clipper();
+    if (!hasCSSClipping && clipper) {
         GraphicsContext* contextPtr = &m_paintInfo->context();
-        auto result = clipper->applyResource(*m_renderer, style, contextPtr, { });
+        bool result = clipper->applyResource(*m_renderer, style, contextPtr, { });
         m_paintInfo->setContext(*contextPtr);
-        if (!resourceWasApplied(result))
+        if (!result)
             return;
-
-        m_pathClippingIsEntirelyWithinRendererContents = result.contains(LegacyRenderSVGResource::ApplyResult::ClipContainsRendererContent);
     }
 
     if (!isRenderingMask) {
@@ -172,9 +174,9 @@ void SVGRenderingContext::prepareToRenderSVGContent(RenderElement& renderer, Pai
             // (because it was either drawn before or empty) but we still need to apply the filter.
             m_renderingFlags |= EndFilterLayer;
             GraphicsContext* contextPtr = &m_paintInfo->context();
-            auto result = m_filter->applyResource(*m_renderer, style, contextPtr, { });
+            bool result = m_filter->applyResource(*m_renderer, style, contextPtr, { });
             m_paintInfo->setContext(*contextPtr);
-            if (!resourceWasApplied(result))
+            if (!result)
                 return;
 
             // Since we're caching the resulting bitmap and do not invalidate it on repaint rect

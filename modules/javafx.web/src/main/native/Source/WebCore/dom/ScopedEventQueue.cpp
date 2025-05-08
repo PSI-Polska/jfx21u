@@ -43,17 +43,20 @@ ScopedEventQueue& ScopedEventQueue::singleton()
     return scopedEventQueue;
 }
 
-void ScopedEventQueue::enqueueEvent(ScopedEvent&& event)
+void ScopedEventQueue::enqueueEvent(Ref<Event>&& event)
 {
+    ASSERT(event->target());
+    auto& target = downcast<Node>(*event->target());
+    ScopedEvent scopedEvent = { WTFMove(event), target };
     if (m_scopingLevel)
-        m_queuedEvents.append(WTFMove(event));
+        m_queuedEvents.append(WTFMove(scopedEvent));
     else
-        dispatchEvent(event);
+        dispatchEvent(scopedEvent);
 }
 
 void ScopedEventQueue::dispatchEvent(const ScopedEvent& event) const
 {
-    if (event.event->interfaceType() == EventInterfaceType::MutationEvent && event.target->isInShadowTree())
+    if (event.event->eventInterface() == MutationEventInterfaceType && event.target->isInShadowTree())
         return;
     Ref { event.target.get() }->dispatchEvent(event.event);
 }

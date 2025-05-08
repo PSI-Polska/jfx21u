@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2017 Metrological Group B.V.
- * Copyright (C) 2017, 2024 Igalia S.L.
+ * Copyright (C) 2017 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,16 +35,6 @@
 #include <wtf/Ref.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
-#if USE(SKIA)
-IGNORE_CLANG_WARNINGS_BEGIN("cast-align")
-#include <skia/core/SkSurface.h>
-IGNORE_CLANG_WARNINGS_END
-#endif
-
-namespace WebCore {
-class GLFence;
-}
-
 namespace Nicosia {
 
 class Buffer : public ThreadSafeRefCounted<Buffer> {
@@ -55,60 +45,27 @@ public:
     };
     using Flags = unsigned;
 
-    WEBCORE_EXPORT virtual ~Buffer();
-
-    virtual WebCore::IntSize size() const = 0;
-    virtual bool isBackedByOpenGL() const = 0;
-    virtual void platformWaitUntilPaintingComplete() { };
+    WEBCORE_EXPORT static Ref<Buffer> create(const WebCore::IntSize&, Flags);
+    WEBCORE_EXPORT ~Buffer();
 
     bool supportsAlpha() const { return m_flags & SupportsAlpha; }
+    const WebCore::IntSize& size() const { return m_size; }
+    int stride() const { return m_size.width() * 4; }
+    unsigned char* data() const { return m_data.get(); }
 
-    virtual void beginPainting() = 0;
-    virtual void completePainting() = 0;
-    virtual void waitUntilPaintingComplete() = 0;
-
-#if USE(SKIA)
-    SkSurface* surface() const { return m_surface.get(); }
-#endif
+    void beginPainting();
+    void completePainting();
+    void waitUntilPaintingComplete();
 
     static void resetMemoryUsage();
     static double getMemoryUsage();
 
-protected:
-    explicit Buffer(Flags);
-
-#if USE(SKIA)
-    sk_sp<SkSurface> m_surface;
-#endif
-
-    static Lock s_layersMemoryUsageLock;
-    static double s_currentLayersMemoryUsage;
-    static double s_maxLayersMemoryUsage;
-
 private:
-    Flags m_flags;
-};
-
-class UnacceleratedBuffer final : public Buffer {
-public:
-    WEBCORE_EXPORT static Ref<Buffer> create(const WebCore::IntSize&, Flags);
-    WEBCORE_EXPORT virtual ~UnacceleratedBuffer();
-
-    int stride() const { return m_size.width() * 4; }
-    unsigned char* data() const { return m_data.get(); }
-
-private:
-    UnacceleratedBuffer(const WebCore::IntSize&, Flags);
-
-    bool isBackedByOpenGL() const final { return false; }
-    WebCore::IntSize size() const final { return m_size; }
-
-    void beginPainting() final;
-    void completePainting() final;
-    void waitUntilPaintingComplete() final;
+    Buffer(const WebCore::IntSize&, Flags);
 
     MallocPtr<unsigned char> m_data;
     WebCore::IntSize m_size;
+    Flags m_flags;
 
     enum class PaintingState {
         InProgress,
@@ -120,29 +77,10 @@ private:
         Condition condition;
         PaintingState state { PaintingState::Complete };
     } m_painting;
+
+    static Lock s_layersMemoryUsageLock;
+    static double s_currentLayersMemoryUsage;
+    static double s_maxLayersMemoryUsage;
 };
-
-#if USE(SKIA)
-class AcceleratedBuffer final : public Buffer {
-public:
-    WEBCORE_EXPORT static Ref<Buffer> create(sk_sp<SkSurface>&&, Flags);
-    WEBCORE_EXPORT virtual ~AcceleratedBuffer();
-
-    unsigned textureID() const { return m_textureID; }
-
-private:
-    AcceleratedBuffer(sk_sp<SkSurface>&&, Flags);
-
-    bool isBackedByOpenGL() const final { return true; }
-    WebCore::IntSize size() const final;
-
-    void beginPainting() final;
-    void completePainting() final;
-    void waitUntilPaintingComplete() final;
-
-    unsigned m_textureID { 0 };
-    std::unique_ptr<WebCore::GLFence> m_fence;
-};
-#endif
 
 } // namespace Nicosia

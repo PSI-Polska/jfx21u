@@ -39,11 +39,6 @@ public:
     void doWork(VM&) final;
 
     void scheduleSoon();
-
-    void disable();
-
-private:
-    bool m_isDisabled { false };
 };
 
 } // namespace JSC

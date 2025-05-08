@@ -44,13 +44,12 @@
 #include "ScriptElement.h"
 #include "StyleResolver.h"
 #include "Text.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/Ref.h>
-#include <wtf/TZoneMallocInlines.h>
-#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLOptionElement);
+WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLOptionElement);
 
 using namespace HTMLNames;
 
@@ -174,8 +173,8 @@ void HTMLOptionElement::attributeChanged(const QualifiedName& name, const AtomSt
         if (m_disabled != newDisabled) {
             Style::PseudoClassChangeInvalidation disabledInvalidation(*this, { { CSSSelector::PseudoClass::Disabled, newDisabled },  { CSSSelector::PseudoClass::Enabled, !newDisabled } });
             m_disabled = newDisabled;
-            if (renderer() && renderer()->style().hasUsedAppearance())
-                renderer()->repaint();
+            if (renderer() && renderer()->style().hasEffectiveAppearance())
+                renderer()->theme().stateChanged(*renderer(), ControlStyle::State::Enabled);
         }
         break;
     }
@@ -249,8 +248,8 @@ void HTMLOptionElement::setSelectedState(bool selected, AllowStyleInvalidation a
 
     m_isSelected = selected;
 
-    if (CheckedPtr cache = document().existingAXObjectCache())
-        cache->onSelectedChanged(*this);
+    if (auto* cache = document().existingAXObjectCache())
+        cache->onSelectedChanged(this);
 }
 
 void HTMLOptionElement::childrenChanged(const ChildChange& change)
@@ -315,7 +314,7 @@ String HTMLOptionElement::textIndentedToRespectGroupLabel() const
 {
     RefPtr parent = parentNode();
     if (is<HTMLOptGroupElement>(parent))
-        return makeString("    "_s, displayLabel());
+        return "    " + displayLabel();
     return displayLabel();
 }
 

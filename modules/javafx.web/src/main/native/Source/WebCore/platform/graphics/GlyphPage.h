@@ -61,7 +61,7 @@ struct GlyphData {
 // A GlyphPage contains a fixed-size set of GlyphData mappings for a contiguous
 // range of characters in the Unicode code space. GlyphPages are indexed
 // starting from 0 and incrementing for each "size" number of glyphs.
-class GlyphPage final : public RefCounted<GlyphPage> {
+class GlyphPage : public RefCounted<GlyphPage> {
 public:
     static Ref<GlyphPage> create(const Font& font)
     {
@@ -75,13 +75,13 @@ public:
 
     static unsigned count() { return s_count; }
 
-    static constexpr unsigned size = 16;
+    static const unsigned size = 16;
 
-    static constexpr unsigned sizeForPageNumber(unsigned) { return size; }
-    static constexpr unsigned indexForCodePoint(char32_t c) { return c % size; }
-    static constexpr unsigned pageNumberForCodePoint(char32_t c) { return c / size; }
-    static constexpr char32_t startingCodePointInPageNumber(unsigned pageNumber) { return pageNumber * size; }
-    static constexpr bool pageNumberIsUsedForArabic(unsigned pageNumber) { return startingCodePointInPageNumber(pageNumber) >= 0x600 && startingCodePointInPageNumber(pageNumber) + sizeForPageNumber(pageNumber) < 0x700; }
+    static unsigned sizeForPageNumber(unsigned) { return 16; }
+    static unsigned indexForCodePoint(char32_t c) { return c % size; }
+    static unsigned pageNumberForCodePoint(char32_t c) { return c / size; }
+    static char32_t startingCodePointInPageNumber(unsigned pageNumber) { return pageNumber * size; }
+    static bool pageNumberIsUsedForArabic(unsigned pageNumber) { return startingCodePointInPageNumber(pageNumber) >= 0x600 && startingCodePointInPageNumber(pageNumber) + sizeForPageNumber(pageNumber) < 0x700; }
 
     GlyphData glyphDataForCharacter(char32_t c) const
     {
@@ -126,7 +126,7 @@ public:
     }
 
     // Implemented by the platform.
-    bool fill(std::span<const UChar> characterBuffer);
+    bool fill(UChar* characterBuffer, unsigned bufferLength);
 
 private:
     explicit GlyphPage(const Font& font)

@@ -29,11 +29,11 @@
 #include "RenderProgress.h"
 #include "ShadowRoot.h"
 #include "TypedElementDescendantIteratorInlines.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLProgressElement);
+WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLProgressElement);
 
 using namespace HTMLNames;
 
@@ -42,6 +42,8 @@ const double HTMLProgressElement::InvalidPosition = -2;
 
 HTMLProgressElement::HTMLProgressElement(const QualifiedName& tagName, Document& document)
     : HTMLElement(tagName, document, TypeFlag::HasCustomStyleResolveCallbacks)
+    , m_value(0)
+    , m_isDeterminate(false)
 {
     ASSERT(hasTagName(progressTag));
 }
@@ -57,7 +59,7 @@ Ref<HTMLProgressElement> HTMLProgressElement::create(const QualifiedName& tagNam
 
 RenderPtr<RenderElement> HTMLProgressElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
-    if (!style.hasUsedAppearance())
+    if (!style.hasEffectiveAppearance())
         return RenderElement::createFor(*this, WTFMove(style));
 
     return createRenderer<RenderProgress>(*this, WTFMove(style));
@@ -72,7 +74,7 @@ RenderProgress* HTMLProgressElement::renderProgress() const
 {
     if (auto* renderProgress = dynamicDowncast<RenderProgress>(renderer()))
         return renderProgress;
-    return downcast<RenderProgress>(descendantsOfType<Element>(*protectedUserAgentShadowRoot()).first()->renderer());
+    return downcast<RenderProgress>(descendantsOfType<Element>(*userAgentShadowRoot()).first()->renderer());
 }
 
 void HTMLProgressElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
@@ -94,7 +96,7 @@ void HTMLProgressElement::didAttachRenderers()
 
 double HTMLProgressElement::value() const
 {
-    double value = parseHTMLFloatingPointNumberValue(attributeWithoutSynchronization(valueAttr));
+    double value = parseToDoubleForNumberType(attributeWithoutSynchronization(valueAttr));
     return !std::isfinite(value) || value < 0 ? 0 : std::min(value, max());
 }
 
@@ -105,7 +107,7 @@ void HTMLProgressElement::setValue(double value)
 
 double HTMLProgressElement::max() const
 {
-    double max = parseHTMLFloatingPointNumberValue(attributeWithoutSynchronization(maxAttr));
+    double max = parseToDoubleForNumberType(attributeWithoutSynchronization(maxAttr));
     return !std::isfinite(max) || max <= 0 ? 1 : max;
 }
 
@@ -137,8 +139,8 @@ void HTMLProgressElement::didElementStateChange()
     if (RenderProgress* renderer = renderProgress())
         renderer->updateFromElement();
 
-    if (CheckedPtr cache = document().existingAXObjectCache())
-        cache->valueChanged(*this);
+    if (auto* cache = document().existingAXObjectCache())
+        cache->valueChanged(this);
 }
 
 void HTMLProgressElement::didAddUserAgentShadowRoot(ShadowRoot& root)

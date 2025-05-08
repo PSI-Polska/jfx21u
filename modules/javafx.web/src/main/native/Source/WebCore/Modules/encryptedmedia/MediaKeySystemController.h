@@ -28,7 +28,6 @@
 
 #include "MediaKeySystemClient.h"
 #include "Supplementable.h"
-#include <wtf/Noncopyable.h>
 
 namespace WebCore {
 
@@ -36,7 +35,6 @@ class MediaKeySystemRequest;
 
 class MediaKeySystemController : public Supplement<Page> {
     WTF_MAKE_FAST_ALLOCATED;
-    WTF_MAKE_NONCOPYABLE(MediaKeySystemController);
 public:
     explicit MediaKeySystemController(MediaKeySystemClient&);
     ~MediaKeySystemController();

@@ -31,28 +31,23 @@
 
 namespace WebCore {
 
-template<typename IDL>
+template<typename IDLType>
 struct VariadicConverter {
-    using Item = typename IDL::ImplementationType;
+    using Item = typename IDLType::ImplementationType;
 
     static std::optional<Item> convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
     {
         auto& vm = JSC::getVM(&lexicalGlobalObject);
         auto scope = DECLARE_THROW_SCOPE(vm);
 
-        auto result = WebCore::convert<IDL>(lexicalGlobalObject, value);
-        if (UNLIKELY(result.hasException(scope)))
-            return std::nullopt;
+        auto result = Converter<IDLType>::convert(lexicalGlobalObject, value);
+        RETURN_IF_EXCEPTION(scope, std::nullopt);
 
-        return result.releaseReturnValue();
+        return result;
     }
 };
 
-template<typename IDL> using VariadicItem = typename VariadicConverter<IDL>::Item;
-template<typename IDL> using VariadicArguments = FixedVector<VariadicItem<IDL>>;
-
-template<typename IDL>
-VariadicArguments<IDL> convertVariadicArguments(JSC::JSGlobalObject& lexicalGlobalObject, JSC::CallFrame& callFrame, size_t startIndex)
+template<typename IDLType> FixedVector<typename VariadicConverter<IDLType>::Item> convertVariadicArguments(JSC::JSGlobalObject& lexicalGlobalObject, JSC::CallFrame& callFrame, size_t startIndex)
 {
     auto& vm = JSC::getVM(&lexicalGlobalObject);
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -61,14 +56,18 @@ VariadicArguments<IDL> convertVariadicArguments(JSC::JSGlobalObject& lexicalGlob
     if (startIndex >= length)
         return { };
 
-    auto result = VariadicArguments<IDL>::createWithSizeFromGenerator(length - startIndex, [&](size_t i) -> std::optional<VariadicItem<IDL>> {
-        auto result = VariadicConverter<IDL>::convert(lexicalGlobalObject, callFrame.uncheckedArgument(i + startIndex));
-        RETURN_IF_EXCEPTION(scope, std::nullopt);
+    FixedVector<typename VariadicConverter<IDLType>::Item> result(length - startIndex);
 
-        return result;
-    });
+    size_t resultIndex = 0;
+    for (size_t i = startIndex; i < length; ++i) {
+        auto value = VariadicConverter<IDLType>::convert(lexicalGlobalObject, callFrame.uncheckedArgument(i));
+        EXCEPTION_ASSERT_UNUSED(scope, !!scope.exception() == !value);
+        if (!value)
+            return { };
+        result[resultIndex] = WTFMove(*value);
+        resultIndex++;
+    }
 
-    RETURN_IF_EXCEPTION(scope, VariadicArguments<IDL> { });
     return result;
 }
 

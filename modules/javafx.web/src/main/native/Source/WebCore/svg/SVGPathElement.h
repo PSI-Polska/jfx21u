@@ -33,8 +33,7 @@ class SVGPathSegList;
 class SVGPoint;
 
 class SVGPathElement final : public SVGGeometryElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGPathElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGPathElement);
+    WTF_MAKE_ISO_ALLOCATED(SVGPathElement);
 public:
     static Ref<SVGPathElement> create(const QualifiedName&, Document&);
 
@@ -97,11 +96,9 @@ public:
     Ref<SVGPathSegList>& pathSegList() { return m_pathSegList->baseVal(); }
     RefPtr<SVGPathSegList>& animatedPathSegList() { return m_pathSegList->animVal(); }
 
-    const SVGPathByteStream& pathByteStream() const;
-    Path path() const;
+    const SVGPathByteStream& pathByteStream() const { return m_pathSegList->currentPathByteStream(); }
+    Path path() const { return m_pathSegList->currentPath(); }
     size_t approximateMemoryCost() const final { return m_pathSegList->approximateMemoryCost(); }
-
-    void pathDidChange();
 
     static void clearCache();
 
@@ -123,10 +120,7 @@ private:
 
     void invalidateMPathDependencies();
 
-    void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
-    void collectExtraStyleForPresentationalHints(MutableStyleProperties&) override;
-    void collectDPresentationalHint(MutableStyleProperties&);
-
+private:
     Ref<SVGAnimatedPathSegList> m_pathSegList { SVGAnimatedPathSegList::create(this) };
 };
 

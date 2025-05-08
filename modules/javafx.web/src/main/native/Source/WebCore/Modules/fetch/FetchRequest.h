@@ -89,9 +89,6 @@ public:
 
     RequestPriority fetchPriorityHint() const { return m_fetchPriorityHint; }
 
-    bool shouldEnableContentExtensionsCheck() const { return m_enableContentExtensionsCheck; }
-    void disableContentExtensionsCheck() { m_enableContentExtensionsCheck = false; }
-
 private:
     FetchRequest(ScriptExecutionContext&, std::optional<FetchBody>&&, Ref<FetchHeaders>&&, ResourceRequest&&, FetchOptions&&, String&& referrer);
 
@@ -102,6 +99,7 @@ private:
     ExceptionOr<void> setBody(FetchRequest&);
 
     void stop() final;
+    const char* activeDOMObjectName() const final;
 
     Ref<AbortSignal> protectedSignal() const { return m_signal; }
 
@@ -112,7 +110,6 @@ private:
     String m_referrer;
     Ref<AbortSignal> m_signal;
     FetchIdentifier m_navigationPreloadIdentifier;
-    bool m_enableContentExtensionsCheck { true };
 };
 
 WebCoreOpaqueRoot root(FetchRequest*);

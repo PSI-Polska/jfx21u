@@ -26,7 +26,6 @@
 #pragma once
 
 #include <wtf/MathExtras.h>
-#include <wtf/StdLibExtras.h>
 #include <wtf/Vector.h>
 
 namespace WTF {
@@ -63,7 +62,8 @@ public:
         return result;
     }
 
-    void decreaseKey(const Invocable<bool(T&)> auto& desiredElement)
+    template<typename Functor>
+    void decreaseKey(const Functor& desiredElement)
     {
         for (size_t i = 0; i < m_buffer.size(); ++i) {
             if (desiredElement(m_buffer[i])) {
@@ -74,7 +74,8 @@ public:
         ASSERT(isValidHeap());
     }
 
-    void increaseKey(const Invocable<bool(T&)> auto& desiredElement)
+    template<typename Functor>
+    void increaseKey(const Functor& desiredElement)
     {
         for (size_t i = 0; i < m_buffer.size(); ++i) {
             if (desiredElement(m_buffer[i])) {

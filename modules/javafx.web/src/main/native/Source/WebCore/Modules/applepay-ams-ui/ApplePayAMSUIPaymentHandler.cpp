@@ -42,10 +42,9 @@ static ExceptionOr<ApplePayAMSUIRequest> convertAndValidateApplePayAMSUIRequest(
         return Exception { ExceptionCode::TypeError, "Missing payment method data."_s };
 
     auto throwScope = DECLARE_THROW_SCOPE(document.vm());
-    auto applePayAMSUIRequestConversionResult = convertDictionary<ApplePayAMSUIRequest>(*document.globalObject(), data);
-    if (applePayAMSUIRequestConversionResult.hasException(throwScope))
+    auto applePayAMSUIRequest = convertDictionary<ApplePayAMSUIRequest>(*document.globalObject(), data);
+    if (throwScope.exception())
         return Exception { ExceptionCode::ExistingExceptionError };
-    auto applePayAMSUIRequest = applePayAMSUIRequestConversionResult.releaseReturnValue();
 
     if (!applePayAMSUIRequest.engagementRequest.startsWith('{'))
         return Exception { ExceptionCode::TypeError, "Member ApplePayAMSUIRequest.engagementRequest is required and must be a JSON-serializable object"_s };

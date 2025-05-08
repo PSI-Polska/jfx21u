@@ -26,8 +26,7 @@
 namespace WebCore {
 
 class SVGGlyphElement final : public SVGElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGGlyphElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGGlyphElement);
+    WTF_MAKE_ISO_ALLOCATED(SVGGlyphElement);
 public:
     static Ref<SVGGlyphElement> create(const QualifiedName&, Document&);
 

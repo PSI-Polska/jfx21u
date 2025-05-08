@@ -54,19 +54,16 @@ JSValue JSElementInternals::setFormValue(JSGlobalObject& lexicalGlobalObject, Ca
 
     EnsureStillAliveScope argument0 = callFrame.uncheckedArgument(0);
     auto value = convert<JSCustomElementFormValue>(lexicalGlobalObject, argument0.value());
-    if (UNLIKELY(value.hasException(throwScope)))
-        return { };
+    RETURN_IF_EXCEPTION(throwScope, { });
 
     std::optional<CustomElementFormValue> state;
     if (callFrame.argumentCount() > 1) {
         EnsureStillAliveScope argument1 = callFrame.argument(1);
-        auto stateConversionResult = convert<JSCustomElementFormValue>(lexicalGlobalObject, argument1.value());
-        if (UNLIKELY(stateConversionResult.hasException(throwScope)))
-            return { };
-        state = stateConversionResult.releaseReturnValue();
+        state = convert<JSCustomElementFormValue>(lexicalGlobalObject, argument1.value());
+        RETURN_IF_EXCEPTION(throwScope, { });
     }
 
-    auto result = wrapped().setFormValue(value.releaseReturnValue(), WTFMove(state));
+    auto result = wrapped().setFormValue(WTFMove(value), WTFMove(state));
     if (UNLIKELY(result.hasException())) {
         propagateException(lexicalGlobalObject, throwScope, result.releaseException());
         return { };
@@ -89,12 +86,12 @@ static JSValue getElementsArrayAttribute(JSGlobalObject& lexicalGlobalObject, co
         const_cast<JSElementInternals&>(thisObject).putDirect(vm, builtinNames(vm).cachedAttrAssociatedElementsPrivateName(), cachedObject);
     }
 
-    std::optional<Vector<Ref<Element>>> elements = thisObject.wrapped().getElementsArrayAttribute(attributeName);
+    std::optional<Vector<RefPtr<Element>>> elements = thisObject.wrapped().getElementsArrayAttribute(attributeName);
     auto propertyName = PropertyName(Identifier::fromString(vm, attributeName.toString()));
     JSValue cachedValue = cachedObject->getDirect(vm, propertyName);
     if (!cachedValue.isEmpty()) {
-        auto cachedElements = convert<IDLNullable<IDLFrozenArray<IDLInterface<Element>>>>(lexicalGlobalObject, cachedValue);
-        if (!cachedElements.hasException(throwScope) && elements == cachedElements.returnValue())
+        std::optional<Vector<RefPtr<Element>>> cachedElements = convert<IDLNullable<IDLFrozenArray<IDLInterface<Element>>>>(lexicalGlobalObject, cachedValue);
+        if (elements == cachedElements)
             return cachedValue;
     }
 

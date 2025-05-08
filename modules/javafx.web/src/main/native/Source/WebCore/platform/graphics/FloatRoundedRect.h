@@ -35,10 +35,6 @@
 #include "Region.h"
 #include "RoundedRect.h"
 
-#if USE(SKIA)
-class SkRRect;
-#endif
-
 namespace WebCore {
 
 class FloatRoundedRect {
@@ -47,7 +43,7 @@ public:
     class Radii {
     WTF_MAKE_FAST_ALLOCATED;
     public:
-        Radii() = default;
+        Radii() { }
         Radii(const FloatSize& topLeft, const FloatSize& topRight, const FloatSize& bottomLeft, const FloatSize& bottomRight)
             : m_topLeft(topLeft)
             , m_topRight(topRight)
@@ -153,11 +149,6 @@ public:
     bool intersectionIsRectangular(const FloatRect&) const;
 
     friend bool operator==(const FloatRoundedRect&, const FloatRoundedRect&) = default;
-
-#if USE(SKIA)
-    FloatRoundedRect(const SkRRect&);
-    operator SkRRect() const;
-#endif
 
 private:
     FloatRect m_rect;

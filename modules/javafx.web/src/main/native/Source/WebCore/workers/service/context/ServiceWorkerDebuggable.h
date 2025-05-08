@@ -39,7 +39,7 @@ class ServiceWorkerDebuggable final : public Inspector::RemoteInspectionTarget {
     WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(ServiceWorkerDebuggable);
 public:
-    static Ref<ServiceWorkerDebuggable> create(ServiceWorkerThreadProxy&, const ServiceWorkerContextData&);
+    ServiceWorkerDebuggable(ServiceWorkerThreadProxy&, const ServiceWorkerContextData&);
     ~ServiceWorkerDebuggable() = default;
 
     Inspector::RemoteControllableTarget::Type type() const final { return Inspector::RemoteControllableTarget::Type::ServiceWorker; }
@@ -53,9 +53,7 @@ public:
     void dispatchMessageFromRemote(String&& message) final;
 
 private:
-    ServiceWorkerDebuggable(ServiceWorkerThreadProxy&, const ServiceWorkerContextData&);
-
-    ThreadSafeWeakPtr<ServiceWorkerThreadProxy> m_serviceWorkerThreadProxy;
+    ServiceWorkerThreadProxy& m_serviceWorkerThreadProxy;
     String m_scopeURL;
 };
 

@@ -65,7 +65,7 @@ public:
 
     private:
         Ref<SceneIntegration> m_sceneIntegration;
-        Locker<Lock> m_locker;
+        LockHolder m_locker;
     };
 
     std::unique_ptr<UpdateScope> createUpdateScope();

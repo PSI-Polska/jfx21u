@@ -38,7 +38,7 @@ namespace WebCore {
 using namespace HTMLNames;
 
 AccessibilityMenuListOption::AccessibilityMenuListOption(HTMLOptionElement& element)
-    : AccessibilityNodeObject(&element)
+    : m_element(element)
     , m_parent(nullptr)
 {
 }
@@ -48,30 +48,28 @@ Ref<AccessibilityMenuListOption> AccessibilityMenuListOption::create(HTMLOptionE
     return adoptRef(*new AccessibilityMenuListOption(element));
 }
 
-HTMLOptionElement* AccessibilityMenuListOption::optionElement() const
-{
-    return downcast<HTMLOptionElement>(node());
-}
-
 Element* AccessibilityMenuListOption::actionElement() const
 {
-    return downcast<Element>(node());
+    return m_element.get();
+}
+
+Node* AccessibilityMenuListOption::node() const
+{
+    return m_element.get();
 }
 
 bool AccessibilityMenuListOption::isEnabled() const
 {
-    auto* optionElement = this->optionElement();
-    return optionElement && !optionElement->ownElementDisabled();
+    return m_element && !m_element->ownElementDisabled();
 }
 
 bool AccessibilityMenuListOption::isVisible() const
 {
-    WeakPtr optionElement = this->optionElement();
-    if (!optionElement)
+    if (!m_element)
         return false;
 
     // In a single-option select with the popup collapsed, only the selected item is considered visible.
-    auto* ownerSelectElement = optionElement->document().axObjectCache()->getOrCreate(optionElement->ownerSelectElement());
+    auto ownerSelectElement = m_element->document().axObjectCache()->getOrCreate(m_element->ownerSelectElement());
     return ownerSelectElement && (!ownerSelectElement->isOffScreen() || isSelected());
 }
 
@@ -83,8 +81,7 @@ bool AccessibilityMenuListOption::isOffScreen() const
 
 bool AccessibilityMenuListOption::isSelected() const
 {
-    auto* optionElement = this->optionElement();
-    return optionElement && optionElement->selected();
+    return m_element && m_element->selected();
 }
 
 void AccessibilityMenuListOption::setSelected(bool selected)
@@ -92,8 +89,7 @@ void AccessibilityMenuListOption::setSelected(bool selected)
     if (!canSetSelectedAttribute())
         return;
 
-    if (auto* optionElement = this->optionElement())
-        optionElement->setSelected(selected);
+    m_element->setSelected(selected);
 }
 
 bool AccessibilityMenuListOption::canSetSelectedAttribute() const
@@ -108,22 +104,23 @@ bool AccessibilityMenuListOption::computeAccessibilityIsIgnored() const
 
 LayoutRect AccessibilityMenuListOption::elementRect() const
 {
-    RefPtr parent = parentObject();
+    AccessibilityObject* parent = parentObject();
     // Our parent should've been set to be a menu-list popup before this method is called.
     ASSERT(parent && parent->isMenuListPopup());
     if (!parent)
         return boundingBoxRect();
 
-    RefPtr grandparent = parent->parentObject();
-    ASSERT(!grandparent || grandparent->isMenuList());
+    AccessibilityObject* grandparent = parent->parentObject();
+    if (!grandparent)
+        return boundingBoxRect();
+    ASSERT(grandparent->isMenuList());
 
-    return grandparent ? grandparent->elementRect() : boundingBoxRect();
+    return grandparent->elementRect();
 }
 
 String AccessibilityMenuListOption::stringValue() const
 {
-    auto* optionElement = this->optionElement();
-    return optionElement ? optionElement->label() : String();
+    return m_element ? m_element->label() : String();
 }
 
 } // namespace WebCore

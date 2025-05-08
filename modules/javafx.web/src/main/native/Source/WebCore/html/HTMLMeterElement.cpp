@@ -36,11 +36,11 @@
 #include "ShadowRoot.h"
 #include "UserAgentParts.h"
 #include "UserAgentStyleSheets.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLMeterElement);
+WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLMeterElement);
 
 using namespace HTMLNames;
 
@@ -61,7 +61,7 @@ Ref<HTMLMeterElement> HTMLMeterElement::create(const QualifiedName& tagName, Doc
 
 RenderPtr<RenderElement> HTMLMeterElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
-    if (!RenderTheme::singleton().supportsMeter(style.usedAppearance()))
+    if (!RenderTheme::singleton().supportsMeter(style.effectiveAppearance()))
         return RenderElement::createFor(*this, WTFMove(style));
 
     return createRenderer<RenderMeter>(*this, WTFMove(style));
@@ -91,7 +91,7 @@ void HTMLMeterElement::attributeChanged(const QualifiedName& name, const AtomStr
 
 double HTMLMeterElement::min() const
 {
-    return parseHTMLFloatingPointNumberValue(attributeWithoutSynchronization(minAttr), 0);
+    return parseToDoubleForNumberType(attributeWithoutSynchronization(minAttr), 0);
 }
 
 void HTMLMeterElement::setMin(double min)
@@ -101,7 +101,7 @@ void HTMLMeterElement::setMin(double min)
 
 double HTMLMeterElement::max() const
 {
-    return std::max(parseHTMLFloatingPointNumberValue(attributeWithoutSynchronization(maxAttr), std::max(1.0, min())), min());
+    return std::max(parseToDoubleForNumberType(attributeWithoutSynchronization(maxAttr), std::max(1.0, min())), min());
 }
 
 void HTMLMeterElement::setMax(double max)
@@ -111,7 +111,7 @@ void HTMLMeterElement::setMax(double max)
 
 double HTMLMeterElement::value() const
 {
-    double value = parseHTMLFloatingPointNumberValue(attributeWithoutSynchronization(valueAttr), 0);
+    double value = parseToDoubleForNumberType(attributeWithoutSynchronization(valueAttr), 0);
     return std::min(std::max(value, min()), max());
 }
 
@@ -122,7 +122,7 @@ void HTMLMeterElement::setValue(double value)
 
 double HTMLMeterElement::low() const
 {
-    double low = parseHTMLFloatingPointNumberValue(attributeWithoutSynchronization(lowAttr), min());
+    double low = parseToDoubleForNumberType(attributeWithoutSynchronization(lowAttr), min());
     return std::min(std::max(low, min()), max());
 }
 
@@ -133,7 +133,7 @@ void HTMLMeterElement::setLow(double low)
 
 double HTMLMeterElement::high() const
 {
-    double high = parseHTMLFloatingPointNumberValue(attributeWithoutSynchronization(highAttr), max());
+    double high = parseToDoubleForNumberType(attributeWithoutSynchronization(highAttr), max());
     return std::min(std::max(high, low()), max());
 }
 
@@ -144,7 +144,7 @@ void HTMLMeterElement::setHigh(double high)
 
 double HTMLMeterElement::optimum() const
 {
-    double optimum = parseHTMLFloatingPointNumberValue(attributeWithoutSynchronization(optimumAttr), (max() + min()) / 2);
+    double optimum = parseToDoubleForNumberType(attributeWithoutSynchronization(optimumAttr), (max() + min()) / 2);
     return std::min(std::max(optimum, min()), max());
 }
 
@@ -235,7 +235,7 @@ void HTMLMeterElement::didAddUserAgentShadowRoot(ShadowRoot& root)
 {
     ASSERT(!m_value);
 
-    static MainThreadNeverDestroyed<const String> shadowStyle(StringImpl::createWithoutCopying(meterElementShadowUserAgentStyleSheet));
+    static MainThreadNeverDestroyed<const String> shadowStyle(StringImpl::createWithoutCopying(meterElementShadowUserAgentStyleSheet, sizeof(meterElementShadowUserAgentStyleSheet)));
 
     auto style = HTMLStyleElement::create(HTMLNames::styleTag, document(), false);
     style->setTextContent(String { shadowStyle });

@@ -45,6 +45,7 @@ public:
 
     TextBoxSelectableRange selectableRange() const;
 
+    bool isCombinedText() const;
     const FontCascade& fontCascade() const;
 
     inline TextRun textRun(TextRunMode = TextRunMode::Painting) const;
@@ -60,7 +61,7 @@ public:
 
 class TextBoxIterator : public LeafBoxIterator {
 public:
-    TextBoxIterator() = default;
+    TextBoxIterator() { }
     TextBoxIterator(Box::PathVariant&&);
     TextBoxIterator(const Box&);
 

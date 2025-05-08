@@ -55,7 +55,7 @@ static constexpr bool verbose = false;
 class ArgumentsEliminationPhase : public Phase {
 public:
     ArgumentsEliminationPhase(Graph& graph)
-        : Phase(graph, "arguments elimination"_s)
+        : Phase(graph, "arguments elimination")
     {
     }
 
@@ -342,7 +342,6 @@ private:
                         escape(node->child1(), node);
                     break;
 
-                case GetUndetachedTypeArrayLength:
                 case GetTypedArrayLengthAsInt52:
                     // This node is only used for TypedArrays, so should not be relevant for arguments elimination
                     escape(node->child2(), node);

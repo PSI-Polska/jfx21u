@@ -28,6 +28,7 @@
 #include "config.h"
 #include "SVGContainerLayout.h"
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "Logging.h"
 #include "RenderAncestorIterator.h"
 #include "RenderChildIterator.h"
@@ -51,7 +52,7 @@ SVGContainerLayout::SVGContainerLayout(RenderLayerModelObject& container)
 void SVGContainerLayout::layoutChildren(bool containerNeedsLayout)
 {
     bool layoutSizeChanged = layoutSizeOfNearestViewportChanged();
-    bool transformChanged = transformToRootChanged(m_container.ptr());
+    bool transformChanged = transformToRootChanged(&m_container);
 
     m_positionedChildren.clear();
     for (auto& child : childrenOfType<RenderObject>(m_container)) {
@@ -72,8 +73,7 @@ void SVGContainerLayout::layoutChildren(bool containerNeedsLayout)
             if (child.isAnonymous()) {
                 ASSERT(is<RenderSVGViewportContainer>(child));
                 needsLayout = true;
-            } else if (RefPtr element = dynamicDowncast<SVGElement>(child.node())) {
-                if (element->hasRelativeLengths()) {
+            } else if (auto* element = dynamicDowncast<SVGElement>(*child.node()); element && element->hasRelativeLengths()) {
                 // When containerNeedsLayout is false and the layout size changed, we have to check whether this child uses relative lengths
 
                 // When the layout size changed and when using relative values tell the RenderSVGShape to update its shape object
@@ -89,12 +89,11 @@ void SVGContainerLayout::layoutChildren(bool containerNeedsLayout)
                 // FIXME: [LBSE] Add pattern support.
                 }
             }
-        }
 
         if (needsLayout)
             child.setNeedsLayout(MarkOnlyThis);
 
-        if (CheckedPtr element = dynamicDowncast<RenderElement>(child)) {
+        if (auto* element = dynamicDowncast<RenderElement>(child)) {
             if (element->needsLayout())
                 element->layout();
 
@@ -133,16 +132,16 @@ void SVGContainerLayout::positionChildrenRelativeToContainer()
         // only meaningful for the children of the RenderSVGRoot. RenderSVGRoot itself is positioned according to
         // the CSS box model object, where we need to respect border & padding, encoded in the contentBoxLocation().
         // -> Position all RenderSVGRoot children relative to the contentBoxLocation() to avoid intruding border/padding area.
-        if (CheckedPtr svgRoot = dynamicDowncast<RenderSVGRoot>(m_container.get()))
+        if (auto* svgRoot = dynamicDowncast<RenderSVGRoot>(m_container))
             return -svgRoot->contentBoxLocation();
 
         // For (inner) RenderSVGViewportContainer nominalSVGLayoutLocation() returns the viewport boundaries,
         // including the effect of the 'x'/'y' attribute values. Do not subtract the location, otherwise the
         // effect of the x/y translation is removed.
-        if (is<RenderSVGViewportContainer>(m_container) && !m_container->isAnonymous())
+        if (is<RenderSVGViewportContainer>(m_container) && !m_container.isAnonymous())
             return { };
 
-        return m_container->nominalSVGLayoutLocation();
+        return m_container.nominalSVGLayoutLocation();
     };
 
     // Arrange layout location for all child renderers relative to the container layout location.
@@ -204,7 +203,7 @@ void SVGContainerLayout::verifyLayoutLocationConsistency(const RenderLayerModelO
 
 bool SVGContainerLayout::layoutSizeOfNearestViewportChanged() const
 {
-    RenderElement* ancestor = m_container.ptr();
+    RenderElement* ancestor = &m_container;
     while (ancestor && !is<RenderSVGRoot>(ancestor) && !is<RenderSVGViewportContainer>(ancestor))
         ancestor = ancestor->parent();
 
@@ -237,3 +236,4 @@ bool SVGContainerLayout::transformToRootChanged(const RenderObject* ancestor)
 
 }
 
+#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

@@ -296,7 +296,13 @@ String createVPCodecParametersString(const VPCodecConfigurationRecord& configura
         || !isValidRange(configuration.videoFullRangeFlag))
         return resultBuilder.toString();
 
-    resultBuilder.append(".0"_s, numberToStringUnsigned<String>(configuration.profile), '.', numberToStringUnsigned<String>(configuration.level), '.');
+    resultBuilder.append(".0");
+    resultBuilder.append(numberToStringUnsigned<String>(configuration.profile));
+
+    resultBuilder.append('.');
+    resultBuilder.append(numberToStringUnsigned<String>(configuration.level));
+
+    resultBuilder.append('.');
     if (configuration.transferCharacteristics < 10)
         resultBuilder.append('0');
     resultBuilder.append(numberToStringUnsigned<String>(configuration.bitDepth));
@@ -313,16 +319,26 @@ String createVPCodecParametersString(const VPCodecConfigurationRecord& configura
         && configuration.matrixCoefficients == defaultConfiguration->matrixCoefficients)
         return resultBuilder.toString();
 
-    resultBuilder.append(".0"_s, numberToStringUnsigned<String>(configuration.chromaSubsampling), '.');
+    resultBuilder.append(".0");
+    resultBuilder.append(numberToStringUnsigned<String>(configuration.chromaSubsampling));
+
+    resultBuilder.append('.');
     if (configuration.colorPrimaries < 10)
         resultBuilder.append('0');
-    resultBuilder.append(numberToStringUnsigned<String>(configuration.colorPrimaries), '.');
+    resultBuilder.append(numberToStringUnsigned<String>(configuration.colorPrimaries));
+
+    resultBuilder.append('.');
     if (configuration.transferCharacteristics < 10)
         resultBuilder.append('0');
-    resultBuilder.append(numberToStringUnsigned<String>(configuration.transferCharacteristics), '.');
+    resultBuilder.append(numberToStringUnsigned<String>(configuration.transferCharacteristics));
+
+    resultBuilder.append('.');
     if (configuration.matrixCoefficients < 10)
         resultBuilder.append('0');
-    resultBuilder.append(numberToStringUnsigned<String>(configuration.matrixCoefficients), ".0"_s, numberToStringUnsigned<String>(configuration.videoFullRangeFlag));
+    resultBuilder.append(numberToStringUnsigned<String>(configuration.matrixCoefficients));
+
+    resultBuilder.append(".0");
+    resultBuilder.append(numberToStringUnsigned<String>(configuration.videoFullRangeFlag));
 
     return resultBuilder.toString();
 }

@@ -38,15 +38,16 @@
 #include "JSAbortSignal.h"
 #include "JSDOMGlobalObjectInlines.h"
 #include "JSDOMPromiseDeferred.h"
-#include "JSDOMWindow.h"
 #include "JSEventListener.h"
 #include "JSFetchResponse.h"
 #include "JSIDBSerializationGlobalObject.h"
+#include "JSLocalDOMWindow.h"
 #include "JSMediaStream.h"
 #include "JSMediaStreamTrack.h"
 #include "JSRTCIceCandidate.h"
 #include "JSRTCSessionDescription.h"
 #include "JSReadableStream.h"
+#include "JSRemoteDOMWindow.h"
 #include "JSShadowRealmGlobalScope.h"
 #include "JSShadowRealmGlobalScopeBase.h"
 #include "JSWorkerGlobalScope.h"
@@ -67,7 +68,6 @@
 #include "WorkletGlobalScope.h"
 #include <JavaScriptCore/BuiltinNames.h>
 #include <JavaScriptCore/CodeBlock.h>
-#include <JavaScriptCore/ConsoleClient.h>
 #include <JavaScriptCore/GetterSetter.h>
 #include <JavaScriptCore/GlobalObjectMethodTable.h>
 #include <JavaScriptCore/JSCustomGetterFunction.h>
@@ -79,7 +79,7 @@
 #include <JavaScriptCore/VMTrapsInlines.h>
 #include <JavaScriptCore/WasmStreamingCompiler.h>
 #include <JavaScriptCore/WeakGCMapInlines.h>
-#include <wtf/text/MakeString.h>
+#include <wtf/text/StringConcatenateNumbers.h>
 
 #if ENABLE(REMOTE_INSPECTOR)
 #include <JavaScriptCore/JSRemoteInspector.h>
@@ -358,6 +358,8 @@ ScriptExecutionContext* JSDOMGlobalObject::scriptExecutionContext() const
 {
     if (inherits<JSDOMWindowBase>())
         return jsCast<const JSDOMWindowBase*>(this)->scriptExecutionContext();
+    if (inherits<JSRemoteDOMWindowBase>())
+        return nullptr;
     if (inherits<JSShadowRealmGlobalScopeBase>())
         return jsCast<const JSShadowRealmGlobalScopeBase*>(this)->scriptExecutionContext();
     if (inherits<JSWorkerGlobalScopeBase>())
@@ -370,24 +372,6 @@ ScriptExecutionContext* JSDOMGlobalObject::scriptExecutionContext() const
     dataLog("Unexpected global object: ", JSValue(this), "\n");
     RELEASE_ASSERT_NOT_REACHED();
     return nullptr;
-}
-
-bool JSDOMGlobalObject::canCompileStrings(JSGlobalObject* globalObject, CompilationType compilationType, String codeString, JSValue bodyArgument)
-{
-    VM& vm = globalObject->vm();
-    auto throwScope = DECLARE_THROW_SCOPE(vm);
-
-    auto& thisObject = static_cast<JSDOMGlobalObject&>(*globalObject);
-    auto* scriptExecutionContext = thisObject.scriptExecutionContext();
-
-    auto result = canCompile(*scriptExecutionContext, compilationType, codeString, bodyArgument);
-
-    if (result.hasException()) {
-        propagateException(*globalObject, throwScope, result.releaseException());
-        RETURN_IF_EXCEPTION(throwScope, false);
-    }
-
-    return result.releaseReturnValue();
 }
 
 template<typename Visitor>
@@ -574,7 +558,7 @@ static JSC::JSPromise* handleResponseOnStreamingAction(JSC::JSGlobalObject* glob
             }
 
             if (auto* chunk = result.returnValue())
-                compiler->addBytes(*chunk);
+                compiler->addBytes(chunk->data(), chunk->size());
             else
                 compiler->finalize(globalObject);
         });
@@ -585,7 +569,7 @@ static JSC::JSPromise* handleResponseOnStreamingAction(JSC::JSGlobalObject* glob
     WTF::switchOn(body, [&](Ref<FormData>&) {
         RELEASE_ASSERT_NOT_REACHED();
     }, [&](Ref<SharedBuffer>& buffer) {
-        compiler->addBytes(buffer->span());
+        compiler->addBytes(buffer->data(), buffer->size());
         compiler->finalize(globalObject);
     }, [&](std::nullptr_t&) {
         compiler->finalize(globalObject);
@@ -610,12 +594,14 @@ JSC::JSPromise* JSDOMGlobalObject::instantiateStreaming(JSC::JSGlobalObject* glo
 static ScriptModuleLoader* scriptModuleLoader(JSDOMGlobalObject* globalObject)
 {
     if (globalObject->inherits<JSDOMWindowBase>()) {
-        if (auto document = jsCast<const JSDOMWindowBase*>(globalObject)->wrapped().documentIfLocal())
+        if (auto document = jsCast<const JSDOMWindowBase*>(globalObject)->wrapped().document())
             return &document->moduleLoader();
         return nullptr;
     }
     if (globalObject->inherits<JSShadowRealmGlobalScopeBase>())
         return &jsCast<const JSShadowRealmGlobalScopeBase*>(globalObject)->wrapped().moduleLoader();
+    if (globalObject->inherits<JSRemoteDOMWindowBase>())
+        return nullptr;
     if (globalObject->inherits<JSWorkerGlobalScopeBase>())
         return &jsCast<const JSWorkerGlobalScopeBase*>(globalObject)->wrapped().moduleLoader();
     if (globalObject->inherits<JSWorkletGlobalScopeBase>())
@@ -700,8 +686,9 @@ JSC::JSGlobalObject* JSDOMGlobalObject::deriveShadowRealmGlobalObject(JSC::JSGlo
         auto& originalWorld = domGlobalObject->world();
 
         while (!document->isTopDocument()) {
-            auto* candidateDocument = document->parentDocument();
-            if (!candidateDocument || !candidateDocument->protectedSecurityOrigin()->isSameOriginDomain(originalOrigin))
+            auto candidateDocument = document->parentDocument();
+
+            if (!candidateDocument->securityOrigin().isSameOriginDomain(originalOrigin))
                 break;
 
             document = candidateDocument;
@@ -727,23 +714,23 @@ JSC::JSGlobalObject* JSDOMGlobalObject::deriveShadowRealmGlobalObject(JSC::JSGlo
 
 String JSDOMGlobalObject::defaultAgentClusterID()
 {
-    return makeString(Process::identifier().toUInt64(), "-default"_s);
+    return makeString(Process::identifier().toUInt64(), "-default");
 }
 
 String JSDOMGlobalObject::agentClusterID() const
 {
     // Service workers may run in process but they need to be in a separate agent cluster.
     if (is<ServiceWorkerGlobalScope>(scriptExecutionContext()))
-        return makeString(Process::identifier().toUInt64(), "-serviceworker"_s);
+        return makeString(Process::identifier().toUInt64(), "-serviceworker");
     if (is<SharedWorkerGlobalScope>(scriptExecutionContext()))
-        return makeString(Process::identifier().toUInt64(), "-sharedworker"_s);
+        return makeString(Process::identifier().toUInt64(), "-sharedworker");
     return defaultAgentClusterID();
 }
 
 JSDOMGlobalObject* toJSDOMGlobalObject(ScriptExecutionContext& context, DOMWrapperWorld& world)
 {
     if (auto* document = dynamicDowncast<Document>(context))
-        return toJSDOMWindow(document->frame(), world);
+        return toJSLocalDOMWindow(document->frame(), world);
 
     if (auto* globalScope = dynamicDowncast<WorkerOrWorkletGlobalScope>(context))
         return globalScope->script()->globalScopeWrapper();

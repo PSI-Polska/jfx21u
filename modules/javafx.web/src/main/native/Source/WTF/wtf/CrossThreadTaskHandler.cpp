@@ -30,7 +30,7 @@
 
 namespace WTF {
 
-CrossThreadTaskHandler::CrossThreadTaskHandler(ASCIILiteral threadName, AutodrainedPoolForRunLoop useAutodrainedPool)
+CrossThreadTaskHandler::CrossThreadTaskHandler(const char* threadName, AutodrainedPoolForRunLoop useAutodrainedPool)
     : m_useAutodrainedPool(useAutodrainedPool)
 {
     ASSERT(isMainThread());

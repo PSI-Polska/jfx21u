@@ -28,7 +28,6 @@
 
 #include "HeapInlines.h"
 #include "InspectorProtocolObjects.h"
-#include <wtf/text/MakeString.h>
 #include <wtf/text/WTFString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/Vector.h>
@@ -96,36 +95,36 @@ String TypeSet::dumpTypes() const
     StringBuilder seen;
 
     if (m_seenTypes & TypeFunction)
-        seen.append("Function "_s);
+        seen.append("Function ");
     if (m_seenTypes & TypeUndefined)
-        seen.append("Undefined "_s);
+        seen.append("Undefined ");
     if (m_seenTypes & TypeNull)
-        seen.append("Null "_s);
+        seen.append("Null ");
     if (m_seenTypes & TypeBoolean)
-        seen.append("Boolean "_s);
+        seen.append("Boolean ");
     if (m_seenTypes & TypeAnyInt)
-        seen.append("AnyInt "_s);
+        seen.append("AnyInt ");
     if (m_seenTypes & TypeNumber)
-        seen.append("Number "_s);
+        seen.append("Number ");
     if (m_seenTypes & TypeString)
-        seen.append("String "_s);
+        seen.append("String ");
     if (m_seenTypes & TypeObject)
-        seen.append("Object "_s);
+        seen.append("Object ");
     if (m_seenTypes & TypeSymbol)
-        seen.append("Symbol "_s);
+        seen.append("Symbol ");
 
     for (const auto& shape : m_structureHistory)
         seen.append(shape->m_constructorName, ' ');
 
     if (m_structureHistory.size())
-        seen.append("\nStructures:[ "_s);
+        seen.append("\nStructures:[ ");
     for (const auto& shape : m_structureHistory)
         seen.append(shape->stringRepresentation(), ' ');
     if (m_structureHistory.size())
         seen.append(']');
 
     if (m_structureHistory.size())
-        seen.append("\nLeast Common Ancestor: "_s, leastCommonAncestor());
+        seen.append("\nLeast Common Ancestor: ", leastCommonAncestor());
 
     return seen.toString();
 }
@@ -161,7 +160,7 @@ String TypeSet::displayName() const
         if (doesTypeConformTo(TypeObject))
             return ctorName;
         if (doesTypeConformTo(TypeObject | TypeNull | TypeUndefined))
-            return makeString(ctorName, '?');
+            return ctorName + '?';
     }
 
     // The order of these checks are important. For example, if a value is only a function, it conforms to TypeFunction, but it also conforms to TypeFunction | TypeNull.
@@ -253,57 +252,57 @@ String TypeSet::toJSONString() const
     StringBuilder json;
     json.append('{');
 
-    json.append("\"displayTypeName\":"_s);
+    json.append("\"displayTypeName\":");
     json.appendQuotedJSONString(displayName());
     json.append(',');
 
-    json.append("\"primitiveTypeNames\":["_s);
+    json.append("\"primitiveTypeNames\":[");
     bool hasAnItem = false;
     if (m_seenTypes & TypeUndefined) {
         hasAnItem = true;
-        json.append("\"Undefined\""_s);
+        json.append("\"Undefined\"");
     }
     if (m_seenTypes & TypeNull) {
         if (hasAnItem)
             json.append(',');
         hasAnItem = true;
-        json.append("\"Null\""_s);
+        json.append("\"Null\"");
     }
     if (m_seenTypes & TypeBoolean) {
         if (hasAnItem)
             json.append(',');
         hasAnItem = true;
-        json.append("\"Boolean\""_s);
+        json.append("\"Boolean\"");
     }
     if (m_seenTypes & TypeAnyInt) {
         if (hasAnItem)
             json.append(',');
         hasAnItem = true;
-        json.append("\"Integer\""_s);
+        json.append("\"Integer\"");
     }
     if (m_seenTypes & TypeNumber) {
         if (hasAnItem)
             json.append(',');
         hasAnItem = true;
-        json.append("\"Number\""_s);
+        json.append("\"Number\"");
     }
     if (m_seenTypes & TypeString) {
         if (hasAnItem)
             json.append(',');
         hasAnItem = true;
-        json.append("\"String\""_s);
+        json.append("\"String\"");
     }
     if (m_seenTypes & TypeSymbol) {
         if (hasAnItem)
             json.append(',');
         hasAnItem = true;
-        json.append("\"Symbol\""_s);
+        json.append("\"Symbol\"");
     }
     json.append(']');
 
     json.append(',');
 
-    json.append("\"structures\":["_s);
+    json.append("\"structures\":[");
     hasAnItem = false;
     for (size_t i = 0; i < m_structureHistory.size(); i++) {
         if (hasAnItem)
@@ -354,7 +353,7 @@ String StructureShape::propertyHash()
     }
 
     if (m_proto)
-        builder.append(":__proto__"_s, m_proto->propertyHash());
+        builder.append(":__proto__", m_proto->propertyHash());
 
     m_propertyHash = makeUnique<String>(builder.toString());
     return *m_propertyHash;
@@ -402,9 +401,9 @@ String StructureShape::stringRepresentation()
     representation.append('{');
     while (curShape) {
         for (auto& field : curShape->m_fields)
-            representation.append(StringView { field.get() }, ", "_s);
+            representation.append(StringView { field.get() }, ", ");
         if (curShape->m_proto)
-            representation.append("__proto__ ["_s, curShape->m_proto->m_constructorName, "], "_s);
+            representation.append("__proto__ [", curShape->m_proto->m_constructorName, "], ");
         curShape = curShape->m_proto;
     }
 
@@ -427,18 +426,18 @@ String StructureShape::toJSONString() const
     StringBuilder json;
     json.append('{');
 
-    json.append("\"constructorName\":"_s);
+    json.append("\"constructorName\":");
     json.appendQuotedJSONString(m_constructorName);
     json.append(',');
 
-    json.append("\"isInDictionaryMode\":"_s);
+    json.append("\"isInDictionaryMode\":");
     if (m_isInDictionaryMode)
-        json.append("true"_s);
+        json.append("true");
     else
-        json.append("false"_s);
+        json.append("false");
     json.append(',');
 
-    json.append("\"fields\":["_s);
+    json.append("\"fields\":[");
     bool hasAnItem = false;
     for (auto& field : m_fields) {
         if (hasAnItem)
@@ -448,9 +447,9 @@ String StructureShape::toJSONString() const
         String fieldName(field.get());
         json.appendQuotedJSONString(fieldName);
     }
-    json.append("],"_s);
+    json.append("],");
 
-    json.append("\"optionalFields\":["_s);
+    json.append("\"optionalFields\":[");
     hasAnItem = false;
     for (auto& field : m_optionalFields) {
         if (hasAnItem)
@@ -463,11 +462,11 @@ String StructureShape::toJSONString() const
     json.append(']');
     json.append(',');
 
-    json.append("\"proto\":"_s);
+    json.append("\"proto\":");
     if (m_proto)
         json.append(m_proto->toJSONString());
     else
-        json.append("null"_s);
+        json.append("null");
 
     json.append('}');
 

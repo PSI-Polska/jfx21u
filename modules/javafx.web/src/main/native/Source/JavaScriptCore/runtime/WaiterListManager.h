@@ -41,8 +41,18 @@ class Waiter final : public WTF::BasicRawSentinelNode<Waiter>, public ThreadSafe
     WTF_MAKE_TZONE_ALLOCATED(Waiter);
 
 public:
-    Waiter(VM*);
-    Waiter(JSPromise*);
+    Waiter(VM* vm)
+        : m_vm(vm)
+        , m_isAsync(false)
+    {
+    }
+
+    Waiter(JSPromise* promise)
+        : m_vm(&promise->vm())
+        , m_ticket(m_vm->deferredWorkTimer->addPendingWork(*m_vm, promise, { }))
+        , m_isAsync(true)
+    {
+    }
 
     bool isAsync() const
     {
@@ -70,16 +80,16 @@ public:
         return m_condition;
     }
 
-    RefPtr<DeferredWorkTimer::TicketData> ticket(const AbstractLocker&) const
+    DeferredWorkTimer::Ticket ticket(const AbstractLocker&) const
     {
         ASSERT(m_isAsync);
-        return m_ticket.get();
+        return m_ticket;
     }
 
-    void clearTicket(const AbstractLocker&)
+    DeferredWorkTimer::Ticket takeTicket(const AbstractLocker&)
     {
         ASSERT(m_isAsync);
-        m_ticket = nullptr;
+        return std::exchange(m_ticket, nullptr);
     }
 
     void setTimer(const AbstractLocker&, Ref<RunLoop::DispatchTimer>&& timer)
@@ -93,25 +103,19 @@ public:
         return !!m_timer;
     }
 
-    void clearTimer(const AbstractLocker&)
+    void cancelTimer(const AbstractLocker&)
     {
         ASSERT(m_isAsync);
         // If the timeout for AsyncWaiter is infinity, we won't dispatch any timer.
         if (!m_timer)
             return;
         m_timer->stop();
-        // The AsyncWaiter's timer holds the waiter's reference. This
-        // releases the strong reference to the Waiter in the timer.
         m_timer = nullptr;
     }
 
-    void scheduleWorkAndClear(const AbstractLocker&, DeferredWorkTimer::Task&&);
-    void cancelAndClear(const AbstractLocker&);
-    void dump(PrintStream&) const;
-
 private:
     VM* m_vm { nullptr };
-    ThreadSafeWeakPtr<DeferredWorkTimer::TicketData> m_ticket { nullptr };
+    DeferredWorkTimer::Ticket m_ticket { nullptr };
     RefPtr<RunLoop::DispatchTimer> m_timer { nullptr };
     Condition m_condition;
     bool m_isAsync { false };
@@ -220,11 +224,9 @@ public:
 
     size_t waiterListSize(void* ptr);
 
-    size_t totalWaiterCount();
+    void unregisterVM(VM*);
 
-    void unregister(VM*);
-    void unregister(JSGlobalObject*);
-    void unregister(uint8_t* arrayPtr, size_t);
+    void unregisterSharedArrayBuffer(uint8_t* arrayPtr, size_t);
 
 private:
     template <typename ValueType>

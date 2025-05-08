@@ -90,11 +90,10 @@
 #include <JavaScriptCore/HeapInlines.h>
 #include <variant>
 #include <wtf/HexNumber.h>
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/RefCountedLeakCounter.h>
 #include <wtf/SHA1.h>
-#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/CString.h>
-#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/TextStream.h>
 
@@ -109,11 +108,11 @@
 
 namespace WebCore {
 
-WTF_MAKE_COMPACT_TZONE_OR_ISO_ALLOCATED_IMPL(Node);
+WTF_MAKE_ISO_ALLOCATED_IMPL(Node);
 
 using namespace HTMLNames;
 
-struct SameSizeAsNode : EventTarget, CanMakeCheckedPtr<SameSizeAsNode> {
+struct SameSizeAsNode : EventTarget {
 #if ASSERT_ENABLED
     uint32_t m_isAllocatedMemory;
     bool inRemovedLastRefFunction;
@@ -123,7 +122,7 @@ struct SameSizeAsNode : EventTarget, CanMakeCheckedPtr<SameSizeAsNode> {
     uint32_t nodeFlags;
     void* parentNode;
     void* treeScope;
-    uint8_t previous[8];
+    void* previous;
     void* next;
     uint8_t rendererWithStyleFlags[8];
     uint8_t rareDataWithBitfields[8];
@@ -138,65 +137,65 @@ static WeakHashSet<Node>& liveNodeSet()
     return liveNodes;
 }
 
-static ASCIILiteral stringForRareDataUseType(NodeRareData::UseType useType)
+static const char* stringForRareDataUseType(NodeRareData::UseType useType)
 {
     switch (useType) {
     case NodeRareData::UseType::TabIndex:
-        return "TabIndex"_s;
+        return "TabIndex";
     case NodeRareData::UseType::ChildIndex:
-        return "ChildIndex"_s;
+        return "ChildIndex";
     case NodeRareData::UseType::NodeList:
-        return "NodeList"_s;
+        return "NodeList";
     case NodeRareData::UseType::MutationObserver:
-        return "MutationObserver"_s;
+        return "MutationObserver";
     case NodeRareData::UseType::ManuallyAssignedSlot:
-        return "ManuallyAssignedSlot"_s;
+        return "ManuallyAssignedSlot";
     case NodeRareData::UseType::ScrollingPosition:
-        return "ScrollingPosition"_s;
+        return "ScrollingPosition";
     case NodeRareData::UseType::ComputedStyle:
-        return "ComputedStyle"_s;
+        return "ComputedStyle";
     case NodeRareData::UseType::DisplayContentsOrNoneStyle:
-        return "DisplayContentsOrNoneStyle"_s;
+        return "DisplayContentsOrNoneStyle";
     case NodeRareData::UseType::EffectiveLang:
-        return "EffectiveLang"_s;
+        return "EffectiveLang";
     case NodeRareData::UseType::Dataset:
-        return "Dataset"_s;
+        return "Dataset";
     case NodeRareData::UseType::ClassList:
-        return "ClassList"_s;
+        return "ClassList";
     case NodeRareData::UseType::ShadowRoot:
-        return "ShadowRoot"_s;
+        return "ShadowRoot";
     case NodeRareData::UseType::CustomElementReactionQueue:
-        return "CustomElementReactionQueue"_s;
+        return "CustomElementReactionQueue";
     case NodeRareData::UseType::CustomElementDefaultARIA:
-        return "CustomElementDefaultARIA"_s;
+        return "CustomElementDefaultARIA";
     case NodeRareData::UseType::FormAssociatedCustomElement:
-        return "FormAssociatedCustomElement"_s;
+        return "FormAssociatedCustomElement";
     case NodeRareData::UseType::AttributeMap:
-        return "AttributeMap"_s;
+        return "AttributeMap";
     case NodeRareData::UseType::InteractionObserver:
-        return "InteractionObserver"_s;
+        return "InteractionObserver";
     case NodeRareData::UseType::ResizeObserver:
-        return "ResizeObserver"_s;
+        return "ResizeObserver";
     case NodeRareData::UseType::Animations:
-        return "Animations"_s;
+        return "Animations";
     case NodeRareData::UseType::PseudoElements:
-        return "PseudoElements"_s;
+        return "PseudoElements";
     case NodeRareData::UseType::AttributeStyleMap:
-        return "AttributeStyleMap"_s;
+        return "AttributeStyleMap";
     case NodeRareData::UseType::ComputedStyleMap:
-        return "ComputedStyleMap"_s;
+        return "ComputedStyleMap";
     case NodeRareData::UseType::PartList:
-        return "PartList"_s;
+        return "PartList";
     case NodeRareData::UseType::PartNames:
-        return "PartNames"_s;
+        return "PartNames";
     case NodeRareData::UseType::Nonce:
-        return "Nonce"_s;
+        return "Nonce";
     case NodeRareData::UseType::ExplicitlySetAttrElementsMap:
-        return "ExplicitlySetAttrElementsMap"_s;
+        return "ExplicitlySetAttrElementsMap";
     case NodeRareData::UseType::Popover:
-        return "Popover"_s;
+        return "Popover";
     }
-    return { };
+    return nullptr;
 }
 
 #endif
@@ -314,7 +313,7 @@ void Node::dumpStatistics()
     printf("Number of Nodes with RareData: %zu\n", nodesWithRareData);
     printf("  Mixed use: %zu\n", mixedRareDataUseCount);
     for (auto it : rareDataSingleUseTypeCounts)
-        printf("  %s: %zu\n", stringForRareDataUseType(static_cast<NodeRareData::UseType>(it.key)).characters(), it.value);
+        printf("  %s: %zu\n", stringForRareDataUseType(static_cast<NodeRareData::UseType>(it.key)), it.value);
     printf("\n");
 
 
@@ -386,9 +385,9 @@ void Node::trackForDebugging()
 
 inline void NodeRareData::operator delete(NodeRareData* nodeRareData, std::destroying_delete_t)
 {
-    auto destroyAndFree = [&]<typename RareDataType> (RareDataType& value) {
+    auto destroyAndFree = [&](auto& value) {
         std::destroy_at(&value);
-        RareDataType::freeAfterDestruction(&value);
+        std::decay_t<decltype(value)>::freeAfterDestruction(&value);
     };
 
     if (nodeRareData->m_isElementRareData)
@@ -436,7 +435,7 @@ Node::~Node()
 
     ASSERT(!renderer());
     ASSERT(!parentNode());
-    ASSERT(!m_previous.pointer());
+    ASSERT(!m_previous);
     ASSERT(!m_next);
 
     {
@@ -504,10 +503,9 @@ String Node::nodeValue() const
     return String();
 }
 
-ExceptionOr<void> Node::setNodeValue(const String&)
+void Node::setNodeValue(const String&)
 {
     // By default, setting nodeValue has no effect.
-    return { };
 }
 
 RefPtr<NodeList> Node::childNodes()
@@ -641,7 +639,6 @@ ExceptionOr<NodeVector> Node::convertNodesOrStringsIntoNodeVector(FixedVector<No
             nodeVector.append(Text::create(document, WTFMove(std::get<String>(variant))));
             continue;
         }
-
         ASSERT(std::holds_alternative<RefPtr<Node>>(variant));
         RefPtr node = WTFMove(std::get<RefPtr<Node>>(variant));
         ASSERT(node);
@@ -851,13 +848,13 @@ static Node::Editability computeEditabilityFromComputedStyle(const RenderStyle& 
 
         // Elements with user-select: all style are considered atomic
         // therefore non editable.
-    if (treatment == Node::UserSelectAllTreatment::NotEditable && style.usedUserSelect() == UserSelect::All)
+    if (treatment == Node::UserSelectAllTreatment::NotEditable && style.effectiveUserSelect() == UserSelect::All)
             return Node::Editability::ReadOnly;
 
         if (pageIsEditable == PageIsEditable::Yes)
             return Node::Editability::CanEditRichly;
 
-    switch (style.usedUserModify()) {
+    switch (style.effectiveUserModify()) {
         case UserModify::ReadOnly:
             return Node::Editability::ReadOnly;
         case UserModify::ReadWrite:
@@ -962,7 +959,7 @@ void Node::adjustStyleValidity(Style::Validity validity, Style::InvalidationMode
     case Style::InvalidationMode::Normal:
         break;
     case Style::InvalidationMode::RecompositeLayer:
-        setStateFlag(StateFlag::StyleResolutionShouldRecompositeLayer);
+        setStyleFlag(NodeStyleFlag::StyleResolutionShouldRecompositeLayer);
         break;
     case Style::InvalidationMode::RebuildRenderer:
     case Style::InvalidationMode::InsertedIntoAncestor:
@@ -1263,7 +1260,7 @@ bool Node::canStartSelection() const
 
         // We allow selections to begin within an element that has -webkit-user-select: none set,
         // but if the element is draggable then dragging should take priority over selection.
-        if (style.userDrag() == UserDrag::Element && style.usedUserSelect() == UserSelect::None)
+        if (style.userDrag() == UserDrag::Element && style.effectiveUserSelect() == UserSelect::None)
             return false;
     }
     return parentOrShadowHostNode() ? parentOrShadowHostNode()->canStartSelection() : true;
@@ -1279,16 +1276,6 @@ Element* Node::shadowHost() const
 ShadowRoot* Node::containingShadowRoot() const
 {
     return dynamicDowncast<ShadowRoot>(treeScope().rootNode());
-}
-
-RefPtr<ShadowRoot> Node::protectedContainingShadowRoot() const
-{
-    return containingShadowRoot();
-}
-
-CheckedPtr<RenderObject> Node::checkedRenderer() const
-{
-    return renderer();
 }
 
 #if ASSERT_ENABLED
@@ -1452,7 +1439,11 @@ Element* Node::parentOrShadowHostElement() const
 
 Node& Node::traverseToRootNode() const
 {
-    return traverseToRootNodeInternal(*this);
+    Node* node = const_cast<Node*>(this);
+    Node* highest = node;
+    for (; node; node = node->parentNode())
+        highest = node;
+    return *highest;
 }
 
 // https://dom.spec.whatwg.org/#concept-shadow-including-root
@@ -1487,7 +1478,6 @@ void Node::queueTaskToDispatchEvent(TaskSource source, Ref<Event>&& event)
 
 Node::InsertedIntoAncestorResult Node::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
 {
-    ASSERT(!containsSelectionEndPoint());
     if (insertionType.connectedToDocument)
         setEventTargetFlag(EventTargetFlag::IsConnected);
     if (parentOfInsertedTree.isInShadowTree())
@@ -1500,13 +1490,12 @@ Node::InsertedIntoAncestorResult Node::insertedIntoAncestor(InsertionType insert
 
 void Node::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)
 {
-    ASSERT(!containsSelectionEndPoint());
     if (removalType.disconnectedFromDocument)
         clearEventTargetFlag(EventTargetFlag::IsConnected);
     if (isInShadowTree() && !treeScope().rootNode().isShadowRoot())
         clearEventTargetFlag(EventTargetFlag::IsInShadowTree);
     if (removalType.disconnectedFromDocument) {
-        if (CheckedPtr cache = oldParentOfRemovedTree.document().existingAXObjectCache())
+        if (auto* cache = oldParentOfRemovedTree.document().existingAXObjectCache())
             cache->remove(*this);
     }
 }
@@ -1776,7 +1765,7 @@ String Node::textContent(bool convertBRsToNewlines) const
     return isNullString ? String() : content.toString();
 }
 
-ExceptionOr<void> Node::setTextContent(String&& text)
+void Node::setTextContent(String&& text)
 {
     switch (nodeType()) {
     case ATTRIBUTE_NODE:
@@ -1784,25 +1773,24 @@ ExceptionOr<void> Node::setTextContent(String&& text)
     case CDATA_SECTION_NODE:
     case COMMENT_NODE:
     case PROCESSING_INSTRUCTION_NODE:
-        return setNodeValue(WTFMove(text));
+        setNodeValue(WTFMove(text));
+        return;
     case ELEMENT_NODE:
     case DOCUMENT_FRAGMENT_NODE:
         uncheckedDowncast<ContainerNode>(*this).stringReplaceAll(WTFMove(text));
-        return { };
+        return;
     case DOCUMENT_NODE:
     case DOCUMENT_TYPE_NODE:
         // Do nothing.
-        return { };
+        return;
     }
     ASSERT_NOT_REACHED();
-
-    return { };
 }
 
 static SHA1::Digest hashPointer(const void* pointer)
 {
     SHA1 sha1;
-    sha1.addBytes(std::span { reinterpret_cast<const uint8_t*>(&pointer), sizeof(pointer) });
+    sha1.addBytes(reinterpret_cast<const uint8_t*>(&pointer), sizeof(pointer));
     SHA1::Digest digest;
     sha1.computeHash(digest);
     return digest;
@@ -1956,18 +1944,18 @@ FloatPoint Node::convertFromPage(const FloatPoint& p) const
 String Node::description() const
 {
     auto name = nodeName();
-    return makeString(name.isEmpty() ? "<none>"_s : ""_s, name);
+    return makeString(name.isEmpty() ? "<none>" : "", name);
 }
 
 String Node::debugDescription() const
 {
     auto name = nodeName();
-    return makeString(name.isEmpty() ? "<none>"_s : ""_s, name, " 0x"_s, hex(reinterpret_cast<uintptr_t>(this), Lowercase));
+    return makeString(name.isEmpty() ? "<none>" : "", name, " 0x"_s, hex(reinterpret_cast<uintptr_t>(this), Lowercase));
 }
 
 #if ENABLE(TREE_DEBUGGING)
 
-static void appendAttributeDesc(const Node* node, StringBuilder& stringBuilder, const QualifiedName& name, ASCIILiteral attrDesc)
+static void appendAttributeDesc(const Node* node, StringBuilder& stringBuilder, const QualifiedName& name, const char* attrDesc)
 {
     auto* element = dynamicDowncast<Element>(*node);
     if (!element)
@@ -1981,19 +1969,19 @@ static void appendAttributeDesc(const Node* node, StringBuilder& stringBuilder, 
     stringBuilder.append(attr);
 }
 
-void Node::showNode(ASCIILiteral prefix) const
+void Node::showNode(const char* prefix) const
 {
-    if (prefix.isNull())
-        prefix = ""_s;
+    if (!prefix)
+        prefix = "";
     if (isTextNode()) {
         String value = makeStringByReplacingAll(nodeValue(), '\\', "\\\\"_s);
         value = makeStringByReplacingAll(value, '\n', "\\n"_s);
-        fprintf(stderr, "%s%s\t%p \"%s\"\n", prefix.characters(), nodeName().utf8().data(), this, value.utf8().data());
+        fprintf(stderr, "%s%s\t%p \"%s\"\n", prefix, nodeName().utf8().data(), this, value.utf8().data());
     } else {
         StringBuilder attrs;
-        appendAttributeDesc(this, attrs, classAttr, " CLASS="_s);
-        appendAttributeDesc(this, attrs, styleAttr, " STYLE="_s);
-        fprintf(stderr, "%s%s\t%p (renderer %p) %s%s%s\n", prefix.characters(), nodeName().utf8().data(), this, renderer(), attrs.toString().utf8().data(), needsStyleRecalc() ? " (needs style recalc)" : "", childNeedsStyleRecalc() ? " (child needs style recalc)" : "");
+        appendAttributeDesc(this, attrs, classAttr, " CLASS=");
+        appendAttributeDesc(this, attrs, styleAttr, " STYLE=");
+        fprintf(stderr, "%s%s\t%p (renderer %p) %s%s%s\n", prefix, nodeName().utf8().data(), this, renderer(), attrs.toString().utf8().data(), needsStyleRecalc() ? " (needs style recalc)" : "", childNeedsStyleRecalc() ? " (child needs style recalc)" : "");
     }
 }
 
@@ -2102,12 +2090,12 @@ static void showSubTreeAcrossFrame(const Node* node, const Node* markedNode, con
     node->showNode();
     if (!node->isShadowRoot()) {
         if (auto* frameOwner = dynamicDowncast<HTMLFrameOwnerElement>(node))
-            showSubTreeAcrossFrame(frameOwner->protectedContentDocument().get(), markedNode, makeString(indent, '\t'));
+            showSubTreeAcrossFrame(frameOwner->protectedContentDocument().get(), markedNode, indent + "\t");
         if (RefPtr shadowRoot = node->shadowRoot())
-            showSubTreeAcrossFrame(shadowRoot.get(), markedNode, makeString(indent, '\t'));
+            showSubTreeAcrossFrame(shadowRoot.get(), markedNode, indent + "\t");
     }
     for (RefPtr child = node->firstChild(); child; child = child->nextSibling())
-        showSubTreeAcrossFrame(child.get(), markedNode, makeString(indent, '\t'));
+        showSubTreeAcrossFrame(child.get(), markedNode, indent + "\t");
 }
 
 void Node::showTreeForThisAcrossFrame() const
@@ -2166,9 +2154,9 @@ Element* Node::enclosingLinkEventParentOrSelf()
     return nullptr;
 }
 
-enum EventTargetInterfaceType Node::eventTargetInterface() const
+EventTargetInterface Node::eventTargetInterface() const
 {
-    return EventTargetInterfaceType::Node;
+    return NodeEventTargetInterfaceType;
 }
 
 template <typename MoveNodeFunction, typename MoveShadowRootFunction>
@@ -2341,7 +2329,7 @@ void Node::moveNodeToNewDocumentSlowCase(Document& oldDocument, Document& newDoc
         oldDocument.parentlessNodeMovedToNewDocument(*this);
 
     if (AXObjectCache::accessibilityEnabled()) {
-        if (CheckedPtr cache = oldDocument.existingAXObjectCache())
+        if (auto* cache = oldDocument.existingAXObjectCache())
             cache->remove(*this);
     }
 
@@ -2817,9 +2805,9 @@ Node::Editability Node::computeEditabilityForMouseClickEvents(const RenderStyle*
     return computeEditabilityWithStyle(style, userSelectAllTreatment, style ? ShouldUpdateStyle::DoNotUpdate : ShouldUpdateStyle::Update);
 }
 
-bool Node::willRespondToMouseClickEvents(const RenderStyle* styleToUse) const
+bool Node::willRespondToMouseClickEvents() const
 {
-    return willRespondToMouseClickEventsWithEditability(computeEditabilityForMouseClickEvents(styleToUse));
+    return willRespondToMouseClickEventsWithEditability(computeEditabilityForMouseClickEvents());
 }
 
 bool Node::willRespondToMouseClickEventsWithEditability(Editability editability) const

@@ -27,8 +27,8 @@
 
 #include "InlineIteratorBoxLegacyPath.h"
 #include "LayoutIntegrationInlineContent.h"
+#include "LegacyEllipsisBox.h"
 #include "LegacyRootInlineBox.h"
-#include "RenderBlockFlow.h"
 
 namespace WebCore {
 namespace InlineIterator {
@@ -53,20 +53,20 @@ public:
     float logicalWidth() const { return m_rootInlineBox->lineBoxWidth().toFloat(); }
     float inkOverflowLogicalTop() const { return m_rootInlineBox->logicalTopVisualOverflow(); }
     float inkOverflowLogicalBottom() const { return m_rootInlineBox->logicalBottomVisualOverflow(); }
-    float scrollableOverflowTop() const { return logicalTop(); }
-    float scrollableOverflowBottom() const { return logicalBottom(); }
+    float scrollableOverflowTop() const { return m_rootInlineBox->logicalTopLayoutOverflow(); }
+    float scrollableOverflowBottom() const { return m_rootInlineBox->logicalBottomLayoutOverflow(); }
 
-    bool hasEllipsis() const { return false; }
+    bool hasEllipsis() const { return !!m_rootInlineBox->ellipsisBox(); }
     FloatRect ellipsisVisualRectIgnoringBlockDirection() const
     {
-        ASSERT_NOT_REACHED();
-        return { };
+        ASSERT(hasEllipsis());
+        return m_rootInlineBox->ellipsisBox()->frameRect();
     }
 
     TextRun ellipsisText() const
     {
-        ASSERT_NOT_REACHED();
-        return TextRun { emptyString() };
+        ASSERT(hasEllipsis());
+        return m_rootInlineBox->ellipsisBox()->createTextRun();
     }
 
     float contentLogicalLeft() const { return m_rootInlineBox->logicalLeft(); }
@@ -76,12 +76,16 @@ public:
 
     const RenderBlockFlow& formattingContextRoot() const { return m_rootInlineBox->blockFlow(); }
 
-    RenderFragmentContainer* containingFragment() const { return nullptr; }
-    bool isFirstAfterPageBreak() const { return false; }
+    RenderFragmentContainer* containingFragment() const { return m_rootInlineBox->containingFragment(); }
+    bool isFirstAfterPageBreak() const { return m_rootInlineBox->isFirstAfterPageBreak(); }
 
     size_t lineIndex() const
     {
-        return formattingContextRoot().legacyRootBox() ? 1 : 0;
+        size_t count = 0;
+        for (auto* box = formattingContextRoot().firstRootBox(); box && box != m_rootInlineBox; box = box->nextRootBox())
+            ++count;
+
+        return count;
     }
 
 

@@ -149,7 +149,6 @@ public:
     int intValue() const;
     float percent() const;
     CalculationValue& calculationValue() const;
-    Ref<CalculationValue> protectedCalculationValue() const;
 
     LengthType type() const;
     WEBCORE_EXPORT IPCData ipcData() const;

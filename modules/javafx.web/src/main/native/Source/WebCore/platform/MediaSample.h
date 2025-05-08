@@ -30,6 +30,7 @@
 #include "PlatformVideoColorSpace.h"
 #include "SharedBuffer.h"
 #include <functional>
+#include <wtf/EnumTraits.h>
 #include <wtf/MediaTime.h>
 #include <wtf/PrintStream.h>
 #include <wtf/ThreadSafeRefCounted.h>

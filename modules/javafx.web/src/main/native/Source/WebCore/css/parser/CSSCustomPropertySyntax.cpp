@@ -34,10 +34,8 @@
 namespace WebCore {
 
 template<typename CharacterType>
-auto CSSCustomPropertySyntax::parseComponent(std::span<const CharacterType> span) -> std::optional<Component>
+auto CSSCustomPropertySyntax::parseComponent(StringParsingBuffer<CharacterType> buffer) -> std::optional<Component>
 {
-    StringParsingBuffer buffer { span };
-
     auto consumeMultiplier = [&] {
         if (skipExactly(buffer, '+'))
             return Multiplier::SpaceList;
@@ -52,7 +50,7 @@ auto CSSCustomPropertySyntax::parseComponent(std::span<const CharacterType> span
         if (buffer.position() == begin)
             return { };
 
-        auto dataTypeName = StringView(std::span(begin, buffer.position()));
+        auto dataTypeName = StringView(begin, buffer.position() - begin);
         if (!skipExactly(buffer, '>'))
             return { };
 
@@ -77,7 +75,7 @@ auto CSSCustomPropertySyntax::parseComponent(std::span<const CharacterType> span
         ++buffer;
 
     auto ident = [&] {
-        auto tokenizer = CSSTokenizer::tryCreate(StringView(std::span(begin, buffer.position())).toStringWithoutCopying());
+        auto tokenizer = CSSTokenizer::tryCreate(StringView(begin, buffer.position() - begin).toStringWithoutCopying());
         if (!tokenizer)
             return nullAtom();
 
@@ -119,7 +117,7 @@ std::optional<CSSCustomPropertySyntax> CSSCustomPropertySyntax::parse(StringView
 
             skipUntil(buffer, '|');
 
-            auto component = parseComponent(std::span { begin, buffer.position() });
+            auto component = parseComponent(StringParsingBuffer { begin, buffer.position() });
             if (!component)
                 return { };
 
@@ -149,7 +147,6 @@ auto CSSCustomPropertySyntax::typeForTypeName(StringView dataTypeName) -> Type
         { "number", Type::Number },
         { "percentage", Type::Percentage },
         { "resolution", Type::Resolution },
-        { "string", Type::String },
         { "time", Type::Time },
         { "transform-function", Type::TransformFunction },
         { "transform-list", Type::TransformList },

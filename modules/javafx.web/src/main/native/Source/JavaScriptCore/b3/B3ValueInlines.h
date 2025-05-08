@@ -75,8 +75,6 @@ namespace JSC { namespace B3 {
     case SExt8: \
     case SExt16: \
     case Trunc: \
-    case TruncHigh: \
-    case Stitch: \
     case SExt8To64: \
     case SExt16To64: \
     case SExt32: \
@@ -243,7 +241,7 @@ namespace JSC { namespace B3 {
         RELEASE_ASSERT_NOT_REACHED(); \
     }
 
-ALWAYS_INLINE size_t Value::computeAdjacencyListOffset() const
+ALWAYS_INLINE size_t Value::adjacencyListOffset() const
 {
 #define VALUE_TYPE_SIZE(ValueType) sizeof(ValueType)
     DISPATCH_ON_KIND(VALUE_TYPE_SIZE);
@@ -423,13 +421,13 @@ inline bool Value::isRepresentableAs() const
 {
     switch (opcode()) {
     case Const32:
-        return WTF::isRepresentableAs<T>(asInt32());
+        return B3::isRepresentableAs<T>(asInt32());
     case Const64:
-        return WTF::isRepresentableAs<T>(asInt64());
+        return B3::isRepresentableAs<T>(asInt64());
     case ConstDouble:
-        return WTF::isRepresentableAs<T>(asDouble());
+        return B3::isRepresentableAs<T>(asDouble());
     case ConstFloat:
-        return WTF::isRepresentableAs<T>(asFloat());
+        return B3::isRepresentableAs<T>(asFloat());
     default:
         return false;
     }

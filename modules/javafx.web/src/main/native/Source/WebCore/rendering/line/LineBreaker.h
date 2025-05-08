@@ -47,15 +47,31 @@ public:
     explicit LineBreaker(RenderBlockFlow& block)
         : m_block(block)
     {
+        reset();
     }
 
-    LegacyInlineIterator nextLineBreak(InlineBidiResolver&, LineInfo&, RenderTextInfo&);
+    LegacyInlineIterator nextLineBreak(InlineBidiResolver&, LineInfo&, RenderTextInfo&, FloatingObject* lastFloatFromPreviousLine, unsigned consecutiveHyphenatedLines, WordMeasurements&);
+
+    bool lineWasHyphenated() { return m_hyphenated; }
+    const Vector<RenderBox*>& positionedObjects() { return m_positionedObjects; }
+    UsedClear usedClear() { return m_clear; }
 
 private:
+    void reset();
+
     void skipTrailingWhitespace(LegacyInlineIterator&, const LineInfo&);
-    void skipLeadingWhitespace(InlineBidiResolver&, LineInfo&);
+    void skipLeadingWhitespace(InlineBidiResolver&, LineInfo&, FloatingObject* lastFloatFromPreviousLine, LineWidth&);
+
+    FloatingObject* insertFloatingObject(RenderBox& floatBox) { return m_block.insertFloatingObject(floatBox); }
+    bool positionNewFloatOnLine(const FloatingObject& newFloat, FloatingObject* lastFloatFromPreviousLine, LineInfo& lineInfo, LineWidth& width)
+    {
+        return m_block.legacyLineLayout()->positionNewFloatOnLine(newFloat, lastFloatFromPreviousLine, lineInfo, width);
+    }
 
     RenderBlockFlow& m_block;
+    bool m_hyphenated;
+    UsedClear m_clear;
+    Vector<RenderBox*> m_positionedObjects;
 };
 
 } // namespace WebCore

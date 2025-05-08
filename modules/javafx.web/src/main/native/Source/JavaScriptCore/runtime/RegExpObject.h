@@ -113,12 +113,12 @@ public:
 
     inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
-    static constexpr ptrdiff_t offsetOfRegExpAndFlags()
+    static ptrdiff_t offsetOfRegExpAndFlags()
     {
         return OBJECT_OFFSETOF(RegExpObject, m_regExpAndFlags);
     }
 
-    static constexpr ptrdiff_t offsetOfLastIndex()
+    static ptrdiff_t offsetOfLastIndex()
     {
         return OBJECT_OFFSETOF(RegExpObject, m_lastIndex);
     }

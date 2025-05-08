@@ -33,11 +33,11 @@
 #include "Path.h"
 #include "RenderImage.h"
 #include "RenderView.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLAreaElement);
+WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLAreaElement);
 
 using namespace HTMLNames;
 
@@ -46,8 +46,6 @@ inline HTMLAreaElement::HTMLAreaElement(const QualifiedName& tagName, Document& 
 {
     ASSERT(hasTagName(areaTag));
 }
-
-HTMLAreaElement::~HTMLAreaElement() = default;
 
 Ref<HTMLAreaElement> HTMLAreaElement::create(const QualifiedName& tagName, Document& document)
 {
@@ -117,7 +115,7 @@ Path HTMLAreaElement::computePath(RenderObject* obj) const
         size = obj->absoluteOutlineBounds().size();
 
     Path p = getRegion(size);
-    float zoomFactor = obj->style().usedZoom();
+    float zoomFactor = obj->style().effectiveZoom();
     if (zoomFactor != 1.0f) {
         AffineTransform zoomTransform;
         zoomTransform.scale(zoomFactor);

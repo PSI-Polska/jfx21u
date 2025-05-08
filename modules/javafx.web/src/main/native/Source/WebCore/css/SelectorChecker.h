@@ -86,8 +86,7 @@ public:
         PseudoId pseudoId { PseudoId::None };
         AtomString pseudoElementNameArgument;
         std::optional<StyleScrollbarState> scrollbarState;
-        Vector<AtomString> classList;
-        RefPtr<const ContainerNode> scope;
+        const ContainerNode* scope { nullptr };
         const Element* hasScope { nullptr };
         bool matchesAllHasScopes { false };
         Style::ScopeOrdinal styleScopeOrdinal { Style::ScopeOrdinal::Element };
@@ -97,7 +96,6 @@ public:
         Style::Relations styleRelations;
         PseudoIdSet pseudoIDSet;
         bool matchedInsideScope { false };
-        bool disallowHasPseudoClass { false };
     };
 
     bool match(const CSSSelector&, const Element&, CheckingContext&) const;
@@ -113,13 +111,12 @@ public:
     struct LocalContext;
 
 private:
-    MatchResult matchRecursively(CheckingContext&, LocalContext&, PseudoIdSet&) const;
-    bool checkOne(CheckingContext&, LocalContext&, MatchType&) const;
+    MatchResult matchRecursively(CheckingContext&, const LocalContext&, PseudoIdSet&) const;
+    bool checkOne(CheckingContext&, const LocalContext&, MatchType&) const;
     bool matchSelectorList(CheckingContext&, const LocalContext&, const Element&, const CSSSelectorList&) const;
     bool matchHasPseudoClass(CheckingContext&, const Element&, const CSSSelector&) const;
 
     bool checkScrollbarPseudoClass(const CheckingContext&, const Element&, const CSSSelector&) const;
-    bool checkViewTransitionPseudoClass(const CheckingContext&, const Element&, const CSSSelector&) const;
 
     bool m_strictParsing;
     bool m_documentIsHTML;

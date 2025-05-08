@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include <span>
 #include <wtf/Forward.h>
 
 typedef const struct __CFData* CFDataRef;
@@ -35,7 +34,6 @@ namespace WTF {
 
 constexpr size_t URLBytesVectorInlineCapacity = 2048;
 
-RetainPtr<CFDataRef> bytesAsCFData(std::span<const uint8_t>);
 RetainPtr<CFDataRef> bytesAsCFData(CFURLRef);
 WTF_EXPORT_PRIVATE String bytesAsString(CFURLRef);
 WTF_EXPORT_PRIVATE Vector<uint8_t, URLBytesVectorInlineCapacity> bytesAsVector(CFURLRef);

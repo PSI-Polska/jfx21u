@@ -37,12 +37,12 @@
 #include "StyleSheetContents.h"
 #include "XMLDocumentParser.h"
 #include "XSLStyleSheet.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/SetForScope.h>
-#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ProcessingInstruction);
+WTF_MAKE_ISO_ALLOCATED_IMPL(ProcessingInstruction);
 
 inline ProcessingInstruction::ProcessingInstruction(Document& document, String&& target, String&& data)
     : CharacterData(document, WTFMove(data), PROCESSING_INSTRUCTION_NODE)
@@ -81,12 +81,11 @@ Ref<Node> ProcessingInstruction::cloneNodeInternal(Document& targetDocument, Clo
 
 void ProcessingInstruction::checkStyleSheet()
 {
-    Ref document = this->document();
-    if (m_target == "xml-stylesheet"_s && document->frame() && parentNode() == document.ptr()) {
+    if (m_target == "xml-stylesheet"_s && document().frame() && parentNode() == &document()) {
         // see http://www.w3.org/TR/xml-stylesheet/
         // ### support stylesheet included in a fragment of this (or another) document
         // ### make sure this gets called when adding from javascript
-        auto attributes = parseAttributes(document->cachedResourceLoader(), data());
+        auto attributes = parseAttributes(data());
         if (!attributes)
             return;
         String type = attributes->get<HashTranslatorASCIILiteral>("type"_s);
@@ -109,6 +108,7 @@ void ProcessingInstruction::checkStyleSheet()
         if (m_alternate && m_title.isEmpty())
             return;
 
+        Ref document = this->document();
         if (href.length() > 1 && href[0] == '#') {
             m_localHref = href.substring(1);
 #if ENABLE(XSLT)

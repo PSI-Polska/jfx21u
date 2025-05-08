@@ -35,7 +35,7 @@
 #include "TypeError.h"
 #include "TypedArrays.h"
 #include <wtf/CheckedArithmetic.h>
-#include <wtf/text/MakeString.h>
+#include <wtf/text/StringConcatenateNumbers.h>
 
 namespace JSC {
 
@@ -320,9 +320,6 @@ bool JSGenericTypedArrayView<Adaptor>::setFromTypedArray(JSGlobalObject* globalO
     case TypeUint32:
         RELEASE_AND_RETURN(scope, setWithSpecificType<Uint32Adaptor>(
             globalObject, offset, jsCast<JSUint32Array*>(object), objectOffset, length, type));
-    case TypeFloat16:
-        RELEASE_AND_RETURN(scope, setWithSpecificType<Float16Adaptor>(
-            globalObject, offset, jsCast<JSFloat16Array*>(object), objectOffset, length, type));
     case TypeFloat32:
         RELEASE_AND_RETURN(scope, setWithSpecificType<Float32Adaptor>(
             globalObject, offset, jsCast<JSFloat32Array*>(object), objectOffset, length, type));
@@ -582,7 +579,7 @@ bool JSGenericTypedArrayView<Adaptor>::defineOwnProperty(
     JSGenericTypedArrayView* thisObject = jsCast<JSGenericTypedArrayView*>(object);
 
     if (std::optional<uint32_t> index = parseIndex(propertyName)) {
-        auto throwTypeErrorIfNeeded = [&] (ASCIILiteral errorMessage) -> bool {
+        auto throwTypeErrorIfNeeded = [&] (const char* errorMessage) -> bool {
             if (shouldThrow)
                 throwTypeError(globalObject, scope, makeString(errorMessage, *index));
             return false;
@@ -592,19 +589,19 @@ bool JSGenericTypedArrayView<Adaptor>::defineOwnProperty(
             return typeError(globalObject, scope, shouldThrow, typedArrayBufferHasBeenDetachedErrorMessage);
 
         if (!thisObject->inBounds(index.value()))
-            return throwTypeErrorIfNeeded("Attempting to store out-of-bounds property on a typed array at index: "_s);
+            return throwTypeErrorIfNeeded("Attempting to store out-of-bounds property on a typed array at index: ");
 
         if (descriptor.isAccessorDescriptor())
-            return throwTypeErrorIfNeeded("Attempting to store accessor property on a typed array at index: "_s);
+            return throwTypeErrorIfNeeded("Attempting to store accessor property on a typed array at index: ");
 
         if (descriptor.configurablePresent() && !descriptor.configurable())
-            return throwTypeErrorIfNeeded("Attempting to store non-configurable property on a typed array at index: "_s);
+            return throwTypeErrorIfNeeded("Attempting to store non-configurable property on a typed array at index: ");
 
         if (descriptor.enumerablePresent() && !descriptor.enumerable())
-            return throwTypeErrorIfNeeded("Attempting to store non-enumerable property on a typed array at index: "_s);
+            return throwTypeErrorIfNeeded("Attempting to store non-enumerable property on a typed array at index: ");
 
         if (descriptor.writablePresent() && !descriptor.writable())
-            return throwTypeErrorIfNeeded("Attempting to store non-writable property on a typed array at index: "_s);
+            return throwTypeErrorIfNeeded("Attempting to store non-writable property on a typed array at index: ");
 
         scope.release();
         if (descriptor.value())
@@ -880,9 +877,6 @@ template<typename Adaptor> inline auto JSGenericTypedArrayView<Adaptor>::sort() 
     }
 
     switch (Adaptor::typeValue) {
-    case TypeFloat16:
-        sortFloat<int16_t>(array, array + length);
-        break;
     case TypeFloat32:
         sortFloat<int32_t>(array, array + length);
         break;
@@ -940,8 +934,6 @@ inline GCClient::IsoSubspace* JSGenericTypedArrayView<Adaptor>::subspaceFor(VM& 
         return vm.uint16ArraySpace<access>();
     case TypeUint32:
         return vm.uint32ArraySpace<access>();
-    case TypeFloat16:
-        return vm.float16ArraySpace<access>();
     case TypeFloat32:
         return vm.float32ArraySpace<access>();
     case TypeFloat64:

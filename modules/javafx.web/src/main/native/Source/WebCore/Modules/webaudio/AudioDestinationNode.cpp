@@ -40,11 +40,11 @@
 #include "AudioWorkletMessagingProxy.h"
 #include "AudioWorkletThread.h"
 #include "DenormalDisabler.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(AudioDestinationNode);
+WTF_MAKE_ISO_ALLOCATED_IMPL(AudioDestinationNode);
 
 AudioDestinationNode::AudioDestinationNode(BaseAudioContext& context, float sampleRate)
     : AudioNode(context, NodeTypeDestination)
@@ -118,12 +118,12 @@ void AudioDestinationNode::renderQuantum(AudioBus* destinationBus, size_t number
         workletGlobalScope->handlePostRenderTasks(m_currentSampleFrame);
 }
 
-void AudioDestinationNode::ref() const
+void AudioDestinationNode::ref()
 {
     context().ref();
 }
 
-void AudioDestinationNode::deref() const
+void AudioDestinationNode::deref()
 {
     context().deref();
 }

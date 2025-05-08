@@ -26,7 +26,7 @@
 #include "DOMException.h"
 #include "JSDOMException.h"
 #include "JSDOMPromiseDeferred.h"
-#include "JSDOMWindow.h"
+#include "JSLocalDOMWindow.h"
 #include "LocalDOMWindow.h"
 #include "ScriptExecutionContext.h"
 #include <JavaScriptCore/ErrorHandlingScope.h>
@@ -34,7 +34,6 @@
 #include <JavaScriptCore/ExceptionHelpers.h>
 #include <JavaScriptCore/ScriptCallStack.h>
 #include <JavaScriptCore/ScriptCallStackFactory.h>
-#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 using namespace JSC;
@@ -51,15 +50,6 @@ void reportException(JSGlobalObject* lexicalGlobalObject, JSValue exceptionValue
     }
 
     reportException(lexicalGlobalObject, exception, cachedScript, fromModule);
-}
-
-void reportExceptionIfJSDOMWindow(JSC::JSGlobalObject* globalObject, JSC::JSValue exception)
-{
-    // Make sure the context has a DOMWindow global object, otherwise this context didn't originate from a Page.
-    if (!globalObject->inherits<JSDOMWindow>())
-        return;
-
-    reportException(globalObject, exception);
 }
 
 String retrieveErrorMessageWithoutName(JSGlobalObject& lexicalGlobalObject, VM& vm, JSValue exception, CatchScope& catchScope)
@@ -117,9 +107,8 @@ void reportException(JSGlobalObject* lexicalGlobalObject, JSC::Exception* except
     vm.clearLastException();
 
     auto* globalObject = jsCast<JSDOMGlobalObject*>(lexicalGlobalObject);
-    if (auto* window = jsDynamicCast<JSDOMWindow*>(globalObject)) {
-        RefPtr localDOMWindow = dynamicDowncast<LocalDOMWindow>(window->wrapped());
-        if (!localDOMWindow || !localDOMWindow->isCurrentlyDisplayedInFrame())
+    if (auto* window = jsDynamicCast<JSLocalDOMWindow*>(globalObject)) {
+        if (!window->wrapped().isCurrentlyDisplayedInFrame())
             return;
     }
 
@@ -216,12 +205,12 @@ static EncodedJSValue throwTypeError(JSC::JSGlobalObject& lexicalGlobalObject, J
     return throwVMTypeError(&lexicalGlobalObject, scope, errorMessage);
 }
 
-template<typename... StringTypes> static String makeArgumentTypeErrorMessage(unsigned argumentIndex, ASCIILiteral argumentName, ASCIILiteral interfaceName, ASCIILiteral functionName, StringTypes ...strings)
+template<typename... StringTypes> static String makeArgumentTypeErrorMessage(unsigned argumentIndex, const char* argumentName, const char* interfaceName, const char* functionName, StringTypes ...strings)
 {
     return makeString(
-        "Argument "_s, argumentIndex + 1, " ('"_s, argumentName, "') to "_s,
-        functionName ? std::make_tuple(interfaceName, "."_s, functionName) : std::make_tuple("the "_s, interfaceName, " constructor"_s),
-        " must be "_s, strings...
+        "Argument ", argumentIndex + 1, " ('", argumentName, "') to ",
+        functionName ? std::make_tuple(interfaceName, ".", functionName) : std::make_tuple("the ", interfaceName, " constructor"),
+        " must be ", strings...
     );
 }
 
@@ -243,39 +232,39 @@ void throwSecurityError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScop
     throwException(&lexicalGlobalObject, scope, createDOMException(&lexicalGlobalObject, ExceptionCode::SecurityError, message));
 }
 
-JSC::EncodedJSValue throwArgumentMustBeEnumError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, unsigned argumentIndex, ASCIILiteral argumentName, ASCIILiteral functionInterfaceName, ASCIILiteral functionName, ASCIILiteral expectedValues)
+JSC::EncodedJSValue throwArgumentMustBeEnumError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, unsigned argumentIndex, const char* argumentName, const char* functionInterfaceName, const char* functionName, const char* expectedValues)
 {
-    return throwVMTypeError(&lexicalGlobalObject, scope, makeArgumentTypeErrorMessage(argumentIndex, argumentName, functionInterfaceName, functionName, "one of: "_s, expectedValues));
+    return throwVMTypeError(&lexicalGlobalObject, scope, makeArgumentTypeErrorMessage(argumentIndex, argumentName, functionInterfaceName, functionName, "one of: ", expectedValues));
 }
 
-JSC::EncodedJSValue throwArgumentMustBeFunctionError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, unsigned argumentIndex, ASCIILiteral argumentName, ASCIILiteral interfaceName, ASCIILiteral functionName)
+JSC::EncodedJSValue throwArgumentMustBeFunctionError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, unsigned argumentIndex, const char* argumentName, const char* interfaceName, const char* functionName)
 {
-    return throwVMTypeError(&lexicalGlobalObject, scope, makeArgumentTypeErrorMessage(argumentIndex, argumentName, interfaceName, functionName, "a function"_s));
+    return throwVMTypeError(&lexicalGlobalObject, scope, makeArgumentTypeErrorMessage(argumentIndex, argumentName, interfaceName, functionName, "a function"));
 }
 
-JSC::EncodedJSValue throwArgumentMustBeObjectError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, unsigned argumentIndex, ASCIILiteral argumentName, ASCIILiteral interfaceName, ASCIILiteral functionName)
+JSC::EncodedJSValue throwArgumentMustBeObjectError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, unsigned argumentIndex, const char* argumentName, const char* interfaceName, const char* functionName)
 {
-    return throwVMTypeError(&lexicalGlobalObject, scope, makeArgumentTypeErrorMessage(argumentIndex, argumentName, interfaceName, functionName, "an object"_s));
+    return throwVMTypeError(&lexicalGlobalObject, scope, makeArgumentTypeErrorMessage(argumentIndex, argumentName, interfaceName, functionName, "an object"));
 }
 
-JSC::EncodedJSValue throwArgumentTypeError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, unsigned argumentIndex, ASCIILiteral argumentName, ASCIILiteral functionInterfaceName, ASCIILiteral functionName, ASCIILiteral expectedType)
+JSC::EncodedJSValue throwArgumentTypeError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, unsigned argumentIndex, const char* argumentName, const char* functionInterfaceName, const char* functionName, const char* expectedType)
 {
-    return throwVMTypeError(&lexicalGlobalObject, scope, makeArgumentTypeErrorMessage(argumentIndex, argumentName, functionInterfaceName, functionName, "an instance of "_s, expectedType));
+    return throwVMTypeError(&lexicalGlobalObject, scope, makeArgumentTypeErrorMessage(argumentIndex, argumentName, functionInterfaceName, functionName, "an instance of ", expectedType));
 }
 
-void throwAttributeTypeError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, ASCIILiteral interfaceName, ASCIILiteral attributeName, ASCIILiteral expectedType)
+void throwAttributeTypeError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, const char* interfaceName, const char* attributeName, const char* expectedType)
 {
-    throwTypeError(lexicalGlobalObject, scope, makeString("The "_s, interfaceName, '.', attributeName, " attribute must be an instance of "_s, expectedType));
+    throwTypeError(lexicalGlobalObject, scope, makeString("The ", interfaceName, '.', attributeName, " attribute must be an instance of ", expectedType));
 }
 
-JSC::EncodedJSValue throwRequiredMemberTypeError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, ASCIILiteral memberName, ASCIILiteral dictionaryName, ASCIILiteral expectedType)
+JSC::EncodedJSValue throwRequiredMemberTypeError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, const char* memberName, const char* dictionaryName, const char* expectedType)
 {
-    return throwVMTypeError(&lexicalGlobalObject, scope, makeString("Member "_s, dictionaryName, '.', memberName, " is required and must be an instance of "_s, expectedType));
+    return throwVMTypeError(&lexicalGlobalObject, scope, makeString("Member ", dictionaryName, '.', memberName, " is required and must be an instance of ", expectedType));
 }
 
-JSC::EncodedJSValue throwConstructorScriptExecutionContextUnavailableError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, ASCIILiteral interfaceName)
+JSC::EncodedJSValue throwConstructorScriptExecutionContextUnavailableError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, const char* interfaceName)
 {
-    return throwVMError(&lexicalGlobalObject, scope, createReferenceError(&lexicalGlobalObject, makeString(interfaceName, " constructor associated execution context is unavailable"_s)));
+    return throwVMError(&lexicalGlobalObject, scope, createReferenceError(&lexicalGlobalObject, makeString(interfaceName, " constructor associated execution context is unavailable")));
 }
 
 void throwSequenceTypeError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope)
@@ -295,13 +284,12 @@ JSC::EncodedJSValue rejectPromiseWithGetterTypeError(JSC::JSGlobalObject& lexica
 
 String makeThisTypeErrorMessage(const char* interfaceName, const char* functionName)
 {
-    auto interfaceNameSpan = span(interfaceName);
-    return makeString("Can only call "_s, interfaceNameSpan, '.', span(functionName), " on instances of "_s, interfaceNameSpan);
+    return makeString("Can only call ", interfaceName, '.', functionName, " on instances of ", interfaceName);
 }
 
-String makeUnsupportedIndexedSetterErrorMessage(ASCIILiteral interfaceName)
+String makeUnsupportedIndexedSetterErrorMessage(const char* interfaceName)
 {
-    return makeString("Failed to set an indexed property on "_s, interfaceName, ": Indexed property setter is not supported."_s);
+    return makeString("Failed to set an indexed property on ", interfaceName, ": Indexed property setter is not supported.");
 }
 
 EncodedJSValue throwThisTypeError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, const char* interfaceName, const char* functionName)

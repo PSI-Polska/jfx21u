@@ -100,7 +100,7 @@ struct CrossThreadRecord {
         , responseBodySize(responseBodySize)
     {
     }
-    WEBCORE_EXPORT CrossThreadRecord isolatedCopy() &&;
+    CrossThreadRecord isolatedCopy() &&;
 
     uint64_t identifier;
     uint64_t updateResponseCounter;

@@ -25,12 +25,11 @@
 
 #pragma once
 
-#include "CSSPrimitiveValue.h"
 #include "CSSValue.h"
-#include <wtf/Function.h>
 
 namespace WebCore {
 
+class CSSPrimitiveValue;
 class StyleImage;
 
 namespace Style {
@@ -50,17 +49,6 @@ public:
     bool isPrefixed() const { return m_isPrefixed; }
 
     RefPtr<StyleImage> createStyleImage(Style::BuilderState&) const;
-
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
-    {
-        if (func(m_fromValueOrNone.get()) == IterationStatus::Done)
-            return IterationStatus::Done;
-        if (func(m_toValueOrNone.get()) == IterationStatus::Done)
-            return IterationStatus::Done;
-        if (func(m_percentageValue.get()) == IterationStatus::Done)
-            return IterationStatus::Done;
-        return IterationStatus::Continue;
-    }
 
 private:
     CSSCrossfadeValue(Ref<CSSValue>&& fromValueOrNone, Ref<CSSValue>&& toValueOrNone, Ref<CSSPrimitiveValue>&& percentageValue, bool isPrefixed);

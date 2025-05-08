@@ -21,7 +21,6 @@
 #pragma once
 
 #include "RectBase.h"
-#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -39,7 +38,7 @@ public:
 private:
     static String generateCSSString(const String& top, const String& right, const String& bottom, const String& left)
     {
-        return makeString("rect("_s, top, ", "_s, right, ", "_s, bottom, ", "_s, left, ')');
+        return "rect(" + top + ", " + right + ", " + bottom + ", " + left + ')';
     }
 };
 

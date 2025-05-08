@@ -49,9 +49,15 @@ private:
     {
     }
 
-    ThreadSafeDataBufferImpl(std::span<const uint8_t> data)
+    ThreadSafeDataBufferImpl(const Vector<uint8_t>& data)
         : m_data(data)
     {
+    }
+
+    ThreadSafeDataBufferImpl(const void* data, unsigned length)
+        : m_data(length)
+    {
+        memcpy(m_data.data(), data, length);
     }
 
     Vector<uint8_t> m_data;
@@ -66,9 +72,14 @@ public:
         return ThreadSafeDataBuffer(WTFMove(data));
     }
 
-    static ThreadSafeDataBuffer copyData(std::span<const uint8_t> data)
+    static ThreadSafeDataBuffer copyVector(const Vector<uint8_t>& data)
     {
         return ThreadSafeDataBuffer(data);
+    }
+
+    static ThreadSafeDataBuffer copyData(const void* data, unsigned length)
+    {
+        return ThreadSafeDataBuffer(data, length);
     }
 
     ThreadSafeDataBuffer() = default;
@@ -109,8 +120,13 @@ private:
     {
     }
 
-    explicit ThreadSafeDataBuffer(std::span<const uint8_t> data)
+    explicit ThreadSafeDataBuffer(const Vector<uint8_t>& data)
         : m_impl(adoptRef(new ThreadSafeDataBufferImpl(data)))
+    {
+    }
+
+    explicit ThreadSafeDataBuffer(const void* data, unsigned length)
+        : m_impl(adoptRef(new ThreadSafeDataBufferImpl(data, length)))
     {
     }
 

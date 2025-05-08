@@ -55,7 +55,6 @@ public:
 
     CustomElementQueue& backupElementQueue();
 
-    void scheduleIdlePeriod(Page&);
     void didScheduleRenderingUpdate(Page&, MonotonicTime);
     void didStartRenderingUpdate(Page&);
     void opportunisticallyRunIdleCallbacks();
@@ -74,8 +73,6 @@ private:
 
     std::optional<MonotonicTime> nextRenderingTime() const;
     void didReachTimeToRun();
-
-    void decayIdleCallbackDuration() { m_expectedIdleCallbackDuration /= 2; }
 
     String m_agentClusterKey;
     Timer m_timer;
@@ -98,7 +95,6 @@ private:
     bool m_processingBackupElementQueue { false };
 
     MonotonicTime m_lastIdlePeriodStartTime;
-    Seconds m_expectedIdleCallbackDuration { 4_ms };
 };
 
 } // namespace WebCore

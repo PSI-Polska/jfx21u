@@ -29,7 +29,7 @@
 #include "APICast.h"
 #include "IntegrityInlines.h"
 #include "JSCInlines.h"
-#include "JSGlobalProxyInlines.h"
+#include "JSGlobalProxy.h"
 #include "JSObjectRefPrivate.h"
 #include "JavaScript.h"
 #include "ProxyObject.h"

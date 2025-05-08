@@ -45,7 +45,7 @@ constexpr bool verbose = false;
 class StoreBarrierClusteringPhase : public Phase {
 public:
     StoreBarrierClusteringPhase(Graph& graph)
-        : Phase(graph, "store barrier clustering"_s)
+        : Phase(graph, "store barrier clustering")
         , m_insertionSet(graph)
     {
     }

@@ -57,9 +57,8 @@ struct ServiceWorkerRegistrationData;
 struct WorkerFetchResult;
 enum class CertificateInfoPolicy : uint8_t;
 
-class WorkerScriptLoader final : public RefCounted<WorkerScriptLoader>, public ThreadableLoaderClient {
+class WorkerScriptLoader : public RefCounted<WorkerScriptLoader>, public ThreadableLoaderClient {
     WTF_MAKE_FAST_ALLOCATED;
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WorkerScriptLoader);
 public:
     static Ref<WorkerScriptLoader> create()
     {
@@ -71,7 +70,7 @@ public:
     std::optional<Exception> loadSynchronously(ScriptExecutionContext*, const URL&, Source, FetchOptions::Mode, FetchOptions::Cache, ContentSecurityPolicyEnforcement, const String& initiatorIdentifier);
     void loadAsynchronously(ScriptExecutionContext&, ResourceRequest&&, Source, FetchOptions&&, ContentSecurityPolicyEnforcement, ServiceWorkersMode, WorkerScriptLoaderClient&, String&& taskMode, ScriptExecutionContextIdentifier clientIdentifier = { });
 
-    void notifyError(ScriptExecutionContextIdentifier);
+    void notifyError();
 
     OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections() const { return m_advancedPrivacyProtections; }
 
@@ -92,10 +91,10 @@ public:
 
     WorkerFetchResult fetchResult() const;
 
-    void didReceiveResponse(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const ResourceResponse&) override;
+    void didReceiveResponse(ResourceLoaderIdentifier, const ResourceResponse&) override;
     void didReceiveData(const SharedBuffer&) override;
-    void didFinishLoading(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const NetworkLoadMetrics&) override;
-    void didFail(ScriptExecutionContextIdentifier, const ResourceError&) override;
+    void didFinishLoading(ResourceLoaderIdentifier, const NetworkLoadMetrics&) override;
+    void didFail(const ResourceError&) override;
 
     void cancel();
 
@@ -135,7 +134,7 @@ private:
     ~WorkerScriptLoader();
 
     std::unique_ptr<ResourceRequest> createResourceRequest(const String& initiatorIdentifier);
-    void notifyFinished(ScriptExecutionContextIdentifier);
+    void notifyFinished();
 
     WeakPtr<WorkerScriptLoaderClient> m_client;
     RefPtr<ThreadableLoader> m_threadableLoader;

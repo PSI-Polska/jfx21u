@@ -107,7 +107,7 @@ static inline Color getSystemAccentColor()
 static inline Color getAccentColor(const RenderObject& renderObject)
 {
     if (!renderObject.style().hasAutoAccentColor())
-        return renderObject.style().usedAccentColor(renderObject.styleColorOptions());
+        return renderObject.style().effectiveAccentColor();
 
     return getSystemAccentColor();
 }
@@ -118,11 +118,9 @@ RenderTheme& RenderTheme::singleton()
     return theme;
 }
 
-RenderThemeAdwaita::~RenderThemeAdwaita() = default;
-
 bool RenderThemeAdwaita::supportsFocusRing(const RenderStyle& style) const
 {
-    switch (style.usedAppearance()) {
+    switch (style.effectiveAppearance()) {
     case StyleAppearance::PushButton:
     case StyleAppearance::Button:
     case StyleAppearance::TextField:
@@ -202,7 +200,7 @@ void RenderThemeAdwaita::platformColorsDidChange()
 
 String RenderThemeAdwaita::extraDefaultStyleSheet()
 {
-    return StringImpl::createWithoutCopying(themeAdwaitaUserAgentStyleSheet);
+    return StringImpl::createWithoutCopying(themeAdwaitaUserAgentStyleSheet, sizeof(themeAdwaitaUserAgentStyleSheet));
 }
 
 #if ENABLE(VIDEO)
@@ -210,7 +208,7 @@ String RenderThemeAdwaita::extraDefaultStyleSheet()
 Vector<String, 2> RenderThemeAdwaita::mediaControlsScripts()
 {
 #if ENABLE(MODERN_MEDIA_CONTROLS)
-    return { StringImpl::createWithoutCopying(ModernMediaControlsJavaScript) };
+    return { StringImpl::createWithoutCopying(ModernMediaControlsJavaScript, sizeof(ModernMediaControlsJavaScript)) };
 #else
     return { };
 #endif
@@ -220,7 +218,7 @@ String RenderThemeAdwaita::mediaControlsStyleSheet()
 {
 #if ENABLE(MODERN_MEDIA_CONTROLS)
     if (m_mediaControlsStyleSheet.isEmpty())
-        m_mediaControlsStyleSheet = StringImpl::createWithoutCopying(ModernMediaControlsUserAgentStyleSheet);
+        m_mediaControlsStyleSheet = StringImpl::createWithoutCopying(ModernMediaControlsUserAgentStyleSheet, sizeof(ModernMediaControlsUserAgentStyleSheet));
     return m_mediaControlsStyleSheet;
 #else
     return emptyString();
@@ -232,17 +230,17 @@ String RenderThemeAdwaita::mediaControlsStyleSheet()
 String RenderThemeAdwaita::mediaControlsBase64StringForIconNameAndType(const String& iconName, const String& iconType)
 {
 #if USE(GLIB)
-    auto path = makeString("/org/webkit/media-controls/"_s, iconName, '.', iconType);
+    auto path = makeString("/org/webkit/media-controls/", iconName, '.', iconType);
     auto data = adoptGRef(g_resources_lookup_data(path.latin1().data(), G_RESOURCE_LOOKUP_FLAGS_NONE, nullptr));
     if (!data)
         return emptyString();
-    return base64EncodeToString({ static_cast<const uint8_t*>(g_bytes_get_data(data.get(), nullptr)), g_bytes_get_size(data.get()) });
+    return base64EncodeToString(g_bytes_get_data(data.get(), nullptr), g_bytes_get_size(data.get()));
 #elif PLATFORM(WIN)
     auto path = webKitBundlePath(iconName, iconType, "media-controls"_s);
     auto data = FileSystem::readEntireFile(path);
     if (!data)
         return { };
-    return base64EncodeToString(data->span());
+    return base64EncodeToString(data->data(), data->size());
 #else
     return { };
 #endif
@@ -263,54 +261,35 @@ Color RenderThemeAdwaita::systemColor(CSSValueID cssValueID, OptionSet<StyleColo
     switch (cssValueID) {
     case CSSValueActivebuttontext:
     case CSSValueButtontext:
-        if (useDarkAppearance)
-            return { buttonTextColorDark, Color::Flags::Semantic };
-        return { buttonTextColorLight, Color::Flags::Semantic };
+        return useDarkAppearance ? buttonTextColorDark : buttonTextColorLight;
 
     case CSSValueGraytext:
-        if (useDarkAppearance)
-            return { buttonTextDisabledColorDark, Color::Flags::Semantic };
-        return { buttonTextDisabledColorLight, Color::Flags::Semantic };
+        return useDarkAppearance ? buttonTextDisabledColorDark : buttonTextDisabledColorLight;
 
     case CSSValueCanvas:
-        if (useDarkAppearance)
-            return { SRGBA<uint8_t> { 30, 30, 30 }, Color::Flags::Semantic };
-        return { Color::white, Color::Flags::Semantic };
+        return useDarkAppearance ? SRGBA<uint8_t> { 30, 30, 30 } : Color::white;
 
     case CSSValueField:
 #if HAVE(OS_DARK_MODE_SUPPORT)
     case CSSValueWebkitControlBackground:
 #endif
-        if (useDarkAppearance)
-            return { textFieldBackgroundColorDark, Color::Flags::Semantic };
-        return { textFieldBackgroundColorLight, Color::Flags::Semantic };
+        return useDarkAppearance ? textFieldBackgroundColorDark : textFieldBackgroundColorLight;
 
     case CSSValueCanvastext:
     case CSSValueFieldtext:
     case CSSValueText:
-        if (useDarkAppearance)
-            return { Color::white, Color::Flags::Semantic };
-        return { Color::black, Color::Flags::Semantic };
+        return useDarkAppearance ? Color::white : Color::black;
 
     case CSSValueHighlight:
         // Hardcoded to avoid exposing a user appearance preference to the web for fingerprinting.
-        return { SRGBA<uint8_t> { 52, 132, 228 }, Color::Flags::Semantic };
+        return SRGBA<uint8_t> { 52, 132, 228 };
 
     case CSSValueHighlighttext:
-        return { Color::white, Color::Flags::Semantic };
+        return Color::white;
 
     default:
         return RenderTheme::systemColor(cssValueID, options);
     }
-}
-
-bool RenderThemeAdwaita::isControlStyled(const RenderStyle& style, const RenderStyle& userAgentStyle) const
-{
-    auto appearance = style.usedAppearance();
-    if (appearance == StyleAppearance::TextField || appearance == StyleAppearance::TextArea || appearance == StyleAppearance::SearchField || appearance == StyleAppearance::Listbox)
-        return style.border() != userAgentStyle.border();
-
-    return RenderTheme::isControlStyled(style, userAgentStyle);
 }
 
 bool RenderThemeAdwaita::paintTextField(const RenderObject& renderObject, const PaintInfo& paintInfo, const FloatRect& rect)
@@ -359,7 +338,7 @@ bool RenderThemeAdwaita::paintTextField(const RenderObject& renderObject, const 
 
 #if ENABLE(DATALIST_ELEMENT)
     if (is<HTMLInputElement>(renderObject.generatingNode()) && downcast<HTMLInputElement>(*(renderObject.generatingNode())).list()) {
-        auto zoomedArrowSize = menuListButtonArrowSize * renderObject.style().usedZoom();
+        auto zoomedArrowSize = menuListButtonArrowSize * renderObject.style().effectiveZoom();
         FloatRect arrowRect = rect;
         if (renderObject.style().direction() == TextDirection::LTR)
             arrowRect.move(arrowRect.width() - (zoomedArrowSize + textFieldBorderSize * 2), 0);
@@ -415,10 +394,10 @@ void RenderThemeAdwaita::adjustMenuListButtonStyle(RenderStyle& style, const Ele
 
 LengthBox RenderThemeAdwaita::popupInternalPaddingBox(const RenderStyle& style) const
 {
-    if (style.usedAppearance() == StyleAppearance::None)
+    if (style.effectiveAppearance() == StyleAppearance::None)
         return { };
 
-    auto zoomedArrowSize = menuListButtonArrowSize * style.usedZoom();
+    auto zoomedArrowSize = menuListButtonArrowSize * style.effectiveZoom();
     int leftPadding = menuListButtonPadding + (style.direction() == TextDirection::RTL ? zoomedArrowSize : 0);
     int rightPadding = menuListButtonPadding + (style.direction() == TextDirection::LTR ? zoomedArrowSize : 0);
 
@@ -437,9 +416,9 @@ bool RenderThemeAdwaita::paintMenuList(const RenderObject& renderObject, const P
         states.add(ControlStyle::State::Pressed);
     if (isHovered(renderObject))
         states.add(ControlStyle::State::Hovered);
-    Theme::singleton().paint(StyleAppearance::Button, states, graphicsContext, rect, renderObject.useDarkAppearance(), renderObject.style().usedAccentColor(renderObject.styleColorOptions()));
+    Theme::singleton().paint(StyleAppearance::Button, states, graphicsContext, rect, renderObject.useDarkAppearance(), renderObject.style().effectiveAccentColor());
 
-    auto zoomedArrowSize = menuListButtonArrowSize * renderObject.style().usedZoom();
+    auto zoomedArrowSize = menuListButtonArrowSize * renderObject.style().effectiveZoom();
     FloatRect fieldRect = rect;
     fieldRect.inflate(menuListButtonBorderSize);
     if (renderObject.style().direction() == TextDirection::LTR)
@@ -538,7 +517,7 @@ bool RenderThemeAdwaita::paintSliderTrack(const RenderObject& renderObject, cons
     auto& graphicsContext = paintInfo.context();
     GraphicsContextStateSaver stateSaver(graphicsContext);
 
-    auto appearance = renderObject.style().usedAppearance();
+    auto appearance = renderObject.style().effectiveAppearance();
     ASSERT(appearance == StyleAppearance::SliderHorizontal || appearance == StyleAppearance::SliderVertical);
 
     FloatRect fieldRect = rect;
@@ -617,7 +596,7 @@ bool RenderThemeAdwaita::paintSliderTrack(const RenderObject& renderObject, cons
 
 void RenderThemeAdwaita::adjustSliderThumbSize(RenderStyle& style, const Element*) const
 {
-    auto appearance = style.usedAppearance();
+    auto appearance = style.effectiveAppearance();
     if (appearance != StyleAppearance::SliderThumbHorizontal && appearance != StyleAppearance::SliderThumbVertical)
         return;
 
@@ -630,7 +609,7 @@ bool RenderThemeAdwaita::paintSliderThumb(const RenderObject& renderObject, cons
     auto& graphicsContext = paintInfo.context();
     GraphicsContextStateSaver stateSaver(graphicsContext);
 
-    ASSERT(renderObject.style().usedAppearance() == StyleAppearance::SliderThumbHorizontal || renderObject.style().usedAppearance() == StyleAppearance::SliderThumbVertical);
+    ASSERT(renderObject.style().effectiveAppearance() == StyleAppearance::SliderThumbHorizontal || renderObject.style().effectiveAppearance() == StyleAppearance::SliderThumbVertical);
 
     SRGBA<uint8_t> sliderThumbBackgroundColor;
     SRGBA<uint8_t> sliderThumbBackgroundHoveredColor;

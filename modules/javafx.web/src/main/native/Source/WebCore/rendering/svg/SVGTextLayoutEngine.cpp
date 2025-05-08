@@ -135,8 +135,8 @@ bool SVGTextLayoutEngine::parentDefinesTextLength(RenderObject* parent) const
 {
     RenderObject* currentParent = parent;
     while (currentParent) {
-        if (RefPtr textContentElement = SVGTextContentElement::elementFromRenderer(currentParent)) {
-            SVGLengthContext lengthContext(textContentElement.get());
+        if (SVGTextContentElement* textContentElement = SVGTextContentElement::elementFromRenderer(currentParent)) {
+            SVGLengthContext lengthContext(textContentElement);
             if (textContentElement->lengthAdjust() == SVGLengthAdjustSpacing && textContentElement->specifiedTextLength().value(lengthContext) > 0)
                 return true;
         }
@@ -166,7 +166,7 @@ void SVGTextLayoutEngine::beginTextPathLayout(RenderSVGTextPath& textPath, SVGTe
         m_textPathStartOffset = startOffset.valueAsPercentage() * m_textPathLength;
     else {
         m_textPathStartOffset = startOffset.valueInSpecifiedUnits();
-        if (RefPtr targetElement = textPath.targetElement()) {
+        if (auto* targetElement = textPath.targetElement()) {
             // FIXME: A value of zero is valid. Need to differentiate this case from being unspecified.
             if (float pathLength = targetElement->pathLength())
                 m_textPathStartOffset *= m_textPathLength / pathLength;
@@ -180,11 +180,11 @@ void SVGTextLayoutEngine::beginTextPathLayout(RenderSVGTextPath& textPath, SVGTe
     m_textPathCurrentOffset = m_textPathStartOffset;
 
     // Eventually handle textLength adjustments.
-    RefPtr textContentElement = SVGTextContentElement::elementFromRenderer(&textPath);
+    auto* textContentElement = SVGTextContentElement::elementFromRenderer(&textPath);
     if (!textContentElement)
         return;
 
-    SVGLengthContext lengthContext(textContentElement.get());
+    SVGLengthContext lengthContext(textContentElement);
     float desiredTextLength = textContentElement->specifiedTextLength().value(lengthContext);
     if (!desiredTextLength)
         return;
@@ -360,6 +360,9 @@ bool SVGTextLayoutEngine::currentVisualCharacterMetrics(const SVGInlineTextBox& 
     unsigned boxStart = textBox.start();
     unsigned boxLength = textBox.len();
 
+    if (m_visualMetricsListOffset == textMetricsSize)
+        return false;
+
     while (m_visualMetricsListOffset < textMetricsSize) {
         // Advance to text box start location.
         if (m_visualCharacterOffset < boxStart) {
@@ -397,7 +400,7 @@ void SVGTextLayoutEngine::layoutTextOnLineOrPath(SVGInlineTextBox& textBox, Rend
 
     RenderElement* textParent = text.parent();
     ASSERT(textParent);
-    RefPtr lengthContext = downcast<SVGElement>(textParent->element());
+    SVGElement* lengthContext = downcast<SVGElement>(textParent->element());
 
     bool definesTextLength = parentDefinesTextLength(textParent);
 
@@ -420,7 +423,7 @@ void SVGTextLayoutEngine::layoutTextOnLineOrPath(SVGInlineTextBox& textBox, Rend
     bool applySpacingToNextCharacter = false;
 
     float lastAngle = 0;
-    float baselineShift = baselineLayout.calculateBaselineShift(svgStyle, lengthContext.get());
+    float baselineShift = baselineLayout.calculateBaselineShift(svgStyle, lengthContext);
     baselineShift -= baselineLayout.calculateAlignmentBaselineShift(m_isVerticalText, text);
 
     // Main layout algorithm.
@@ -468,11 +471,11 @@ void SVGTextLayoutEngine::layoutTextOnLineOrPath(SVGInlineTextBox& textBox, Rend
                     return;
             }
 
-            RefPtr textContentElement = SVGTextContentElement::elementFromRenderer(&previousBoxOnLine->renderer());
+            auto* textContentElement = SVGTextContentElement::elementFromRenderer(&previousBoxOnLine->renderer());
             if (!textContentElement)
                 return;
 
-            SVGLengthContext lengthContext(textContentElement.get());
+            SVGLengthContext lengthContext(textContentElement);
             auto specifiedTextLength = textContentElement->specifiedTextLength().value(lengthContext);
 
             if (m_lastChunkIsVerticalText)
@@ -527,7 +530,7 @@ void SVGTextLayoutEngine::layoutTextOnLineOrPath(SVGInlineTextBox& textBox, Rend
         updateRelativePositionAdjustmentsIfNeeded(data.dx, data.dy);
 
         // Calculate CSS 'kerning', 'letter-spacing' and 'word-spacing' for next character, if needed.
-        float spacing = spacingLayout.calculateCSSKerningAndSpacing(&svgStyle, lengthContext.get(), currentCharacter);
+        float spacing = spacingLayout.calculateCSSKerningAndSpacing(&svgStyle, lengthContext, currentCharacter);
 
         float textPathOffset = 0;
         if (m_inPathLayout) {

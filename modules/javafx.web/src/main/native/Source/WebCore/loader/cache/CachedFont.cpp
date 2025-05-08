@@ -27,6 +27,7 @@
 #include "config.h"
 #include "CachedFont.h"
 
+#include "AllowedFonts.h"
 #include "CachedFontClient.h"
 #include "CachedResourceClientWalker.h"
 #include "CachedResourceLoader.h"
@@ -34,12 +35,10 @@
 #include "FontCustomPlatformData.h"
 #include "FontDescription.h"
 #include "FontPlatformData.h"
-#include "Logging.h"
 #include "MemoryCache.h"
 #include "SharedBuffer.h"
 #include "SubresourceLoader.h"
 #include "TextResourceDecoder.h"
-#include "TrustedFonts.h"
 #include "TypedElementDescendantIteratorInlines.h"
 #include "WOFFFileFormat.h"
 #include <pal/crypto/CryptoDigest.h>
@@ -71,22 +70,21 @@ void CachedFont::didAddClient(CachedResourceClient& client)
 }
 
 
-FontParsingPolicy CachedFont::policyForCustomFont(const Ref<SharedBuffer>& data)
+bool CachedFont::shouldAllowCustomFont(const Ref<SharedBuffer>& data)
 {
     if (!m_loader || !m_loader->frame())
-        return FontParsingPolicy::Deny;
+        return false;
 
-    return fontBinaryParsingPolicy(data->span(), m_loader->frame()->settings().downloadableBinaryFontTrustedTypes());
+    return isFontBinaryAllowed(data->dataAsSpanForContiguousData(), m_loader->frame()->settings().downloadableBinaryFontAllowedTypes());
 }
 
 void CachedFont::finishLoading(const FragmentedSharedBuffer* data, const NetworkLoadMetrics& metrics)
 {
     if (data) {
         Ref dataContiguous = data->makeContiguous();
-        m_fontParsingPolicy = policyForCustomFont(dataContiguous);
-        if (m_fontParsingPolicy == FontParsingPolicy::Deny) {
-            // SafeFontParser failed to parse font, we set a flag to signal it in CachedFontLoadRequest.h
-            m_didRefuseToParseCustomFont = true;
+        if (!shouldAllowCustomFont(dataContiguous)) {
+            // fonts are blocked, we set a flag to signal it in CachedFontLoadRequest.h
+            m_didRefuseToLoadCustomFont = true;
             setErrorAndDeleteData();
             return;
         }
@@ -136,39 +134,11 @@ String CachedFont::calculateItemInCollection() const
 bool CachedFont::ensureCustomFontData(SharedBuffer* data)
 {
     if (!m_fontCustomPlatformData && !errorOccurred() && !isLoading() && data) {
-        bool wrapping = false;
-        switch (m_fontParsingPolicy) {
-        case FontParsingPolicy::Deny:
-            // This is not supposed to happen: loading should have cancelled
-            // back in finishLoading. Nevertheless, we can recover in a healthy
-            // manner.
-            setErrorAndDeleteData();
-            return false;
-
-        case FontParsingPolicy::LoadWithSystemFontParser: {
+        bool wrapping;
         m_fontCustomPlatformData = createCustomFontData(*data, calculateItemInCollection(), wrapping);
-        if (!m_fontCustomPlatformData)
-                RELEASE_LOG(Fonts, "[Font Parser] A font could not be parsed by system font parser.");
-            break;
-        }
-        case FontParsingPolicy::LoadWithSafeFontParser: {
-            m_fontCustomPlatformData = createCustomFontDataExperimentalParser(*data, calculateItemInCollection(), wrapping);
-            if (!m_fontCustomPlatformData) {
-                m_didRefuseToParseCustomFont = true;
-                RELEASE_LOG(Fonts, "[Font Parser] A font could not be parsed by safe font parser.");
-            }
-            break;
-        }
-        }
-
         m_hasCreatedFontDataWrappingResource = m_fontCustomPlatformData && wrapping;
-        if (!m_fontCustomPlatformData) {
-            if (m_fontParsingPolicy == FontParsingPolicy::LoadWithSafeFontParser) {
-                m_didRefuseToParseCustomFont = true;
-                setErrorAndDeleteData();
-            } else
+        if (!m_fontCustomPlatformData)
             setStatus(DecodeError);
-    }
     }
 
     return m_fontCustomPlatformData.get();
@@ -177,15 +147,12 @@ bool CachedFont::ensureCustomFontData(SharedBuffer* data)
 RefPtr<FontCustomPlatformData> CachedFont::createCustomFontData(SharedBuffer& bytes, const String& itemInCollection, bool& wrapping)
 {
     RefPtr buffer = { &bytes };
+#if PLATFORM(JAVA)
+    wrapping = false;
+#else
     wrapping = !convertWOFFToSfntIfNecessary(buffer);
-    return buffer ? FontCustomPlatformData::create(*buffer, itemInCollection) : nullptr;
-}
-
-RefPtr<FontCustomPlatformData> CachedFont::createCustomFontDataExperimentalParser(SharedBuffer& bytes, const String& itemInCollection, bool& wrapping)
-{
-    RefPtr buffer = { &bytes };
-    wrapping = !convertWOFFToSfntIfNecessary(buffer);
-    return FontCustomPlatformData::createMemorySafe(*buffer, itemInCollection);
+#endif
+    return buffer ? createFontCustomPlatformData(*buffer, itemInCollection) : nullptr;
 }
 
 RefPtr<Font> CachedFont::createFont(const FontDescription& fontDescription, bool syntheticBold, bool syntheticItalic, const FontCreationContext& fontCreationContext)
@@ -210,7 +177,7 @@ void CachedFont::allClientsRemoved()
     m_fontCustomPlatformData = nullptr;
 }
 
-void CachedFont::checkNotify(const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess)
+void CachedFont::checkNotify(const NetworkLoadMetrics&)
 {
     if (isLoading())
         return;

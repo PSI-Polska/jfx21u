@@ -27,13 +27,12 @@
 
 #if ENABLE(MATHML)
 
-#include "MathMLRowElement.h"
+#include "MathMLPresentationElement.h"
 
 namespace WebCore {
 
-class MathMLFractionElement final : public MathMLRowElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(MathMLFractionElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(MathMLFractionElement);
+class MathMLFractionElement final : public MathMLPresentationElement {
+    WTF_MAKE_ISO_ALLOCATED(MathMLFractionElement);
 public:
     static Ref<MathMLFractionElement> create(const QualifiedName& tagName, Document&);
     const Length& lineThickness();
@@ -48,7 +47,6 @@ public:
 private:
     MathMLFractionElement(const QualifiedName& tagName, Document&);
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
-    bool acceptsMathVariantAttribute() final { return false; };
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
 
     FractionAlignment cachedFractionAlignment(const QualifiedName&, std::optional<FractionAlignment>&);

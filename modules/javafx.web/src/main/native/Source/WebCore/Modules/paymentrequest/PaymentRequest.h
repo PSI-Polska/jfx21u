@@ -53,7 +53,7 @@ struct PaymentMethodData;
 template<typename IDLType> class DOMPromiseDeferred;
 
 class PaymentRequest final : public ActiveDOMObject, public EventTarget, public RefCounted<PaymentRequest> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(PaymentRequest);
+    WTF_MAKE_ISO_ALLOCATED(PaymentRequest);
 public:
     using AbortPromise = DOMPromiseDeferred<void>;
     using CanMakePaymentPromise = DOMPromiseDeferred<IDLBoolean>;
@@ -103,10 +103,8 @@ public:
     void cancel();
 
     using MethodIdentifier = std::variant<String, URL>;
-
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
+    using RefCounted<PaymentRequest>::ref;
+    using RefCounted<PaymentRequest>::deref;
 
 private:
     struct Method {
@@ -130,11 +128,12 @@ private:
     void closeActivePaymentHandler();
 
     // ActiveDOMObject
+    const char* activeDOMObjectName() const final { return "PaymentRequest"; }
     void stop() final;
     void suspend(ReasonForSuspension) final;
 
     // EventTarget
-    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::PaymentRequest; }
+    EventTargetInterface eventTargetInterface() const final { return PaymentRequestEventTargetInterfaceType; }
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
     bool isPaymentRequest() const final { return true; }
     void refEventTarget() final { ref(); }

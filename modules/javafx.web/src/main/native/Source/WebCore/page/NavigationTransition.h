@@ -25,33 +25,27 @@
 
 #pragma once
 
-#include "JSDOMPromise.h"
+#include "DOMPromiseProxy.h"
 #include "NavigationHistoryEntry.h"
 #include "NavigationNavigationType.h"
+#include "ScriptWrappable.h"
 
 namespace WebCore {
 
-class DOMPromise;
-
-class NavigationTransition final : public RefCounted<NavigationTransition> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(NavigationTransition);
+class NavigationTransition final : public RefCounted<NavigationTransition>, public ScriptWrappable {
+    WTF_MAKE_ISO_ALLOCATED(NavigationTransition);
 public:
-    static Ref<NavigationTransition> create(NavigationNavigationType type, Ref<NavigationHistoryEntry>&& fromEntry, Ref<DeferredPromise>&& finished) { return adoptRef(*new NavigationTransition(type, WTFMove(fromEntry), WTFMove(finished))); };
+
+    using FinishedPromise = DOMPromiseProxy<IDLUndefined>;
 
     NavigationNavigationType navigationType() { return m_navigationType; };
     NavigationHistoryEntry& from() { return m_from; };
-    DOMPromise* finished();
-
-    void resolvePromise();
-    void rejectPromise(Exception&);
+    FinishedPromise& finished() { return *m_finished; };
 
 private:
-    explicit NavigationTransition(NavigationNavigationType, Ref<NavigationHistoryEntry>&& fromEntry, Ref<DeferredPromise>&& finished);
-
     NavigationNavigationType m_navigationType;
     Ref<NavigationHistoryEntry> m_from;
-    Ref<DeferredPromise> m_finished;
-    RefPtr<DOMPromise> m_finishedDOMPromise;
+    UniqueRef<FinishedPromise> m_finished;
 };
 
 } // namespace WebCore

@@ -25,6 +25,7 @@
 
 // https://drafts.css-houdini.org/css-typed-om/#cssnumericarray
 [
+    EnabledBySetting=CSSTypedOMEnabled,
     Exposed=(Window,Worker,PaintWorklet)
 ] interface CSSNumericArray {
     iterable<CSSNumericValue>;

@@ -27,7 +27,6 @@
 #include "IDBTransactionInfo.h"
 
 #include "IDBTransaction.h"
-#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -112,7 +111,7 @@ String IDBTransactionInfo::loggingString() const
         ASSERT_NOT_REACHED();
     }
 
-    return makeString("Transaction: "_s, m_identifier.loggingString(), " mode "_s, modeString, " newVersion "_s, m_newVersion);
+    return makeString("Transaction: ", m_identifier.loggingString(), " mode ", modeString, " newVersion ", m_newVersion);
 }
 
 #endif

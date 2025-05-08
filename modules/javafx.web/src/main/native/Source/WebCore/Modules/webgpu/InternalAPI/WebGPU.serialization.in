@@ -38,7 +38,6 @@ header: <WebCore/WebGPUMapMode.h>
     Read,
     Write,
 };
-using WebCore::WebGPU::MapModeFlags = OptionSet<WebCore::WebGPU::MapMode>;
 
 [AdditionalEncoder=StreamConnectionEncoder] enum class WebCore::WebGPU::MapMode : uint8_t {
     Read,
@@ -258,7 +257,7 @@ enum class WebCore::WebGPU::ColorWrite : uint8_t {
     All,
 };
 
-using WebCore::WebGPU::ColorWriteFlags = uint32_t;
+using WebCore::WebGPU::ColorWriteFlags = std::underlying_type<WebCore::WebGPU::ColorWrite>;
 
 header: <WebCore/WebGPUSamplerBindingType.h>
 enum class WebCore::WebGPU::SamplerBindingType : uint8_t {
@@ -299,13 +298,6 @@ enum class WebCore::WebGPU::VertexStepMode : uint8_t {
     Instance,
 };
 
-header: <WebCore/WebGPUXREye.h>
-enum class WebCore::WebGPU::XREye : uint8_t {
-    None,
-    Left,
-    Right,
-};
-
 header: <WebCore/WebGPUBufferUsage.h>
 enum class WebCore::WebGPU::BufferUsage : uint16_t {
     MapRead,
@@ -339,5 +331,3 @@ header: <WebCore/WebGPUTextureUsage.h>
 };
 
 using WebCore::WebGPU::TextureUsageFlags = OptionSet<WebCore::WebGPU::TextureUsage>;
-
-using WebCore::WebGPU::BufferUsageFlags = uint16_t

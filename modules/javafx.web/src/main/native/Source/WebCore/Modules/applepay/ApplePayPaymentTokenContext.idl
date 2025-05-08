@@ -27,7 +27,6 @@
     Conditional=APPLE_PAY_MULTI_MERCHANT_PAYMENTS,
     ExportMacro=WEBCORE_EXPORT,
     JSGenerateToJSObject,
-    JSGenerateToNativeObject,
 ] dictionary ApplePayPaymentTokenContext {
     required DOMString merchantIdentifier;
     required DOMString externalIdentifier;

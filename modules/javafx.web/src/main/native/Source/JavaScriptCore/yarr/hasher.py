@@ -31,9 +31,9 @@ mask32 = 2**32 - 1
 secret = [11562461410679940143, 16646288086500911323, 10285213230658275043, 6384245875588680899]
 
 
-def stringHash(str, useWYHash):
+def stringHash(str, isMac):
     strLen = len(str)
-    if useWYHash:
+    if isMac:
         if strLen <= 48:
             return superFastHash(str)
         return wyhash(str)
@@ -216,7 +216,7 @@ def ceilingToPowerOf2(v):
 # where the indexMask in the corresponding HashTable should
 # be numEntries - 1.
 def createHashTable(keys, hashTableName):
-    def createHashTableHelper(keys, hashTableName, useWYHash):
+    def createHashTableHelper(keys, hashTableName, isMac):
         table = {}
         links = {}
         compactSize = ceilingToPowerOf2(len(keys))
@@ -227,7 +227,7 @@ def createHashTable(keys, hashTableName):
         i = 0
         for key in keys:
             depth = 0
-            hashValue = stringHash(key, useWYHash) % numEntries
+            hashValue = stringHash(key, isMac) % numEntries
             while hashValue in table:
                 if hashValue in links:
                     hashValue = links[hashValue]
@@ -254,10 +254,10 @@ def createHashTable(keys, hashTableName):
         string += '};\n'
         return string
 
-    hashTableForWYHash = createHashTableHelper(keys, hashTableName, True)
-    hashTableForSFHash = createHashTableHelper(keys, hashTableName, False)
-    result = hashTableForWYHash
-    if hashTableForWYHash != hashTableForSFHash:
-        result = "#if ENABLE(WYHASH_STRING_HASHER)\n{}#else\n{}#endif".format(hashTableForWYHash, hashTableForSFHash)
+    hashTableForMacOS = createHashTableHelper(keys, hashTableName, True)
+    hashTableForIOS = createHashTableHelper(keys, hashTableName, False)
+    result = hashTableForMacOS
+    if hashTableForMacOS != hashTableForIOS:
+        result = "#if PLATFORM(MAC)\n{}#else\n{}#endif".format(hashTableForMacOS, hashTableForIOS)
     print(result)
 

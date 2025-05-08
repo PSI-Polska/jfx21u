@@ -29,6 +29,5 @@
  */
 
 [
-    ExportMacro=WEBCORE_EXPORT,
-    GenerateIsReachable=ImplScriptExecutionContext
+    ExportMacro=WEBCORE_EXPORT
 ] callback StringCallback = undefined (DOMString data);

@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "CacheableIdentifierInlines.h"
 #include "ClassInfo.h"
 #include "Identifier.h"
 #include <wtf/Condition.h>
@@ -103,18 +102,18 @@ public:
     {
     }
 
-    ICEvent(VM& vm, Kind kind, const ClassInfo* classInfo, PropertyName propertyName)
+    ICEvent(Kind kind, const ClassInfo* classInfo, const Identifier propertyName)
         : m_kind(kind)
         , m_classInfo(classInfo)
-        , m_propertyName(Identifier::fromUid(vm, propertyName.uid()))
+        , m_propertyName(propertyName)
         , m_propertyLocation(Unknown)
     {
     }
 
-    ICEvent(VM& vm, Kind kind, const ClassInfo* classInfo, PropertyName propertyName, bool isBaseProperty)
+    ICEvent(Kind kind, const ClassInfo* classInfo, const Identifier propertyName, bool isBaseProperty)
         : m_kind(kind)
         , m_classInfo(classInfo)
-        , m_propertyName(Identifier::fromUid(vm, propertyName.uid()))
+        , m_propertyName(propertyName)
         , m_propertyLocation(isBaseProperty ? BaseObject : ProtoLookup)
     {
     }
@@ -202,7 +201,7 @@ public:
 
     void add(const ICEvent& event);
 
-    static ICStats& singleton();
+    static ICStats& instance();
 
 private:
 

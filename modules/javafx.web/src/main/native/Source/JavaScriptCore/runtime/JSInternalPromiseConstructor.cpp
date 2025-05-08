@@ -45,12 +45,12 @@ const ClassInfo JSInternalPromiseConstructor::s_info = { "Function"_s, &Base::s_
 @end
 */
 
-JSInternalPromiseConstructor* JSInternalPromiseConstructor::create(VM& vm, Structure* structure, JSInternalPromisePrototype* promisePrototype)
+JSInternalPromiseConstructor* JSInternalPromiseConstructor::create(VM& vm, Structure* structure, JSInternalPromisePrototype* promisePrototype, GetterSetter* speciesSymbol)
 {
     JSGlobalObject* globalObject = structure->globalObject();
     FunctionExecutable* executable = promiseConstructorInternalPromiseConstructorCodeGenerator(vm);
     JSInternalPromiseConstructor* constructor = new (NotNull, allocateCell<JSInternalPromiseConstructor>(vm)) JSInternalPromiseConstructor(vm, executable, globalObject, structure);
-    constructor->finishCreation(vm, promisePrototype);
+    constructor->finishCreation(vm, promisePrototype, speciesSymbol);
     return constructor;
 }
 

@@ -26,26 +26,19 @@
 #pragma once
 
 #include "SpeechRecognitionConnectionClientIdentifier.h"
-#include <wtf/Identified.h>
 #include <wtf/WeakPtr.h>
-
-namespace WebCore {
-class SpeechRecognitionConnectionClient;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::SpeechRecognitionConnectionClient> : std::true_type { };
-}
 
 namespace WebCore {
 
 struct SpeechRecognitionError;
 struct SpeechRecognitionResultData;
 
-class SpeechRecognitionConnectionClient : public Identified<SpeechRecognitionConnectionClientIdentifier>, public CanMakeWeakPtr<SpeechRecognitionConnectionClient> {
+class SpeechRecognitionConnectionClient : public CanMakeWeakPtr<SpeechRecognitionConnectionClient> {
 public:
-    SpeechRecognitionConnectionClient() = default;
+    SpeechRecognitionConnectionClient()
+        : m_identifier(SpeechRecognitionConnectionClientIdentifier::generate())
+    {
+    }
 
     virtual ~SpeechRecognitionConnectionClient() { }
 
@@ -60,6 +53,11 @@ public:
     virtual void didReceiveResult(Vector<SpeechRecognitionResultData>&& resultDatas) = 0;
     virtual void didError(const SpeechRecognitionError&) = 0;
     virtual void didEnd() = 0;
+
+    SpeechRecognitionConnectionClientIdentifier identifier() const { return m_identifier; };
+
+private:
+    SpeechRecognitionConnectionClientIdentifier m_identifier;
 };
 
 } // namespace WebCore

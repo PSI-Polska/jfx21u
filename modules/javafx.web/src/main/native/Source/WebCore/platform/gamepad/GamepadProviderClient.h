@@ -31,15 +31,6 @@
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
-class GamepadProviderClient;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::GamepadProviderClient> : std::true_type { };
-}
-
-namespace WebCore {
 
 class PlatformGamepad;
 

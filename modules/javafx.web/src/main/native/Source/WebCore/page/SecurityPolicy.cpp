@@ -39,7 +39,6 @@
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/URL.h>
-#include <wtf/text/MakeString.h>
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {
@@ -57,10 +56,10 @@ static OriginAccessMap& originAccessMap() WTF_REQUIRES_LOCK(originAccessMapLock)
     return originAccessMap;
 }
 
-bool SecurityPolicy::shouldHideReferrer(const URL& url, const URL& referrer)
+bool SecurityPolicy::shouldHideReferrer(const URL& url, const String& referrer)
 {
-    bool referrerIsSecureURL = referrer.protocolIs("https"_s);
-    bool referrerIsWebURL = referrerIsSecureURL || referrer.protocolIs("http"_s);
+    bool referrerIsSecureURL = protocolIs(referrer, "https"_s);
+    bool referrerIsWebURL = referrerIsSecureURL || protocolIs(referrer, "http"_s);
 
     if (!referrerIsWebURL)
         return true;
@@ -73,25 +72,25 @@ bool SecurityPolicy::shouldHideReferrer(const URL& url, const URL& referrer)
     return !URLIsSecureURL;
 }
 
-String SecurityPolicy::referrerToOriginString(const URL& referrer)
+String SecurityPolicy::referrerToOriginString(const String& referrer)
 {
-    String originString = SecurityOrigin::create(referrer)->toString();
+    String originString = SecurityOrigin::createFromString(referrer)->toString();
     if (originString == "null"_s)
         return String();
     // A security origin is not a canonical URL as it lacks a path. Add /
     // to turn it into a canonical URL we can use as referrer.
-    return makeString(originString, '/');
+    return originString + "/";
 }
 
-String SecurityPolicy::generateReferrerHeader(ReferrerPolicy referrerPolicy, const URL& url, const URL& referrer, const OriginAccessPatterns& patterns)
+String SecurityPolicy::generateReferrerHeader(ReferrerPolicy referrerPolicy, const URL& url, const String& referrer, const OriginAccessPatterns& patterns)
 {
-    ASSERT(referrer.string() == URL { referrer.string() }.strippedForUseAsReferrer().string
-        || referrer.string() == SecurityOrigin::create(URL { referrer.string() })->toString());
+    ASSERT(referrer == URL { referrer }.strippedForUseAsReferrer()
+        || referrer == SecurityOrigin::create(URL { referrer })->toString());
 
     if (referrer.isEmpty())
         return String();
 
-    if (!referrer.protocolIsInHTTPFamily())
+    if (!protocolIsInHTTPFamily(referrer))
         return String();
 
     switch (referrerPolicy) {
@@ -103,7 +102,7 @@ String SecurityPolicy::generateReferrerHeader(ReferrerPolicy referrerPolicy, con
     case ReferrerPolicy::NoReferrerWhenDowngrade:
         break;
     case ReferrerPolicy::SameOrigin: {
-        auto origin = SecurityOrigin::create(referrer);
+        auto origin = SecurityOrigin::createFromString(referrer);
         if (!origin->canRequest(url, patterns))
             return String();
         break;
@@ -115,13 +114,13 @@ String SecurityPolicy::generateReferrerHeader(ReferrerPolicy referrerPolicy, con
             return String();
         return referrerToOriginString(referrer);
     case ReferrerPolicy::OriginWhenCrossOrigin: {
-        auto origin = SecurityOrigin::create(referrer);
+        auto origin = SecurityOrigin::createFromString(referrer);
         if (!origin->canRequest(url, patterns))
             return referrerToOriginString(referrer);
         break;
     }
     case ReferrerPolicy::StrictOriginWhenCrossOrigin: {
-        auto origin = SecurityOrigin::create(referrer);
+        auto origin = SecurityOrigin::createFromString(referrer);
         if (!origin->canRequest(url, patterns)) {
             if (shouldHideReferrer(url, referrer))
                 return String();
@@ -130,10 +129,10 @@ String SecurityPolicy::generateReferrerHeader(ReferrerPolicy referrerPolicy, con
         break;
     }
     case ReferrerPolicy::UnsafeUrl:
-        return referrer.string();
+        return referrer;
     }
 
-    return shouldHideReferrer(url, referrer) ? String() : referrer.string();
+    return shouldHideReferrer(url, referrer) ? String() : referrer;
 }
 
 String SecurityPolicy::generateOriginHeader(ReferrerPolicy referrerPolicy, const URL& url, const SecurityOrigin& securityOrigin, const OriginAccessPatterns& patterns)

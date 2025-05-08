@@ -33,8 +33,7 @@ class StyleRuleCounterStyle;
 // Used to render the list item's marker.
 // The RenderListMarker always has to be a child of a RenderListItem.
 class RenderListMarker final : public RenderBox {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderListMarker);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderListMarker);
+    WTF_MAKE_ISO_ALLOCATED(RenderListMarker);
 public:
     RenderListMarker(RenderListItem&, RenderStyle&&);
     virtual ~RenderListMarker();
@@ -45,6 +44,7 @@ public:
     bool isInside() const;
 
     void updateMarginsAndContent();
+    void addOverflowFromListMarker();
 
     bool isImage() const final;
 
@@ -59,6 +59,7 @@ private:
     void paint(PaintInfo&, const LayoutPoint&) final;
     void layout() final;
     void imageChanged(WrappedImagePtr, const IntRect*) final;
+    std::unique_ptr<LegacyInlineElementBox> createInlineBox() final;
     LayoutUnit lineHeight(bool firstLine, LineDirectionMode, LinePositionMode) const final;
     LayoutUnit baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode) const final;
     LayoutRect selectionRectForRepaint(const RenderLayerModelObject* repaintContainer, bool clipToVisibleContent) final;

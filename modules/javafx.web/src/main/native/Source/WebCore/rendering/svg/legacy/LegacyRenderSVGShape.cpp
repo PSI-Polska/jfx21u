@@ -46,16 +46,15 @@
 #include "SVGResources.h"
 #include "SVGResourcesCache.h"
 #include "SVGURIReference.h"
-#include "SVGVisitedRendererTracking.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
-#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(LegacyRenderSVGShape);
+WTF_MAKE_ISO_ALLOCATED_IMPL(LegacyRenderSVGShape);
 
 LegacyRenderSVGShape::LegacyRenderSVGShape(Type type, SVGGraphicsElement& element, RenderStyle&& style)
-    : LegacyRenderSVGModelObject(type, element, WTFMove(style), { SVGModelObjectFlag::IsShape, SVGModelObjectFlag::UsesBoundaryCaching })
+    : LegacyRenderSVGModelObject(type, element, WTFMove(style), SVGModelObjectFlag::IsShape)
     , m_needsBoundariesUpdate(false) // Default is false, the cached rects are empty from the beginning.
     , m_needsShapeUpdate(true) // Default is true, so we grab a Path object once from SVGGraphicsElement.
     , m_needsTransformUpdate(true) // Default is true, so we grab a AffineTransform object once from SVGGraphicsElement.
@@ -143,8 +142,7 @@ bool LegacyRenderSVGShape::strokeContains(const FloatPoint& point, bool requires
 void LegacyRenderSVGShape::layout()
 {
     StackStats::LayoutCheckPoint layoutCheckPoint;
-    auto checkForRepaintOverride = !selfNeedsLayout() ? LayoutRepainter::CheckForRepaint::No : SVGRenderSupport::checkForSVGRepaintDuringLayout(*this);
-    LayoutRepainter repainter(*this, checkForRepaintOverride, { }, RepaintOutlineBounds::No);
+    LayoutRepainter repainter(*this, SVGRenderSupport::checkForSVGRepaintDuringLayout(*this) && selfNeedsLayout(), RepaintOutlineBounds::No);
 
     bool updateCachedBoundariesInParents = false;
 
@@ -167,10 +165,8 @@ void LegacyRenderSVGShape::layout()
         SVGResourcesCache::clientLayoutChanged(*this);
 
     // If our bounds changed, notify the parents.
-    if (updateCachedBoundariesInParents) {
-        if (CheckedPtr parent = this->parent())
-            parent->invalidateCachedBoundaries();
-    }
+    if (updateCachedBoundariesInParents)
+        LegacyRenderSVGModelObject::setNeedsBoundariesUpdate();
 
     repainter.repaintAfterLayout();
     clearNeedsLayout();
@@ -199,20 +195,20 @@ bool LegacyRenderSVGShape::setupNonScalingStrokeContext(AffineTransform& strokeT
 
 AffineTransform LegacyRenderSVGShape::nonScalingStrokeTransform() const
 {
-    return protectedGraphicsElement()->getScreenCTM(SVGLocatable::DisallowStyleUpdate);
+    return graphicsElement().getScreenCTM(SVGLocatable::DisallowStyleUpdate);
 }
 
 void LegacyRenderSVGShape::fillShape(const RenderStyle& style, GraphicsContext& originalContext)
 {
     GraphicsContext* context = &originalContext;
     Color fallbackColor;
-    if (auto* fillPaintingResource = LegacyRenderSVGResource::fillPaintingResource(*this, style, fallbackColor)) {
-        if (resourceWasApplied(fillPaintingResource->applyResource(*this, style, context, RenderSVGResourceMode::ApplyToFill)))
+    if (LegacyRenderSVGResource* fillPaintingResource = LegacyRenderSVGResource::fillPaintingResource(*this, style, fallbackColor)) {
+        if (fillPaintingResource->applyResource(*this, style, context, RenderSVGResourceMode::ApplyToFill))
             fillPaintingResource->postApplyResource(*this, context, RenderSVGResourceMode::ApplyToFill, nullptr, this);
         else if (fallbackColor.isValid()) {
-            auto* fallbackResource = LegacyRenderSVGResource::sharedSolidPaintingResource();
+            LegacyRenderSVGResourceSolidColor* fallbackResource = LegacyRenderSVGResource::sharedSolidPaintingResource();
             fallbackResource->setColor(fallbackColor);
-            if (resourceWasApplied(fallbackResource->applyResource(*this, style, context, RenderSVGResourceMode::ApplyToFill)))
+            if (fallbackResource->applyResource(*this, style, context, RenderSVGResourceMode::ApplyToFill))
                 fallbackResource->postApplyResource(*this, context, RenderSVGResourceMode::ApplyToFill, nullptr, this);
         }
     }
@@ -222,13 +218,13 @@ void LegacyRenderSVGShape::strokeShapeInternal(const RenderStyle& style, Graphic
 {
     GraphicsContext* context = &originalContext;
     Color fallbackColor;
-    if (auto* strokePaintingResource = LegacyRenderSVGResource::strokePaintingResource(*this, style, fallbackColor)) {
-        if (resourceWasApplied(strokePaintingResource->applyResource(*this, style, context, RenderSVGResourceMode::ApplyToStroke)))
+    if (LegacyRenderSVGResource* strokePaintingResource = LegacyRenderSVGResource::strokePaintingResource(*this, style, fallbackColor)) {
+        if (strokePaintingResource->applyResource(*this, style, context, RenderSVGResourceMode::ApplyToStroke))
             strokePaintingResource->postApplyResource(*this, context, RenderSVGResourceMode::ApplyToStroke, nullptr, this);
         else if (fallbackColor.isValid()) {
-            auto* fallbackResource = LegacyRenderSVGResource::sharedSolidPaintingResource();
+            LegacyRenderSVGResourceSolidColor* fallbackResource = LegacyRenderSVGResource::sharedSolidPaintingResource();
             fallbackResource->setColor(fallbackColor);
-            if (resourceWasApplied(fallbackResource->applyResource(*this, style, context, RenderSVGResourceMode::ApplyToStroke)))
+            if (fallbackResource->applyResource(*this, style, context, RenderSVGResourceMode::ApplyToStroke))
                 fallbackResource->postApplyResource(*this, context, RenderSVGResourceMode::ApplyToStroke, nullptr, this);
         }
     }
@@ -267,17 +263,9 @@ void LegacyRenderSVGShape::fillStrokeMarkers(PaintInfo& childPaintInfo)
 
 void LegacyRenderSVGShape::paint(PaintInfo& paintInfo, const LayoutPoint&)
 {
-    if (style().usedVisibility() == Visibility::Hidden || isEmpty())
+    if (paintInfo.context().paintingDisabled() || paintInfo.phase != PaintPhase::Foreground
+        || style().visibility() == Visibility::Hidden || isEmpty())
         return;
-
-    if (paintInfo.phase == PaintPhase::EventRegion) {
-        paintInfo.eventRegionContext()->unite(FloatRoundedRect(m_fillBoundingBox), *this, style(), false);
-        return;
-    }
-
-    if (paintInfo.context().paintingDisabled() || paintInfo.phase != PaintPhase::Foreground)
-        return;
-
     FloatRect boundingBox = repaintRectInLocalCoordinates();
     if (!SVGRenderSupport::paintInfoIntersectsRepaintRect(boundingBox, m_localTransform, paintInfo))
         return;
@@ -290,13 +278,11 @@ void LegacyRenderSVGShape::paint(PaintInfo& paintInfo, const LayoutPoint&)
         SVGRenderingContext renderingContext(*this, childPaintInfo);
 
         if (renderingContext.isRenderingPrepared()) {
-            Ref svgStyle = style().svgStyle();
-            if (svgStyle->shapeRendering() == ShapeRendering::CrispEdges)
+            const SVGRenderStyle& svgStyle = style().svgStyle();
+            if (svgStyle.shapeRendering() == ShapeRendering::CrispEdges)
                 childPaintInfo.context().setShouldAntialias(false);
 
-            m_fillRequiresClip = !renderingContext.pathClippingIsEntirelyWithinRendererContents();
             fillStrokeMarkers(childPaintInfo);
-            m_fillRequiresClip = true;
         }
     }
 
@@ -342,21 +328,16 @@ bool LegacyRenderSVGShape::nodeAtFloatPoint(const HitTestRequest& request, HitTe
     if (hitTestAction != HitTestForeground)
         return false;
 
-    static NeverDestroyed<SVGVisitedRendererTracking::VisitedSet> s_visitedSet;
-
-    SVGVisitedRendererTracking recursionTracking(s_visitedSet);
-    if (recursionTracking.isVisiting(*this))
-        return false;
-
     FloatPoint localPoint = valueOrDefault(m_localTransform.inverse()).mapPoint(pointInParent);
 
     if (!SVGRenderSupport::pointInClippingArea(*this, localPoint))
         return false;
 
-    SVGVisitedRendererTracking::Scope recursionScope(recursionTracking, *this);
+    SVGHitTestCycleDetectionScope hitTestScope(*this);
 
-    PointerEventsHitRules hitRules(PointerEventsHitRules::HitTestingTargetType::SVGPath, request, usedPointerEvents());
-    if (isVisibleToHitTesting(style(), request) || !hitRules.requireVisible) {
+    PointerEventsHitRules hitRules(PointerEventsHitRules::HitTestingTargetType::SVGPath, request, style().effectivePointerEvents());
+    bool isVisible = (style().visibility() == Visibility::Visible);
+    if (isVisible || !hitRules.requireVisible) {
         const SVGRenderStyle& svgStyle = style().svgStyle();
         WindRule fillRule = svgStyle.fillRule();
         if (request.svgClipContent())
@@ -365,7 +346,7 @@ bool LegacyRenderSVGShape::nodeAtFloatPoint(const HitTestRequest& request, HitTe
             || (hitRules.canHitFill && (svgStyle.hasFill() || !hitRules.requireFill) && fillContains(localPoint, hitRules.requireFill, fillRule))
             || (hitRules.canHitBoundingBox && objectBoundingBox().contains(localPoint))) {
             updateHitTestResult(result, LayoutPoint(localPoint));
-            if (result.addNodeToListBasedTestResult(protectedNodeForHitTest().get(), request, flooredLayoutPoint(localPoint)) == HitTestProgress::Stop)
+            if (result.addNodeToListBasedTestResult(nodeForHitTest(), request, flooredLayoutPoint(localPoint)) == HitTestProgress::Stop)
                 return true;
         }
     }
@@ -451,10 +432,8 @@ FloatRect LegacyRenderSVGShape::repaintRectInLocalCoordinates(RepaintRectCalcula
 
 float LegacyRenderSVGShape::strokeWidth() const
 {
-    Ref graphicsElement = this->graphicsElement();
-    SVGLengthContext lengthContext(graphicsElement.ptr());
-    auto strokeWidth = lengthContext.valueForLength(style().strokeWidth());
-    return std::isnan(strokeWidth) ? 0 : strokeWidth;
+    SVGLengthContext lengthContext(&graphicsElement());
+    return lengthContext.valueForLength(style().strokeWidth());
 }
 
 Path& LegacyRenderSVGShape::ensurePath()
@@ -466,7 +445,7 @@ Path& LegacyRenderSVGShape::ensurePath()
 
 std::unique_ptr<Path> LegacyRenderSVGShape::createPath() const
 {
-    return makeUnique<Path>(pathFromGraphicsElement(protectedGraphicsElement()));
+    return makeUnique<Path>(pathFromGraphicsElement(graphicsElement()));
 }
 
 }

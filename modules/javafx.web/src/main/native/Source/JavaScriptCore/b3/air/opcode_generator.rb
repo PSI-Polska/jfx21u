@@ -531,22 +531,6 @@ end
 writeH("Opcode") {
     | outp |
     outp.puts "#if ENABLE(B3_JIT)"
-
-    outp.puts "#pragma push_macro(\"RotateLeft32\")"
-    outp.puts "#pragma push_macro(\"RotateLeft64\")"
-    outp.puts "#pragma push_macro(\"RotateRight32\")"
-    outp.puts "#pragma push_macro(\"RotateRight64\")"
-    outp.puts "#pragma push_macro(\"StoreFence\")"
-    outp.puts "#pragma push_macro(\"LoadFence\")"
-    outp.puts "#pragma push_macro(\"MemoryFence\")"
-    outp.puts "#undef RotateLeft32"
-    outp.puts "#undef RotateLeft64"
-    outp.puts "#undef RotateRight32"
-    outp.puts "#undef RotateRight64"
-    outp.puts "#undef StoreFence"
-    outp.puts "#undef LoadFence"
-    outp.puts "#undef MemoryFence"
-
     outp.puts "namespace JSC { namespace B3 { namespace Air {"
     outp.puts "enum Opcode : int16_t {"
     $opcodes.keys.each {
@@ -562,15 +546,6 @@ writeH("Opcode") {
     outp.puts "class PrintStream;"
     outp.puts "JS_EXPORT_PRIVATE void printInternal(PrintStream&, JSC::B3::Air::Opcode);"
     outp.puts "} // namespace WTF"
-
-    outp.puts "#pragma pop_macro(\"RotateLeft32\")"
-    outp.puts "#pragma pop_macro(\"RotateLeft64\")"
-    outp.puts "#pragma pop_macro(\"RotateRight32\")"
-    outp.puts "#pragma pop_macro(\"RotateRight64\")"
-    outp.puts "#pragma pop_macro(\"StoreFence\")"
-    outp.puts "#pragma pop_macro(\"LoadFence\")"
-    outp.puts "#pragma pop_macro(\"MemoryFence\")"
-
     outp.puts "#endif // ENABLE(B3_JIT)"
 }
 
@@ -727,22 +702,6 @@ formTableWidth = (maxNumOperands + 1) * maxNumOperands / 2
 writeH("OpcodeUtils") {
     | outp |
     outp.puts "#if ENABLE(B3_JIT)"
-
-    outp.puts "#pragma push_macro(\"RotateLeft32\")"
-    outp.puts "#pragma push_macro(\"RotateLeft64\")"
-    outp.puts "#pragma push_macro(\"RotateRight32\")"
-    outp.puts "#pragma push_macro(\"RotateRight64\")"
-    outp.puts "#pragma push_macro(\"StoreFence\")"
-    outp.puts "#pragma push_macro(\"LoadFence\")"
-    outp.puts "#pragma push_macro(\"MemoryFence\")"
-    outp.puts "#undef RotateLeft32"
-    outp.puts "#undef RotateLeft64"
-    outp.puts "#undef RotateRight32"
-    outp.puts "#undef RotateRight64"
-    outp.puts "#undef StoreFence"
-    outp.puts "#undef LoadFence"
-    outp.puts "#undef MemoryFence"
-
     outp.puts "#include \"AirCustom.h\""
     outp.puts "#include \"AirInst.h\""
     outp.puts "#include \"AirFormTable.h\""
@@ -878,37 +837,12 @@ writeH("OpcodeUtils") {
     outp.puts "}"
     
     outp.puts "} } } // namespace JSC::B3::Air"
-
-    outp.puts "#pragma pop_macro(\"RotateLeft32\")"
-    outp.puts "#pragma pop_macro(\"RotateLeft64\")"
-    outp.puts "#pragma pop_macro(\"RotateRight32\")"
-    outp.puts "#pragma pop_macro(\"RotateRight64\")"
-    outp.puts "#pragma pop_macro(\"StoreFence\")"
-    outp.puts "#pragma pop_macro(\"LoadFence\")"
-    outp.puts "#pragma pop_macro(\"MemoryFence\")"
-
     outp.puts "#endif // ENABLE(B3_JIT)"
 }
 
 writeH("OpcodeGenerated") {
     | outp |
     outp.puts "#if ENABLE(B3_JIT)"
-
-    outp.puts "#pragma push_macro(\"RotateLeft32\")"
-    outp.puts "#pragma push_macro(\"RotateLeft64\")"
-    outp.puts "#pragma push_macro(\"RotateRight32\")"
-    outp.puts "#pragma push_macro(\"RotateRight64\")"
-    outp.puts "#pragma push_macro(\"StoreFence\")"
-    outp.puts "#pragma push_macro(\"LoadFence\")"
-    outp.puts "#pragma push_macro(\"MemoryFence\")"
-    outp.puts "#undef RotateLeft32"
-    outp.puts "#undef RotateLeft64"
-    outp.puts "#undef RotateRight32"
-    outp.puts "#undef RotateRight64"
-    outp.puts "#undef StoreFence"
-    outp.puts "#undef LoadFence"
-    outp.puts "#undef MemoryFence"
-
     outp.puts "#include \"AirInstInlines.h\""
     outp.puts "#include \"B3ProcedureInlines.h\""
     outp.puts "#include \"CCallHelpers.h\""
@@ -1368,15 +1302,6 @@ writeH("OpcodeGenerated") {
     outp.puts "}"
 
     outp.puts "} } } // namespace JSC::B3::Air"
-
-    outp.puts "#pragma pop_macro(\"RotateLeft32\")"
-    outp.puts "#pragma pop_macro(\"RotateLeft64\")"
-    outp.puts "#pragma pop_macro(\"RotateRight32\")"
-    outp.puts "#pragma pop_macro(\"RotateRight64\")"
-    outp.puts "#pragma pop_macro(\"StoreFence\")"
-    outp.puts "#pragma pop_macro(\"LoadFence\")"
-    outp.puts "#pragma pop_macro(\"MemoryFence\")"
-
     outp.puts "#endif // ENABLE(B3_JIT)"
 }
 

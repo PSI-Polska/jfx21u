@@ -34,7 +34,6 @@
 #include "JSMediaKeyStatusMap.h"
 #include "MediaKeySession.h"
 #include "SharedBuffer.h"
-#include <wtf/StdLibExtras.h>
 
 namespace WebCore {
 
@@ -59,9 +58,10 @@ unsigned long MediaKeyStatusMap::size()
 
 static bool keyIdsMatch(const SharedBuffer& a, const BufferSource& b)
 {
-    if (a.isEmpty())
+    auto length = a.size();
+    if (!length || length != b.length())
         return false;
-    return equalSpans(a.span(), b.span());
+    return !std::memcmp(a.data(), b.data(), length);
 }
 
 bool MediaKeyStatusMap::has(const BufferSource& keyId)
@@ -103,7 +103,7 @@ std::optional<KeyValuePair<BufferSource::VariantType, MediaKeyStatus>> MediaKeyS
         return std::nullopt;
 
     auto& pair = statuses[m_index++];
-    auto buffer = ArrayBuffer::create(pair.first->makeContiguous()->span());
+    auto buffer = ArrayBuffer::create(pair.first->makeContiguous()->data(), pair.first->size());
     return KeyValuePair<BufferSource::VariantType, MediaKeyStatus> { RefPtr<ArrayBuffer>(WTFMove(buffer)), pair.second };
 }
 

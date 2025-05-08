@@ -38,15 +38,6 @@
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
-class PlatformGamepad;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::PlatformGamepad> : std::true_type { };
-}
-
-namespace WebCore {
 
 struct GamepadEffectParameters;
 
@@ -67,7 +58,7 @@ public:
     virtual void playEffect(GamepadHapticEffectType, const GamepadEffectParameters&, CompletionHandler<void(bool)>&& completionHandler) { completionHandler(false); }
     virtual void stopEffects(CompletionHandler<void()>&& completionHandler) { completionHandler(); }
 
-    virtual ASCIILiteral source() const { return "Unknown"_s; }
+    virtual const char* source() const { return "Unknown"_s; }
 
 protected:
     explicit PlatformGamepad(unsigned index)

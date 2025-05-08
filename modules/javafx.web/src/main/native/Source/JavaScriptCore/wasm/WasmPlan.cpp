@@ -62,14 +62,13 @@ void Plan::runCompletionTasks()
     m_completed.notifyAll();
 }
 
-bool Plan::addCompletionTaskIfNecessary(VM& vm, CompletionTask&& task)
+void Plan::addCompletionTask(VM& vm, CompletionTask&& task)
 {
     Locker locker { m_lock };
-    if (!isComplete()) {
+    if (!isComplete())
         m_completionTasks.append(std::make_pair(&vm, WTFMove(task)));
-        return true;
-    }
-    return false;
+    else
+        task->run(*this);
 }
 
 void Plan::waitForCompletion()
@@ -114,18 +113,17 @@ bool Plan::tryRemoveContextAndCancelIfLast(VM& vm)
     return false;
 }
 
-void Plan::fail(String&& errorMessage, Error error)
+void Plan::fail(String&& errorMessage)
 {
     if (failed())
         return;
     ASSERT(errorMessage);
     dataLogLnIf(WasmPlanInternal::verbose, "failing with message: ", errorMessage);
     m_errorMessage = WTFMove(errorMessage);
-    m_error = error;
     complete();
 }
 
-Plan::~Plan() = default;
+Plan::~Plan() { }
 
 } } // namespace JSC::Wasm
 

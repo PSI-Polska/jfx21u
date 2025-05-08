@@ -28,7 +28,7 @@
 
 #include "CodeBlock.h"
 #include "JSCellInlines.h"
-#include <wtf/text/MakeString.h>
+#include <wtf/text/StringBuilder.h>
 
 namespace JSC {
 
@@ -38,9 +38,15 @@ FileBasedFuzzerAgentBase::FileBasedFuzzerAgentBase(VM&)
 
 String FileBasedFuzzerAgentBase::createLookupKey(const String& sourceFilename, OpcodeID opcodeId, int startLocation, int endLocation)
 {
-    return makeString(sourceFilename, '|',
-        opcodeNames[opcodeAliasForLookupKey(opcodeId)],
-        '|', startLocation, '|', endLocation);
+    StringBuilder lookupKey;
+    lookupKey.append(sourceFilename);
+    lookupKey.append("|");
+    lookupKey.append(opcodeNames[opcodeAliasForLookupKey(opcodeId)]);
+    lookupKey.append("|");
+    lookupKey.append(startLocation);
+    lookupKey.append("|");
+    lookupKey.append(endLocation);
+    return lookupKey.toString();
 }
 
 OpcodeID FileBasedFuzzerAgentBase::opcodeAliasForLookupKey(const OpcodeID& opcodeId)

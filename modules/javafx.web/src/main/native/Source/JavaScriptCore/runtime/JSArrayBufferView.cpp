@@ -255,7 +255,7 @@ JSArrayBuffer* JSArrayBufferView::possiblySharedJSBuffer(JSGlobalObject* globalO
     return nullptr;
 }
 
-void JSArrayBufferView::detachFromArrayBuffer()
+void JSArrayBufferView::detach()
 {
     Locker locker { cellLock() };
     RELEASE_ASSERT(hasArrayBuffer());
@@ -263,7 +263,6 @@ void JSArrayBufferView::detachFromArrayBuffer()
     m_length = 0;
     m_byteOffset = 0;
     m_vector.clear();
-    globalObject()->notifyArrayBufferDetaching();
 }
 
 ArrayBuffer* JSArrayBufferView::slowDownAndWasteMemory()
@@ -290,10 +289,11 @@ ArrayBuffer* JSArrayBufferView::slowDownAndWasteMemory()
     Structure* structure = this->structure();
 
     RefPtr<ArrayBuffer> buffer;
+    size_t byteLength = this->byteLength();
 
     switch (m_mode) {
     case FastTypedArray: {
-        buffer = ArrayBuffer::tryCreate(span());
+        buffer = ArrayBuffer::tryCreate(vector(), byteLength);
         if (!buffer)
             return nullptr;
         break;
@@ -303,7 +303,7 @@ ArrayBuffer* JSArrayBufferView::slowDownAndWasteMemory()
         // FIXME: consider doing something like "subtracting" from extra memory
         // cost, since right now this case will cause the GC to think that we reallocated
         // the whole buffer.
-        buffer = ArrayBuffer::createAdopted(span());
+        buffer = ArrayBuffer::createAdopted(vector(), byteLength);
         break;
     }
 

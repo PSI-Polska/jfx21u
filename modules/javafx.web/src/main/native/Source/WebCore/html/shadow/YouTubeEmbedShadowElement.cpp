@@ -27,11 +27,11 @@
 #include "YouTubeEmbedShadowElement.h"
 
 #include "RenderBlockFlow.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(YouTubeEmbedShadowElement);
+WTF_MAKE_ISO_ALLOCATED_IMPL(YouTubeEmbedShadowElement);
 
 Ref<YouTubeEmbedShadowElement> YouTubeEmbedShadowElement::create(Document& document)
 {

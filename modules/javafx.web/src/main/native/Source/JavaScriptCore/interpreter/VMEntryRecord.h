@@ -57,6 +57,6 @@ struct VMEntryRecord {
     SUPPRESS_ASAN EntryFrame* unsafePrevTopEntryFrame() { return m_prevTopEntryFrame; }
 };
 
-extern "C" VMEntryRecord* SYSV_ABI vmEntryRecord(EntryFrame*);
+extern "C" VMEntryRecord* vmEntryRecord(EntryFrame*);
 
 } // namespace JSC

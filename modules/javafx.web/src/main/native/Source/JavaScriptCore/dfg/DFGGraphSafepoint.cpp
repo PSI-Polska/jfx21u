@@ -33,14 +33,14 @@
 
 namespace JSC { namespace DFG {
 
-GraphSafepoint::GraphSafepoint(Graph& graph, Safepoint::Result& result, bool keepDependencesLive)
+GraphSafepoint::GraphSafepoint(Graph& graph, Safepoint::Result& result)
     : m_safepoint(graph.m_plan, result)
 {
     m_safepoint.add(&graph);
-    m_safepoint.begin(keepDependencesLive);
+    m_safepoint.begin();
 }
 
-GraphSafepoint::~GraphSafepoint() = default;
+GraphSafepoint::~GraphSafepoint() { }
 
 } } // namespace JSC::DFG
 

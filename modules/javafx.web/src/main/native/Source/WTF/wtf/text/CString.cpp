@@ -45,31 +45,31 @@ Ref<CStringBuffer> CStringBuffer::createUninitialized(size_t length)
     return adoptRef(*new (NotNull, stringBuffer) CStringBuffer(length));
 }
 
-CString::CString(const char* string)
+CString::CString(const char* str)
 {
-    if (!string)
+    if (!str)
         return;
 
-    init(WTF::span(string));
+    init(str, strlen(str));
 }
 
-CString::CString(std::span<const char> string)
+CString::CString(const char* str, size_t length)
 {
-    if (!string.data()) {
-        ASSERT(string.empty());
+    if (!str) {
+        ASSERT(!length);
         return;
     }
 
-    init(string);
+    init(str, length);
 }
 
-void CString::init(std::span<const char> string)
+void CString::init(const char* str, size_t length)
 {
-    ASSERT(string.data());
+    ASSERT(str);
 
-    m_buffer = CStringBuffer::createUninitialized(string.size());
-    memcpy(m_buffer->mutableData(), string.data(), string.size());
-    m_buffer->mutableData()[string.size()] = '\0';
+    m_buffer = CStringBuffer::createUninitialized(length);
+    memcpy(m_buffer->mutableData(), str, length);
+    m_buffer->mutableData()[length] = '\0';
 }
 
 char* CString::mutableData()
@@ -121,7 +121,7 @@ bool operator==(const CString& a, const CString& b)
         return false;
     if (a.length() != b.length())
         return false;
-    return equal(a.span().data(), b.span());
+    return equal(reinterpret_cast<const LChar*>(a.data()), reinterpret_cast<const LChar*>(b.data()), a.length());
 }
 
 bool operator==(const CString& a, const char* b)

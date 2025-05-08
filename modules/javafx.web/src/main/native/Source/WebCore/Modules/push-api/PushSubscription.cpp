@@ -34,12 +34,12 @@
 #include "ScriptExecutionContext.h"
 #include "ServiceWorkerContainer.h"
 #include <JavaScriptCore/ArrayBuffer.h>
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/text/Base64.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(PushSubscription);
+WTF_MAKE_ISO_ALLOCATED_IMPL(PushSubscription);
 
 PushSubscription::PushSubscription(PushSubscriptionData&& data, RefPtr<PushSubscriptionOwner>&& owner)
     : m_data(WTFMove(data))
@@ -86,16 +86,20 @@ const Vector<uint8_t>& PushSubscription::sharedAuthenticationSecret() const
 
 ExceptionOr<RefPtr<JSC::ArrayBuffer>> PushSubscription::getKey(PushEncryptionKeyName name) const
 {
-    auto& source = [&]() -> const Vector<uint8_t>& {
+    const Vector<uint8_t>* source = nullptr;
+
     switch (name) {
     case PushEncryptionKeyName::P256dh:
-            return clientECDHPublicKey();
+        source = &clientECDHPublicKey();
+        break;
     case PushEncryptionKeyName::Auth:
-            return sharedAuthenticationSecret();
+        source = &sharedAuthenticationSecret();
+        break;
+    default:
+        return nullptr;
     }
-    }();
 
-    auto buffer = ArrayBuffer::tryCreate(source);
+    auto buffer = ArrayBuffer::tryCreate(source->data(), source->size());
     if (!buffer)
         return Exception { ExceptionCode::OutOfMemoryError };
     return buffer;

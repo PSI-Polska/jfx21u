@@ -31,7 +31,7 @@
 
 #include "Color.h"
 #include "DestinationColorSpace.h"
-#include "ImageBufferPixelFormat.h"
+#include "PixelFormat.h"
 #include "SimpleRange.h"
 #include <memory>
 #include <wtf/OptionSet.h>
@@ -44,7 +44,7 @@ class ImageBuffer;
 class LocalFrame;
 class Node;
 
-enum class SnapshotFlags : uint16_t {
+enum class SnapshotFlags : uint8_t {
     ExcludeSelectionHighlighting = 1 << 0,
     PaintSelectionOnly = 1 << 1,
     InViewCoordinates = 1 << 2,
@@ -53,13 +53,11 @@ enum class SnapshotFlags : uint16_t {
     PaintEverythingExcludingSelection = 1 << 5,
     PaintWithIntegralScaleFactor = 1 << 6,
     Shareable = 1 << 7,
-    Accelerated = 1 << 8,
-    ExcludeReplacedContent = 1 << 9,
 };
 
 struct SnapshotOptions {
     OptionSet<SnapshotFlags> flags;
-    ImageBufferPixelFormat pixelFormat;
+    PixelFormat pixelFormat;
     DestinationColorSpace colorSpace;
 };
 

@@ -41,11 +41,11 @@ void SSACalculator::Variable::dumpVerbose(PrintStream& out) const
 {
     dump(out);
     if (!m_blocksWithDefs.isEmpty()) {
-        out.print("(defs: "_s);
+        out.print("(defs: ");
         CommaPrinter comma;
         for (BasicBlock* block : m_blocksWithDefs)
             out.print(comma, *block);
-        out.print(")"_s);
+        out.print(")");
     }
 }
 
@@ -60,7 +60,9 @@ SSACalculator::SSACalculator(Procedure& proc)
 {
 }
 
-SSACalculator::~SSACalculator() = default;
+SSACalculator::~SSACalculator()
+{
+}
 
 void SSACalculator::reset()
 {
@@ -108,39 +110,39 @@ SSACalculator::Def* SSACalculator::reachingDefAtTail(BasicBlock* startingBlock, 
 
 void SSACalculator::dump(PrintStream& out) const
 {
-    out.print("<Variables: ["_s);
+    out.print("<Variables: [");
     CommaPrinter comma;
     for (unsigned i = 0; i < m_variables.size(); ++i) {
         out.print(comma);
         m_variables[i].dumpVerbose(out);
     }
-    out.print("], Defs: ["_s);
+    out.print("], Defs: [");
     comma = CommaPrinter();
     for (Def* def : const_cast<SSACalculator*>(this)->m_defs)
         out.print(comma, *def);
-    out.print("], Phis: ["_s);
+    out.print("], Phis: [");
     comma = CommaPrinter();
     for (Def* def : const_cast<SSACalculator*>(this)->m_phis)
         out.print(comma, *def);
-    out.print("], Block data: ["_s);
+    out.print("], Block data: [");
     comma = CommaPrinter();
     for (unsigned blockIndex = 0; blockIndex < m_proc.size(); ++blockIndex) {
         BasicBlock* block = m_proc[blockIndex];
         if (!block)
             continue;
 
-        out.print(comma, *block, "=>("_s);
-        out.print("Defs: {"_s);
+        out.print(comma, *block, "=>(");
+        out.print("Defs: {");
         CommaPrinter innerComma;
         for (auto entry : m_data[block].m_defs)
-            out.print(innerComma, *entry.key, "->"_s, *entry.value);
-        out.print("}, Phis: {"_s);
+            out.print(innerComma, *entry.key, "->", *entry.value);
+        out.print("}, Phis: {");
         innerComma = CommaPrinter();
         for (Def* def : m_data[block].m_phis)
             out.print(innerComma, *def);
-        out.print("})"_s);
+        out.print("})");
     }
-    out.print("]>"_s);
+    out.print("]>");
 }
 
 } } // namespace JSC::B3

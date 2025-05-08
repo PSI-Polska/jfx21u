@@ -57,8 +57,8 @@ public:
     void deref() final { RefCounted::deref(); }
 
     void advanceCurrentTime();
-    MediaTime currentTime() const override;
-    bool timeIsProgressing() const override;
+    MediaTime currentMediaTime() const override;
+    bool currentMediaTimeMayProgress() const override;
     void notifyActiveSourceBuffersChanged() final;
     void updateDuration(const MediaTime&);
 
@@ -84,17 +84,17 @@ private:
     FloatSize naturalSize() const override;
     bool hasVideo() const override;
     bool hasAudio() const override;
-    void setPageIsVisible(bool) final;
+    void setPageIsVisible(bool, String&& sceneIdentifier) final;
     void seekToTarget(const SeekTarget&) final;
     bool seeking() const final;
     bool paused() const override;
     MediaPlayer::NetworkState networkState() const override;
-    MediaTime maxTimeSeekable() const override;
+    MediaTime maxMediaTimeSeekable() const override;
     const PlatformTimeRanges& buffered() const override;
     bool didLoadingProgress() const override;
     void setPresentationSize(const IntSize&) override;
     void paint(GraphicsContext&, const FloatRect&) override;
-    MediaTime duration() const override;
+    MediaTime durationMediaTime() const override;
     std::optional<VideoPlaybackQualityMetrics> videoPlaybackQualityMetrics() override;
     DestinationColorSpace colorSpace() override;
 
@@ -103,10 +103,10 @@ private:
 
     MediaTime m_currentTime;
     MediaTime m_duration;
-    std::optional<SeekTarget> m_lastSeekTarget;
     MediaPlayer::ReadyState m_readyState { MediaPlayer::ReadyState::HaveNothing };
     MediaPlayer::NetworkState m_networkState { MediaPlayer::NetworkState::Empty };
     bool m_playing { false };
+    bool m_seekCompleted { false };
 };
 
 }

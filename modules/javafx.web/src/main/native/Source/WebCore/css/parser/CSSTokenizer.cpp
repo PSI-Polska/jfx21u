@@ -1,5 +1,5 @@
 // Copyright 2015 The Chromium Authors. All rights reserved.
-// Copyright (C) 2016-2024 Apple Inc. All rights reserved.
+// Copyright (C) 2016-2021 Apple Inc. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -34,6 +34,7 @@
 #include "CSSParserObserverWrapper.h"
 #include "CSSParserTokenRange.h"
 #include "CSSTokenizerInputStream.h"
+#include "JSDOMConvertStrings.h"
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringToIntegerConversion.h>
 #include <wtf/unicode/CharacterNames.h>
@@ -45,7 +46,7 @@ DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSTokenizer);
 String CSSTokenizer::preprocessString(const String& string)
 {
     // We don't replace '\r' and '\f' with '\n' as the specification suggests, instead
-    // we treat them all the same in the isNewline function below.
+    // we treat them all the same in the isNewLine function below.
     StringImpl* oldImpl = string.impl();
     String replaced = makeStringByReplacingAll(string, '\0', replacementCharacter);
     replaced = replaceUnpairedSurrogatesWithReplacementCharacter(WTFMove(replaced));
@@ -139,26 +140,16 @@ unsigned CSSTokenizer::tokenCount()
     return m_tokens.size();
 }
 
-bool CSSTokenizer::isWhitespace(CSSParserTokenType type)
-{
-    return type == NonNewlineWhitespaceToken || type == NewlineToken;
-}
-
-bool CSSTokenizer::isNewline(UChar cc)
+static bool isNewLine(UChar cc)
 {
     // We check \r and \f here, since we have no preprocessing stage
     return (cc == '\r' || cc == '\n' || cc == '\f');
 }
 
-CSSParserToken CSSTokenizer::newline(UChar)
-{
-    return CSSParserToken(NewlineToken);
-}
-
 // http://dev.w3.org/csswg/css-syntax/#check-if-two-code-points-are-a-valid-escape
 static bool twoCharsAreValidEscape(UChar first, UChar second)
 {
-    return first == '\\' && !CSSTokenizer::isNewline(second);
+    return first == '\\' && !isNewLine(second);
 }
 
 void CSSTokenizer::reconsume(UChar c)
@@ -173,12 +164,10 @@ UChar CSSTokenizer::consume()
     return current;
 }
 
-CSSParserToken CSSTokenizer::whitespace(UChar)
+CSSParserToken CSSTokenizer::whiteSpace(UChar /*cc*/)
 {
-    auto startOffset = m_input.offset();
-    m_input.advanceUntilNewlineOrNonWhitespace();
-    auto whitespaceCount = 1 + (m_input.offset() - startOffset);
-    return CSSParserToken(whitespaceCount);
+    m_input.advanceUntilNonWhitespace();
+    return CSSParserToken(WhitespaceToken);
 }
 
 CSSParserToken CSSTokenizer::blockStart(CSSParserTokenType type)
@@ -202,32 +191,32 @@ CSSParserToken CSSTokenizer::blockEnd(CSSParserTokenType type, CSSParserTokenTyp
     return CSSParserToken(type);
 }
 
-CSSParserToken CSSTokenizer::leftParenthesis(UChar)
+CSSParserToken CSSTokenizer::leftParenthesis(UChar /*cc*/)
 {
     return blockStart(LeftParenthesisToken);
 }
 
-CSSParserToken CSSTokenizer::rightParenthesis(UChar)
+CSSParserToken CSSTokenizer::rightParenthesis(UChar /*cc*/)
 {
     return blockEnd(RightParenthesisToken, LeftParenthesisToken);
 }
 
-CSSParserToken CSSTokenizer::leftBracket(UChar)
+CSSParserToken CSSTokenizer::leftBracket(UChar /*cc*/)
 {
     return blockStart(LeftBracketToken);
 }
 
-CSSParserToken CSSTokenizer::rightBracket(UChar)
+CSSParserToken CSSTokenizer::rightBracket(UChar /*cc*/)
 {
     return blockEnd(RightBracketToken, LeftBracketToken);
 }
 
-CSSParserToken CSSTokenizer::leftBrace(UChar)
+CSSParserToken CSSTokenizer::leftBrace(UChar /*cc*/)
 {
     return blockStart(LeftBraceToken);
 }
 
-CSSParserToken CSSTokenizer::rightBrace(UChar)
+CSSParserToken CSSTokenizer::rightBrace(UChar /*cc*/)
 {
     return blockEnd(RightBraceToken, LeftBraceToken);
 }
@@ -259,7 +248,7 @@ CSSParserToken CSSTokenizer::lessThan(UChar cc)
     return CSSParserToken(DelimiterToken, '<');
 }
 
-CSSParserToken CSSTokenizer::comma(UChar)
+CSSParserToken CSSTokenizer::comma(UChar /*cc*/)
 {
     return CSSParserToken(CommaToken);
 }
@@ -292,12 +281,12 @@ CSSParserToken CSSTokenizer::solidus(UChar cc)
     return CSSParserToken(DelimiterToken, cc);
 }
 
-CSSParserToken CSSTokenizer::colon(UChar)
+CSSParserToken CSSTokenizer::colon(UChar /*cc*/)
 {
     return CSSParserToken(ColonToken);
 }
 
-CSSParserToken CSSTokenizer::semiColon(UChar)
+CSSParserToken CSSTokenizer::semiColon(UChar /*cc*/)
 {
     return CSSParserToken(SemicolonToken);
 }
@@ -381,7 +370,7 @@ CSSParserToken CSSTokenizer::stringStart(UChar cc)
     return consumeStringTokenUntil(cc);
 }
 
-CSSParserToken CSSTokenizer::endOfFile(UChar)
+CSSParserToken CSSTokenizer::endOfFile(UChar /*cc*/)
 {
     return CSSParserToken(EOFToken);
 }
@@ -396,13 +385,11 @@ const CSSTokenizer::CodePoint CSSTokenizer::codePoints[128] = {
     0,
     0,
     0,
-    &CSSTokenizer::whitespace,
-    &CSSTokenizer::newline, // '\n'
+    &CSSTokenizer::whiteSpace,
+    &CSSTokenizer::whiteSpace,
     0,
-    &CSSTokenizer::newline, // '\f'
-    &CSSTokenizer::newline, // '\r'
-    0,
-    0,
+    &CSSTokenizer::whiteSpace,
+    &CSSTokenizer::whiteSpace,
     0,
     0,
     0,
@@ -419,7 +406,9 @@ const CSSTokenizer::CodePoint CSSTokenizer::codePoints[128] = {
     0,
     0,
     0,
-    &CSSTokenizer::whitespace,
+    0,
+    0,
+    &CSSTokenizer::whiteSpace,
     0,
     &CSSTokenizer::stringStart,
     &CSSTokenizer::hash,
@@ -630,7 +619,7 @@ CSSParserToken CSSTokenizer::consumeStringTokenUntil(UChar endingCodePoint)
             m_input.advance(size + 1);
             return CSSParserToken(StringToken, m_input.rangeAt(startOffset, size));
         }
-        if (isNewline(cc)) {
+        if (isNewLine(cc)) {
             m_input.advance(size);
             return CSSParserToken(BadStringToken);
         }
@@ -643,14 +632,14 @@ CSSParserToken CSSTokenizer::consumeStringTokenUntil(UChar endingCodePoint)
         UChar cc = consume();
         if (cc == endingCodePoint || cc == kEndOfFileMarker)
             return CSSParserToken(StringToken, registerString(output.toString()));
-        if (isNewline(cc)) {
+        if (isNewLine(cc)) {
             reconsume(cc);
             return CSSParserToken(BadStringToken);
         }
         if (cc == '\\') {
             if (m_input.nextInputChar() == kEndOfFileMarker)
                 continue;
-            if (isNewline(m_input.peek(0)))
+            if (isNewLine(m_input.peek(0)))
                 consumeSingleWhitespaceIfNext(); // This handles \r\n for us
             else
                 output.append(consumeEscape());
@@ -804,7 +793,7 @@ StringView CSSTokenizer::consumeName()
 char32_t CSSTokenizer::consumeEscape()
 {
     UChar cc = consume();
-    ASSERT(!isNewline(cc));
+    ASSERT(!isNewLine(cc));
     if (isASCIIHexDigit(cc)) {
         unsigned consumedHexDigits = 1;
         StringBuilder hexChars;

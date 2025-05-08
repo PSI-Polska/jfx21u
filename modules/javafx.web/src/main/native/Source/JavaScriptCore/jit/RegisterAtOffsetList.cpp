@@ -39,13 +39,13 @@ RegisterAtOffsetList::RegisterAtOffsetList() { }
 RegisterAtOffsetList::RegisterAtOffsetList(RegisterSet registerSetBuilder, OffsetBaseType offsetBaseType)
     : m_registers(registerSetBuilder.numberOfSetRegisters())
 {
-    ASSERT(!registerSetBuilder.hasAnyWideRegisters() || Options::useWasmSIMD());
+    ASSERT(!registerSetBuilder.hasAnyWideRegisters() || Options::useWebAssemblySIMD());
 
     size_t sizeOfAreaInBytes = registerSetBuilder.byteSizeOfSetRegisters();
     m_sizeOfAreaInBytes = sizeOfAreaInBytes;
 #if USE(JSVALUE64)
     static_assert(sizeof(CPURegister) == sizeof(double));
-    ASSERT(this->sizeOfAreaInBytes() == registerCount() * sizeof(CPURegister) || Options::useWasmSIMD());
+    ASSERT(this->sizeOfAreaInBytes() == registerCount() * sizeof(CPURegister) || Options::useWebAssemblySIMD());
 #endif
 
     ptrdiff_t startOffset = 0;

@@ -47,7 +47,7 @@ struct RTCConfiguration {
     RTCBundlePolicy bundlePolicy;
     RTCPMuxPolicy rtcpMuxPolicy;
     unsigned short iceCandidatePoolSize;
-    Vector<Ref<RTCCertificate>> certificates;
+    Vector<RefPtr<RTCCertificate>> certificates;
 };
 
 } // namespace WebCore

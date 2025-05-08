@@ -30,26 +30,21 @@
 #include "EventNames.h"
 #include "History.h"
 #include <JavaScriptCore/JSCInlines.h>
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(PopStateEvent);
-
-PopStateEvent::PopStateEvent()
-    : Event(EventInterfaceType::PopStateEvent)
-{
-}
+WTF_MAKE_ISO_ALLOCATED_IMPL(PopStateEvent);
 
 PopStateEvent::PopStateEvent(const AtomString& type, const Init& initializer, IsTrusted isTrusted)
-    : Event(EventInterfaceType::PopStateEvent, type, initializer, isTrusted)
+    : Event(type, initializer, isTrusted)
     , m_state(initializer.state)
     , m_hasUAVisualTransition(initializer.hasUAVisualTransition)
 {
 }
 
 PopStateEvent::PopStateEvent(RefPtr<SerializedScriptValue>&& serializedState, History* history)
-    : Event(EventInterfaceType::PopStateEvent, eventNames().popstateEvent, CanBubble::No, IsCancelable::No)
+    : Event(eventNames().popstateEvent, CanBubble::No, IsCancelable::No)
     , m_serializedState(WTFMove(serializedState))
     , m_history(history)
 {
@@ -82,6 +77,11 @@ RefPtr<SerializedScriptValue> PopStateEvent::trySerializeState(JSC::JSGlobalObje
     }
 
     return m_serializedState;
+}
+
+EventInterface PopStateEvent::eventInterface() const
+{
+    return PopStateEventInterfaceType;
 }
 
 } // namespace WebCore

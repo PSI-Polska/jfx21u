@@ -31,7 +31,6 @@ namespace Style {
 enum class Validity : uint8_t {
     Valid,
     AnimationInvalid,
-    InlineStyleInvalid,
     ElementInvalid,
     SubtreeInvalid,
 };

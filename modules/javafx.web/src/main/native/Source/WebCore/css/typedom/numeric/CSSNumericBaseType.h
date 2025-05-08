@@ -26,7 +26,6 @@
 #pragma once
 
 #include <array>
-#include <wtf/text/ASCIILiteral.h>
 
 namespace WebCore {
 
@@ -53,25 +52,25 @@ constexpr std::array<CSSNumericBaseType, 7> eachBaseType()
     };
 }
 
-constexpr ASCIILiteral debugString(CSSNumericBaseType type)
+constexpr const char* debugString(CSSNumericBaseType type)
 {
     switch (type) {
     case CSSNumericBaseType::Length:
-        return "length"_s;
+        return "length";
     case CSSNumericBaseType::Angle:
-        return "angle"_s;
+        return "angle";
     case CSSNumericBaseType::Time:
-        return "time"_s;
+        return "time";
     case CSSNumericBaseType::Frequency:
-        return "frequency"_s;
+        return "frequency";
     case CSSNumericBaseType::Resolution:
-        return "resolution"_s;
+        return "resolution";
     case CSSNumericBaseType::Flex:
-        return "flex"_s;
+        return "flex";
     case CSSNumericBaseType::Percent:
-        return "percent"_s;
+        return "percent";
     }
-    return "invalid"_s;
+    return "invalid";
 }
 
 } // namespace WebCore

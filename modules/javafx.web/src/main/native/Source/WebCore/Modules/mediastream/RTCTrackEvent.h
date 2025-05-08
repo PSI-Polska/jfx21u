@@ -42,10 +42,10 @@ class MediaStreamTrack;
 class RTCRtpReceiver;
 class RTCRtpTransceiver;
 
-typedef Vector<Ref<MediaStream>> MediaStreamArray;
+typedef Vector<RefPtr<MediaStream>> MediaStreamArray;
 
 class RTCTrackEvent final : public Event {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RTCTrackEvent);
+    WTF_MAKE_ISO_ALLOCATED(RTCTrackEvent);
 public:
     static Ref<RTCTrackEvent> create(const AtomString& type, CanBubble, IsCancelable, RefPtr<RTCRtpReceiver>&&, RefPtr<MediaStreamTrack>&&, MediaStreamArray&&, RefPtr<RTCRtpTransceiver>&&);
 
@@ -61,6 +61,8 @@ public:
     MediaStreamTrack* track() const  { return m_track.get(); }
     const MediaStreamArray& streams() const  { return m_streams; }
     RTCRtpTransceiver* transceiver() const  { return m_transceiver.get(); }
+
+    virtual EventInterface eventInterface() const { return RTCTrackEventInterfaceType; }
 
 private:
     RTCTrackEvent(const AtomString& type, CanBubble, IsCancelable, RefPtr<RTCRtpReceiver>&&, RefPtr<MediaStreamTrack>&&, MediaStreamArray&&, RefPtr<RTCRtpTransceiver>&&);

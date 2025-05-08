@@ -25,9 +25,8 @@
 
 [
     EnabledBySetting=MediaCapabilitiesEnabled,
-    ExportMacro=WEBCORE_EXPORT,
     JSGenerateToJSObject,
-    JSGenerateToNativeObject
+    ExportMacro=WEBCORE_EXPORT,
 ] dictionary VideoConfiguration {
   required DOMString contentType;
   required unsigned long width;

@@ -26,8 +26,7 @@
 namespace WebCore {
 
 class SVGFEFloodElement final : public SVGFilterPrimitiveStandardAttributes {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGFEFloodElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGFEFloodElement);
+    WTF_MAKE_ISO_ALLOCATED(SVGFEFloodElement);
 public:
     static Ref<SVGFEFloodElement> create(const QualifiedName&, Document&);
 

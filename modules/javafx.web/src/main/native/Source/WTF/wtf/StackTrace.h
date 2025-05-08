@@ -68,8 +68,6 @@ public:
     }
 
     void dump(PrintStream&) const;
-    template<typename Functor> // void Functor(int frameNumber, void* stackFrame, const char* name)
-    void forEachFrame(Functor) const;
     WTF_EXPORT_PRIVATE String toString() const;
 
 private:
@@ -184,12 +182,6 @@ private:
 inline void StackTrace::dump(PrintStream& out) const
 {
     StackTracePrinter { *this }.dump(out);
-}
-
-template<typename Functor>
-void StackTrace::forEachFrame(Functor functor) const
-{
-    StackTraceSymbolResolver { *this }.forEach(functor);
 }
 
 } // namespace WTF

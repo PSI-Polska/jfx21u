@@ -34,7 +34,9 @@
 
 namespace JSC { namespace B3 {
 
-ConstFloatValue::~ConstFloatValue() = default;
+ConstFloatValue::~ConstFloatValue()
+{
+}
 
 Value* ConstFloatValue::negConstant(Procedure& proc) const
 {
@@ -132,14 +134,14 @@ Value* ConstFloatValue::fMinConstant(Procedure& proc, const Value* other) const
 {
     if (!other->hasFloat())
         return nullptr;
-    return proc.add<ConstFloatValue>(origin(), Math::fMin(m_value, other->asFloat()));
+    return proc.add<ConstFloatValue>(origin(), fMin(m_value, other->asFloat()));
 }
 
 Value* ConstFloatValue::fMaxConstant(Procedure& proc, const Value* other) const
 {
     if (!other->hasFloat())
         return nullptr;
-    return proc.add<ConstFloatValue>(origin(), Math::fMax(m_value, other->asFloat()));
+    return proc.add<ConstFloatValue>(origin(), fMax(m_value, other->asFloat()));
 }
 
 TriState ConstFloatValue::equalConstant(const Value* other) const

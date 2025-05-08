@@ -28,11 +28,11 @@
 #include "MediaStreamTrackEvent.h"
 
 #include "MediaStreamTrack.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MediaStreamTrackEvent);
+WTF_MAKE_ISO_ALLOCATED_IMPL(MediaStreamTrackEvent);
 
 Ref<MediaStreamTrackEvent> MediaStreamTrackEvent::create(const AtomString& type, CanBubble canBubble, IsCancelable cancelable, RefPtr<MediaStreamTrack>&& track)
 {
@@ -45,13 +45,13 @@ Ref<MediaStreamTrackEvent> MediaStreamTrackEvent::create(const AtomString& type,
 }
 
 MediaStreamTrackEvent::MediaStreamTrackEvent(const AtomString& type, CanBubble canBubble, IsCancelable cancelable, RefPtr<MediaStreamTrack>&& track)
-    : Event(EventInterfaceType::MediaStreamTrackEvent, type, canBubble, cancelable)
+    : Event(type, canBubble, cancelable)
     , m_track(WTFMove(track))
 {
 }
 
 MediaStreamTrackEvent::MediaStreamTrackEvent(const AtomString& type, const Init& initializer, IsTrusted isTrusted)
-    : Event(EventInterfaceType::MediaStreamTrackEvent, type, initializer, isTrusted)
+    : Event(type, initializer, isTrusted)
     , m_track(initializer.track)
 {
 }
@@ -61,6 +61,11 @@ MediaStreamTrackEvent::~MediaStreamTrackEvent() = default;
 MediaStreamTrack* MediaStreamTrackEvent::track() const
 {
     return m_track.get();
+}
+
+EventInterface MediaStreamTrackEvent::eventInterface() const
+{
+    return MediaStreamTrackEventInterfaceType;
 }
 
 } // namespace WebCore

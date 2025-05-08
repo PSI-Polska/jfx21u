@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,33 +31,46 @@
 #include "ImageBuffer.h"
 #include "IntSize.h"
 #include "LengthFunctions.h"
-#include <ranges>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
-FilterOperations::FilterOperations(Vector<Ref<FilterOperation>>&& operations)
+FilterOperations::FilterOperations(Vector<RefPtr<FilterOperation>>&& operations)
     : m_operations(WTFMove(operations))
 {
 }
 
 bool FilterOperations::operator==(const FilterOperations& other) const
 {
-    static_assert(std::ranges::sized_range<decltype(m_operations)>);
-
-    return std::ranges::equal(m_operations, other.m_operations, [](auto& a, auto& b) { return a.get() == b.get(); });
+    size_t size = m_operations.size();
+    if (size != other.m_operations.size())
+        return false;
+    for (size_t i = 0; i < size; i++) {
+        if (*m_operations[i] != *other.m_operations[i])
+            return false;
+    }
+    return true;
 }
 
 bool FilterOperations::operationsMatch(const FilterOperations& other) const
 {
-    static_assert(std::ranges::sized_range<decltype(m_operations)>);
-
-    return std::ranges::equal(m_operations, other.m_operations, [](auto& a, auto& b) { return a->isSameType(b.get()); });
+    size_t size = operations().size();
+    if (size != other.operations().size())
+        return false;
+    for (size_t i = 0; i < size; ++i) {
+        if (!operations()[i]->isSameType(*other.operations()[i]))
+            return false;
+    }
+    return true;
 }
 
 bool FilterOperations::hasReferenceFilter() const
 {
-    return hasFilterOfType<FilterOperation::Type::Reference>();
+    for (auto& operation : m_operations) {
+        if (operation->type() == FilterOperation::Type::Reference)
+            return true;
+    }
+    return false;
 }
 
 bool FilterOperations::isReferenceFilter() const
@@ -71,7 +84,7 @@ IntOutsets FilterOperations::outsets() const
     for (auto& operation : m_operations) {
         switch (operation->type()) {
         case FilterOperation::Type::Blur: {
-            auto& blurOperation = downcast<BlurFilterOperation>(operation.get());
+            auto& blurOperation = downcast<BlurFilterOperation>(*operation);
             float stdDeviation = floatValueForLength(blurOperation.stdDeviation(), 0);
             IntSize outsetSize = FEGaussianBlur::calculateOutsetSize({ stdDeviation, stdDeviation });
             IntOutsets outsets(outsetSize.height(), outsetSize.width(), outsetSize.height(), outsetSize.width());
@@ -79,7 +92,7 @@ IntOutsets FilterOperations::outsets() const
             break;
         }
         case FilterOperation::Type::DropShadow: {
-            auto& dropShadowOperation = downcast<DropShadowFilterOperation>(operation.get());
+            auto& dropShadowOperation = downcast<DropShadowFilterOperation>(*operation);
             float stdDeviation = dropShadowOperation.stdDeviation();
             IntSize outsetSize = FEGaussianBlur::calculateOutsetSize({ stdDeviation, stdDeviation });
 
@@ -142,17 +155,29 @@ bool FilterOperations::inverseTransformColor(Color& color) const
 
 bool FilterOperations::hasFilterThatAffectsOpacity() const
 {
-    return std::ranges::any_of(m_operations, [](auto& op) { return op->affectsOpacity(); });
+    for (auto& operation : m_operations) {
+        if (operation->affectsOpacity())
+            return true;
+    }
+    return false;
 }
 
 bool FilterOperations::hasFilterThatMovesPixels() const
 {
-    return std::ranges::any_of(m_operations, [](auto& op) { return op->movesPixels(); });
+    for (auto& operation : m_operations) {
+        if (operation->movesPixels())
+            return true;
+    }
+    return false;
 }
 
 bool FilterOperations::hasFilterThatShouldBeRestrictedBySecurityOrigin() const
 {
-    return std::ranges::any_of(m_operations, [](auto& op) { return op->shouldBeRestrictedBySecurityOrigin(); });
+    for (auto& operation : m_operations) {
+        if (operation->shouldBeRestrictedBySecurityOrigin())
+            return true;
+    }
+    return false;
 }
 
 bool FilterOperations::canInterpolate(const FilterOperations& to, CompositeOperation compositeOperation) const
@@ -186,14 +211,10 @@ FilterOperations FilterOperations::blend(const FilterOperations& to, const Blend
 {
     if (context.compositeOperation == CompositeOperation::Add) {
         ASSERT(context.progress == 1.0);
-
-        Vector<Ref<FilterOperation>> operations;
-        operations.reserveInitialCapacity(size() + to.size());
-
-        operations.appendVector(m_operations);
-        operations.appendVector(to.m_operations);
-
-        return FilterOperations { WTFMove(operations) };
+        FilterOperations result;
+        result.operations().appendVector(m_operations);
+        result.operations().appendVector(to.operations());
+        return result;
     }
 
     if (context.isDiscrete) {
@@ -201,16 +222,13 @@ FilterOperations FilterOperations::blend(const FilterOperations& to, const Blend
         return context.progress ? to : *this;
     }
 
+    FilterOperations result;
     auto fromSize = m_operations.size();
-    auto toSize = to.m_operations.size();
+    auto toSize = to.operations().size();
     auto size = std::max(fromSize, toSize);
-
-    Vector<Ref<FilterOperation>> operations;
-    operations.reserveInitialCapacity(size);
-
     for (size_t i = 0; i < size; ++i) {
-        RefPtr<FilterOperation> fromOp = (i < fromSize) ? m_operations[i].ptr() : nullptr;
-        RefPtr<FilterOperation> toOp = (i < toSize) ? to.m_operations[i].ptr() : nullptr;
+        RefPtr<FilterOperation> fromOp = (i < fromSize) ? m_operations[i].get() : nullptr;
+        RefPtr<FilterOperation> toOp = (i < toSize) ? to.operations()[i].get() : nullptr;
 
         RefPtr<FilterOperation> blendedOp;
         if (toOp)
@@ -219,29 +237,30 @@ FilterOperations FilterOperations::blend(const FilterOperations& to, const Blend
             blendedOp = fromOp->blend(nullptr, context, true);
 
         if (blendedOp)
-            operations.append(blendedOp.releaseNonNull());
+            result.operations().append(blendedOp);
         else {
             auto identityOp = PassthroughFilterOperation::create();
-            if (context.progress > 0.5) {
-                if (toOp)
-                    operations.append(toOp.releaseNonNull());
+            if (context.progress > 0.5)
+                result.operations().append(toOp ? toOp : WTFMove(identityOp));
             else
-                    operations.append(WTFMove(identityOp));
-            } else {
-                if (fromOp)
-                    operations.append(fromOp.releaseNonNull());
-                else
-                    operations.append(WTFMove(identityOp));
-        }
+                result.operations().append(fromOp ? fromOp : WTFMove(identityOp));
         }
     }
-
-    return FilterOperations { WTFMove(operations) };
+    return result;
 }
 
 TextStream& operator<<(TextStream& ts, const FilterOperations& filters)
 {
-    return ts << filters.m_operations;
+    for (size_t i = 0; i < filters.size(); ++i) {
+        auto filter = filters.at(i);
+        if (filter)
+            ts << *filter;
+        else
+            ts << "(null)";
+        if (i < filters.size() - 1)
+            ts << " ";
+    }
+    return ts;
 }
 
 } // namespace WebCore

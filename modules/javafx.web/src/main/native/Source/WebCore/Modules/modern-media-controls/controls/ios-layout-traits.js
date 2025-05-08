@@ -30,9 +30,19 @@ class IOSLayoutTraits extends LayoutTraits
         return IOSInlineMediaControls;
     }
 
+    overridenSupportingObjectClasses()
+    {
+        return null;
+    }
+
     resourceDirectory()
     {
         return "iOS";
+    }
+
+    controlsAlwaysAvailable()
+    {
+        return false;
     }
 
     controlsNeverAvailable()

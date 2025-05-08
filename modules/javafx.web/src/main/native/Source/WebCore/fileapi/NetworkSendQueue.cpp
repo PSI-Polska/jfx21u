@@ -53,10 +53,11 @@ void NetworkSendQueue::enqueue(CString&& utf8)
 void NetworkSendQueue::enqueue(const JSC::ArrayBuffer& binaryData, unsigned byteOffset, unsigned byteLength)
 {
     if (m_queue.isEmpty()) {
-        m_writeRawData(binaryData.span().subspan(byteOffset, byteLength));
+        auto* data = static_cast<const uint8_t*>(binaryData.data());
+        m_writeRawData(std::span(data + byteOffset, byteLength));
         return;
     }
-    m_queue.append(SharedBuffer::create(binaryData.span().subspan(byteOffset, byteLength)));
+    m_queue.append(SharedBuffer::create(static_cast<const uint8_t*>(binaryData.data()) + byteOffset, byteLength));
 }
 
 void NetworkSendQueue::enqueue(WebCore::Blob& blob)
@@ -103,7 +104,7 @@ void NetworkSendQueue::processMessages()
             }
 
             if (const auto& result = loader->arrayBufferResult()) {
-                m_writeRawData(result->span());
+                m_writeRawData(std::span(static_cast<const uint8_t*>(result->data()), result->byteLength()));
                 return;
             }
             ASSERT(errorCode);

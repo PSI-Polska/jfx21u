@@ -35,15 +35,13 @@ struct GPURequestAdapterOptions {
     WebGPU::RequestAdapterOptions convertToBacking() const
     {
         return {
-            .powerPreference = powerPreference ? std::optional { WebCore::convertToBacking(*powerPreference) } : std::nullopt,
-            .forceFallbackAdapter = forceFallbackAdapter,
-            .xrCompatible = xrCompatible
+            powerPreference ? std::optional { WebCore::convertToBacking(*powerPreference) } : std::nullopt,
+            forceFallbackAdapter,
         };
     }
 
     std::optional<GPUPowerPreference> powerPreference;
     bool forceFallbackAdapter { false };
-    bool xrCompatible { false };
 };
 
 }

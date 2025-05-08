@@ -30,19 +30,17 @@
 
 #include "RenderMathMLBlockInlines.h"
 #include <cmath>
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderMathMLPadded);
+WTF_MAKE_ISO_ALLOCATED_IMPL(RenderMathMLPadded);
 
 RenderMathMLPadded::RenderMathMLPadded(MathMLPaddedElement& element, RenderStyle&& style)
     : RenderMathMLRow(Type::MathMLPadded, element, WTFMove(style))
 {
     ASSERT(isRenderMathMLPadded());
 }
-
-RenderMathMLPadded::~RenderMathMLPadded() = default;
 
 LayoutUnit RenderMathMLPadded::voffset() const
 {
@@ -75,11 +73,13 @@ void RenderMathMLPadded::computePreferredLogicalWidths()
 {
     ASSERT(preferredLogicalWidthsDirty());
 
+    // Determine the intrinsic width of the content.
+    RenderMathMLRow::computePreferredLogicalWidths();
+
     // Only the width attribute should modify the width.
     // We parse it using the preferred width of the content as its default value.
-    LayoutUnit preferredWidth = preferredLogicalWidthOfRowItems();
-    preferredWidth = mpaddedWidth(preferredWidth) + borderAndPaddingLogicalWidth();
-    m_maxPreferredLogicalWidth = m_minPreferredLogicalWidth = preferredWidth;
+    m_maxPreferredLogicalWidth = mpaddedWidth(m_maxPreferredLogicalWidth);
+    m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth;
 
     setPreferredLogicalWidthsDirty(false);
 }
@@ -91,9 +91,6 @@ void RenderMathMLPadded::layoutBlock(bool relayoutChildren, LayoutUnit)
     if (!relayoutChildren && simplifiedLayout())
         return;
 
-    recomputeLogicalWidth();
-    computeAndSetBlockDirectionMarginsOfChildren();
-
     // We first layout our children as a normal <mrow> element.
     LayoutUnit contentWidth, contentAscent, contentDescent;
     stretchVerticalOperatorsAndLayoutChildren();
@@ -101,12 +98,14 @@ void RenderMathMLPadded::layoutBlock(bool relayoutChildren, LayoutUnit)
     layoutRowItems(contentWidth, contentAscent);
 
     // We parse the mpadded attributes using the content metrics as the default value.
-    LayoutUnit width = mpaddedWidth(contentWidth) + borderAndPaddingLogicalWidth();
-    LayoutUnit ascent = mpaddedHeight(contentAscent) + borderAndPaddingBefore();
-    LayoutUnit descent = mpaddedDepth(contentDescent) + borderAndPaddingAfter();
+    LayoutUnit width = mpaddedWidth(contentWidth);
+    LayoutUnit ascent = mpaddedHeight(contentAscent);
+    LayoutUnit descent = mpaddedDepth(contentDescent);
 
     // Align children on the new baseline and shift them by (lspace, -voffset)
-    shiftRowItems(borderLeft() + paddingLeft() + lspace(), ascent - contentAscent - voffset());
+    LayoutPoint contentLocation(lspace(), ascent - contentAscent - voffset());
+    for (auto* child = firstChildBox(); child; child = child->nextSiblingBox())
+        child->setLocation(child->location() + contentLocation);
 
     // Set the final metrics.
     setLogicalWidth(width);

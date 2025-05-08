@@ -31,11 +31,9 @@
 #include "CachedRawResource.h"
 #include "CachedRawResourceClient.h"
 #include "CachedResourceHandle.h"
-#include "ExceptionOr.h"
 #include "HTMLElement.h"
 #include "HTMLModelElementCamera.h"
 #include "IDLTypes.h"
-#include "LayerHostingContextIdentifier.h"
 #include "ModelPlayerClient.h"
 #include "PlatformLayer.h"
 #include "PlatformLayerIdentifier.h"
@@ -44,8 +42,6 @@
 
 namespace WebCore {
 
-class DOMMatrixReadOnly;
-class DOMPointReadOnly;
 class Event;
 class LayoutSize;
 class Model;
@@ -56,8 +52,7 @@ template<typename IDLType> class DOMPromiseDeferred;
 template<typename IDLType> class DOMPromiseProxyWithResolveCallback;
 
 class HTMLModelElement final : public HTMLElement, private CachedRawResourceClient, public ModelPlayerClient, public ActiveDOMObject {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLModelElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLModelElement);
+    WTF_MAKE_ISO_ALLOCATED(HTMLModelElement);
 public:
     using HTMLElement::weakPtrFactory;
     using HTMLElement::WeakValueType;
@@ -65,10 +60,6 @@ public:
 
     static Ref<HTMLModelElement> create(const QualifiedName&, Document&);
     virtual ~HTMLModelElement();
-
-    // ActiveDOMObject.
-    void ref() const final { HTMLElement::ref(); }
-    void deref() const final { HTMLElement::deref(); }
 
     void sourcesChanged();
     const URL& currentSrc() const { return m_sourceURL; }
@@ -83,18 +74,6 @@ public:
 
     bool usesPlatformLayer() const;
     PlatformLayer* platformLayer() const;
-
-    std::optional<LayerHostingContextIdentifier> layerHostingContextIdentifier() const;
-
-    void applyBackgroundColor(Color);
-
-#if ENABLE(MODEL_PROCESS)
-    const DOMMatrixReadOnly& entityTransform() const;
-    ExceptionOr<void> setEntityTransform(const DOMMatrixReadOnly&);
-
-    const DOMPointReadOnly& boundingBoxCenter() const;
-    const DOMPointReadOnly& boundingBoxExtents() const;
-#endif
 
     void enterFullscreen();
 
@@ -148,7 +127,8 @@ private:
 
     HTMLModelElement& readyPromiseResolve();
 
-    // ActiveDOMObject.
+    // ActiveDOMObject
+    const char* activeDOMObjectName() const final;
     bool virtualHasPendingActivity() const final;
 
     // DOM overrides.
@@ -166,16 +146,11 @@ private:
 
     // CachedRawResourceClient overrides.
     void dataReceived(CachedResource&, const SharedBuffer&) final;
-    void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) final;
+    void notifyFinished(CachedResource&, const NetworkLoadMetrics&) final;
 
     // ModelPlayerClient overrides.
-    void didUpdateLayerHostingContextIdentifier(ModelPlayer&, LayerHostingContextIdentifier) final;
     void didFinishLoading(ModelPlayer&) final;
     void didFailLoading(ModelPlayer&, const ResourceError&) final;
-#if ENABLE(MODEL_PROCESS)
-    void didUpdateEntityTransform(ModelPlayer&, const TransformationMatrix&) final;
-    void didUpdateBoundingBox(ModelPlayer&, const FloatPoint3D&, const FloatPoint3D&) final;
-#endif
     PlatformLayerIdentifier platformLayerID() final;
 
     void defaultEventHandler(Event&) final;
@@ -199,11 +174,6 @@ private:
     bool m_shouldCreateModelPlayerUponRendererAttachment { false };
 
     RefPtr<ModelPlayer> m_modelPlayer;
-#if ENABLE(MODEL_PROCESS)
-    Ref<DOMMatrixReadOnly> m_entityTransform;
-    Ref<DOMPointReadOnly> m_boundingBoxCenter;
-    Ref<DOMPointReadOnly> m_boundingBoxExtents;
-#endif
 };
 
 } // namespace WebCore

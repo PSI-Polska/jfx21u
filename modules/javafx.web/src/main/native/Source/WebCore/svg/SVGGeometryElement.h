@@ -32,8 +32,7 @@ struct DOMPointInit;
 class SVGPoint;
 
 class SVGGeometryElement : public SVGGraphicsElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGGeometryElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGGeometryElement);
+    WTF_MAKE_ISO_ALLOCATED(SVGGeometryElement);
 public:
     virtual float getTotalLength() const;
     virtual ExceptionOr<Ref<SVGPoint>> getPointAtLength(float distance) const;

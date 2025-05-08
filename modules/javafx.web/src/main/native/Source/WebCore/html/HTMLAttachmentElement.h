@@ -43,8 +43,7 @@ class ShadowRoot;
 class FragmentedSharedBuffer;
 
 class HTMLAttachmentElement final : public HTMLElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLAttachmentElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLAttachmentElement);
+    WTF_MAKE_ISO_ALLOCATED(HTMLAttachmentElement);
 public:
     static Ref<HTMLAttachmentElement> create(const QualifiedName&, Document&);
     WEBCORE_EXPORT static String getAttachmentIdentifier(HTMLElement&);
@@ -84,7 +83,7 @@ public:
     String attachmentPath() const;
     RefPtr<Image> thumbnail() const { return m_thumbnail; }
     RefPtr<Image> icon() const { return m_icon; }
-    void requestIconIfNeededWithSize(const FloatSize&);
+    void requestIconWithSize(const FloatSize&);
     void requestWideLayoutIconIfNeeded();
     FloatSize iconSize() const { return m_iconSize; }
     void invalidateRendering();
@@ -111,7 +110,7 @@ private:
     void updateSaveButton(bool);
     void updateImage();
 
-    void setNeedsIconRequest();
+    void setNeedsWideLayoutIconRequest();
 
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
     bool shouldSelectOnMouseDown() final {
@@ -153,7 +152,7 @@ private:
     RefPtr<HTMLElement> m_saveButton;
     mutable RefPtr<DOMRectReadOnly> m_saveButtonClientRect;
 
-    bool m_needsIconRequest { true };
+    bool m_needsWideLayoutIconRequest { false };
 
 #if ENABLE(SERVICE_CONTROLS)
     bool m_isImageMenuEnabled { false };

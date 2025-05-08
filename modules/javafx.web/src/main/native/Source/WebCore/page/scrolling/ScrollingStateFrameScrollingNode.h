@@ -153,8 +153,6 @@ private:
         MouseLocationState&&,
         ScrollbarHoverState&&,
         ScrollbarEnabledState&&,
-        UserInterfaceLayoutDirection,
-        ScrollbarWidth,
         RequestedKeyboardScrollData&&,
         float frameScaleFactor,
         EventTrackingRegions&&,
@@ -201,7 +199,7 @@ private:
     float m_topContentInset { 0 };
     int m_headerHeight { 0 };
     int m_footerHeight { 0 };
-    ScrollBehaviorForFixedElements m_behaviorForFixed { ScrollBehaviorForFixedElements::StickToDocumentBounds };
+    ScrollBehaviorForFixedElements m_behaviorForFixed { StickToDocumentBounds };
     bool m_fixedElementsLayoutRelativeToFrame { false };
     bool m_visualViewportIsSmallerThanLayoutViewport { false };
     bool m_asyncFrameOrOverflowScrollingEnabled { false };

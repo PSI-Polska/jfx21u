@@ -37,7 +37,9 @@
 
 namespace PAL {
 
-bool detectTextEncoding(std::span<const uint8_t> data, const char* hintEncodingName, TextEncoding* detectedEncoding)
+bool detectTextEncoding(const char* data, size_t len,
+    const char* hintEncodingName,
+    TextEncoding* detectedEncoding)
 {
     *detectedEncoding = TextEncoding();
     int matchesCount = 0;
@@ -46,7 +48,7 @@ bool detectTextEncoding(std::span<const uint8_t> data, const char* hintEncodingN
     if (U_FAILURE(status))
         return false;
     ucsdet_enableInputFilter(detector, true);
-    ucsdet_setText(detector, byteCast<char>(data.data()), static_cast<int32_t>(data.size()), &status);
+    ucsdet_setText(detector, data, static_cast<int32_t>(len), &status);
     if (U_FAILURE(status))
         return false;
 

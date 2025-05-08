@@ -28,7 +28,6 @@
 
 #if ENABLE(THREADED_ANIMATION_RESOLUTION)
 
-#include "AnimationMalloc.h"
 #include "Document.h"
 #include "LocalDOMWindow.h"
 #include "Page.h"
@@ -42,6 +41,7 @@
 #include <wtf/MonotonicTime.h>
 
 namespace WebCore {
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AcceleratedTimeline);
 
 AcceleratedTimeline::AcceleratedTimeline(Document& document)
 {
@@ -54,11 +54,13 @@ AcceleratedTimeline::AcceleratedTimeline(Document& document)
 void AcceleratedTimeline::updateEffectStacks()
 {
     auto targetsPendingUpdate = std::exchange(m_targetsPendingUpdate, { });
-    for (auto [element, pseudoElementIdentifier] : targetsPendingUpdate) {
+    for (auto hashedStyleable : targetsPendingUpdate) {
+        auto* element = hashedStyleable.first;
         if (!element)
             continue;
 
-        Styleable target { *element, pseudoElementIdentifier };
+        auto pseudoId = static_cast<PseudoId>(hashedStyleable.second);
+        Styleable target { *element, pseudoId };
 
         auto* renderer = dynamicDowncast<RenderLayerModelObject>(target.renderer());
         if (!renderer || !renderer->isComposited())
@@ -72,7 +74,7 @@ void AcceleratedTimeline::updateEffectStacks()
 
 void AcceleratedTimeline::updateEffectStackForTarget(const Styleable& target)
 {
-    m_targetsPendingUpdate.add({ &target.element, target.pseudoElementIdentifier });
+    m_targetsPendingUpdate.add({ &target.element, enumToUnderlyingType(target.pseudoId) });
 }
 
 } // namespace WebCore

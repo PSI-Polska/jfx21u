@@ -55,7 +55,9 @@ YarrDisassembler::YarrDisassembler(YarrJITInfo* yarrJITInfo)
 {
 }
 
-YarrDisassembler::~YarrDisassembler() = default;
+YarrDisassembler::~YarrDisassembler()
+{
+}
 
 void YarrDisassembler::dump(PrintStream& out, LinkBuffer& linkBuffer)
 {

@@ -33,7 +33,6 @@
 #include "LayoutChildIterator.h"
 #include "LayoutContext.h"
 #include "LayoutInitialContainingBlock.h"
-#include "RenderObject.h"
 #include "TableFormattingConstraints.h"
 #include "TableFormattingContext.h"
 #include "TableFormattingState.h"
@@ -42,7 +41,7 @@
 namespace WebCore {
 namespace Layout {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TableWrapperBlockFormattingContext);
+WTF_MAKE_ISO_ALLOCATED_IMPL(TableWrapperBlockFormattingContext);
 
 TableWrapperBlockFormattingContext::TableWrapperBlockFormattingContext(const ElementBox& formattingContextRoot, BlockFormattingState& formattingState)
     : BlockFormattingContext(formattingContextRoot, formattingState)

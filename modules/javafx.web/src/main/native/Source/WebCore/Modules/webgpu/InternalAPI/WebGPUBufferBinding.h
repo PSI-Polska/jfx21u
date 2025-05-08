@@ -25,16 +25,16 @@
 
 #pragma once
 
-#include "WebGPUBuffer.h"
 #include "WebGPUIntegralTypes.h"
 #include <optional>
 #include <wtf/Ref.h>
-#include <wtf/WeakRef.h>
 
 namespace WebCore::WebGPU {
 
+class Buffer;
+
 struct BufferBinding {
-    WeakRef<Buffer> buffer;
+    Buffer& buffer;
     Size64 offset { 0 };
     std::optional<Size64> size;
 };

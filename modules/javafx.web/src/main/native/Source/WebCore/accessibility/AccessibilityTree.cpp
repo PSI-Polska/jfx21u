@@ -40,7 +40,7 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-AccessibilityTree::AccessibilityTree(RenderObject& renderer)
+AccessibilityTree::AccessibilityTree(RenderObject* renderer)
     : AccessibilityRenderObject(renderer)
 {
 }
@@ -52,7 +52,7 @@ AccessibilityTree::AccessibilityTree(Node& node)
 
 AccessibilityTree::~AccessibilityTree() = default;
 
-Ref<AccessibilityTree> AccessibilityTree::create(RenderObject& renderer)
+Ref<AccessibilityTree> AccessibilityTree::create(RenderObject* renderer)
 {
     return adoptRef(*new AccessibilityTree(renderer));
 }
@@ -72,7 +72,7 @@ AccessibilityRole AccessibilityTree::determineAccessibilityRole()
     if ((m_ariaRole = determineAriaRoleAttribute()) != AccessibilityRole::Tree)
         return AccessibilityRenderObject::determineAccessibilityRole();
 
-    return isTreeValid() ? AccessibilityRole::Tree : AccessibilityRole::Generic;
+    return isTreeValid() ? AccessibilityRole::Tree : AccessibilityRole::Group;
 }
 
 bool AccessibilityTree::isTreeValid() const
@@ -83,22 +83,22 @@ bool AccessibilityTree::isTreeValid() const
     if (!node)
         return false;
 
-    Deque<Ref<Node>> queue;
-    for (RefPtr child = node->firstChild(); child; child = queue.last()->nextSibling())
-        queue.append(child.releaseNonNull());
+    Deque<Node*> queue;
+    for (auto* child = node->firstChild(); child; child = child->nextSibling())
+        queue.append(child);
 
     while (!queue.isEmpty()) {
-        Ref child = queue.takeFirst();
+        auto child = queue.takeFirst();
 
-        if (!is<Element>(child.get()))
+        if (!is<Element>(*child))
             continue;
-        if (nodeHasRole(child.ptr(), "treeitem"_s))
+        if (nodeHasRole(child, "treeitem"_s))
             continue;
-        if (!nodeHasRole(child.ptr(), "group"_s) && !nodeHasRole(child.ptr(), "presentation"_s))
+        if (!nodeHasRole(child, "group"_s) && !nodeHasRole(child, "presentation"_s))
             return false;
 
-        for (RefPtr groupChild = child->firstChild(); groupChild; groupChild = queue.last()->nextSibling())
-            queue.append(groupChild.releaseNonNull());
+        for (auto* groupChild = child->firstChild(); groupChild; groupChild = groupChild->nextSibling())
+            queue.append(groupChild);
     }
     return true;
 }

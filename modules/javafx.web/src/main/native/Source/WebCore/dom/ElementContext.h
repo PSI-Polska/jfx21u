@@ -39,7 +39,7 @@ struct ElementContext {
 
     PageIdentifier webPageIdentifier;
     ScriptExecutionContextIdentifier documentIdentifier;
-    Markable<ElementIdentifier> elementIdentifier;
+    ElementIdentifier elementIdentifier;
 
     ~ElementContext() = default;
 

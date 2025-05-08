@@ -32,6 +32,7 @@ namespace WebCore {
 
 template std::partial_ordering treeOrder<Tree>(const BoundaryPoint&, const BoundaryPoint&);
 template std::partial_ordering treeOrder<ShadowIncludingTree>(const BoundaryPoint&, const BoundaryPoint&);
+template std::partial_ordering treeOrder<ComposedTree>(const BoundaryPoint&, const BoundaryPoint&);
 
 std::optional<BoundaryPoint> makeBoundaryPointBeforeNode(Node& node)
 {
@@ -64,7 +65,7 @@ static bool isOffsetBeforeChild(ContainerNode& container, unsigned offset, Node&
     return false;
 }
 
-template<TreeType treeType> std::partial_ordering treeOrderInternal(const BoundaryPoint& a, const BoundaryPoint& b)
+template<TreeType treeType> std::partial_ordering treeOrder(const BoundaryPoint& a, const BoundaryPoint& b)
 {
     if (a.container.ptr() == b.container.ptr())
         return a.offset <=> b.offset;
@@ -84,16 +85,6 @@ template<TreeType treeType> std::partial_ordering treeOrderInternal(const Bounda
     }
 
     return treeOrder<treeType>(a.container, b.container);
-}
-
-template<TreeType treeType> std::partial_ordering treeOrder(const BoundaryPoint& a, const BoundaryPoint& b)
-{
-    return treeOrderInternal<treeType>(a, b);
-}
-
-template<> std::partial_ordering treeOrder<ComposedTree>(const BoundaryPoint& a, const BoundaryPoint& b)
-{
-    return treeOrderInternal<ComposedTree>(a, b);
 }
 
 std::partial_ordering treeOrderForTesting(TreeType type, const BoundaryPoint& a, const BoundaryPoint& b)

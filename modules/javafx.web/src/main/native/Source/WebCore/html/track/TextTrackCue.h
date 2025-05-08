@@ -46,8 +46,7 @@ class TextTrack;
 class TextTrackCue;
 
 class TextTrackCueBox : public HTMLElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(TextTrackCueBox);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(TextTrackCueBox);
+    WTF_MAKE_ISO_ALLOCATED(TextTrackCueBox);
 public:
     static Ref<TextTrackCueBox> create(Document&, TextTrackCue&);
 
@@ -66,14 +65,13 @@ private:
 };
 
 class TextTrackCue : public RefCounted<TextTrackCue>, public EventTarget, public ActiveDOMObject {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(TextTrackCue);
+    WTF_MAKE_ISO_ALLOCATED(TextTrackCue);
 public:
     static ExceptionOr<Ref<TextTrackCue>> create(Document&, double start, double end, DocumentFragment&);
 
     void didMoveToNewDocument(Document&);
 
     TextTrack* track() const;
-    RefPtr<TextTrack> protectedTrack() const;
     void setTrack(TextTrack*);
 
     const AtomString& id() const { return m_id; }
@@ -120,9 +118,8 @@ public:
 
     String toJSONString() const;
 
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
+    using RefCounted::ref;
+    using RefCounted::deref;
 
     virtual void recalculateStyles() { m_displayTreeNeedsUpdate = true; }
     virtual void setFontSize(int fontSize, bool important);
@@ -153,8 +150,11 @@ private:
     void derefEventTarget() final { deref(); }
     using EventTarget::dispatchEvent;
     void dispatchEvent(Event&) final;
-    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::TextTrackCue; }
+    EventTargetInterface eventTargetInterface() const final { return TextTrackCueEventTargetInterfaceType; }
     ScriptExecutionContext* scriptExecutionContext() const final;
+
+    // ActiveDOMObject
+    const char* activeDOMObjectName() const final;
 
     void rebuildDisplayTree();
 
@@ -163,7 +163,7 @@ private:
     MediaTime m_endTime;
     int m_processingCueChanges { 0 };
 
-    WeakPtr<TextTrack, WeakPtrImplWithEventTargetData> m_track;
+    TextTrack* m_track { nullptr };
 
     RefPtr<DocumentFragment> m_cueNode;
     RefPtr<TextTrackCueBox> m_displayTree;

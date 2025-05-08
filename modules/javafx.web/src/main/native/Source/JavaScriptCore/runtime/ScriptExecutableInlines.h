@@ -32,23 +32,17 @@ namespace JSC {
 
 inline void ScriptExecutable::finalizeCodeBlockEdge(VM& vm, WriteBarrier<CodeBlock>& codeBlockEdge)
 {
-    for (;;) {
     auto* codeBlock = codeBlockEdge.get();
     if (!codeBlock)
         return;
 
-        if (vm.heap.isMarked(codeBlock))
-            return;
-
+    if (!vm.heap.isMarked(codeBlock)) {
         if (codeBlock->shouldJettisonDueToWeakReference(vm))
             codeBlock->jettison(Profiler::JettisonDueToWeakReference);
         else
             codeBlock->jettison(Profiler::JettisonDueToOldAge);
-
-        if (codeBlock == codeBlockEdge.get()) {
+        if (codeBlock == codeBlockEdge.get())
             codeBlockEdge.clear();
-            return;
-        }
     }
 }
 

@@ -57,7 +57,7 @@ namespace WebCore {
 class RealtimeOutgoingAudioSource
     : public ThreadSafeRefCounted<RealtimeOutgoingAudioSource, WTF::DestructionThread::Main>
     , public webrtc::AudioSourceInterface
-    , private MediaStreamTrackPrivateObserver
+    , private MediaStreamTrackPrivate::Observer
     , private RealtimeMediaSource::AudioSampleObserver
 #if !RELEASE_LOG_DISABLED
     , private LoggerHelper
@@ -85,7 +85,7 @@ protected:
     // LoggerHelper API
     const Logger& logger() const final { return m_audioSource->logger(); }
     const void* logIdentifier() const final { return m_audioSource->logIdentifier(); }
-    ASCIILiteral logClassName() const final { return "RealtimeOutgoingAudioSource"_s; }
+    const char* logClassName() const final { return "RealtimeOutgoingAudioSource"; }
     WTFLogChannel& logChannel() const final;
 #endif
 
@@ -95,11 +95,11 @@ private:
     void RemoveSink(webrtc::AudioTrackSinkInterface*) final;
 
     void AddRef() const final { ref(); }
-    webrtc::RefCountReleaseStatus Release() const final
+    rtc::RefCountReleaseStatus Release() const final
     {
         auto result = refCount() - 1;
         deref();
-        return result ? webrtc::RefCountReleaseStatus::kOtherRefsRemained : webrtc::RefCountReleaseStatus::kDroppedLastRef;
+        return result ? rtc::RefCountReleaseStatus::kOtherRefsRemained : rtc::RefCountReleaseStatus::kDroppedLastRef;
     }
 
     SourceState state() const final { return kLive; }
@@ -118,7 +118,7 @@ private:
     virtual bool hasBufferedEnoughData() { return false; };
     virtual void sourceUpdated() { }
 
-    // MediaStreamTrackPrivateObserver API
+    // MediaStreamTrackPrivate::Observer API
     void trackMutedChanged(MediaStreamTrackPrivate&) final { sourceMutedChanged(); }
     void trackEnabledChanged(MediaStreamTrackPrivate&) final { sourceEnabledChanged(); }
     void trackEnded(MediaStreamTrackPrivate&) final { }

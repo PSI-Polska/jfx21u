@@ -45,13 +45,12 @@ extern "C" {
 typedef void *(*crash_reporter_memory_reader_t)(task_t task, vm_address_t address, size_t size);
 
 /* Crash Report Version number. This must be in sync between ReportCrash and libpas to generate a report. */
-const unsigned pas_crash_report_version = 2;
+const unsigned pas_crash_report_version = 1;
 
 /* Report sent back to the ReportCrash process. */
 typedef struct {
     const char *error_type;
     const char *confidence;
-    const char *alignment;
     vm_address_t fault_address;
     size_t allocation_size;
 } pas_report_crash_pgm_report;

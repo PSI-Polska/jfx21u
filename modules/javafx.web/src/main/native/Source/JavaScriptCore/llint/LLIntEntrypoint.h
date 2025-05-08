@@ -27,7 +27,6 @@
 
 #include "JSCPtrTag.h"
 #include "OpcodeSize.h"
-#include <wtf/CodePtr.h>
 
 namespace JSC {
 
@@ -46,6 +45,5 @@ MacroAssemblerCodeRef<JSEntryPtrTag> defaultCall();
 MacroAssemblerCodeRef<JSEntryPtrTag> getHostCallReturnValueEntrypoint();
 MacroAssemblerCodeRef<JSEntryPtrTag> fuzzerReturnEarlyFromLoopHintEntrypoint();
 MacroAssemblerCodeRef<JSEntryPtrTag> genericReturnPointEntrypoint(OpcodeSize);
-CodePtr<JITThunkPtrTag> arityFixup();
 
 } } // namespace JSC::LLInt

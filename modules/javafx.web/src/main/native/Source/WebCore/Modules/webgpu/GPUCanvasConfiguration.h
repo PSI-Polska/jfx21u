@@ -36,7 +36,7 @@
 namespace WebCore {
 
 struct GPUCanvasConfiguration {
-    WebGPU::CanvasConfiguration convertToBacking(bool reportValidationErrors) const
+    WebGPU::CanvasConfiguration convertToBacking() const
     {
         ASSERT(device);
         return {
@@ -48,11 +48,10 @@ struct GPUCanvasConfiguration {
             }),
             WebCore::convertToBacking(colorSpace),
             WebCore::convertToBacking(alphaMode),
-            reportValidationErrors,
         };
     }
 
-    WeakPtr<GPUDevice, WeakPtrImplWithEventTargetData> device;
+    GPUDevice* device { nullptr };
     GPUTextureFormat format { GPUTextureFormat::R8unorm };
     GPUTextureUsageFlags usage { GPUTextureUsage::RENDER_ATTACHMENT };
     Vector<GPUTextureFormat> viewFormats;

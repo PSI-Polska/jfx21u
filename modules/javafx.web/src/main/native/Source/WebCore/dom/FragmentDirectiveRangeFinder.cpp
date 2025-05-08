@@ -157,12 +157,12 @@ static std::optional<SimpleRange> findRangeFromNodeList(const String& query, con
     auto foldedQuery = foldQuoteMarks(query);
 
     // FIXME: add quote folding to TextIterator instead of leaving it here?
-    FindOptions options = { FindOption::CaseInsensitive, FindOption::DoNotRevealSelection };
+    FindOptions options = { CaseInsensitive, DoNotRevealSelection };
 
     if (wordStartBounded == WordBounded::Yes)
-        options.add(FindOption::AtWordStarts);
+        options.add(AtWordStarts);
     if (wordEndBounded == WordBounded::Yes)
-        options.add(FindOption::AtWordEnds);
+        options.add(AtWordEnds);
 
     auto foundText = findPlainText(searchRange, foldedQuery, options);
 

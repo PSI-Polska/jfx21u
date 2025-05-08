@@ -28,6 +28,7 @@
 #include "CSSNumericBaseType.h"
 #include <optional>
 #include <wtf/Markable.h>
+#include <wtf/text/StringConcatenateNumbers.h>
 
 namespace WebCore {
 

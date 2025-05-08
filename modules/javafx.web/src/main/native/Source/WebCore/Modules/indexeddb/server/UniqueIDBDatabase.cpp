@@ -33,8 +33,6 @@
 #include "IDBGetRecordData.h"
 #include "IDBIterateCursorData.h"
 #include "IDBKeyRangeData.h"
-#include "IDBOpenRequestData.h"
-#include "IDBRequestData.h"
 #include "IDBResultData.h"
 #include "IDBSerialization.h"
 #include "IDBServer.h"
@@ -46,7 +44,6 @@
 #include "UniqueIDBDatabaseManager.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/Scope.h>
-#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 using namespace JSC;
@@ -172,7 +169,7 @@ UniqueIDBDatabaseManager* UniqueIDBDatabase::manager()
     return m_manager.get();
 }
 
-void UniqueIDBDatabase::openDatabaseConnection(IDBConnectionToClient& connection, const IDBOpenRequestData& requestData)
+void UniqueIDBDatabase::openDatabaseConnection(IDBConnectionToClient& connection, const IDBRequestData& requestData)
 {
     LOG(IndexedDB, "UniqueIDBDatabase::openDatabaseConnection");
     ASSERT(!isMainThread());
@@ -182,9 +179,9 @@ void UniqueIDBDatabase::openDatabaseConnection(IDBConnectionToClient& connection
     handleDatabaseOperations();
 }
 
-static inline String quotaErrorMessageName(ASCIILiteral taskName)
+static inline String quotaErrorMessageName(const char* taskName)
 {
-    return makeString("Failed to "_s, taskName, " in database because not enough space for domain"_s);
+    return makeString("Failed to ", taskName, " in database because not enough space for domain");
 }
 
 void UniqueIDBDatabase::performCurrentOpenOperation()
@@ -227,7 +224,7 @@ void UniqueIDBDatabase::performCurrentOpenOperationAfterSpaceCheck(bool isGrante
         if (!m_manager)
             backingStoreOpenError = IDBError { ExceptionCode::InvalidStateError };
         else if (!isGranted)
-            backingStoreOpenError = IDBError { ExceptionCode::QuotaExceededError, quotaErrorMessageName("OpenBackingStore"_s) };
+            backingStoreOpenError = IDBError { ExceptionCode::QuotaExceededError, quotaErrorMessageName("OpenBackingStore") };
         else {
             m_backingStore = m_manager->createBackingStore(m_identifier);
             IDBDatabaseInfo databaseInfo;
@@ -418,7 +415,7 @@ bool UniqueIDBDatabase::allConnectionsAreClosedOrClosing() const
     return true;
 }
 
-void UniqueIDBDatabase::handleDelete(IDBConnectionToClient& connection, const IDBOpenRequestData& requestData)
+void UniqueIDBDatabase::handleDelete(IDBConnectionToClient& connection, const IDBRequestData& requestData)
 {
     LOG(IndexedDB, "UniqueIDBDatabase::handleDelete");
 
@@ -474,7 +471,7 @@ void UniqueIDBDatabase::maybeNotifyConnectionsOfVersionChange()
     // 3.3.7 "versionchange" transaction steps
     // Fire a versionchange event at each connection in m_openDatabaseConnections that is open.
     // The event must not be fired on connections which has the closePending flag set.
-    HashSet<IDBDatabaseConnectionIdentifier> connectionIdentifiers;
+    HashSet<uint64_t> connectionIdentifiers;
     for (const auto& connection : m_openDatabaseConnections) {
         if (connection->closePending())
             continue;
@@ -489,9 +486,9 @@ void UniqueIDBDatabase::maybeNotifyConnectionsOfVersionChange()
         m_currentOpenDBRequest->maybeNotifyRequestBlocked(m_databaseInfo->version());
 }
 
-void UniqueIDBDatabase::notifyCurrentRequestConnectionClosedOrFiredVersionChangeEvent(IDBDatabaseConnectionIdentifier connectionIdentifier)
+void UniqueIDBDatabase::notifyCurrentRequestConnectionClosedOrFiredVersionChangeEvent(uint64_t connectionIdentifier)
 {
-    LOG(IndexedDB, "UniqueIDBDatabase::notifyCurrentRequestConnectionClosedOrFiredVersionChangeEvent - %" PRIu64, connectionIdentifier.toUInt64());
+    LOG(IndexedDB, "UniqueIDBDatabase::notifyCurrentRequestConnectionClosedOrFiredVersionChangeEvent - %" PRIu64, connectionIdentifier);
 
     if (!m_currentOpenDBRequest)
         return;
@@ -580,7 +577,7 @@ void UniqueIDBDatabase::addOpenDatabaseConnection(Ref<UniqueIDBDatabaseConnectio
     m_openDatabaseConnections.add(adoptRef(connection.leakRef()));
 }
 
-void UniqueIDBDatabase::createObjectStore(UniqueIDBDatabaseTransaction& transaction, const IDBObjectStoreInfo& info, ErrorCallback&& callback, SpaceCheckResult spaceCheckResult)
+void UniqueIDBDatabase::createObjectStore(UniqueIDBDatabaseTransaction& transaction, const IDBObjectStoreInfo& info, ErrorCallback callback, SpaceCheckResult spaceCheckResult)
 {
     ASSERT(!isMainThread());
     LOG(IndexedDB, "UniqueIDBDatabase::createObjectStore");
@@ -599,7 +596,7 @@ void UniqueIDBDatabase::createObjectStore(UniqueIDBDatabaseTransaction& transact
     }
 
     if (spaceCheckResult != SpaceCheckResult::Pass) {
-        callback(IDBError { ExceptionCode::QuotaExceededError, quotaErrorMessageName("CreateObjectStore"_s) });
+        callback(IDBError { ExceptionCode::QuotaExceededError, quotaErrorMessageName("CreateObjectStore") });
         return;
     }
 
@@ -613,7 +610,7 @@ void UniqueIDBDatabase::createObjectStore(UniqueIDBDatabaseTransaction& transact
     callback(error);
 }
 
-void UniqueIDBDatabase::deleteObjectStore(UniqueIDBDatabaseTransaction& transaction, const String& objectStoreName, ErrorCallback&& callback, SpaceCheckResult spaceCheckResult)
+void UniqueIDBDatabase::deleteObjectStore(UniqueIDBDatabaseTransaction& transaction, const String& objectStoreName, ErrorCallback callback, SpaceCheckResult spaceCheckResult)
 {
     ASSERT(!isMainThread());
     LOG(IndexedDB, "UniqueIDBDatabase::deleteObjectStore");
@@ -648,7 +645,7 @@ void UniqueIDBDatabase::deleteObjectStore(UniqueIDBDatabaseTransaction& transact
     callback(error);
 }
 
-void UniqueIDBDatabase::renameObjectStore(UniqueIDBDatabaseTransaction& transaction, IDBObjectStoreIdentifier objectStoreIdentifier, const String& newName, ErrorCallback&& callback, SpaceCheckResult spaceCheckResult)
+void UniqueIDBDatabase::renameObjectStore(UniqueIDBDatabaseTransaction& transaction, uint64_t objectStoreIdentifier, const String& newName, ErrorCallback callback, SpaceCheckResult spaceCheckResult)
 {
     ASSERT(!isMainThread());
     LOG(IndexedDB, "UniqueIDBDatabase::renameObjectStore");
@@ -668,7 +665,7 @@ void UniqueIDBDatabase::renameObjectStore(UniqueIDBDatabaseTransaction& transact
     }
 
     if (spaceCheckResult != SpaceCheckResult::Pass) {
-        callback(IDBError(ExceptionCode::QuotaExceededError, quotaErrorMessageName("RenameObjectStore"_s)));
+        callback(IDBError(ExceptionCode::QuotaExceededError, quotaErrorMessageName("RenameObjectStore")));
         return;
     }
 
@@ -688,7 +685,7 @@ void UniqueIDBDatabase::renameObjectStore(UniqueIDBDatabaseTransaction& transact
     callback(error);
 }
 
-void UniqueIDBDatabase::clearObjectStore(UniqueIDBDatabaseTransaction& transaction, IDBObjectStoreIdentifier objectStoreIdentifier, ErrorCallback&& callback, SpaceCheckResult spaceCheckResult)
+void UniqueIDBDatabase::clearObjectStore(UniqueIDBDatabaseTransaction& transaction, uint64_t objectStoreIdentifier, ErrorCallback callback, SpaceCheckResult spaceCheckResult)
 {
     ASSERT(!isMainThread());
     LOG(IndexedDB, "UniqueIDBDatabase::clearObjectStore");
@@ -714,7 +711,7 @@ void UniqueIDBDatabase::clearObjectStore(UniqueIDBDatabaseTransaction& transacti
     callback(error);
 }
 
-void UniqueIDBDatabase::createIndex(UniqueIDBDatabaseTransaction& transaction, const IDBIndexInfo& info, ErrorCallback&& callback, SpaceCheckResult spaceCheckResult)
+void UniqueIDBDatabase::createIndex(UniqueIDBDatabaseTransaction& transaction, const IDBIndexInfo& info, ErrorCallback callback, SpaceCheckResult spaceCheckResult)
 {
     ASSERT(!isMainThread());
     LOG(IndexedDB, "UniqueIDBDatabase::createIndex");
@@ -734,7 +731,7 @@ void UniqueIDBDatabase::createIndex(UniqueIDBDatabaseTransaction& transaction, c
     }
 
     if (spaceCheckResult != SpaceCheckResult::Pass) {
-        callback(IDBError { ExceptionCode::QuotaExceededError, quotaErrorMessageName("CreateIndex"_s) });
+        callback(IDBError { ExceptionCode::QuotaExceededError, quotaErrorMessageName("CreateIndex") });
         return;
     }
 
@@ -753,7 +750,7 @@ void UniqueIDBDatabase::createIndex(UniqueIDBDatabaseTransaction& transaction, c
     callback(error);
 }
 
-void UniqueIDBDatabase::deleteIndex(UniqueIDBDatabaseTransaction& transaction, IDBObjectStoreIdentifier objectStoreIdentifier, const String& indexName, ErrorCallback&& callback, SpaceCheckResult spaceCheckResult)
+void UniqueIDBDatabase::deleteIndex(UniqueIDBDatabaseTransaction& transaction, uint64_t objectStoreIdentifier, const String& indexName, ErrorCallback callback, SpaceCheckResult spaceCheckResult)
 {
     ASSERT(!isMainThread());
     LOG(IndexedDB, "UniqueIDBDatabase::deleteIndex");
@@ -795,7 +792,7 @@ void UniqueIDBDatabase::deleteIndex(UniqueIDBDatabaseTransaction& transaction, I
     callback(error);
 }
 
-void UniqueIDBDatabase::renameIndex(UniqueIDBDatabaseTransaction& transaction, IDBObjectStoreIdentifier objectStoreIdentifier, uint64_t indexIdentifier, const String& newName, ErrorCallback&& callback, SpaceCheckResult spaceCheckResult)
+void UniqueIDBDatabase::renameIndex(UniqueIDBDatabaseTransaction& transaction, uint64_t objectStoreIdentifier, uint64_t indexIdentifier, const String& newName, ErrorCallback callback, SpaceCheckResult spaceCheckResult)
 {
     ASSERT(!isMainThread());
     LOG(IndexedDB, "UniqueIDBDatabase::renameIndex");
@@ -815,7 +812,7 @@ void UniqueIDBDatabase::renameIndex(UniqueIDBDatabaseTransaction& transaction, I
     }
 
     if (spaceCheckResult != SpaceCheckResult::Pass) {
-        callback(IDBError { ExceptionCode::QuotaExceededError, quotaErrorMessageName("RenameIndex"_s) });
+        callback(IDBError { ExceptionCode::QuotaExceededError, quotaErrorMessageName("RenameIndex") });
         return;
     }
 
@@ -841,7 +838,7 @@ void UniqueIDBDatabase::renameIndex(UniqueIDBDatabaseTransaction& transaction, I
     callback(error);
 }
 
-void UniqueIDBDatabase::putOrAdd(const IDBRequestData& requestData, const IDBKeyData& keyData, const IDBValue& value, IndexedDB::ObjectStoreOverwriteMode overwriteMode, KeyDataCallback&& callback)
+void UniqueIDBDatabase::putOrAdd(const IDBRequestData& requestData, const IDBKeyData& keyData, const IDBValue& value, IndexedDB::ObjectStoreOverwriteMode overwriteMode, KeyDataCallback callback)
 {
     ASSERT(!isMainThread());
     LOG(IndexedDB, "UniqueIDBDatabase::putOrAdd");
@@ -910,7 +907,7 @@ void UniqueIDBDatabase::putOrAdd(const IDBRequestData& requestData, const IDBKey
     });
 }
 
-void UniqueIDBDatabase::putOrAddAfterSpaceCheck(const IDBRequestData& requestData, const IDBKeyData& keyData, const IDBValue& value, IndexedDB::ObjectStoreOverwriteMode overwriteMode, KeyDataCallback&& callback, bool isKeyGenerated, const IndexIDToIndexKeyMap& indexKeys, const IDBObjectStoreInfo& objectStoreInfo, SpaceCheckResult spaceCheckResult)
+void UniqueIDBDatabase::putOrAddAfterSpaceCheck(const IDBRequestData& requestData, const IDBKeyData& keyData, const IDBValue& value, IndexedDB::ObjectStoreOverwriteMode overwriteMode, KeyDataCallback callback, bool isKeyGenerated, const IndexIDToIndexKeyMap& indexKeys, const IDBObjectStoreInfo& objectStoreInfo, SpaceCheckResult spaceCheckResult)
 {
     ASSERT(!isMainThread());
     ASSERT(m_databaseInfo);
@@ -927,7 +924,7 @@ void UniqueIDBDatabase::putOrAddAfterSpaceCheck(const IDBRequestData& requestDat
     });
 
     if (spaceCheckResult != SpaceCheckResult::Pass)
-        return callback(IDBError { ExceptionCode::QuotaExceededError, quotaErrorMessageName("PutOrAdd"_s) }, keyData);
+        return callback(IDBError { ExceptionCode::QuotaExceededError, quotaErrorMessageName("PutOrAdd") }, keyData);
     // If a record already exists in store, then remove the record from store using the steps for deleting records from an object store.
     // This is important because formally deleting it from the object store also removes it from the appropriate indexes.
     IDBError error = m_backingStore->deleteRange(transactionIdentifier, objectStoreIdentifier, keyData);
@@ -945,7 +942,7 @@ void UniqueIDBDatabase::putOrAddAfterSpaceCheck(const IDBRequestData& requestDat
     callback(error, keyData);
 }
 
-void UniqueIDBDatabase::getRecord(const IDBRequestData& requestData, const IDBGetRecordData& getRecordData, GetResultCallback&& callback, SpaceCheckResult spaceCheckResult)
+void UniqueIDBDatabase::getRecord(const IDBRequestData& requestData, const IDBGetRecordData& getRecordData, GetResultCallback callback, SpaceCheckResult spaceCheckResult)
 {
     ASSERT(!isMainThread());
     LOG(IndexedDB, "UniqueIDBDatabase::getRecord");
@@ -970,16 +967,15 @@ void UniqueIDBDatabase::getRecord(const IDBRequestData& requestData, const IDBGe
     IDBGetResult result;
     IDBError error;
 
-    auto transactionIdentifier = requestData.transactionIdentifier();
     if (uint64_t indexIdentifier = requestData.indexIdentifier())
-        error = m_backingStore->getIndexRecord(transactionIdentifier, requestData.objectStoreIdentifier(), indexIdentifier, requestData.indexRecordType(), getRecordData.keyRangeData, result);
+        error = m_backingStore->getIndexRecord(requestData.transactionIdentifier(), requestData.objectStoreIdentifier(), indexIdentifier, requestData.indexRecordType(), getRecordData.keyRangeData, result);
     else
-        error = m_backingStore->getRecord(transactionIdentifier, requestData.objectStoreIdentifier(), getRecordData.keyRangeData, getRecordData.type, result);
+        error = m_backingStore->getRecord(requestData.transactionIdentifier(), requestData.objectStoreIdentifier(), getRecordData.keyRangeData, getRecordData.type, result);
 
     callback(error, result);
 }
 
-void UniqueIDBDatabase::getAllRecords(const IDBRequestData& requestData, const IDBGetAllRecordsData& getAllRecordsData, GetAllResultsCallback&& callback, SpaceCheckResult spaceCheckResult)
+void UniqueIDBDatabase::getAllRecords(const IDBRequestData& requestData, const IDBGetAllRecordsData& getAllRecordsData, GetAllResultsCallback callback, SpaceCheckResult spaceCheckResult)
 {
     ASSERT(!isMainThread());
     LOG(IndexedDB, "UniqueIDBDatabase::getAllRecords");
@@ -1007,7 +1003,7 @@ void UniqueIDBDatabase::getAllRecords(const IDBRequestData& requestData, const I
     callback(error, result);
 }
 
-void UniqueIDBDatabase::getCount(const IDBRequestData& requestData, const IDBKeyRangeData& range, CountCallback&& callback, SpaceCheckResult spaceCheckResult)
+void UniqueIDBDatabase::getCount(const IDBRequestData& requestData, const IDBKeyRangeData& range, CountCallback callback, SpaceCheckResult spaceCheckResult)
 {
     ASSERT(!isMainThread());
     LOG(IndexedDB, "UniqueIDBDatabase::getCount");
@@ -1035,7 +1031,7 @@ void UniqueIDBDatabase::getCount(const IDBRequestData& requestData, const IDBKey
     callback(error, count);
 }
 
-void UniqueIDBDatabase::deleteRecord(const IDBRequestData& requestData, const IDBKeyRangeData& keyRangeData, ErrorCallback&& callback, SpaceCheckResult spaceCheckResult)
+void UniqueIDBDatabase::deleteRecord(const IDBRequestData& requestData, const IDBKeyRangeData& keyRangeData, ErrorCallback callback, SpaceCheckResult spaceCheckResult)
 {
     ASSERT(!isMainThread());
     LOG(IndexedDB, "UniqueIDBDatabase::deleteRecord");
@@ -1062,7 +1058,7 @@ void UniqueIDBDatabase::deleteRecord(const IDBRequestData& requestData, const ID
     callback(error);
 }
 
-void UniqueIDBDatabase::openCursor(const IDBRequestData& requestData, const IDBCursorInfo& info, GetResultCallback&& callback, SpaceCheckResult spaceCheckResult)
+void UniqueIDBDatabase::openCursor(const IDBRequestData& requestData, const IDBCursorInfo& info, GetResultCallback callback, SpaceCheckResult spaceCheckResult)
 {
     ASSERT(!isMainThread());
     LOG(IndexedDB, "UniqueIDBDatabase::openCursor");
@@ -1090,7 +1086,7 @@ void UniqueIDBDatabase::openCursor(const IDBRequestData& requestData, const IDBC
     callback(error, result);
 }
 
-void UniqueIDBDatabase::iterateCursor(const IDBRequestData& requestData, const IDBIterateCursorData& data, GetResultCallback&& callback, SpaceCheckResult spaceCheckResult)
+void UniqueIDBDatabase::iterateCursor(const IDBRequestData& requestData, const IDBIterateCursorData& data, GetResultCallback callback, SpaceCheckResult spaceCheckResult)
 {
     ASSERT(!isMainThread());
     LOG(IndexedDB, "UniqueIDBDatabase::iterateCursor");
@@ -1113,13 +1109,14 @@ void UniqueIDBDatabase::iterateCursor(const IDBRequestData& requestData, const I
         return callback(IDBError { ExceptionCode::InvalidStateError, "Backing store is closed"_s }, IDBGetResult { });
 
     IDBGetResult result;
+    auto transactionIdentifier = requestData.transactionIdentifier();
     auto cursorIdentifier = requestData.cursorIdentifier();
-    auto error = m_backingStore->iterateCursor(requestData.transactionIdentifier(), cursorIdentifier, data, result);
+    auto error = m_backingStore->iterateCursor(transactionIdentifier, cursorIdentifier, data, result);
 
     callback(error, result);
 }
 
-void UniqueIDBDatabase::commitTransaction(UniqueIDBDatabaseTransaction& transaction, uint64_t handledRequestResultsCount, ErrorCallback&& callback, SpaceCheckResult spaceCheckResult)
+void UniqueIDBDatabase::commitTransaction(UniqueIDBDatabaseTransaction& transaction, ErrorCallback callback, SpaceCheckResult spaceCheckResult)
 {
     ASSERT(!isMainThread());
     LOG(IndexedDB, "UniqueIDBDatabase::commitTransaction - %s", transaction.info().identifier().loggingString().utf8().data());
@@ -1128,27 +1125,17 @@ void UniqueIDBDatabase::commitTransaction(UniqueIDBDatabaseTransaction& transact
         if (!m_manager)
             return callback(IDBError { ExceptionCode::InvalidStateError });
 
-        m_manager->requestSpace(m_identifier.origin(), 0, [this, handledRequestResultsCount, weakThis = WeakPtr { *this }, weakTransaction = WeakPtr { transaction }, callback = WTFMove(callback)](bool granted) mutable {
+        m_manager->requestSpace(m_identifier.origin(), 0, [this, weakThis = WeakPtr { *this }, weakTransaction = WeakPtr { transaction }, callback = WTFMove(callback)](bool granted) mutable {
             if (!weakThis || !weakTransaction)
                 return callback(IDBError { ExceptionCode::InvalidStateError, "Database or transaction is closed"_s });
 
-            commitTransaction(*weakTransaction, handledRequestResultsCount, WTFMove(callback), granted ? SpaceCheckResult::Pass : SpaceCheckResult::Fail);
+            commitTransaction(*weakTransaction, WTFMove(callback), granted ? SpaceCheckResult::Pass : SpaceCheckResult::Fail);
         });
         return;
     }
 
     ASSERT(spaceCheckResult == SpaceCheckResult::Pass);
     ASSERT(transaction.database() == this);
-
-    if (transaction.shouldAbortDueToUnhandledRequestError(handledRequestResultsCount)) {
-        abortTransaction(transaction, [callback = WTFMove(callback)](auto error) {
-            if (!error.isNull())
-                return callback(error);
-
-            callback(IDBError { ExceptionCode::UnknownError, "Transaction is aborted due to unhandled failed request"_s });
-        }, spaceCheckResult);
-        return;
-    }
 
     if (!m_backingStore)
         return callback(IDBError { ExceptionCode::InvalidStateError, "Backing store is closed"_s });
@@ -1168,7 +1155,7 @@ void UniqueIDBDatabase::commitTransaction(UniqueIDBDatabaseTransaction& transact
     transactionCompleted(WTFMove(takenTransaction));
 }
 
-void UniqueIDBDatabase::abortTransaction(UniqueIDBDatabaseTransaction& transaction, ErrorCallback&& callback, SpaceCheckResult spaceCheckResult)
+void UniqueIDBDatabase::abortTransaction(UniqueIDBDatabaseTransaction& transaction, ErrorCallback callback, SpaceCheckResult spaceCheckResult)
 {
     ASSERT(!isMainThread());
     LOG(IndexedDB, "UniqueIDBDatabase::abortTransaction - %s", transaction.info().identifier().loggingString().utf8().data());
@@ -1241,7 +1228,7 @@ void UniqueIDBDatabase::didFinishHandlingVersionChange(UniqueIDBDatabaseConnecti
 void UniqueIDBDatabase::connectionClosedFromClient(UniqueIDBDatabaseConnection& connection)
 {
     ASSERT(!isMainThread());
-    LOG(IndexedDB, "UniqueIDBDatabase::connectionClosedFromClient - %s (%" PRIu64 ")", connection.openRequestIdentifier().loggingString().utf8().data(), connection.identifier().toUInt64());
+    LOG(IndexedDB, "UniqueIDBDatabase::connectionClosedFromClient - %s (%" PRIu64 ")", connection.openRequestIdentifier().loggingString().utf8().data(), connection.identifier());
 
     Ref<UniqueIDBDatabaseConnection> protectedConnection(connection);
     m_openDatabaseConnections.remove(&connection);
@@ -1276,7 +1263,7 @@ void UniqueIDBDatabase::connectionClosedFromClient(UniqueIDBDatabaseConnection& 
 void UniqueIDBDatabase::connectionClosedFromServer(UniqueIDBDatabaseConnection& connection)
 {
     ASSERT(!isMainThread());
-    LOG(IndexedDB, "UniqueIDBDatabase::connectionClosedFromServer - %s (%" PRIu64 ")", connection.openRequestIdentifier().loggingString().utf8().data(), connection.identifier().toUInt64());
+    LOG(IndexedDB, "UniqueIDBDatabase::connectionClosedFromServer - %s (%" PRIu64 ")", connection.openRequestIdentifier().loggingString().utf8().data(), connection.identifier());
 
     connection.connectionToClient().didCloseFromServer(connection, IDBError::userDeleteError());
 
@@ -1330,7 +1317,7 @@ void UniqueIDBDatabase::activateTransactionInBackingStore(UniqueIDBDatabaseTrans
     transaction.didActivateInBackingStore(error);
 }
 
-template<typename T> bool scopesOverlap(const T& aScopes, const Vector<IDBObjectStoreIdentifier>& bScopes)
+template<typename T> bool scopesOverlap(const T& aScopes, const Vector<uint64_t>& bScopes)
 {
     for (auto scope : bScopes) {
         if (aScopes.contains(scope))
@@ -1347,13 +1334,15 @@ RefPtr<UniqueIDBDatabaseTransaction> UniqueIDBDatabase::takeNextRunnableTransact
     if (m_pendingTransactions.isEmpty())
         return nullptr;
 
-    bool hasReadWriteTransactionInProgress = WTF::anyOf(m_inProgressTransactions, [&](auto& entry) {
-        return !entry.value->isReadOnly();
-    });
+    if (!m_backingStore->supportsSimultaneousTransactions() && !m_inProgressTransactions.isEmpty()) {
+        LOG(IndexedDB, "UniqueIDBDatabase::takeNextRunnableTransaction - Backing store only supports 1 transaction, and we already have 1");
+        return nullptr;
+    }
+
     Deque<RefPtr<UniqueIDBDatabaseTransaction>> deferredTransactions;
     RefPtr<UniqueIDBDatabaseTransaction> currentTransaction;
 
-    HashSet<IDBObjectStoreIdentifier> deferredReadWriteScopes;
+    HashSet<uint64_t> deferredReadWriteScopes;
 
     while (!m_pendingTransactions.isEmpty()) {
         currentTransaction = m_pendingTransactions.takeFirst();
@@ -1371,8 +1360,8 @@ RefPtr<UniqueIDBDatabaseTransaction> UniqueIDBDatabase::takeNextRunnableTransact
         case IDBTransactionMode::Readwrite: {
             bool hasOverlappingScopes = scopesOverlap(m_objectStoreTransactionCounts, currentTransaction->objectStoreIdentifiers());
             hasOverlappingScopes |= scopesOverlap(deferredReadWriteScopes, currentTransaction->objectStoreIdentifiers());
-            bool hasBackingStoreSupport = m_backingStore->supportsSimultaneousReadWriteTransactions() || !hasReadWriteTransactionInProgress;
-            if (hasOverlappingScopes || !hasBackingStoreSupport) {
+
+            if (hasOverlappingScopes) {
                 for (auto objectStore : currentTransaction->objectStoreIdentifiers())
                     deferredReadWriteScopes.add(objectStore);
                 deferredTransactions.append(WTFMove(currentTransaction));

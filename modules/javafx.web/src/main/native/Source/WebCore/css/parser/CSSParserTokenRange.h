@@ -30,7 +30,6 @@
 #pragma once
 
 #include "CSSParserToken.h"
-#include "CSSTokenizer.h"
 #include <wtf/Forward.h>
 
 namespace WebCore {
@@ -88,19 +87,15 @@ public:
 
     void consumeWhitespace()
     {
-        while (CSSTokenizer::isWhitespace(peek().type()))
+        while (peek().type() == WhitespaceToken)
             ++m_first;
     }
 
-    void trimTrailingWhitespace();
-    const CSSParserToken& consumeLast();
-
     CSSParserTokenRange consumeAll() { return { std::exchange(m_first, m_last), m_last }; }
 
-    String serialize(CSSParserToken::SerializationMode = CSSParserToken::SerializationMode::Normal) const;
+    String serialize() const;
 
     const CSSParserToken* begin() const { return m_first; }
-    std::span<const CSSParserToken> span() const { return std::span { begin(), size() }; }
 
     static CSSParserToken& eofToken();
 

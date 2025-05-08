@@ -73,11 +73,11 @@ public:
     unsigned skipWhilePredicate(unsigned offset)
     {
         if (m_string->is8Bit()) {
-            auto characters8 = m_string->span8();
+            const LChar* characters8 = m_string->characters8();
             while ((m_offset + offset) < m_stringLength && characterPredicate(characters8[m_offset + offset]))
                 ++offset;
         } else {
-            auto characters16 = m_string->span16();
+            const UChar* characters16 = m_string->characters16();
             while ((m_offset + offset) < m_stringLength && characterPredicate(characters16[m_offset + offset]))
                 ++offset;
         }
@@ -85,7 +85,6 @@ public:
     }
 
     void advanceUntilNonWhitespace();
-    void advanceUntilNewlineOrNonWhitespace();
 
     unsigned length() const { return m_stringLength; }
     unsigned offset() const { return std::min(m_offset, m_stringLength); }

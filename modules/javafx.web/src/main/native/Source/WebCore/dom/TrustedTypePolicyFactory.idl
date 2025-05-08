@@ -25,9 +25,7 @@
 
 [
     EnabledBySetting=TrustedTypesEnabled,
-    Exposed=(Window,Worker),
-    GenerateIsReachable=ImplScriptExecutionContext,
-    JSCustomMarkFunction,
+    Exposed=(Window,Worker)
 ]
 interface TrustedTypePolicyFactory {
     [CallWith=CurrentScriptExecutionContext] TrustedTypePolicy createPolicy(DOMString policyName, optional TrustedTypePolicyOptions policyOptions = {});
@@ -37,9 +35,9 @@ interface TrustedTypePolicyFactory {
     readonly attribute TrustedHTML emptyHTML;
     readonly attribute TrustedScript emptyScript;
 
-    DOMString? getAttributeType(DOMString tagName, DOMString attribute, optional DOMString? elementNamespace = "", optional DOMString? attrNamespace = "");
+    DOMString? getAttributeType(DOMString tagName, DOMString attribute, optional DOMString elementNamespace = "", optional DOMString attrNamespace = "");
 
-    DOMString? getPropertyType(DOMString tagName, DOMString property, optional DOMString? elementNamespace = "");
+    DOMString? getPropertyType(DOMString tagName, DOMString property, optional DOMString elementNamespace = "");
 
     readonly attribute TrustedTypePolicy? defaultPolicy;
 };

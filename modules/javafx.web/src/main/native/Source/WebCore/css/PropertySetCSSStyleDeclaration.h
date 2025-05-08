@@ -44,7 +44,7 @@ class StyleSheetContents;
 class StyledElement;
 
 class PropertySetCSSStyleDeclaration : public CSSStyleDeclaration {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(PropertySetCSSStyleDeclaration);
+    WTF_MAKE_ISO_ALLOCATED(PropertySetCSSStyleDeclaration);
 public:
     explicit PropertySetCSSStyleDeclaration(MutableStyleProperties& propertySet)
         : m_propertySet(&propertySet)
@@ -53,7 +53,7 @@ public:
     StyleSheetContents* contextStyleSheet() const;
 
 protected:
-    enum class MutationType : uint8_t { NoChanges, StyleAttributeChanged, PropertyChanged };
+    enum MutationType { NoChanges, PropertyChanged };
 
     virtual CSSParserContext cssParserContext() const;
 
@@ -79,7 +79,7 @@ private:
     String cssText() const final;
     ExceptionOr<void> setCssText(const String&) final;
     String getPropertyValueInternal(CSSPropertyID) final;
-    ExceptionOr<void> setPropertyInternal(CSSPropertyID, const String& value, IsImportant) final;
+    ExceptionOr<void> setPropertyInternal(CSSPropertyID, const String& value, bool important) final;
 
     Ref<MutableStyleProperties> copyProperties() const final;
     bool isExposed(CSSPropertyID) const;
@@ -91,7 +91,7 @@ private:
 };
 
 class StyleRuleCSSStyleDeclaration final : public PropertySetCSSStyleDeclaration, public RefCounted<StyleRuleCSSStyleDeclaration> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(StyleRuleCSSStyleDeclaration);
+    WTF_MAKE_ISO_ALLOCATED(StyleRuleCSSStyleDeclaration);
 public:
     static Ref<StyleRuleCSSStyleDeclaration> create(MutableStyleProperties& propertySet, CSSRule& parentRule)
     {
@@ -122,7 +122,7 @@ private:
 };
 
 class InlineCSSStyleDeclaration final : public PropertySetCSSStyleDeclaration {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(InlineCSSStyleDeclaration);
+    WTF_MAKE_ISO_ALLOCATED(InlineCSSStyleDeclaration);
 public:
     InlineCSSStyleDeclaration(MutableStyleProperties& propertySet, StyledElement& parentElement)
         : PropertySetCSSStyleDeclaration(propertySet)

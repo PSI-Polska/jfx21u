@@ -34,16 +34,16 @@
 namespace WebCore {
 
 class InbandWebVTTTextTrack final : public InbandTextTrack, private WebVTTParserClient {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(InbandWebVTTTextTrack);
+    WTF_MAKE_ISO_ALLOCATED(InbandWebVTTTextTrack);
 public:
-    static Ref<InbandTextTrack> create(ScriptExecutionContext&, InbandTextTrackPrivate&);
+    static Ref<InbandTextTrack> create(Document&, InbandTextTrackPrivate&);
     virtual ~InbandWebVTTTextTrack();
 
 private:
-    InbandWebVTTTextTrack(ScriptExecutionContext&, InbandTextTrackPrivate&);
+    InbandWebVTTTextTrack(Document&, InbandTextTrackPrivate&);
 
     WebVTTParser& parser();
-    void parseWebVTTCueData(std::span<const uint8_t>) final;
+    void parseWebVTTCueData(const uint8_t* data, unsigned length) final;
     void parseWebVTTCueData(ISOWebVTTCue&&) final;
 
     void newCuesParsed() final;
@@ -52,7 +52,7 @@ private:
     void fileFailedToParse() final;
 
 #if !RELEASE_LOG_DISABLED
-    ASCIILiteral logClassName() const final { return "InbandWebVTTTextTrack"_s; }
+    const char* logClassName() const final { return "InbandWebVTTTextTrack"; }
 #endif
 
     std::unique_ptr<WebVTTParser> m_webVTTParser;

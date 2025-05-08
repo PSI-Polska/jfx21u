@@ -126,7 +126,6 @@ inline CapabilityLevel canCompile(Node* node)
     case ArithTrunc:
     case ArithSqrt:
     case ArithFRound:
-    case ArithF16Round:
     case ArithNegate:
     case ArithUnary:
     case UInt32ToNumber:
@@ -141,7 +140,6 @@ inline CapabilityLevel canCompile(Node* node)
     case SkipScope:
     case GetGlobalObject:
     case GetGlobalThis:
-    case UnwrapGlobalProxy:
     case CreateActivation:
     case PushWithScope:
     case NewFunction:
@@ -261,30 +259,22 @@ inline CapabilityLevel canCompile(Node* node)
     case MultiDeleteByOffset:
     case ToPrimitive:
     case ToPropertyKey:
-    case ToPropertyKeyOrNumber:
     case Throw:
     case ThrowStaticError:
     case Unreachable:
     case InByVal:
     case InById:
-    case InByValMegamorphic:
-    case InByIdMegamorphic:
     case HasPrivateName:
     case HasPrivateBrand:
     case HasOwnProperty:
     case IsCellWithType:
     case MapHash:
     case NormalizeMapKey:
-    case MapGet:
-    case LoadMapValue:
-    case MapIterationNext:
-    case MapIterationEntry:
-    case MapIterationEntryKey:
-    case MapIterationEntryValue:
-    case MapStorage:
-    case MapIteratorNext:
-    case MapIteratorKey:
-    case MapIteratorValue:
+    case GetMapBucket:
+    case GetMapBucketHead:
+    case GetMapBucketNext:
+    case LoadKeyFromMapBucket:
+    case LoadValueFromMapBucket:
     case ExtractValueFromWeakMapGet:
     case SetAdd:
     case MapSet:
@@ -293,7 +283,6 @@ inline CapabilityLevel canCompile(Node* node)
     case WeakSetAdd:
     case WeakMapSet:
     case IsEmpty:
-    case IsEmptyStorage:
     case TypeOfIsUndefined:
     case TypeOfIsObject:
     case TypeOfIsFunction:
@@ -312,7 +301,6 @@ inline CapabilityLevel canCompile(Node* node)
     case HasStructureWithFlags:
     case OverridesHasInstance:
     case InstanceOf:
-    case InstanceOfMegamorphic:
     case InstanceOfCustom:
     case DoubleRep:
     case ValueRep:
@@ -435,7 +423,6 @@ inline CapabilityLevel canCompile(Node* node)
     case InitializeEntrypointArguments:
     case CPUIntrinsic:
     case GetArrayLength:
-    case GetUndetachedTypeArrayLength:
     case GetTypedArrayLengthAsInt52:
     case GetVectorLength:
     case GetByVal:
@@ -557,9 +544,7 @@ CapabilityLevel canCompile(Graph& graph)
                 case HeapBigIntUse:
                 case DateObjectUse:
                 case MapObjectUse:
-                case MapIteratorObjectUse:
                 case SetObjectUse:
-                case SetIteratorObjectUse:
                 case WeakMapObjectUse:
                 case WeakSetObjectUse:
                 case DataViewObjectUse:
@@ -567,7 +552,6 @@ CapabilityLevel canCompile(Graph& graph)
                 case PromiseObjectUse:
                 case RegExpObjectUse:
                 case ProxyObjectUse:
-                case GlobalProxyUse:
                 case DerivedArrayUse:
                 case NotCellUse:
                 case NotCellNorBigIntUse:

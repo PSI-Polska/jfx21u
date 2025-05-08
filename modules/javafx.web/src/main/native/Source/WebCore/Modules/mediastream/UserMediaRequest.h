@@ -44,7 +44,6 @@
 #include "MediaStreamRequest.h"
 #include "UserMediaRequestIdentifier.h"
 #include <wtf/CompletionHandler.h>
-#include <wtf/Identified.h>
 #include <wtf/ObjectIdentifier.h>
 #include <wtf/UniqueRef.h>
 
@@ -55,16 +54,13 @@ class SecurityOrigin;
 
 template<typename IDLType> class DOMPromiseDeferred;
 
-class UserMediaRequest : public RefCounted<UserMediaRequest>, public ActiveDOMObject, public Identified<UserMediaRequestIdentifier> {
+class UserMediaRequest : public RefCounted<UserMediaRequest>, public ActiveDOMObject {
 public:
     using TrackConstraints = std::variant<bool, MediaTrackConstraints>;
     static Ref<UserMediaRequest> create(Document&, MediaStreamRequest&&, TrackConstraints&&, TrackConstraints&&, DOMPromiseDeferred<IDLInterface<MediaStream>>&&);
     virtual ~UserMediaRequest();
 
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
-
+    UserMediaRequestIdentifier identifier() const { return m_identifier; }
     void start();
 
     WEBCORE_EXPORT void setAllowedMediaDeviceUIDs(const String& audioDeviceUID, const String& videoDeviceUID);
@@ -87,8 +83,10 @@ public:
 private:
     UserMediaRequest(Document&, MediaStreamRequest&&, TrackConstraints&&, TrackConstraints&&, DOMPromiseDeferred<IDLInterface<MediaStream>>&&);
 
-    // ActiveDOMObject.
     void stop() final;
+    const char* activeDOMObjectName() const final;
+
+    UserMediaRequestIdentifier m_identifier;
 
     Vector<String> m_videoDeviceUIDs;
     Vector<String> m_audioDeviceUIDs;

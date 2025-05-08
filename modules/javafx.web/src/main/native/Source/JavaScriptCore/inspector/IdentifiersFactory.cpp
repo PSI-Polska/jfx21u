@@ -27,7 +27,7 @@
 #include "config.h"
 #include "IdentifiersFactory.h"
 
-#include <wtf/text/MakeString.h>
+#include <wtf/text/StringConcatenateNumbers.h>
 
 namespace Inspector {
 

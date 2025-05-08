@@ -39,7 +39,6 @@ public:
 
     ScrollingTreeScrollingNode& scrollingNode() { return m_scrollingNode; }
     const ScrollingTreeScrollingNode& scrollingNode() const { return m_scrollingNode; }
-    Ref<ScrollingTreeScrollingNode> protectedScrollingNode() const { return m_scrollingNode; }
 
     virtual bool startAnimatedScrollToPosition(FloatPoint) = 0;
     virtual void stopAnimatedScroll() = 0;
@@ -84,7 +83,7 @@ protected:
     ScrollElasticity verticalScrollElasticity() const { return m_scrollingNode.verticalScrollElasticity(); }
 
 private:
-    ScrollingTreeScrollingNode& m_scrollingNode; // FIXME : Should use a smart pointer.
+    ScrollingTreeScrollingNode& m_scrollingNode;
 };
 
 } // namespace WebCore

@@ -100,6 +100,9 @@ protected:
     Atomic<uintptr_t> m_word { 0 };
 };
 
+using WordLockHolder = Locker<WordLock>;
+
 } // namespace WTF
 
 using WTF::WordLock;
+using WTF::WordLockHolder;

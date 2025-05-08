@@ -46,7 +46,9 @@ DesiredIdentifiers::DesiredIdentifiers(CodeBlock* codeBlock)
 {
 }
 
-DesiredIdentifiers::~DesiredIdentifiers() = default;
+DesiredIdentifiers::~DesiredIdentifiers()
+{
+}
 
 unsigned DesiredIdentifiers::numberOfIdentifiers()
 {

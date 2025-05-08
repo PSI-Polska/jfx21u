@@ -27,6 +27,8 @@
 #include "config.h"
 #include "StylePaintImage.h"
 
+#if ENABLE(CSS_PAINTING_API)
+
 #include "CSSPaintImageValue.h"
 #include "CSSVariableData.h"
 #include "CustomPaintImage.h"
@@ -118,3 +120,5 @@ FloatSize StylePaintImage::fixedSize(const RenderElement&) const
 }
 
 } // namespace WebCore
+
+#endif // ENABLE(CSS_PAINTING_API)

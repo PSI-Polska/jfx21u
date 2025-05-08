@@ -44,14 +44,12 @@
 
 #define CHECK_DATASIZE_OF(datasize) static_assert(datasize == 32 || datasize == 64)
 #define CHECK_DATASIZE_OF_SIMD(datasize) static_assert(datasize == 32 || datasize == 64 || datasize == 128)
-#define CHECK_DATASIZE_OF_FP(datasize) static_assert(datasize == 16 || datasize == 32 || datasize == 64)
 #define CHECK_MEMOPSIZE_OF(size) static_assert(size == 8 || size == 16 || size == 32 || size == 64);
 #define CHECK_MEMOPSIZE_OF_SIMD(size) static_assert(size == 8 || size == 16 || size == 32 || size == 64 || size == 128);
-#define DATASIZE_OF(datasize) ((datasize == 64) ? Datasize_64 : ((datasize == 128) ? Datasize_128 : ((datasize == 16) ? Datasize_16 : Datasize_32)))
+#define DATASIZE_OF(datasize) ((datasize == 64) ? Datasize_64 : ((datasize == 128) ? Datasize_128 : Datasize_32))
 #define MEMOPSIZE_OF(datasize) ((datasize == 8 || datasize == 128) ? MemOpSize_8_or_128 : (datasize == 16) ? MemOpSize_16 : (datasize == 32) ? MemOpSize_32 : MemOpSize_64)
 #define CHECK_DATASIZE() CHECK_DATASIZE_OF(datasize)
 #define CHECK_DATASIZE_SIMD() CHECK_DATASIZE_OF_SIMD(datasize)
-#define CHECK_DATASIZE_FP() CHECK_DATASIZE_OF_FP(datasize)
 #define CHECK_MEMOPSIZE() CHECK_MEMOPSIZE_OF(datasize)
 #define CHECK_MEMOPSIZE_SIMD() CHECK_MEMOPSIZE_OF_SIMD(datasize)
 #define CHECK_VECTOR_DATASIZE() ASSERT(datasize == 64 || datasize == 128)
@@ -218,10 +216,10 @@ public:
     static constexpr FPRegisterID lastFPRegister() { return ARM64Registers::q31; }
     static constexpr unsigned numberOfFPRegisters() { return lastFPRegister() - firstFPRegister() + 1; }
 
-    static ASCIILiteral gprName(RegisterID id)
+    static const char* gprName(RegisterID id)
     {
         ASSERT(id >= firstRegister() && id <= lastRegister());
-        static constexpr ASCIILiteral nameForRegister[numberOfRegisters()] = {
+        static const char* const nameForRegister[numberOfRegisters()] = {
 #define REGISTER_NAME(id, name, r, cs) name,
         FOR_EACH_GP_REGISTER(REGISTER_NAME)
 #undef REGISTER_NAME
@@ -229,10 +227,10 @@ public:
         return nameForRegister[id];
     }
 
-    static ASCIILiteral sprName(SPRegisterID id)
+    static const char* sprName(SPRegisterID id)
     {
         ASSERT(id >= firstSPRegister() && id <= lastSPRegister());
-        static constexpr ASCIILiteral nameForRegister[numberOfSPRegisters()] = {
+        static const char* const nameForRegister[numberOfSPRegisters()] = {
 #define REGISTER_NAME(id, name) name,
         FOR_EACH_SP_REGISTER(REGISTER_NAME)
 #undef REGISTER_NAME
@@ -240,10 +238,10 @@ public:
         return nameForRegister[id];
     }
 
-    static ASCIILiteral fprName(FPRegisterID id)
+    static const char* fprName(FPRegisterID id)
     {
         ASSERT(id >= firstFPRegister() && id <= lastFPRegister());
-        static constexpr ASCIILiteral nameForRegister[numberOfFPRegisters()] = {
+        static const char* const nameForRegister[numberOfFPRegisters()] = {
 #define REGISTER_NAME(id, name, r, cs) name,
         FOR_EACH_FP_REGISTER(REGISTER_NAME)
 #undef REGISTER_NAME
@@ -2910,9 +2908,9 @@ public:
     template<int dstsize, int srcsize>
     ALWAYS_INLINE void fcvt(FPRegisterID vd, FPRegisterID vn)
     {
-        CHECK_DATASIZE_OF_FP(dstsize);
-        CHECK_DATASIZE_OF_FP(srcsize);
-        static_assert(dstsize != srcsize);
+        ASSERT(dstsize == 16 || dstsize == 32 || dstsize == 64);
+        ASSERT(srcsize == 16 || srcsize == 32 || srcsize == 64);
+        ASSERT(dstsize != srcsize);
         Datasize type = (srcsize == 64) ? Datasize_64 : (srcsize == 32) ? Datasize_32 : Datasize_16;
         FPDataOp1Source opcode = (dstsize == 64) ? FPDataOp_FCVT_toDouble : (dstsize == 32) ? FPDataOp_FCVT_toSingle : FPDataOp_FCVT_toHalf;
         insn(floatingPointDataProcessing1Source(type, opcode, vn, vd));
@@ -3050,14 +3048,14 @@ public:
     template<int datasize>
     ALWAYS_INLINE void fmov(FPRegisterID vd, RegisterID rn)
     {
-        CHECK_DATASIZE_FP();
+        CHECK_DATASIZE();
         insn(floatingPointIntegerConversions(DATASIZE, DATASIZE, FPIntConvOp_FMOV_XtoQ, rn, vd));
     }
 
     template<int datasize>
     ALWAYS_INLINE void fmov(RegisterID rd, FPRegisterID vn)
     {
-        CHECK_DATASIZE_FP();
+        CHECK_DATASIZE();
         insn(floatingPointIntegerConversions(DATASIZE, DATASIZE, FPIntConvOp_FMOV_QtoX, vn, rd));
     }
 
@@ -3299,7 +3297,7 @@ public:
     template<int datasize>
     ALWAYS_INLINE void stur(FPRegisterID rt, RegisterID rn, int simm)
     {
-        CHECK_FP_MEMOP_DATASIZE();
+        CHECK_DATASIZE_SIMD();
         insn(loadStoreRegisterUnscaledImmediate(MEMOPSIZE, true, datasize == 128 ? MemOp_STORE_V128 : MemOp_STORE, simm, rn, rt));
     }
 
@@ -3544,7 +3542,7 @@ public:
         cacheFlush(where, memoryToFillWithNopsInBytes);
     }
 
-    static constexpr ptrdiff_t maxJumpReplacementSize()
+    static ptrdiff_t maxJumpReplacementSize()
     {
         return 4;
     }
@@ -3658,7 +3656,7 @@ public:
 
     unsigned debugOffset() { return m_buffer.debugOffset(); }
 
-#if OS(LINUX)
+#if OS(LINUX) && COMPILER(GCC_COMPATIBLE)
     static inline void linuxPageFlush(uintptr_t begin, uintptr_t end)
     {
         __builtin___clear_cache(reinterpret_cast<char*>(begin), reinterpret_cast<char*>(end));

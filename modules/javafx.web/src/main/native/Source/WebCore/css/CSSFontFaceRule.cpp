@@ -26,7 +26,6 @@
 #include "PropertySetCSSStyleDeclaration.h"
 #include "StyleProperties.h"
 #include "StyleRule.h"
-#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -70,7 +69,7 @@ String CSSFontFaceRule::cssTextInternal(const String& declarations) const
     if (declarations.isEmpty())
         return "@font-face { }"_s;
 
-    return makeString("@font-face { "_s, declarations, " }"_s);
+    return makeString("@font-face { ", declarations, " }");
 }
 
 void CSSFontFaceRule::reattach(StyleRuleBase& rule)

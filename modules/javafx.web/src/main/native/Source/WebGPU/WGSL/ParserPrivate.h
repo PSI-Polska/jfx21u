@@ -126,7 +126,6 @@ private:
     Vector<Token> m_tokens;
     unsigned m_currentTokenIndex { 0 };
     unsigned m_parseDepth { 0 };
-    unsigned m_compositeTypeDepth { 0 };
     Token m_current;
     SourcePosition m_currentPosition;
 };

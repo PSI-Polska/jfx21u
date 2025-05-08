@@ -76,8 +76,8 @@ public:
     // The base class implementation always scrolls immediately, never animates.
     bool singleAxisScroll(ScrollEventAxis, float delta, OptionSet<ScrollBehavior>);
 
-    WEBCORE_EXPORT bool scrollToPositionWithoutAnimation(const FloatPoint&, ScrollClamping = ScrollClamping::Clamped);
-    WEBCORE_EXPORT bool scrollToPositionWithAnimation(const FloatPoint&, ScrollClamping = ScrollClamping::Clamped);
+    bool scrollToPositionWithoutAnimation(const FloatPoint&, ScrollClamping = ScrollClamping::Clamped);
+    bool scrollToPositionWithAnimation(const FloatPoint&, ScrollClamping = ScrollClamping::Clamped);
 
     void retargetRunningAnimation(const FloatPoint& newPosition);
 
@@ -160,9 +160,8 @@ private:
     bool isPinnedOnSide(BoxSide) const final;
 #endif
 
-    void deferWheelEventTestCompletionForReason(ScrollingNodeID, WheelEventTestMonitor::DeferReason) const final;
-    void removeWheelEventTestCompletionDeferralForReason(ScrollingNodeID, WheelEventTestMonitor::DeferReason) const final;
-    ScrollingNodeID scrollingNodeIDForTesting() const final;
+    void deferWheelEventTestCompletionForReason(WheelEventTestMonitor::ScrollableAreaIdentifier, WheelEventTestMonitor::DeferReason) const final;
+    void removeWheelEventTestCompletionDeferralForReason(WheelEventTestMonitor::ScrollableAreaIdentifier, WheelEventTestMonitor::DeferReason) const final;
 
 #if PLATFORM(GTK) || USE(NICOSIA)
     bool scrollAnimationEnabled() const final;

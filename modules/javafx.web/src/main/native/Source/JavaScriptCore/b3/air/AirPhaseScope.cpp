@@ -35,10 +35,10 @@
 
 namespace JSC { namespace B3 { namespace Air {
 
-PhaseScope::PhaseScope(Code& code, ASCIILiteral name)
+PhaseScope::PhaseScope(Code& code, const char* name)
     : m_code(code)
     , m_name(name)
-    , m_timingScope("Air"_s, name)
+    , m_timingScope("Air", name)
 {
     if (shouldDumpIRAtEachPhase(AirMode)) {
         dataLog("Air after ", code.lastPhaseName(), ", before ", name, ":\n");

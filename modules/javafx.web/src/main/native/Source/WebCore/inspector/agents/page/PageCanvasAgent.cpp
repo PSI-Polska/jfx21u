@@ -80,9 +80,9 @@ void PageCanvasAgent::internalDisable()
     InspectorCanvasAgent::internalDisable();
 }
 
-Inspector::Protocol::ErrorStringOr<Inspector::Protocol::DOM::NodeId> PageCanvasAgent::requestNode(const Inspector::Protocol::Canvas::CanvasId& canvasId)
+Protocol::ErrorStringOr<Protocol::DOM::NodeId> PageCanvasAgent::requestNode(const Protocol::Canvas::CanvasId& canvasId)
 {
-    Inspector::Protocol::ErrorString errorString;
+    Protocol::ErrorString errorString;
 
     auto inspectorCanvas = assertInspectorCanvas(errorString, canvasId);
     if (!inspectorCanvas)
@@ -100,9 +100,9 @@ Inspector::Protocol::ErrorStringOr<Inspector::Protocol::DOM::NodeId> PageCanvasA
     return m_instrumentingAgents.persistentDOMAgent()->pushNodeToFrontend(errorString, documentNodeId, node);
 }
 
-Inspector::Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Inspector::Protocol::DOM::NodeId>>> PageCanvasAgent::requestClientNodes(const Inspector::Protocol::Canvas::CanvasId& canvasId)
+Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Protocol::DOM::NodeId>>> PageCanvasAgent::requestClientNodes(const Protocol::Canvas::CanvasId& canvasId)
 {
-    Inspector::Protocol::ErrorString errorString;
+    Protocol::ErrorString errorString;
 
     auto* domAgent = m_instrumentingAgents.persistentDOMAgent();
     if (!domAgent)
@@ -112,7 +112,7 @@ Inspector::Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Inspector::Protocol::DOM::N
     if (!inspectorCanvas)
         return makeUnexpected(errorString);
 
-    auto clientNodeIds = JSON::ArrayOf<Inspector::Protocol::DOM::NodeId>::create();
+    auto clientNodeIds = JSON::ArrayOf<Protocol::DOM::NodeId>::create();
     for (auto& clientNode : inspectorCanvas->clientNodes()) {
         // FIXME: <https://webkit.org/b/213499> Web Inspector: allow DOM nodes to be instrumented at any point, regardless of whether the main document has also been instrumented
         if (auto documentNodeId = domAgent->boundNodeId(&clientNode->document()))

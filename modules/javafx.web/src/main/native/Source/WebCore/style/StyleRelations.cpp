@@ -147,17 +147,5 @@ void commitRelations(std::unique_ptr<Relations> relations, Update& update)
     }
 }
 
-void copyRelations(RenderStyle& to, const RenderStyle& from)
-{
-    if (from.emptyState())
-        to.setEmptyState(true);
-    if (from.firstChildState())
-        to.setFirstChildState();
-    if (from.lastChildState())
-        to.setLastChildState();
-    if (from.unique())
-        to.setUnique();
-}
-
 }
 }

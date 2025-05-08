@@ -33,7 +33,7 @@
 namespace WebCore {
 
 enum class WindowIdentifierType { };
-using WindowIdentifier = LegacyNullableObjectIdentifier<WindowIdentifierType>;
+using WindowIdentifier = ObjectIdentifier<WindowIdentifierType>;
 
 // Window identifier that is unique across all WebContent processes.
 struct GlobalWindowIdentifier {

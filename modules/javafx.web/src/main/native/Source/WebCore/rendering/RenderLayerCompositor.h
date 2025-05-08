@@ -184,7 +184,6 @@ public:
     void notifyFlushRequired(const GraphicsLayer*) override;
     void notifySubsequentFlushRequired(const GraphicsLayer*) override;
     void flushPendingLayerChanges(bool isFlushRoot = true);
-    void setRenderingIsSuppressed(bool);
 
     // Called when the GraphicsLayer for the given RenderLayer has flushed changes inside of flushPendingLayerChanges().
     void didChangePlatformLayerForLayer(RenderLayer&, const GraphicsLayer*);
@@ -207,7 +206,6 @@ public:
         LayoutUpToDate layoutUpToDate { LayoutUpToDate::Yes };
         RenderLayer::ViewportConstrainedNotCompositedReason nonCompositedForPositionReason { RenderLayer::NoNotCompositedReason };
         bool reevaluateAfterLayout { false };
-        bool intrinsic { false };
     };
 
     // Whether layer's backing needs a graphics layer to do clipping by an ancestor (non-stacking-context parent with overflow).
@@ -245,7 +243,6 @@ public:
     void layerWillBeRemoved(RenderLayer& parent, RenderLayer& child);
 
     void layerStyleChanged(StyleDifference, RenderLayer&, const RenderStyle* oldStyle);
-    void layerGainedCompositedScrollableOverflow(RenderLayer&);
 
     void establishesTopLayerWillChangeForLayer(RenderLayer&);
 
@@ -305,14 +302,8 @@ public:
     static bool isCompositedPlugin(const RenderObject&);
 
     static RenderLayerCompositor* frameContentsCompositor(RenderWidget&);
-
-    struct WidgetLayerAttachment {
-        bool widgetLayersAttachedAsChildren { false };
-        bool layerHierarchyChanged { false };
-    };
-    WidgetLayerAttachment attachWidgetContentLayersIfNecessary(RenderWidget&);
-
-    void collectViewTransitionNewContentLayers(RenderLayer&, Vector<Ref<GraphicsLayer>>&);
+    // Returns true the widget contents layer was parented.
+    bool attachWidgetContentLayers(RenderWidget&);
 
     // Update the geometry of the layers used for clipping and scrolling in frames.
     void frameViewDidChangeLocation(const IntPoint& contentsOffset);
@@ -355,7 +346,6 @@ public:
     GraphicsLayer* updateLayerForFooter(bool wantsLayer);
 
     void updateLayerForOverhangAreasBackgroundColor();
-    void updateSizeAndPositionForOverhangAreaLayer();
 #endif // HAVE(RUBBER_BANDING)
 
     // FIXME: make the coordinated/async terminology consistent.
@@ -412,7 +402,7 @@ private:
     // GraphicsLayerClient implementation
     void paintContents(const GraphicsLayer*, GraphicsContext&, const FloatRect&, OptionSet<GraphicsLayerPaintBehavior>) override;
     void customPositionForVisibleRectComputation(const GraphicsLayer*, FloatPoint&) const override;
-    bool shouldDumpPropertyForLayer(const GraphicsLayer*, ASCIILiteral propertyName, OptionSet<LayerTreeAsTextOptions>) const override;
+    bool shouldDumpPropertyForLayer(const GraphicsLayer*, const char* propertyName, OptionSet<LayerTreeAsTextOptions>) const override;
     bool isTrackingRepaints() const override { return m_isTrackingRepaints; }
 
     // Copy the accelerated compositing related flags from Settings
@@ -440,15 +430,12 @@ private:
     void computeExtent(const LayerOverlapMap&, const RenderLayer&, OverlapExtent&) const;
     void computeClippingScopes(const RenderLayer&, OverlapExtent&) const;
     void addToOverlapMap(LayerOverlapMap&, const RenderLayer&, OverlapExtent&) const;
-    LayoutRect computeClippedOverlapBounds(LayerOverlapMap&, const RenderLayer&, OverlapExtent&) const;
     void addDescendantsToOverlapMapRecursive(LayerOverlapMap&, const RenderLayer&, const RenderLayer* ancestorLayer = nullptr) const;
     void updateOverlapMap(LayerOverlapMap&, const RenderLayer&, OverlapExtent&, bool didPushContainer, bool addLayerToOverlap, bool addDescendantsToOverlap = false) const;
     bool layerOverlaps(const LayerOverlapMap&, const RenderLayer&, OverlapExtent&) const;
 
-    struct BackingSharingSnapshot;
-
-    std::optional<BackingSharingSnapshot> updateBackingSharingBeforeDescendantTraversal(BackingSharingState&, unsigned depth, const LayerOverlapMap&, RenderLayer&, OverlapExtent&, bool willBeComposited, RenderLayer* stackingContextAncestor);
-    void updateBackingSharingAfterDescendantTraversal(BackingSharingState&, unsigned depth, const LayerOverlapMap&, RenderLayer&, OverlapExtent&, RenderLayer* stackingContextAncestor, const std::optional<BackingSharingSnapshot>&);
+    void updateBackingSharingBeforeDescendantTraversal(BackingSharingState&, unsigned depth, const LayerOverlapMap&, RenderLayer&, OverlapExtent&, bool willBeComposited, RenderLayer* stackingContextAncestor);
+    void updateBackingSharingAfterDescendantTraversal(BackingSharingState&, unsigned depth, const LayerOverlapMap&, RenderLayer&, OverlapExtent&, const RenderLayer* preDescendantProviderStartLayer, RenderLayer* stackingContextAncestor);
 
     void clearBackingProviderSequencesInStackingContextOfLayer(RenderLayer&);
 
@@ -508,7 +495,6 @@ private:
     bool requiresCompositingForAnimation(RenderLayerModelObject&) const;
     bool requiresCompositingForTransform(RenderLayerModelObject&) const;
     bool requiresCompositingForBackfaceVisibility(RenderLayerModelObject&) const;
-    bool requiresCompositingForViewTransition(RenderLayerModelObject&) const;
     bool requiresCompositingForVideo(RenderLayerModelObject&) const;
     bool requiresCompositingForCanvas(RenderLayerModelObject&) const;
     bool requiresCompositingForFilters(RenderLayerModelObject&) const;
@@ -585,8 +571,8 @@ private:
     bool shouldCompositeOverflowControls() const;
 
 #if !LOG_DISABLED
-    ASCIILiteral logOneReasonForCompositing(const RenderLayer&);
-    void logLayerInfo(const RenderLayer&, ASCIILiteral, int depth);
+    const char* logOneReasonForCompositing(const RenderLayer&);
+    void logLayerInfo(const RenderLayer&, const char*, int depth);
 #endif
 
     bool documentUsesTiledBacking() const;

@@ -43,7 +43,9 @@ InjectedScriptModule::InjectedScriptModule(const String& name)
 {
 }
 
-InjectedScriptModule::~InjectedScriptModule() = default;
+InjectedScriptModule::~InjectedScriptModule()
+{
+}
 
 void InjectedScriptModule::ensureInjected(InjectedScriptManager* injectedScriptManager, JSC::JSGlobalObject* globalObject)
 {
@@ -71,6 +73,10 @@ void InjectedScriptModule::ensureInjected(InjectedScriptManager* injectedScriptM
         if (stack.size() > 0)
             lineColumn = stack[0].computeLineAndColumn();
         WTFLogAlways("Error when calling 'hasInjectedModule' for '%s': %s (%d:%d)\n", name().utf8().data(), error->value().toWTFString(injectedScript.globalObject()).utf8().data(), lineColumn.line, lineColumn.column);
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+    if (!hasInjectedModuleResult.value()) {
+        WTFLogAlways("VM is terminated when calling 'injectModule' for '%s'\n", name().utf8().data());
         RELEASE_ASSERT_NOT_REACHED();
     }
     if (!hasInjectedModuleResult.value()) {

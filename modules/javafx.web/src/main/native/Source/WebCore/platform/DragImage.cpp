@@ -104,11 +104,11 @@ static DragImageRef createDragImageFromSnapshot(RefPtr<ImageBuffer> snapshot, No
 
     ImageOrientation orientation;
     if (node) {
-        auto* elementRenderer = dynamicDowncast<RenderElement>(node->renderer());
-        if (!elementRenderer)
+        RenderObject* renderer = node->renderer();
+        if (!renderer || !is<RenderElement>(renderer))
             return nullptr;
 
-        orientation = elementRenderer->imageOrientation();
+        orientation = downcast<RenderElement>(*renderer).imageOrientation();
     }
 
     auto image = BitmapImage::create(ImageBuffer::sinkIntoNativeImage(WTFMove(snapshot)));
@@ -120,14 +120,14 @@ static DragImageRef createDragImageFromSnapshot(RefPtr<ImageBuffer> snapshot, No
 DragImageRef createDragImageForNode(LocalFrame& frame, Node& node)
 {
     ScopedNodeDragEnabler enableDrag(frame, node);
-    return createDragImageFromSnapshot(snapshotNode(frame, node, { { }, ImageBufferPixelFormat::BGRA8, DestinationColorSpace::SRGB() }), &node);
+    return createDragImageFromSnapshot(snapshotNode(frame, node, { { }, PixelFormat::BGRA8, DestinationColorSpace::SRGB() }), &node);
 }
 
 #if !PLATFORM(IOS_FAMILY) || !ENABLE(DRAG_SUPPORT)
 
 DragImageRef createDragImageForSelection(LocalFrame& frame, TextIndicatorData&, bool forceBlackText)
 {
-    SnapshotOptions options { { }, ImageBufferPixelFormat::BGRA8, DestinationColorSpace::SRGB() };
+    SnapshotOptions options { { }, PixelFormat::BGRA8, DestinationColorSpace::SRGB() };
     if (forceBlackText)
         options.flags.add(SnapshotFlags::ForceBlackText);
     return createDragImageFromSnapshot(snapshotSelection(frame, WTFMove(options)), nullptr);
@@ -185,7 +185,7 @@ DragImageRef createDragImageForRange(LocalFrame& frame, const SimpleRange& range
     if (!startRenderer || !endRenderer)
         return nullptr;
 
-    SnapshotOptions options { { SnapshotFlags::PaintSelectionOnly }, ImageBufferPixelFormat::BGRA8, DestinationColorSpace::SRGB() };
+    SnapshotOptions options { { SnapshotFlags::PaintSelectionOnly }, PixelFormat::BGRA8, DestinationColorSpace::SRGB() };
     if (forceBlackText)
         options.flags.add(SnapshotFlags::ForceBlackText);
 
@@ -218,7 +218,7 @@ DragImageRef createDragImageForImage(LocalFrame& frame, Node& node, IntRect& ima
     elementRect = snappedIntRect(topLevelRect);
     imageRect = paintingRect;
 
-    return createDragImageFromSnapshot(snapshotNode(frame, node, { { }, ImageBufferPixelFormat::BGRA8, DestinationColorSpace::SRGB() }), &node);
+    return createDragImageFromSnapshot(snapshotNode(frame, node, { { }, PixelFormat::BGRA8, DestinationColorSpace::SRGB() }), &node);
 }
 
 #if !PLATFORM(IOS_FAMILY) || !ENABLE(DRAG_SUPPORT)

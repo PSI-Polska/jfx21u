@@ -50,31 +50,25 @@ class Path;
 class RenderBox;
 class SVGPathByteStream;
 
-enum class CoordinateAffinity : uint8_t {
-    Relative, Absolute
-};
-
 class BasicShape : public RefCounted<BasicShape> {
-    WTF_MAKE_FAST_ALLOCATED;
 public:
     virtual ~BasicShape() = default;
 
-    enum class Type : uint8_t {
+    enum class Type {
         Polygon,
         Path,
         Circle,
         Ellipse,
         Inset,
         Rect,
-        Xywh,
-        Shape
+        Xywh
     };
 
     virtual Ref<BasicShape> clone() const = 0;
 
     virtual Type type() const = 0;
 
-    virtual Path path(const FloatRect&) const = 0;
+    virtual const Path& path(const FloatRect&) = 0;
     virtual WindRule windRule() const { return WindRule::NonZero; }
 
     virtual bool canBlend(const BasicShape&) const = 0;
@@ -133,9 +127,7 @@ public:
     enum class Type : uint8_t {
         Value,
         ClosestSide,
-        FarthestSide,
-        ClosestCorner,
-        FarthestCorner
+        FarthestSide
     };
 
     BasicShapeRadius() = default;
@@ -184,7 +176,7 @@ class BasicShapeCircleOrEllipse : public BasicShape {
 public:
     void setPositionWasOmitted(bool flag) { m_centerWasOmitted = flag; }
     bool positionWasOmitted() const { return m_centerWasOmitted; }
-    virtual Path pathForCenterCoordinate(const FloatRect&, FloatPoint) const = 0;
+    virtual const Path& pathForCenterCoordinate(const FloatRect&, FloatPoint) const = 0;
 
 private:
     bool m_centerWasOmitted = false;
@@ -199,14 +191,11 @@ public:
 
     const BasicShapeCenterCoordinate& centerX() const { return m_centerX; }
     const BasicShapeCenterCoordinate& centerY() const { return m_centerY; }
-
     const BasicShapeRadius& radius() const { return m_radius; }
-
-    float floatValueForRadiusInBox(FloatSize boxSize, FloatPoint center) const;
+    float floatValueForRadiusInBox(float boxWidth, float boxHeight, FloatPoint) const;
 
     void setCenterX(BasicShapeCenterCoordinate centerX) { m_centerX = WTFMove(centerX); }
     void setCenterY(BasicShapeCenterCoordinate centerY) { m_centerY = WTFMove(centerY); }
-
     void setRadius(BasicShapeRadius radius) { m_radius = WTFMove(radius); }
 
 private:
@@ -215,8 +204,8 @@ private:
 
     Type type() const final { return Type::Circle; }
 
-    Path path(const FloatRect&) const final;
-    Path pathForCenterCoordinate(const FloatRect&, FloatPoint) const final;
+    const Path& path(const FloatRect&) final;
+    const Path& pathForCenterCoordinate(const FloatRect&, FloatPoint) const final;
 
     bool canBlend(const BasicShape&) const final;
     Ref<BasicShape> blend(const BasicShape& from, const BlendingContext&) const final;
@@ -241,8 +230,7 @@ public:
     const BasicShapeCenterCoordinate& centerY() const { return m_centerY; }
     const BasicShapeRadius& radiusX() const { return m_radiusX; }
     const BasicShapeRadius& radiusY() const { return m_radiusY; }
-
-    FloatSize floatSizeForRadiusInBox(FloatSize boxSize, FloatPoint center) const;
+    float floatValueForRadiusInBox(const BasicShapeRadius&, float center, float boxWidthOrHeight) const;
 
     void setCenterX(BasicShapeCenterCoordinate centerX) { m_centerX = WTFMove(centerX); }
     void setCenterY(BasicShapeCenterCoordinate centerY) { m_centerY = WTFMove(centerY); }
@@ -255,8 +243,8 @@ private:
 
     Type type() const final { return Type::Ellipse; }
 
-    Path path(const FloatRect&) const final;
-    Path pathForCenterCoordinate(const FloatRect&, FloatPoint) const final;
+    const Path& path(const FloatRect&) final;
+    const Path& pathForCenterCoordinate(const FloatRect&, FloatPoint) const final;
 
     bool canBlend(const BasicShape&) const final;
     Ref<BasicShape> blend(const BasicShape& from, const BlendingContext&) const final;
@@ -293,7 +281,7 @@ private:
 
     Type type() const final { return Type::Polygon; }
 
-    Path path(const FloatRect&) const final;
+    const Path& path(const FloatRect&) final;
 
     bool canBlend(const BasicShape&) const final;
     Ref<BasicShape> blend(const BasicShape& from, const BlendingContext&) const final;
@@ -328,16 +316,16 @@ public:
     const SVGPathByteStream* pathData() const { return m_byteStream.get(); }
     const std::unique_ptr<SVGPathByteStream>& byteStream() const { return m_byteStream; }
 
-    Path path(const FloatRect&) const final;
-
-    bool canBlend(const BasicShape&) const final;
-    Ref<BasicShape> blend(const BasicShape& from, const BlendingContext&) const final;
-
 private:
     BasicShapePath(std::unique_ptr<SVGPathByteStream>&&);
     BasicShapePath(std::unique_ptr<SVGPathByteStream>&&, float zoom, WindRule);
 
     Type type() const final { return Type::Path; }
+
+    const Path& path(const FloatRect&) final;
+
+    bool canBlend(const BasicShape&) const final;
+    Ref<BasicShape> blend(const BasicShape& from, const BlendingContext&) const final;
 
     bool operator==(const BasicShape&) const final;
 
@@ -381,7 +369,7 @@ private:
 
     Type type() const override { return Type::Inset; }
 
-    Path path(const FloatRect&) const override;
+    const Path& path(const FloatRect&) override;
 
     bool canBlend(const BasicShape&) const override;
     Ref<BasicShape> blend(const BasicShape& from, const BlendingContext&) const override;
@@ -435,7 +423,7 @@ private:
 
     Type type() const final { return Type::Rect; }
 
-    Path path(const FloatRect&) const final;
+    const Path& path(const FloatRect&) final;
 
     bool canBlend(const BasicShape&) const final;
     Ref<BasicShape> blend(const BasicShape& from, const BlendingContext&) const final;
@@ -485,7 +473,7 @@ private:
 
     Type type() const final { return Type::Xywh; }
 
-    Path path(const FloatRect&) const final;
+    const Path& path(const FloatRect&) final;
 
     bool canBlend(const BasicShape&) const final;
     Ref<BasicShape> blend(const BasicShape& from, const BlendingContext&) const final;
@@ -505,7 +493,6 @@ private:
     LengthSize m_bottomLeftRadius;
 };
 
-WTF::TextStream& operator<<(WTF::TextStream&, CoordinateAffinity);
 WTF::TextStream& operator<<(WTF::TextStream&, const BasicShapeRadius&);
 WTF::TextStream& operator<<(WTF::TextStream&, const BasicShapeCenterCoordinate&);
 WTF::TextStream& operator<<(WTF::TextStream&, const BasicShape&);

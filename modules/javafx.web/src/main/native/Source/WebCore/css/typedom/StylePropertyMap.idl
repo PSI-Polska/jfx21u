@@ -25,6 +25,7 @@
 
 // https://drafts.css-houdini.org/css-typed-om/#cssstylepropertymap
 [
+    EnabledBySetting=CSSTypedOMEnabled,
     Exposed=Window,
     SkipVTableValidation,
     JSGenerateToJSObject

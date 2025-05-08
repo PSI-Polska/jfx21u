@@ -286,6 +286,10 @@ EOF
 
                 $self->_includeHeaders(\%contentsIncludes, $operation->type);
 
+                if ($operation->extendedAttributes->{"PassContext"}) {
+                    push(@arguments, "context");
+                }
+
                 if (!@specifiedArguments) {
                     push(@contents, "    UNUSED_VARIABLE(argumentCount);\n");
                     push(@contents, "    UNUSED_VARIABLE(arguments);\n");

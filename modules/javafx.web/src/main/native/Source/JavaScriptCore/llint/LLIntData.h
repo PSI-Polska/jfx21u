@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,7 +38,7 @@ class VM;
 #if ENABLE(C_LOOP)
 typedef OpcodeID LLIntCode;
 #else
-typedef void (SYSV_ABI *LLIntCode)();
+typedef void (*LLIntCode)();
 #endif
 
 namespace LLInt {
@@ -48,6 +48,11 @@ extern "C" JS_EXPORT_PRIVATE JSC::Opcode g_opcodeMapWide16[numOpcodeIDs + numWas
 extern "C" JS_EXPORT_PRIVATE JSC::Opcode g_opcodeMapWide32[numOpcodeIDs + numWasmOpcodeIDs];
 
 class Data {
+
+public:
+    static void performAssertions(VM&);
+
+private:
     friend void initialize();
 
     friend JSInstruction* exceptionInstructions();
@@ -108,8 +113,7 @@ inline JSC::Opcode getOpcodeWide16(OpcodeID id)
 #if ENABLE(COMPUTED_GOTO_OPCODES)
     return g_opcodeMapWide16[id];
 #else
-    UNUSED_PARAM(id);
-    RELEASE_ASSERT_NOT_REACHED();
+    return static_cast<Opcode>(id + numOpcodeIDs);
 #endif
 }
 
@@ -118,8 +122,7 @@ inline JSC::Opcode getOpcodeWide32(OpcodeID id)
 #if ENABLE(COMPUTED_GOTO_OPCODES)
     return g_opcodeMapWide32[id];
 #else
-    UNUSED_PARAM(id);
-    RELEASE_ASSERT_NOT_REACHED();
+    return static_cast<Opcode>(id + numOpcodeIDs*2);
 #endif
 }
 
@@ -205,24 +208,35 @@ ALWAYS_INLINE MacroAssemblerCodeRef<tag> getWide32CodeRef(OpcodeID opcodeID)
     return MacroAssemblerCodeRef<tag>::createSelfManagedCodeRef(getWide32CodePtr<tag>(opcodeID));
 }
 
+#if ENABLE(JIT)
 template<PtrTag tag>
 ALWAYS_INLINE LLIntCode getCodeFunctionPtr(OpcodeID opcodeID)
 {
-    return reinterpret_cast<LLIntCode>(getCodePtr<tag>(opcodeID).template taggedPtr<>());
+#if COMPILER(MSVC)
+    return reinterpret_cast<LLIntCode>(getCodePtr<tag>(opcodeID).taggedPtr());
+#else
+    return reinterpret_cast<LLIntCode>(getCodePtr<tag>(opcodeID).template taggedPtr());
+#endif
 }
-
-#if ENABLE(JIT)
 
 template<PtrTag tag>
 ALWAYS_INLINE LLIntCode getWide16CodeFunctionPtr(OpcodeID opcodeID)
 {
-    return reinterpret_cast<LLIntCode>(getWide16CodePtr<tag>(opcodeID).template taggedPtr<>());
+#if COMPILER(MSVC)
+    return reinterpret_cast<LLIntCode>(getWide16CodePtr<tag>(opcodeID).taggedPtr());
+#else
+    return reinterpret_cast<LLIntCode>(getWide16CodePtr<tag>(opcodeID).template taggedPtr());
+#endif
 }
 
 template<PtrTag tag>
 ALWAYS_INLINE LLIntCode getWide32CodeFunctionPtr(OpcodeID opcodeID)
 {
-    return reinterpret_cast<LLIntCode>(getWide32CodePtr<tag>(opcodeID).template taggedPtr<>());
+#if COMPILER(MSVC)
+    return reinterpret_cast<LLIntCode>(getWide32CodePtr<tag>(opcodeID).taggedPtr());
+#else
+    return reinterpret_cast<LLIntCode>(getWide32CodePtr<tag>(opcodeID).template taggedPtr());
+#endif
 }
 #else // not ENABLE(JIT)
 ALWAYS_INLINE void* getCodePtr(OpcodeID id)
@@ -338,24 +352,35 @@ ALWAYS_INLINE MacroAssemblerCodeRef<tag> getWide32CodeRef(WasmOpcodeID opcodeID)
     return MacroAssemblerCodeRef<tag>::createSelfManagedCodeRef(getWide32CodePtr<tag>(opcodeID));
 }
 
+#if ENABLE(JIT)
 template<PtrTag tag>
 ALWAYS_INLINE LLIntCode getCodeFunctionPtr(WasmOpcodeID opcodeID)
 {
-    return reinterpret_cast<LLIntCode>(getCodePtr<tag>(opcodeID).template taggedPtr<>());
+#if COMPILER(MSVC)
+    return reinterpret_cast<LLIntCode>(getCodePtr<tag>(opcodeID).taggedPtr());
+#else
+    return reinterpret_cast<LLIntCode>(getCodePtr<tag>(opcodeID).template taggedPtr());
+#endif
 }
-
-#if ENABLE(JIT)
 
 template<PtrTag tag>
 ALWAYS_INLINE LLIntCode getWide16CodeFunctionPtr(WasmOpcodeID opcodeID)
 {
-    return reinterpret_cast<LLIntCode>(getWide16CodePtr<tag>(opcodeID).template taggedPtr<>());
+#if COMPILER(MSVC)
+    return reinterpret_cast<LLIntCode>(getWide16CodePtr<tag>(opcodeID).taggedPtr());
+#else
+    return reinterpret_cast<LLIntCode>(getWide16CodePtr<tag>(opcodeID).template taggedPtr());
+#endif
 }
 
 template<PtrTag tag>
 ALWAYS_INLINE LLIntCode getWide32CodeFunctionPtr(WasmOpcodeID opcodeID)
 {
-    return reinterpret_cast<LLIntCode>(getWide32CodePtr<tag>(opcodeID).template taggedPtr<>());
+#if COMPILER(MSVC)
+    return reinterpret_cast<LLIntCode>(getWide32CodePtr<tag>(opcodeID).taggedPtr());
+#else
+    return reinterpret_cast<LLIntCode>(getWide32CodePtr<tag>(opcodeID).template taggedPtr());
+#endif
 }
 #else // not ENABLE(JIT)
 ALWAYS_INLINE void* getCodePtr(WasmOpcodeID id)

@@ -49,9 +49,9 @@ std::optional<VideoFrameMetadata> MediaPlayerPrivateInterface::videoFrameMetadat
 
 const PlatformTimeRanges& MediaPlayerPrivateInterface::seekable() const
 {
-    if (maxTimeSeekable() == MediaTime::zeroTime())
+    if (maxMediaTimeSeekable() == MediaTime::zeroTime())
         return PlatformTimeRanges::emptyRanges();
-    m_seekable = { minTimeSeekable(), maxTimeSeekable() };
+    m_seekable = { minMediaTimeSeekable(), maxMediaTimeSeekable() };
     return m_seekable;
 }
 
@@ -60,14 +60,6 @@ auto MediaPlayerPrivateInterface::asyncVideoPlaybackQualityMetrics() -> Ref<Vide
     if (auto metrics = videoPlaybackQualityMetrics())
         return VideoPlaybackQualityMetricsPromise::createAndResolve(WTFMove(*metrics));
     return VideoPlaybackQualityMetricsPromise::createAndReject(PlatformMediaError::NotSupportedError);
-}
-
-MediaTime MediaPlayerPrivateInterface::currentOrPendingSeekTime() const
-{
-    auto pendingSeekTime = this->pendingSeekTime();
-    if (pendingSeekTime.isValid())
-        return pendingSeekTime;
-    return currentTime();
 }
 
 }

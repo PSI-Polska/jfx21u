@@ -24,19 +24,18 @@
 #include "BeforeUnloadEvent.h"
 
 #include "EventNames.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(BeforeUnloadEvent);
+WTF_MAKE_ISO_ALLOCATED_IMPL(BeforeUnloadEvent);
 
 BeforeUnloadEvent::BeforeUnloadEvent()
-    : Event(EventInterfaceType::BeforeUnloadEvent, eventNames().beforeunloadEvent, CanBubble::No, IsCancelable::Yes)
+    : Event(eventNames().beforeunloadEvent, CanBubble::No, IsCancelable::Yes)
 {
 }
 
 BeforeUnloadEvent::BeforeUnloadEvent(ForBindingsFlag)
-    : Event(EventInterfaceType::BeforeUnloadEvent)
 {
 }
 

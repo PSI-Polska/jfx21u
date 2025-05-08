@@ -25,6 +25,7 @@
 
 // https://drafts.css-houdini.org/css-typed-om/#cssstylepropertymapreadonly
 [
+    EnabledBySetting=CSSTypedOMEnabled,
     Exposed=(Window,Worker,PaintWorklet),
     SkipVTableValidation,
     JSGenerateToJSObject,

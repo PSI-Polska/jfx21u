@@ -28,7 +28,6 @@
 
 #if ENABLE(WEB_AUTHN)
 
-#include "DigitalCredentialRequestOptions.h"
 #include "MediationRequirement.h"
 #include "PublicKeyCredentialRequestOptions.h"
 #include <wtf/RefCounted.h>
@@ -42,7 +41,6 @@ struct CredentialRequestOptions {
     MediationRequirement mediation;
     RefPtr<AbortSignal> signal;
     std::optional<PublicKeyCredentialRequestOptions> publicKey;
-    std::optional<DigitalCredentialRequestOptions> digital;
 };
 
 } // namespace WebCore

@@ -23,8 +23,8 @@
 #include <variant>
 #include <wtf/ArgumentCoder.h>
 #include <wtf/Forward.h>
+#include <wtf/IsoMalloc.h>
 #include <wtf/RefCounted.h>
-#include <wtf/TZoneMalloc.h>
 #include <wtf/URL.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
@@ -115,7 +115,7 @@ private:
 };
 
 class FormData final : public RefCounted<FormData> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(FormData, WEBCORE_EXPORT);
+    WTF_MAKE_ISO_ALLOCATED_EXPORT(FormData, WEBCORE_EXPORT);
 public:
     enum class EncodingType : uint8_t {
         FormURLEncoded, // for application/x-www-form-urlencoded
@@ -124,10 +124,11 @@ public:
     };
 
     WEBCORE_EXPORT static Ref<FormData> create();
-    WEBCORE_EXPORT static Ref<FormData> create(std::span<const uint8_t>);
+    WEBCORE_EXPORT static Ref<FormData> create(const void*, size_t);
     WEBCORE_EXPORT static Ref<FormData> create(const CString&);
     WEBCORE_EXPORT static Ref<FormData> create(Vector<uint8_t>&&);
-    WEBCORE_EXPORT static Ref<FormData> create(Vector<WebCore::FormDataElement>&&, uint64_t identifier, bool alwaysStream, Vector<uint8_t>&& boundary);
+    WEBCORE_EXPORT static Ref<FormData> create(Vector<WebCore::FormDataElement>&&, uint64_t identifier, bool alwaysStream, Vector<char>&& boundary);
+    static Ref<FormData> create(const Vector<char>&);
     static Ref<FormData> create(const Vector<uint8_t>&);
     static Ref<FormData> create(const DOMFormData&, EncodingType = EncodingType::FormURLEncoded);
     static Ref<FormData> createMultiPart(const DOMFormData&);
@@ -138,7 +139,7 @@ public:
     Ref<FormData> copy() const;
     WEBCORE_EXPORT Ref<FormData> isolatedCopy() const;
 
-    WEBCORE_EXPORT void appendData(std::span<const uint8_t> data);
+    WEBCORE_EXPORT void appendData(const void* data, size_t);
     void appendFile(const String& filePath);
     WEBCORE_EXPORT void appendFileRange(const String& filename, long long start, long long length, std::optional<WallTime> expectedModificationTime);
     WEBCORE_EXPORT void appendBlob(const URL& blobURL);
@@ -155,7 +156,7 @@ public:
 
     bool isEmpty() const { return m_elements.isEmpty(); }
     const Vector<FormDataElement>& elements() const { return m_elements; }
-    const Vector<uint8_t>& boundary() const { return m_boundary; }
+    const Vector<char>& boundary() const { return m_boundary; }
 
     WEBCORE_EXPORT RefPtr<SharedBuffer> asSharedBuffer() const;
 
@@ -187,8 +188,8 @@ private:
     FormData() = default;
     FormData(const FormData&);
 
-    void appendMultiPartFileValue(const File&, Vector<uint8_t>& header, PAL::TextEncoding&);
-    void appendMultiPartStringValue(const String&, Vector<uint8_t>& header, PAL::TextEncoding&);
+    void appendMultiPartFileValue(const File&, Vector<char>& header, PAL::TextEncoding&);
+    void appendMultiPartStringValue(const String&, Vector<char>& header, PAL::TextEncoding&);
     void appendMultiPartKeyValuePairItems(const DOMFormData&);
     void appendNonMultiPartKeyValuePairItems(const DOMFormData&, EncodingType);
 
@@ -196,7 +197,7 @@ private:
 
     int64_t m_identifier { 0 };
     bool m_alwaysStream { false };
-    Vector<uint8_t> m_boundary;
+    Vector<char> m_boundary;
     mutable std::optional<uint64_t> m_lengthInBytes;
 };
 

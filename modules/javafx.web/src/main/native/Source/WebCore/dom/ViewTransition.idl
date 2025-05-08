@@ -24,7 +24,6 @@
  */
 
 [
-    ActiveDOMObject,
     EnabledBySetting=ViewTransitionsEnabled,
     Exposed=Window
 ]

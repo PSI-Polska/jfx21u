@@ -96,7 +96,7 @@ private:
     String m_settings;
 };
 
-class WEBCORE_EXPORT WebVTTParser final {
+class WebVTTParser final {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     enum ParseState {
@@ -111,7 +111,6 @@ public:
         Finished
     };
 
-    WebVTTParser() = delete;
     WebVTTParser(WebVTTParserClient&, Document&);
 
     static inline bool isRecognizedTag(const AtomString& tagName)
@@ -130,7 +129,7 @@ public:
     static bool parseFloatPercentageValuePair(VTTScanner& valueScanner, char, FloatPoint&);
 
     // Input data to the parser to parse.
-    void parseBytes(std::span<const uint8_t>);
+    void parseBytes(const uint8_t*, unsigned);
     void parseFileHeader(String&&);
     void parseCueData(const ISOWebVTTCue&);
     void flush();

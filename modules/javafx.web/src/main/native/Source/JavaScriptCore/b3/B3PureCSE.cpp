@@ -35,9 +35,13 @@
 
 namespace JSC { namespace B3 {
 
-PureCSE::PureCSE() = default;
+PureCSE::PureCSE()
+{
+}
 
-PureCSE::~PureCSE() = default;
+PureCSE::~PureCSE()
+{
+}
 
 void PureCSE::clear()
 {
@@ -99,7 +103,7 @@ bool PureCSE::process(Value* value, Dominators& dominators)
 
 bool pureCSE(Procedure& proc)
 {
-    PhaseScope phaseScope(proc, "pureCSE"_s);
+    PhaseScope phaseScope(proc, "pureCSE");
 
     Dominators& dominators = proc.dominators();
     PureCSE pureCSE;

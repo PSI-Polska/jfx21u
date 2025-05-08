@@ -1,15 +1,10 @@
-function(WEBKIT_DECLARE_DIST_TARGETS _port _tarball_prefix _manifest)
+macro(WEBKIT_DECLARE_DIST_TARGETS _port _tarball_prefix _manifest)
     find_package(Xz REQUIRED)
 
     configure_file(
         ${_manifest}
         ${CMAKE_BINARY_DIR}/manifest.txt
     )
-
-    set(make_dist_unified_flag "")
-    if (ENABLE_UNIFIED_BUILDS)
-        set(make_dist_unified_flag "--unified")
-    endif ()
 
     add_custom_target(distcheck
         COMMENT "Checking release tarball: ${_tarball_prefix}-${PROJECT_VERSION}.tar"
@@ -22,7 +17,6 @@ function(WEBKIT_DECLARE_DIST_TARGETS _port _tarball_prefix _manifest)
                 --source-dir=${CMAKE_SOURCE_DIR}
                 --build-dir=${CMAKE_BINARY_DIR}
                 --version=${PROJECT_VERSION}
-                ${make_dist_unified_flag}
                 ${CMAKE_BINARY_DIR}/manifest.txt
         COMMAND ${XZ_EXECUTABLE} -evfQ
                 ${CMAKE_BINARY_DIR}/${_tarball_prefix}-${PROJECT_VERSION}.tar
@@ -51,4 +45,4 @@ function(WEBKIT_DECLARE_DIST_TARGETS _port _tarball_prefix _manifest)
         DEPENDS WebKit
         DEPENDS doc-all
     )
-endfunction()
+endmacro()

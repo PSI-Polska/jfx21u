@@ -27,13 +27,12 @@
 
 #if ENABLE(APPLE_PAY)
 
+#include "ApplePaySessionPaymentRequest.h"
 #include "ExceptionOr.h"
 
 namespace WebCore {
 
-struct ApplePaySessionPaymentRequestContactFields;
-
-enum class ApplePayContactField : uint8_t {
+enum class ApplePayContactField {
     Email,
     Name,
     PhoneticName,
@@ -41,7 +40,7 @@ enum class ApplePayContactField : uint8_t {
     PostalAddress,
 };
 
-ExceptionOr<ApplePaySessionPaymentRequestContactFields> convertAndValidate(unsigned version, const Vector<ApplePayContactField>&);
+ExceptionOr<ApplePaySessionPaymentRequest::ContactFields> convertAndValidate(unsigned version, const Vector<ApplePayContactField>&);
 
 } // namespace WebCore
 

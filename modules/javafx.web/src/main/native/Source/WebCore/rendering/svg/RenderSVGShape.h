@@ -26,6 +26,8 @@
 
 #pragma once
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+
 #include "AffineTransform.h"
 #include "FloatRect.h"
 #include "RenderSVGModelObject.h"
@@ -42,8 +44,7 @@ class GraphicsContextStateSaver;
 class SVGGraphicsElement;
 
 class RenderSVGShape : public RenderSVGModelObject {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGShape);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGShape);
+    WTF_MAKE_ISO_ALLOCATED(RenderSVGShape);
 public:
     friend FloatRect SVGRenderSupport::calculateApproximateStrokeBoundingBox(const RenderElement&);
 
@@ -65,7 +66,6 @@ public:
     virtual ~RenderSVGShape();
 
     inline SVGGraphicsElement& graphicsElement() const;
-    inline Ref<SVGGraphicsElement> protectedGraphicsElement() const;
 
     void setNeedsShapeUpdate() { m_needsShapeUpdate = true; }
 
@@ -160,3 +160,5 @@ private:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGShape, isRenderSVGShape())
+
+#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

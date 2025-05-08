@@ -61,7 +61,6 @@
 #include "WebGPUTextureImpl.h"
 #include "WebGPUTextureViewImpl.h"
 #include "WebGPUValidationError.h"
-#include "WebGPUXRBindingImpl.h"
 #include <CoreGraphics/CGColorSpace.h>
 #include <WebGPU/WebGPUExt.h>
 #include <wtf/BlockPtr.h>
@@ -97,12 +96,7 @@ void DeviceImpl::destroy()
     wgpuDeviceDestroy(m_backing.get());
 }
 
-RefPtr<XRBinding> DeviceImpl::createXRBinding()
-{
-    return XRBindingImpl::create(adoptWebGPU(wgpuDeviceCreateXRBinding(m_backing.get())), m_convertToBackingContext);
-}
-
-RefPtr<Buffer> DeviceImpl::createBuffer(const BufferDescriptor& descriptor)
+Ref<Buffer> DeviceImpl::createBuffer(const BufferDescriptor& descriptor)
 {
     auto label = descriptor.label.utf8();
 
@@ -117,7 +111,7 @@ RefPtr<Buffer> DeviceImpl::createBuffer(const BufferDescriptor& descriptor)
     return BufferImpl::create(adoptWebGPU(wgpuDeviceCreateBuffer(m_backing.get(), &backingDescriptor)), m_convertToBackingContext);
 }
 
-RefPtr<Texture> DeviceImpl::createTexture(const TextureDescriptor& descriptor)
+Ref<Texture> DeviceImpl::createTexture(const TextureDescriptor& descriptor)
 {
     auto label = descriptor.label.utf8();
 
@@ -141,21 +135,23 @@ RefPtr<Texture> DeviceImpl::createTexture(const TextureDescriptor& descriptor)
     return TextureImpl::create(adoptWebGPU(wgpuDeviceCreateTexture(m_backing.get(), &backingDescriptor)), descriptor.format, descriptor.dimension, m_convertToBackingContext);
 }
 
-RefPtr<Sampler> DeviceImpl::createSampler(const SamplerDescriptor& descriptor)
+Ref<Sampler> DeviceImpl::createSampler(const SamplerDescriptor& descriptor)
 {
+    auto label = descriptor.label.utf8();
+
     WGPUSamplerDescriptor backingDescriptor {
-        .nextInChain = nullptr,
-        .label = descriptor.label,
-        .addressModeU = m_convertToBackingContext->convertToBacking(descriptor.addressModeU),
-        .addressModeV = m_convertToBackingContext->convertToBacking(descriptor.addressModeV),
-        .addressModeW = m_convertToBackingContext->convertToBacking(descriptor.addressModeW),
-        .magFilter = m_convertToBackingContext->convertToBacking(descriptor.magFilter),
-        .minFilter = m_convertToBackingContext->convertToBacking(descriptor.minFilter),
-        .mipmapFilter = m_convertToBackingContext->convertToBacking(descriptor.mipmapFilter),
-        .lodMinClamp = descriptor.lodMinClamp,
-        .lodMaxClamp = descriptor.lodMaxClamp,
-        .compare = descriptor.compare ? m_convertToBackingContext->convertToBacking(*descriptor.compare) : WGPUCompareFunction_Undefined,
-        .maxAnisotropy = descriptor.maxAnisotropy,
+        nullptr,
+        label.data(),
+        m_convertToBackingContext->convertToBacking(descriptor.addressModeU),
+        m_convertToBackingContext->convertToBacking(descriptor.addressModeV),
+        m_convertToBackingContext->convertToBacking(descriptor.addressModeW),
+        m_convertToBackingContext->convertToBacking(descriptor.magFilter),
+        m_convertToBackingContext->convertToBacking(descriptor.minFilter),
+        m_convertToBackingContext->convertToBacking(descriptor.mipmapFilter),
+        descriptor.lodMinClamp,
+        descriptor.lodMaxClamp,
+        descriptor.compare ? m_convertToBackingContext->convertToBacking(*descriptor.compare) : WGPUCompareFunction_Undefined,
+        descriptor.maxAnisotropy,
     };
 
     return SamplerImpl::create(adoptWebGPU(wgpuDeviceCreateSampler(m_backing.get(), &backingDescriptor)), m_convertToBackingContext);
@@ -171,12 +167,7 @@ static WGPUColorSpace convertToWGPUColorSpace(const PredefinedColorSpace& colorS
     }
 }
 
-void DeviceImpl::updateExternalTexture(const WebCore::WebGPU::ExternalTexture&, const WebCore::MediaPlayerIdentifier&)
-{
-    RELEASE_ASSERT_NOT_REACHED();
-}
-
-RefPtr<ExternalTexture> DeviceImpl::importExternalTexture(const ExternalTextureDescriptor& descriptor)
+Ref<ExternalTexture> DeviceImpl::importExternalTexture(const ExternalTextureDescriptor& descriptor)
 {
     auto label = descriptor.label.utf8();
 
@@ -190,7 +181,7 @@ RefPtr<ExternalTexture> DeviceImpl::importExternalTexture(const ExternalTextureD
     return ExternalTextureImpl::create(adoptWebGPU(wgpuDeviceImportExternalTexture(m_backing.get(), &backingDescriptor)), descriptor, m_convertToBackingContext);
 }
 
-RefPtr<BindGroupLayout> DeviceImpl::createBindGroupLayout(const BindGroupLayoutDescriptor& descriptor)
+Ref<BindGroupLayout> DeviceImpl::createBindGroupLayout(const BindGroupLayoutDescriptor& descriptor)
 {
     auto label = descriptor.label.utf8();
 
@@ -198,14 +189,13 @@ RefPtr<BindGroupLayout> DeviceImpl::createBindGroupLayout(const BindGroupLayoutD
         return WGPUBindGroupLayoutEntry {
             .nextInChain = nullptr,
             .binding = entry.binding,
-            .metalBinding = { entry.binding, entry.binding, entry.binding },
+            .metalBinding = entry.binding,
             .visibility = m_convertToBackingContext->convertShaderStageFlagsToBacking(entry.visibility),
             .buffer = {
                 nullptr,
                 entry.buffer ? m_convertToBackingContext->convertToBacking(entry.buffer->type) : WGPUBufferBindingType_Undefined,
                 entry.buffer ? entry.buffer->hasDynamicOffset : false,
                 entry.buffer ? entry.buffer->minBindingSize : 0,
-                0,
             },
             .sampler = {
                 nullptr,
@@ -236,7 +226,7 @@ RefPtr<BindGroupLayout> DeviceImpl::createBindGroupLayout(const BindGroupLayoutD
     return BindGroupLayoutImpl::create(adoptWebGPU(wgpuDeviceCreateBindGroupLayout(m_backing.get(), &backingDescriptor)), m_convertToBackingContext);
 }
 
-RefPtr<PipelineLayout> DeviceImpl::createPipelineLayout(const PipelineLayoutDescriptor& descriptor)
+Ref<PipelineLayout> DeviceImpl::createPipelineLayout(const PipelineLayoutDescriptor& descriptor)
 {
     auto label = descriptor.label.utf8();
 
@@ -257,7 +247,7 @@ RefPtr<PipelineLayout> DeviceImpl::createPipelineLayout(const PipelineLayoutDesc
     return PipelineLayoutImpl::create(adoptWebGPU(wgpuDeviceCreatePipelineLayout(m_backing.get(), &backingDescriptor)), m_convertToBackingContext);
 }
 
-RefPtr<BindGroup> DeviceImpl::createBindGroup(const BindGroupDescriptor& descriptor)
+Ref<BindGroup> DeviceImpl::createBindGroup(const BindGroupDescriptor& descriptor)
 {
     auto label = descriptor.label.utf8();
 
@@ -293,7 +283,7 @@ RefPtr<BindGroup> DeviceImpl::createBindGroup(const BindGroupDescriptor& descrip
     return BindGroupImpl::create(adoptWebGPU(wgpuDeviceCreateBindGroup(m_backing.get(), &backingDescriptor)), m_convertToBackingContext);
 }
 
-RefPtr<ShaderModule> DeviceImpl::createShaderModule(const ShaderModuleDescriptor& descriptor)
+Ref<ShaderModule> DeviceImpl::createShaderModule(const ShaderModuleDescriptor& descriptor)
 {
     auto label = descriptor.label.utf8();
 
@@ -373,7 +363,7 @@ static auto convertToBacking(const ComputePipelineDescriptor& descriptor, Conver
     return callback(backingDescriptor);
 }
 
-RefPtr<ComputePipeline> DeviceImpl::createComputePipeline(const ComputePipelineDescriptor& descriptor)
+Ref<ComputePipeline> DeviceImpl::createComputePipeline(const ComputePipelineDescriptor& descriptor)
 {
     return convertToBacking(descriptor, m_convertToBackingContext, [backing = m_backing, &convertToBackingContext = m_convertToBackingContext.get()](const WGPUComputePipelineDescriptor& backingDescriptor) {
         return ComputePipelineImpl::create(adoptWebGPU(wgpuDeviceCreateComputePipeline(backing.get(), &backingDescriptor)), convertToBackingContext);
@@ -571,54 +561,54 @@ static auto convertToBacking(const RenderPipelineDescriptor& descriptor, Convert
     return callback(backingDescriptor);
 }
 
-RefPtr<RenderPipeline> DeviceImpl::createRenderPipeline(const RenderPipelineDescriptor& descriptor)
+Ref<RenderPipeline> DeviceImpl::createRenderPipeline(const RenderPipelineDescriptor& descriptor)
 {
     return convertToBacking(descriptor, m_convertToBackingContext, [backing = m_backing.copyRef(), &convertToBackingContext = m_convertToBackingContext.get()](const WGPURenderPipelineDescriptor& backingDescriptor) {
         return RenderPipelineImpl::create(adoptWebGPU(wgpuDeviceCreateRenderPipeline(backing.get(), &backingDescriptor)), convertToBackingContext);
     });
 }
 
-static void createComputePipelineAsyncCallback(WGPUCreatePipelineAsyncStatus status, WGPUComputePipeline pipeline, String&& message, void* userdata)
+static void createComputePipelineAsyncCallback(WGPUCreatePipelineAsyncStatus status, WGPUComputePipeline pipeline, const char* message, void* userdata)
 {
-    auto block = reinterpret_cast<void(^)(WGPUCreatePipelineAsyncStatus, WGPUComputePipeline, String&&)>(userdata);
-    block(status, pipeline, WTFMove(message));
+    auto block = reinterpret_cast<void(^)(WGPUCreatePipelineAsyncStatus, WGPUComputePipeline, const char*)>(userdata);
+    block(status, pipeline, message);
     Block_release(block); // Block_release is matched with Block_copy below in DeviceImpl::createComputePipelineAsync().
 }
 
-void DeviceImpl::createComputePipelineAsync(const ComputePipelineDescriptor& descriptor, CompletionHandler<void(RefPtr<ComputePipeline>&&, String&&)>&& callback)
+void DeviceImpl::createComputePipelineAsync(const ComputePipelineDescriptor& descriptor, CompletionHandler<void(RefPtr<ComputePipeline>&&)>&& callback)
 {
     convertToBacking(descriptor, m_convertToBackingContext, [backing = m_backing.copyRef(), &convertToBackingContext = m_convertToBackingContext.get(), callback = WTFMove(callback)](const WGPUComputePipelineDescriptor& backingDescriptor) mutable {
-        auto blockPtr = makeBlockPtr([convertToBackingContext = Ref { convertToBackingContext }, callback = WTFMove(callback)](WGPUCreatePipelineAsyncStatus status, WGPUComputePipeline pipeline, String&& message) mutable {
+        auto blockPtr = makeBlockPtr([convertToBackingContext = Ref { convertToBackingContext }, callback = WTFMove(callback)](WGPUCreatePipelineAsyncStatus status, WGPUComputePipeline pipeline, const char*) mutable {
             if (status == WGPUCreatePipelineAsyncStatus_Success)
-                callback(ComputePipelineImpl::create(adoptWebGPU(pipeline), convertToBackingContext), ""_s);
+                callback(ComputePipelineImpl::create(adoptWebGPU(pipeline), convertToBackingContext));
             else
-                callback(nullptr, WTFMove(message));
+                callback(nullptr);
         });
         wgpuDeviceCreateComputePipelineAsync(backing.get(), &backingDescriptor, &createComputePipelineAsyncCallback, Block_copy(blockPtr.get())); // Block_copy is matched with Block_release above in createComputePipelineAsyncCallback().
     });
 }
 
-static void createRenderPipelineAsyncCallback(WGPUCreatePipelineAsyncStatus status, WGPURenderPipeline pipeline, String&& message, void* userdata)
+static void createRenderPipelineAsyncCallback(WGPUCreatePipelineAsyncStatus status, WGPURenderPipeline pipeline, const char* message, void* userdata)
 {
-    auto block = reinterpret_cast<void(^)(WGPUCreatePipelineAsyncStatus, WGPURenderPipeline, String&&)>(userdata);
-    block(status, pipeline, WTFMove(message));
+    auto block = reinterpret_cast<void(^)(WGPUCreatePipelineAsyncStatus, WGPURenderPipeline, const char*)>(userdata);
+    block(status, pipeline, message);
     Block_release(block); // Block_release is matched with Block_copy below in DeviceImpl::createRenderPipelineAsync().
 }
 
-void DeviceImpl::createRenderPipelineAsync(const RenderPipelineDescriptor& descriptor, CompletionHandler<void(RefPtr<RenderPipeline>&&, String&&)>&& callback)
+void DeviceImpl::createRenderPipelineAsync(const RenderPipelineDescriptor& descriptor, CompletionHandler<void(RefPtr<RenderPipeline>&&)>&& callback)
 {
     convertToBacking(descriptor, m_convertToBackingContext, [backing = m_backing.copyRef(), convertToBackingContext = m_convertToBackingContext.copyRef(), callback = WTFMove(callback)](const WGPURenderPipelineDescriptor& backingDescriptor) mutable {
-        auto blockPtr = makeBlockPtr([convertToBackingContext = convertToBackingContext.copyRef(), callback = WTFMove(callback)](WGPUCreatePipelineAsyncStatus status, WGPURenderPipeline pipeline, String&& message) mutable {
+        auto blockPtr = makeBlockPtr([convertToBackingContext = convertToBackingContext.copyRef(), callback = WTFMove(callback)](WGPUCreatePipelineAsyncStatus status, WGPURenderPipeline pipeline, const char*) mutable {
             if (status == WGPUCreatePipelineAsyncStatus_Success)
-                callback(RenderPipelineImpl::create(adoptWebGPU(pipeline), convertToBackingContext), ""_s);
+                callback(RenderPipelineImpl::create(adoptWebGPU(pipeline), convertToBackingContext));
             else
-                callback(nullptr, WTFMove(message));
+                callback(nullptr);
         });
         wgpuDeviceCreateRenderPipelineAsync(backing.get(), &backingDescriptor, &createRenderPipelineAsyncCallback, Block_copy(blockPtr.get())); // Block_copy is matched with Block_release above in createRenderPipelineAsyncCallback().
     });
 }
 
-RefPtr<CommandEncoder> DeviceImpl::createCommandEncoder(const std::optional<CommandEncoderDescriptor>& descriptor)
+Ref<CommandEncoder> DeviceImpl::createCommandEncoder(const std::optional<CommandEncoderDescriptor>& descriptor)
 {
     CString label = descriptor ? descriptor->label.utf8() : CString("");
 
@@ -630,7 +620,7 @@ RefPtr<CommandEncoder> DeviceImpl::createCommandEncoder(const std::optional<Comm
     return CommandEncoderImpl::create(adoptWebGPU(wgpuDeviceCreateCommandEncoder(m_backing.get(), &backingDescriptor)), m_convertToBackingContext);
 }
 
-RefPtr<RenderBundleEncoder> DeviceImpl::createRenderBundleEncoder(const RenderBundleEncoderDescriptor& descriptor)
+Ref<RenderBundleEncoder> DeviceImpl::createRenderBundleEncoder(const RenderBundleEncoderDescriptor& descriptor)
 {
     auto label = descriptor.label.utf8();
 
@@ -652,7 +642,7 @@ RefPtr<RenderBundleEncoder> DeviceImpl::createRenderBundleEncoder(const RenderBu
     return RenderBundleEncoderImpl::create(adoptWebGPU(wgpuDeviceCreateRenderBundleEncoder(m_backing.get(), &backingDescriptor)), m_convertToBackingContext);
 }
 
-RefPtr<QuerySet> DeviceImpl::createQuerySet(const QuerySetDescriptor& descriptor)
+Ref<QuerySet> DeviceImpl::createQuerySet(const QuerySetDescriptor& descriptor)
 {
     auto label = descriptor.label.utf8();
 

@@ -31,38 +31,16 @@
 
 namespace JSC {
 
-InByVariant::InByVariant(CacheableIdentifier identifier, const StructureSet& structureSet, PropertyOffset offset, const ObjectPropertyConditionSet& conditionSet, std::unique_ptr<CallLinkStatus> callLinkStatus)
+InByVariant::InByVariant(CacheableIdentifier identifier, const StructureSet& structureSet, PropertyOffset offset, const ObjectPropertyConditionSet& conditionSet)
     : m_structureSet(structureSet)
     , m_conditionSet(conditionSet)
     , m_offset(offset)
     , m_identifier(WTFMove(identifier))
-    , m_callLinkStatus(WTFMove(callLinkStatus))
 {
     if (!structureSet.size()) {
         ASSERT(offset == invalidOffset);
         ASSERT(conditionSet.isEmpty());
     }
-}
-
-InByVariant::~InByVariant() = default;
-
-InByVariant::InByVariant(const InByVariant& other)
-    : InByVariant(other.m_identifier)
-{
-    *this = other;
-}
-
-InByVariant& InByVariant::operator=(const InByVariant& other)
-{
-    m_identifier = other.m_identifier;
-    m_structureSet = other.m_structureSet;
-    m_conditionSet = other.m_conditionSet;
-    m_offset = other.m_offset;
-    if (other.m_callLinkStatus)
-        m_callLinkStatus = makeUnique<CallLinkStatus>(*other.m_callLinkStatus);
-    else
-        m_callLinkStatus = nullptr;
-    return *this;
 }
 
 bool InByVariant::attemptToMerge(const InByVariant& other)
@@ -75,11 +53,6 @@ bool InByVariant::attemptToMerge(const InByVariant& other)
 
     if (m_offset != other.m_offset)
         return false;
-
-    if (m_callLinkStatus || other.m_callLinkStatus) {
-        if (!(m_callLinkStatus && other.m_callLinkStatus))
-            return false;
-    }
 
     if (m_conditionSet.isEmpty() != other.m_conditionSet.isEmpty())
         return false;
@@ -96,9 +69,6 @@ bool InByVariant::attemptToMerge(const InByVariant& other)
     m_conditionSet = mergedConditionSet;
 
     m_structureSet.merge(other.m_structureSet);
-
-    if (m_callLinkStatus)
-        m_callLinkStatus->merge(*other.m_callLinkStatus);
 
     return true;
 }
@@ -126,8 +96,6 @@ bool InByVariant::finalize(VM& vm)
         return false;
     if (!m_conditionSet.areStillLive(vm))
         return false;
-    if (m_callLinkStatus && !m_callLinkStatus->finalize(vm))
-        return false;
     return true;
 }
 
@@ -146,8 +114,6 @@ void InByVariant::dumpInContext(PrintStream& out, DumpContext* context) const
 
     out.print(inContext(structureSet(), context), ", ", inContext(m_conditionSet, context));
     out.print(", offset = ", offset());
-    if (m_callLinkStatus)
-        out.print(", call = ", *m_callLinkStatus);
     out.print(">");
 }
 

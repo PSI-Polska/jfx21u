@@ -34,7 +34,6 @@
 #include "CSSFontSelector.h"
 #include "CSSKeyframesRule.h"
 #include "CSSSelectorParser.h"
-#include "CSSViewTransitionRule.h"
 #include "CustomPropertyRegistry.h"
 #include "Document.h"
 #include "DocumentInlines.h"
@@ -45,6 +44,7 @@
 #include "StyleSheetContents.h"
 #include "css/CSSSelectorList.h"
 #include <wtf/CryptographicallyRandomNumber.h>
+#include <wtf/text/StringConcatenateNumbers.h>
 
 namespace WebCore {
 namespace Style {
@@ -220,11 +220,6 @@ void RuleSetBuilder::addChildRule(Ref<StyleRuleBase> rule)
             addChildRules(supportsRule->childRules());
         return;
     }
-    case StyleRuleType::ViewTransition:
-        if (m_ruleSet)
-            m_ruleSet->setViewTransitionRule(uncheckedDowncast<StyleRuleViewTransition>(rule));
-        return;
-
     case StyleRuleType::Import:
     case StyleRuleType::Margin:
     case StyleRuleType::Namespace:
@@ -446,17 +441,17 @@ void RuleSetBuilder::addMutatingRulesToResolver()
 
         auto& rule = collectedRule.rule;
         if (auto* styleRuleFontFace = dynamicDowncast<StyleRuleFontFace>(rule.get())) {
-            m_resolver->document().protectedFontSelector()->addFontFaceRule(*styleRuleFontFace, false);
+            m_resolver->document().fontSelector().addFontFaceRule(*styleRuleFontFace, false);
             m_resolver->invalidateMatchedDeclarationsCache();
             continue;
         }
         if (auto* styleRuleFontPaletteValues = dynamicDowncast<StyleRuleFontPaletteValues>(rule.get())) {
-            m_resolver->document().protectedFontSelector()->addFontPaletteValuesRule(*styleRuleFontPaletteValues);
+            m_resolver->document().fontSelector().addFontPaletteValuesRule(*styleRuleFontPaletteValues);
             m_resolver->invalidateMatchedDeclarationsCache();
             continue;
         }
         if (auto* styleRuleFontFeatureValues = dynamicDowncast<StyleRuleFontFeatureValues>(rule.get())) {
-            m_resolver->document().protectedFontSelector()->addFontFeatureValuesRule(*styleRuleFontFeatureValues);
+            m_resolver->document().fontSelector().addFontFeatureValuesRule(*styleRuleFontFeatureValues);
             m_resolver->invalidateMatchedDeclarationsCache();
             continue;
         }

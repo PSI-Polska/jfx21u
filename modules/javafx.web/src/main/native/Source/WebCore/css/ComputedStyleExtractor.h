@@ -41,9 +41,7 @@ class ShadowData;
 class StyleColor;
 class StylePropertyShorthand;
 class TransformOperation;
-class TransformationMatrix;
 
-struct Length;
 struct PropertyValue;
 
 enum CSSPropertyID : uint16_t;
@@ -83,8 +81,6 @@ public:
     static Ref<CSSValue> valueForFilter(const RenderStyle&, const FilterOperations&, AdjustPixelValuesForComputedStyle = AdjustPixelValuesForComputedStyle::Yes);
 
     static Ref<CSSPrimitiveValue> currentColorOrValidColor(const RenderStyle&, const StyleColor&);
-    static Ref<CSSFunctionValue> matrixTransformValue(const TransformationMatrix&, const RenderStyle&);
-    static Ref<CSSPrimitiveValue> zoomAdjustedPixelValueForLength(const Length&, const RenderStyle&);
 
     static bool updateStyleIfNeededForProperty(Element&, CSSPropertyID);
 
@@ -108,7 +104,6 @@ private:
     Ref<CSSValue> fontVariantShorthandValue() const;
     RefPtr<CSSValue> textWrapShorthandValue(const RenderStyle&) const;
     RefPtr<CSSValue> whiteSpaceShorthandValue(const RenderStyle&) const;
-    RefPtr<CSSValue> textBoxShorthandValue(const RenderStyle&) const;
 
     RefPtr<Element> m_element;
     std::optional<Style::PseudoElementIdentifier> m_pseudoElementIdentifier;

@@ -179,9 +179,9 @@ void writeImageToDataObject(RefPtr<DataObjectJava> dataObject, const Element& el
 String imageToMarkup(const String& url, const Element& element)
 {
     StringBuilder markup;
-    markup.append(WTF::String::fromUTF8("<img src=\""));
+    markup.append("<img src=\"");
     markup.append(url);
-    markup.append(WTF::String::fromUTF8("\""));
+    markup.append("\"");
     // Copy over attributes.  If we are dragging an image, we expect things like
     // the id to be copied as well.
     NamedNodeMap* attrs = &element.attributes();
@@ -190,16 +190,16 @@ String imageToMarkup(const String& url, const Element& element)
         RefPtr<Attr> attr(static_cast<Attr*>(attrs->item(i).get()));
         if (attr->name() == "src"_s)
             continue;
-        markup.append(WTF::String::fromUTF8(" "));
+        markup.append(" ");
         markup.append(attr->name());
-        markup.append(WTF::String::fromUTF8("=\""));
+        markup.append("=\"");
         String escapedAttr = attr->value();
         escapedAttr = makeStringByReplacingAll(escapedAttr,"\""_s, "&quot;"_s);
         markup.append(escapedAttr);
-        markup.append(WTF::String::fromUTF8("\""));
+        markup.append("\"");
     }
 
-    markup.append(WTF::String::fromUTF8("/>"));
+    markup.append("/>");
     return markup.toString();
 }
 

@@ -27,8 +27,8 @@
 
 namespace WGSL {
 
-class ShaderModule;
+class CallGraph;
 
-void rewritePointers(ShaderModule&);
+void rewritePointers(CallGraph&);
 
 } // namespace WGSL

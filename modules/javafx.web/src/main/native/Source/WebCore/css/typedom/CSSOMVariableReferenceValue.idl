@@ -26,6 +26,7 @@
 // https://drafts.css-houdini.org/css-typed-om/#cssvariablereferencevalue
 [
     InterfaceName=CSSVariableReferenceValue,
+    EnabledBySetting=CSSTypedOMEnabled,
     Exposed=(Window,Worker,PaintWorklet),
 ] interface CSSOMVariableReferenceValue {
     constructor(USVString variable, optional CSSUnparsedValue? fallback = null);

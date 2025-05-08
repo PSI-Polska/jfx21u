@@ -49,6 +49,7 @@ private:
         JSObject* prototype);
 
     void dumpImpl(PrintStream&, CommaPrinter&, Indenter&) const;
+    Ref<AccessCase> cloneImpl() const;
 
     WriteBarrier<JSObject> m_prototype;
 };

@@ -29,11 +29,9 @@ class SVGGeometryElement;
 class SVGTextPathElement;
 
 class RenderSVGTextPath final : public RenderSVGInline {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGTextPath);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGTextPath);
+    WTF_MAKE_ISO_ALLOCATED(RenderSVGTextPath);
 public:
     RenderSVGTextPath(SVGTextPathElement&, RenderStyle&&);
-    virtual ~RenderSVGTextPath();
 
     SVGTextPathElement& textPathElement() const;
     SVGGeometryElement* targetElement() const;

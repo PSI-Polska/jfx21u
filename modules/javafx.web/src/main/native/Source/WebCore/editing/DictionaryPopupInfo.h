@@ -38,6 +38,7 @@ namespace WebCore {
 
 #if PLATFORM(COCOA)
 struct DictionaryPopupInfoCocoa {
+    RetainPtr<NSDictionary> options;
     AttributedString attributedString;
 };
 #endif
@@ -45,9 +46,6 @@ struct DictionaryPopupInfoCocoa {
 struct DictionaryPopupInfo {
     FloatPoint origin;
     TextIndicatorData textIndicator;
-
-    // FIXME: This can be a plain string (and cross-platform) once all clients
-    // vend fully-formed TextIndicatorData. Legacy PDFPlugin is the last client.
 #if PLATFORM(COCOA)
     DictionaryPopupInfoCocoa platformData;
 #endif

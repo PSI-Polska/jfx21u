@@ -25,7 +25,6 @@
 [
     Conditional=VIDEO,
     JSGenerateToJSObject,
-    JSGenerateToNativeObject
 ] dictionary VideoColorSpaceInit {
   VideoColorPrimaries? primaries = null;
   VideoTransferCharacteristics? transfer = null;

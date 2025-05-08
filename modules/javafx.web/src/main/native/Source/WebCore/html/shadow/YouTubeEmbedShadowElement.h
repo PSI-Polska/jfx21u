@@ -31,8 +31,7 @@
 namespace WebCore {
 
 class YouTubeEmbedShadowElement final : public HTMLDivElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(YouTubeEmbedShadowElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(YouTubeEmbedShadowElement);
+    WTF_MAKE_ISO_ALLOCATED(YouTubeEmbedShadowElement);
 public:
     static Ref<YouTubeEmbedShadowElement> create(Document&);
 

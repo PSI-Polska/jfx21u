@@ -48,11 +48,11 @@
 #include "RenderView.h"
 #include "StyleResolver.h"
 #include <wtf/HexNumber.h>
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderFragmentContainer);
+WTF_MAKE_ISO_ALLOCATED_IMPL(RenderFragmentContainer);
 
 RenderFragmentContainer::RenderFragmentContainer(Type type, Element& element, RenderStyle&& style, RenderFragmentedFlow* fragmentedFlow)
     : RenderBlockFlow(type, element, WTFMove(style), BlockFlowFlag::IsFragmentContainer)
@@ -65,8 +65,6 @@ RenderFragmentContainer::RenderFragmentContainer(Type type, Document& document, 
     , m_fragmentedFlow(fragmentedFlow)
 {
 }
-
-RenderFragmentContainer::~RenderFragmentContainer() = default;
 
 LayoutPoint RenderFragmentContainer::mapFragmentPointIntoFragmentedFlowCoordinates(const LayoutPoint& point)
 {
@@ -108,12 +106,12 @@ LayoutPoint RenderFragmentContainer::mapFragmentPointIntoFragmentedFlowCoordinat
     return isHorizontalWritingMode() ? pointInThread : pointInThread.transposedPoint();
 }
 
-VisiblePosition RenderFragmentContainer::positionForPoint(const LayoutPoint& point, HitTestSource source, const RenderFragmentContainer* fragment)
+VisiblePosition RenderFragmentContainer::positionForPoint(const LayoutPoint& point, const RenderFragmentContainer* fragment)
 {
     if (!isValid() || !m_fragmentedFlow->firstChild()) // checking for empty fragment blocks.
-        return RenderBlock::positionForPoint(point, source, fragment);
+        return RenderBlock::positionForPoint(point, fragment);
 
-    return m_fragmentedFlow->positionForPoint(mapFragmentPointIntoFragmentedFlowCoordinates(point), source, this);
+    return m_fragmentedFlow->positionForPoint(mapFragmentPointIntoFragmentedFlowCoordinates(point), this);
 }
 
 LayoutUnit RenderFragmentContainer::pageLogicalWidth() const
@@ -360,16 +358,16 @@ LayoutUnit RenderFragmentContainer::logicalBottomOfFragmentedFlowContentRect(con
     return fragmentedFlow()->isHorizontalWritingMode() ? rect.maxY() : rect.maxX();
 }
 
-void RenderFragmentContainer::insertedIntoTree()
+void RenderFragmentContainer::insertedIntoTree(IsInternalMove isInternalMove)
 {
     attachFragment();
     if (isValid())
-        RenderBlockFlow::insertedIntoTree();
+        RenderBlockFlow::insertedIntoTree(isInternalMove);
 }
 
-void RenderFragmentContainer::willBeRemovedFromTree()
+void RenderFragmentContainer::willBeRemovedFromTree(IsInternalMove isInternalMove)
 {
-    RenderBlockFlow::willBeRemovedFromTree();
+    RenderBlockFlow::willBeRemovedFromTree(isInternalMove);
 
     detachFragment();
 }
@@ -496,13 +494,21 @@ void RenderFragmentContainer::addVisualOverflowForBox(const RenderBox& box, cons
     fragmentOverflow->addVisualOverflow(flippedRect);
 }
 
-LayoutRect RenderFragmentContainer::visualOverflowRectForBox(const RenderBox& box) const
+LayoutRect RenderFragmentContainer::visualOverflowRectForBox(const RenderBoxModelObject& box) const
 {
+    if (CheckedPtr inlineBox = dynamicDowncast<RenderInline>(box))
+        return inlineBox->linesVisualOverflowBoundingBoxInFragment(this);
+
+    if (CheckedPtr renderBox = dynamicDowncast<RenderBox>(box)) {
         RefPtr<RenderOverflow> overflow;
-    ensureOverflowForBox(box, overflow, true);
+        ensureOverflowForBox(*renderBox, overflow, true);
 
         ASSERT(overflow);
         return overflow->visualOverflowRect();
+    }
+
+    ASSERT_NOT_REACHED();
+    return LayoutRect();
 }
 
 // FIXME: This doesn't work for writing modes.
@@ -530,7 +536,7 @@ LayoutRect RenderFragmentContainer::layoutOverflowRectForBoxForPropagation(const
     return rect;
 }
 
-LayoutRect RenderFragmentContainer::visualOverflowRectForBoxForPropagation(const RenderBox& box)
+LayoutRect RenderFragmentContainer::visualOverflowRectForBoxForPropagation(const RenderBoxModelObject& box)
 {
     LayoutRect rect = visualOverflowRectForBox(box);
     fragmentedFlow()->flipForWritingModeLocalCoordinates(rect);

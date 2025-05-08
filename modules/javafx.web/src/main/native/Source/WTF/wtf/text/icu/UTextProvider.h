@@ -44,16 +44,15 @@ inline UTextProviderContext uTextProviderContext(const UText* text, int64_t nati
     return UTextProviderContext::PriorContext;
 }
 
-template<typename CharacterType>
-inline void initializeContextAwareUTextProvider(UText* text, const UTextFuncs* funcs, std::span<const CharacterType> string, std::span<const UChar> priorContext)
+inline void initializeContextAwareUTextProvider(UText* text, const UTextFuncs* funcs, const void* string, unsigned length, const UChar* priorContext, int priorContextLength)
 {
     text->pFuncs = funcs;
     text->providerProperties = 1 << UTEXT_PROVIDER_STABLE_CHUNKS;
-    text->context = string.data();
-    text->p = string.data();
-    text->a = string.size();
-    text->q = priorContext.data();
-    text->b = priorContext.size();
+    text->context = string;
+    text->p = string;
+    text->a = length;
+    text->q = priorContext;
+    text->b = priorContextLength;
 }
 
 // Shared implementation for the UTextClone function on UTextFuncs.

@@ -1,7 +1,7 @@
 /*
  * This file is part of the XSL implementation.
  *
- * Copyright (C) 2004-2024 Apple, Inc. All rights reserved.
+ * Copyright (C) 2004-2020 Apple, Inc. All rights reserved.
  * Copyright (C) 2005, 2006 Alexey Proskuryakov <ap@webkit.org>
  *
  * This library is free software; you can redistribute it and/or
@@ -41,7 +41,6 @@
 #include "SharedBuffer.h"
 #include "TransformSource.h"
 #include "XMLDocumentParser.h"
-#include "XMLDocumentParserScope.h"
 #include "XSLTExtensions.h"
 #include "XSLTUnicodeSort.h"
 #include "markup.h"
@@ -91,11 +90,7 @@ void XSLTProcessor::parseErrorFunc(void* userData, xmlError* error)
 
 // FIXME: There seems to be no way to control the ctxt pointer for loading here, thus we have globals.
 static XSLTProcessor* globalProcessor = nullptr;
-static WeakPtr<CachedResourceLoader>& globalCachedResourceLoader()
-{
-    static NeverDestroyed<WeakPtr<CachedResourceLoader>> globalCachedResourceLoader;
-    return globalCachedResourceLoader;
-}
+static CachedResourceLoader* globalCachedResourceLoader = nullptr;
 static xmlDocPtr docLoaderFunc(const xmlChar* uri,
                                xmlDictPtr,
                                int options,
@@ -103,52 +98,51 @@ static xmlDocPtr docLoaderFunc(const xmlChar* uri,
                                xsltLoadType type)
 {
     if (!globalProcessor)
-        return nullptr;
+        return 0;
 
     switch (type) {
     case XSLT_LOAD_DOCUMENT: {
         xsltTransformContextPtr context = (xsltTransformContextPtr)ctxt;
         xmlChar* base = xmlNodeGetBase(context->document->doc, context->node);
-        URL url(URL({ }, String::fromLatin1(byteCast<char>(base))), String::fromLatin1(byteCast<char>(uri)));
+        URL url(URL({ }, String::fromLatin1(reinterpret_cast<const char*>(base))), String::fromLatin1(reinterpret_cast<const char*>(uri)));
         xmlFree(base);
         ResourceError error;
         ResourceResponse response;
 
         RefPtr<SharedBuffer> data;
-        RefPtr cachedResourceLoader = globalCachedResourceLoader().get();
 
-        bool requestAllowed = cachedResourceLoader && cachedResourceLoader->frame() && cachedResourceLoader->document()->protectedSecurityOrigin()->canRequest(url, OriginAccessPatternsForWebProcess::singleton());
+        bool requestAllowed = globalCachedResourceLoader->frame() && globalCachedResourceLoader->document()->securityOrigin().canRequest(url, OriginAccessPatternsForWebProcess::singleton());
         if (requestAllowed) {
             FetchOptions options;
             options.mode = FetchOptions::Mode::SameOrigin;
             options.credentials = FetchOptions::Credentials::Include;
-            cachedResourceLoader->frame()->loader().loadResourceSynchronously(url, ClientCredentialPolicy::MayAskClientForCredentials, options, { }, error, response, data);
+            globalCachedResourceLoader->frame()->loader().loadResourceSynchronously(url, ClientCredentialPolicy::MayAskClientForCredentials, options, { }, error, response, data);
             if (error.isNull())
-                requestAllowed = cachedResourceLoader->document()->protectedSecurityOrigin()->canRequest(response.url(), OriginAccessPatternsForWebProcess::singleton());
+                requestAllowed = globalCachedResourceLoader->document()->securityOrigin().canRequest(response.url(), OriginAccessPatternsForWebProcess::singleton());
             else if (data)
                 data = nullptr;
         }
         if (!requestAllowed) {
             if (data)
                 data = nullptr;
-            if (cachedResourceLoader)
-                cachedResourceLoader->printAccessDeniedMessage(url);
+            globalCachedResourceLoader->printAccessDeniedMessage(url);
         }
-
-        // Return early if nothing to parse.
-        if (!data || !data->size())
-            return nullptr;
 
         PageConsoleClient* console = nullptr;
         auto* frame = globalProcessor->xslStylesheet()->ownerDocument()->frame();
         if (frame && frame->page())
             console = &frame->page()->console();
-        XMLDocumentParserScope scope(cachedResourceLoader.get(), XSLTProcessor::genericErrorFunc, XSLTProcessor::parseErrorFunc, console);
+        xmlSetStructuredErrorFunc(console, XSLTProcessor::parseErrorFunc);
+        xmlSetGenericErrorFunc(console, XSLTProcessor::genericErrorFunc);
 
         // We don't specify an encoding here. Neither Gecko nor WinIE respects
         // the encoding specified in the HTTP headers.
-        auto dataSpan = byteCast<char>(data->span());
-        return xmlReadMemory(dataSpan.data(), dataSpan.size(), byteCast<char>(uri), nullptr, options);
+        xmlDocPtr doc = xmlReadMemory(data ? data->dataAsCharPtr() : nullptr, data ? data->size() : 0, (const char*)uri, 0, options);
+
+        xmlSetStructuredErrorFunc(0, 0);
+        xmlSetGenericErrorFunc(0, 0);
+
+        return doc;
     }
     case XSLT_LOAD_STYLESHEET:
         return globalProcessor->xslStylesheet()->locateStylesheetSubResource(((xsltStylesheetPtr)ctxt)->doc, uri);
@@ -156,26 +150,25 @@ static xmlDocPtr docLoaderFunc(const xmlChar* uri,
         break;
     }
 
-    return nullptr;
+    return 0;
 }
 
 static inline void setXSLTLoadCallBack(xsltDocLoaderFunc func, XSLTProcessor* processor, CachedResourceLoader* cachedResourceLoader)
 {
     xsltSetLoaderFunc(func);
     globalProcessor = processor;
-    globalCachedResourceLoader() = cachedResourceLoader;
+    globalCachedResourceLoader = cachedResourceLoader;
 }
 
 static int writeToStringBuilder(void* context, const char* buffer, int length)
 {
     auto& builder = *static_cast<StringBuilder*>(context);
-    if (!length)
-        return 0;
-    auto checkedString = WTF::Unicode::checkUTF8({ byteCast<char8_t>(buffer), static_cast<size_t>(length) });
-    if (checkedString.characters.empty())
+    FromUTF8 adapter(buffer, length);
+    ASSERT(!adapter.conversionFailed);
+    if (adapter.conversionFailed)
             return -1;
-    builder.append(checkedString);
-    return checkedString.characters.size();
+    builder.append(adapter);
+    return adapter.lengthUTF8;
 }
 
 static bool saveResultToString(xmlDocPtr resultDoc, xsltStylesheetPtr sheet, String& resultString)
@@ -308,7 +301,7 @@ bool XSLTProcessor::transformToString(Node& sourceNode, String& mimeType, String
 
     xmlChar* origMethod = sheet->method;
     if (!origMethod && mimeType == textHTMLContentTypeAtom())
-        sheet->method = byteCast<xmlChar>(const_cast<char*>("html"));
+        sheet->method = reinterpret_cast<xmlChar*>(const_cast<char*>("html"));
 
     bool success = false;
     bool shouldFreeSourceDoc = false;
@@ -341,7 +334,7 @@ bool XSLTProcessor::transformToString(Node& sourceNode, String& mimeType, String
 
         const char** params = xsltParamArrayFromParameterMap(m_parameters);
         xsltQuoteUserParams(transformContext, params);
-        xmlDocPtr resultDoc = xsltApplyStylesheetUser(sheet, sourceDoc, nullptr, nullptr, nullptr, transformContext);
+        xmlDocPtr resultDoc = xsltApplyStylesheetUser(sheet, sourceDoc, 0, 0, 0, transformContext);
 
         xsltFreeTransformContext(transformContext);
         xsltFreeSecurityPrefs(securityPrefs);
@@ -352,14 +345,14 @@ bool XSLTProcessor::transformToString(Node& sourceNode, String& mimeType, String
 
         if ((success = saveResultToString(resultDoc, sheet, resultString))) {
             mimeType = resultMIMEType(resultDoc, sheet);
-            resultEncoding = String::fromLatin1(byteCast<char>(resultDoc->encoding));
+            resultEncoding = String::fromLatin1(reinterpret_cast<const char*>(resultDoc->encoding));
         }
         xmlFreeDoc(resultDoc);
     }
 
     sheet->method = origMethod;
     xsltMaxDepth = origXsltMaxDepth;
-    setXSLTLoadCallBack(nullptr, nullptr, nullptr);
+    setXSLTLoadCallBack(0, 0, 0);
     xsltFreeStylesheet(sheet);
     m_stylesheet = nullptr;
 

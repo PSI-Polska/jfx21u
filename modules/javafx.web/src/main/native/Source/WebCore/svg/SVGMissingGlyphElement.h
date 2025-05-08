@@ -25,8 +25,7 @@
 namespace WebCore {
 
 class SVGMissingGlyphElement final : public SVGElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGMissingGlyphElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGMissingGlyphElement);
+    WTF_MAKE_ISO_ALLOCATED(SVGMissingGlyphElement);
 public:
     static Ref<SVGMissingGlyphElement> create(const QualifiedName&, Document&);
 

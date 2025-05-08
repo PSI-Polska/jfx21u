@@ -32,7 +32,7 @@ public:
     using Base = JSFunction;
     static constexpr unsigned StructureFlags = Base::StructureFlags;
 
-    static BooleanConstructor* create(VM&, Structure*, BooleanPrototype*);
+    static BooleanConstructor* create(VM&, Structure*, BooleanPrototype*, GetterSetter*);
 
     DECLARE_INFO;
 

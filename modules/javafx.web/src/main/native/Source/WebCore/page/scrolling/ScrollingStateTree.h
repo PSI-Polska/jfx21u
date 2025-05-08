@@ -41,9 +41,8 @@ class ScrollingStateFrameScrollingNode;
 // will be informed and will schedule a timer that will clone the new state tree and send it over to
 // the scrolling thread, avoiding locking.
 
-class ScrollingStateTree final : public CanMakeCheckedPtr<ScrollingStateTree> {
+class ScrollingStateTree : public CanMakeCheckedPtr {
     WTF_MAKE_FAST_ALLOCATED;
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ScrollingStateTree);
     friend class ScrollingStateNode;
 public:
     WEBCORE_EXPORT static std::optional<ScrollingStateTree> createAfterReconstruction(bool, bool, RefPtr<ScrollingStateFrameScrollingNode>&&);
@@ -70,6 +69,7 @@ public:
     bool hasChangedProperties() const { return m_hasChangedProperties; }
 
     bool hasNewRootStateNode() const { return m_hasNewRootStateNode; }
+    void setHasNewRootStateNode(bool hasNewRoot) { m_hasNewRootStateNode = hasNewRoot; }
 
     unsigned nodeCount() const { return m_stateNodeMap.size(); }
     unsigned scrollingNodeCount() const { return m_scrollingNodeCount; }
@@ -92,9 +92,7 @@ public:
         --m_scrollingNodeCount;
     }
 
-    WEBCORE_EXPORT String scrollingStateTreeAsText(OptionSet<ScrollingStateTreeAsTextBehavior>) const;
-    FrameIdentifier rootFrameIdentifier() const { return m_rootFrameIdentifier; }
-    void setRootFrameIdentifier(FrameIdentifier frameID) { m_rootFrameIdentifier = frameID; }
+    String scrollingStateTreeAsText(OptionSet<ScrollingStateTreeAsTextBehavior>) const;
 
 private:
     ScrollingStateTree(bool hasNewRootStateNode, bool hasChangedProperties, RefPtr<ScrollingStateFrameScrollingNode>&&);
@@ -113,8 +111,6 @@ private:
     void traverse(const ScrollingStateNode&, const Function<void(const ScrollingStateNode&)>&) const;
 
     ThreadSafeWeakPtr<AsyncScrollingCoordinator> m_scrollingCoordinator;
-    FrameIdentifier m_rootFrameIdentifier;
-
     // Contains all the nodes we know about (those in the m_rootStateNode tree, and in m_unparentedNodes subtrees).
     StateNodeMap m_stateNodeMap;
     // Owns roots of unparented subtrees.

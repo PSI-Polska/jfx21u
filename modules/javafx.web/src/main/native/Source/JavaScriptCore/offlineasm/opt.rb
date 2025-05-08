@@ -125,7 +125,6 @@ def assignRegistersToTemporaries(list, kind, registers)
                 raise "Register allocation inconsistency at #{node.codeOriginString}" if freeRegisters.size > registers.size
             end
         }
-        freeRegisters.sort_by! { |register| registers.find_index(register) }
     }
     
     list.map {

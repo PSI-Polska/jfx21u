@@ -38,8 +38,7 @@ float CalcExpressionLength::evaluate(float maxValue) const
 
 bool CalcExpressionLength::operator==(const CalcExpressionNode& other) const
 {
-    auto* otherExpressionLength = dynamicDowncast<CalcExpressionLength>(other);
-    return otherExpressionLength && *this == *otherExpressionLength;
+    return is<CalcExpressionLength>(other) && *this == downcast<CalcExpressionLength>(other);
 }
 
 void CalcExpressionLength::dump(TextStream& ts) const

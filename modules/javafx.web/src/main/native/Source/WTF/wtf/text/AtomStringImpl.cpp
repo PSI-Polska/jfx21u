@@ -39,13 +39,13 @@ using namespace Unicode;
 
 #if USE(WEB_THREAD)
 
-class AtomStringTableLocker : public Locker<Lock> {
+class AtomStringTableLocker : public LockHolder {
     WTF_MAKE_NONCOPYABLE(AtomStringTableLocker);
 
     static Lock s_stringTableLock;
 public:
     AtomStringTableLocker()
-        : Locker<Lock>(s_stringTableLock)
+        : LockHolder(s_stringTableLock)
     {
     }
 };
@@ -97,58 +97,80 @@ struct UCharBufferTranslator {
 
     static bool equal(AtomStringTable::StringEntry const& str, const UCharBuffer& buf)
     {
-        return WTF::equal(str.get(), buf.characters);
+        return WTF::equal(str.get(), buf.characters, buf.length);
     }
 
     static void translate(AtomStringTable::StringEntry& location, const UCharBuffer& buf, unsigned hash)
     {
-        auto* pointer = &StringImpl::create8BitIfPossible(buf.characters).leakRef();
+        auto* pointer = &StringImpl::create8BitIfPossible(buf.characters, buf.length).leakRef();
         pointer->setHash(hash);
         pointer->setIsAtom(true);
         location = pointer;
     }
 };
 
-struct HashedUTF8Characters {
-    std::span<const char8_t> characters;
-    Unicode::UTF16LengthWithHash length;
+struct HashAndUTF8Characters {
+    unsigned hash;
+    const char* characters;
+    unsigned length;
+    unsigned utf16Length;
 };
 
-struct HashedUTF8CharactersTranslator {
-    static unsigned hash(const HashedUTF8Characters& characters)
+struct HashAndUTF8CharactersTranslator {
+    static unsigned hash(const HashAndUTF8Characters& buffer)
     {
-        return characters.length.hash;
+        return buffer.hash;
     }
 
-    static bool equal(const AtomStringTable::StringEntry& passedString, const HashedUTF8Characters& characters)
+    static bool equal(AtomStringTable::StringEntry const& passedString, const HashAndUTF8Characters& buffer)
     {
         auto* string = passedString.get();
-        if (characters.length.lengthUTF16 != string->length())
+        if (buffer.utf16Length != string->length())
             return false;
 
-        // If buffer contains only ASCII characters, UTF-8 and UTF16 lengths are the same.
-        if (characters.length.lengthUTF16 != characters.characters.size()) {
+        // If buffer contains only ASCII characters UTF-8 and UTF16 length are the same.
+        if (buffer.utf16Length != buffer.length) {
             if (string->is8Bit())
-                return Unicode::equal(string->span8(), characters.characters);
-            return Unicode::equal(string->span16(), characters.characters);
+                return equalLatin1WithUTF8(string->characters8(), buffer.characters, buffer.characters + buffer.length);
+
+            return equalUTF16WithUTF8(string->characters16(), buffer.characters, buffer.characters + buffer.length);
         }
 
-        auto charactersLatin1 = spanReinterpretCast<const LChar>(characters.characters);
-        if (string->is8Bit())
-            return WTF::equal(string->span8().data(), charactersLatin1);
-        return WTF::equal(string->span16().data(), charactersLatin1);
+        if (string->is8Bit()) {
+            const LChar* stringCharacters = string->characters8();
+
+            for (unsigned i = 0; i < buffer.length; ++i) {
+                ASSERT(isASCII(buffer.characters[i]));
+                if (stringCharacters[i] != buffer.characters[i])
+                    return false;
+            }
+
+            return true;
+        }
+
+        const UChar* stringCharacters = string->characters16();
+
+        for (unsigned i = 0; i < buffer.length; ++i) {
+            ASSERT(isASCII(buffer.characters[i]));
+            if (stringCharacters[i] != buffer.characters[i])
+                return false;
+        }
+
+        return true;
     }
 
-    static void translate(AtomStringTable::StringEntry& location, const HashedUTF8Characters& characters, unsigned hash)
+    static void translate(AtomStringTable::StringEntry& location, const HashAndUTF8Characters& buffer, unsigned hash)
     {
         UChar* target;
-        auto newString = StringImpl::createUninitialized(characters.length.lengthUTF16, target);
+        auto newString = StringImpl::createUninitialized(buffer.utf16Length, target);
 
-        auto result = Unicode::convert(characters.characters, { target, characters.length.lengthUTF16 });
-        RELEASE_ASSERT(result.code == Unicode::ConversionResultCode::Success);
+        bool containsOnlyASCII;
+        const char* source = buffer.characters;
+        if (!convertUTF8ToUTF16(source, source + buffer.length, &target, target + buffer.utf16Length, &containsOnlyASCII))
+            RELEASE_ASSERT_NOT_REACHED();
 
-        if (result.isAllASCII)
-            newString = StringImpl::create(spanReinterpretCast<const LChar>(characters.characters));
+        if (containsOnlyASCII)
+            newString = StringImpl::create(buffer.characters, buffer.length);
 
         auto* pointer = &newString.leakRef();
         pointer->setHash(hash);
@@ -157,31 +179,31 @@ struct HashedUTF8CharactersTranslator {
     }
 };
 
-RefPtr<AtomStringImpl> AtomStringImpl::add(std::span<const UChar> characters)
+RefPtr<AtomStringImpl> AtomStringImpl::add(const UChar* characters, unsigned length)
 {
-    if (!characters.data())
+    if (!characters)
         return nullptr;
 
-    if (characters.empty())
+    if (!length)
         return static_cast<AtomStringImpl*>(StringImpl::empty());
 
-    UCharBuffer buffer { characters };
+    UCharBuffer buffer { characters, length };
     return addToStringTable<UCharBuffer, UCharBufferTranslator>(buffer);
 }
 
 RefPtr<AtomStringImpl> AtomStringImpl::add(HashTranslatorCharBuffer<UChar>& buffer)
 {
-    if (!buffer.characters.data())
+    if (!buffer.characters)
         return nullptr;
 
-    if (buffer.characters.empty())
+    if (!buffer.length)
         return static_cast<AtomStringImpl*>(StringImpl::empty());
 
     return addToStringTable<UCharBuffer, UCharBufferTranslator>(buffer);
 }
 
 struct SubstringLocation {
-    SUPPRESS_UNCOUNTED_MEMBER StringImpl* baseString;
+    StringImpl* baseString;
     unsigned start;
     unsigned length;
 };
@@ -199,24 +221,24 @@ struct SubstringTranslator {
 struct SubstringTranslator8 : SubstringTranslator {
     static unsigned hash(const SubstringLocation& buffer)
     {
-        return StringHasher::computeHashAndMaskTop8Bits(buffer.baseString->span8().subspan(buffer.start, buffer.length));
+        return StringHasher::computeHashAndMaskTop8Bits(buffer.baseString->characters8() + buffer.start, buffer.length);
     }
 
     static bool equal(AtomStringTable::StringEntry const& string, const SubstringLocation& buffer)
     {
-        return WTF::equal(string.get(), buffer.baseString->span8().subspan(buffer.start, buffer.length));
+        return WTF::equal(string.get(), buffer.baseString->characters8() + buffer.start, buffer.length);
     }
 };
 
 struct SubstringTranslator16 : SubstringTranslator {
     static unsigned hash(const SubstringLocation& buffer)
     {
-        return StringHasher::computeHashAndMaskTop8Bits(buffer.baseString->span16().subspan(buffer.start, buffer.length));
+        return StringHasher::computeHashAndMaskTop8Bits(buffer.baseString->characters16() + buffer.start, buffer.length);
     }
 
     static bool equal(AtomStringTable::StringEntry const& string, const SubstringLocation& buffer)
     {
-        return WTF::equal(string.get(), buffer.baseString->span16().subspan(buffer.start, buffer.length));
+        return WTF::equal(string.get(), buffer.baseString->characters16() + buffer.start, buffer.length);
     }
 };
 
@@ -250,12 +272,12 @@ struct LCharBufferTranslator {
 
     static bool equal(AtomStringTable::StringEntry const& str, const LCharBuffer& buf)
     {
-        return WTF::equal(str.get(), buf.characters);
+        return WTF::equal(str.get(), buf.characters, buf.length);
     }
 
     static void translate(AtomStringTable::StringEntry& location, const LCharBuffer& buf, unsigned hash)
     {
-        auto* pointer = &StringImpl::create(buf.characters).leakRef();
+        auto* pointer = &StringImpl::create(buf.characters, buf.length).leakRef();
         pointer->setHash(hash);
         pointer->setIsAtom(true);
         location = pointer;
@@ -272,12 +294,12 @@ struct BufferFromStaticDataTranslator {
 
     static bool equal(AtomStringTable::StringEntry const& str, const Buffer& buf)
     {
-        return WTF::equal(str.get(), buf.characters);
+        return WTF::equal(str.get(), buf.characters, buf.length);
     }
 
     static void translate(AtomStringTable::StringEntry& location, const Buffer& buf, unsigned hash)
     {
-        auto* pointer = &StringImpl::createWithoutCopying(buf.characters).leakRef();
+        auto* pointer = &StringImpl::createWithoutCopying(buf.characters, buf.length).leakRef();
         pointer->setHash(hash);
         pointer->setIsAtom(true);
         location = pointer;
@@ -286,33 +308,33 @@ struct BufferFromStaticDataTranslator {
 
 RefPtr<AtomStringImpl> AtomStringImpl::add(HashTranslatorCharBuffer<LChar>& buffer)
 {
-    if (!buffer.characters.data())
+    if (!buffer.characters)
         return nullptr;
 
-    if (buffer.characters.empty())
+    if (!buffer.length)
         return static_cast<AtomStringImpl*>(StringImpl::empty());
 
     return addToStringTable<LCharBuffer, LCharBufferTranslator>(buffer);
 }
 
-RefPtr<AtomStringImpl> AtomStringImpl::add(std::span<const LChar> characters)
+RefPtr<AtomStringImpl> AtomStringImpl::add(const LChar* characters, unsigned length)
 {
-    if (!characters.data())
+    if (!characters)
         return nullptr;
 
-    if (characters.empty())
+    if (!length)
         return static_cast<AtomStringImpl*>(StringImpl::empty());
 
-    LCharBuffer buffer { characters };
+    LCharBuffer buffer { characters, length };
     return addToStringTable<LCharBuffer, LCharBufferTranslator>(buffer);
 }
 
-Ref<AtomStringImpl> AtomStringImpl::addLiteral(std::span<const LChar> characters)
+Ref<AtomStringImpl> AtomStringImpl::addLiteral(const char* characters, unsigned length)
 {
-    ASSERT(characters.data());
-    ASSERT(!characters.empty());
+    ASSERT(characters);
+    ASSERT(length);
 
-    LCharBuffer buffer { characters };
+    LCharBuffer buffer { reinterpret_cast<const LChar*>(characters), length };
     return addToStringTable<LCharBuffer, BufferFromStaticDataTranslator<LChar>>(buffer);
 }
 
@@ -339,10 +361,10 @@ static Ref<AtomStringImpl> addStatic(AtomStringTableLocker& locker, StringTableI
     ASSERT(base.isStatic());
 
     if (base.is8Bit()) {
-        LCharBuffer buffer { base.span8(), base.hash() };
+        LCharBuffer buffer { base.characters8(), base.length(), base.hash() };
         return addToStringTable<LCharBuffer, BufferFromStaticDataTranslator<LChar>>(locker, atomStringTable, buffer);
     }
-    UCharBuffer buffer { base.span16(), base.hash() };
+    UCharBuffer buffer { base.characters16(), base.length(), base.hash() };
     return addToStringTable<UCharBuffer, BufferFromStaticDataTranslator<UChar>>(locker, atomStringTable, buffer);
 }
 
@@ -474,32 +496,36 @@ RefPtr<AtomStringImpl> AtomStringImpl::lookUpSlowCase(StringImpl& string)
     return nullptr;
 }
 
-RefPtr<AtomStringImpl> AtomStringImpl::add(std::span<const char8_t> characters)
+RefPtr<AtomStringImpl> AtomStringImpl::addUTF8(const char* charactersStart, const char* charactersEnd)
 {
-    HashedUTF8Characters buffer { characters, computeUTF16LengthWithHash(spanReinterpretCast<const char8_t>(characters)) };
-    if (!buffer.length.hash)
+    HashAndUTF8Characters buffer;
+    buffer.characters = charactersStart;
+    buffer.hash = calculateStringHashAndLengthFromUTF8MaskingTop8Bits(charactersStart, charactersEnd, buffer.length, buffer.utf16Length);
+
+    if (!buffer.hash)
         return nullptr;
-    return addToStringTable<HashedUTF8Characters, HashedUTF8CharactersTranslator>(buffer);
+
+    return addToStringTable<HashAndUTF8Characters, HashAndUTF8CharactersTranslator>(buffer);
 }
 
-RefPtr<AtomStringImpl> AtomStringImpl::lookUp(std::span<const LChar> characters)
+RefPtr<AtomStringImpl> AtomStringImpl::lookUp(const LChar* characters, unsigned length)
 {
     AtomStringTableLocker locker;
     auto& table = stringTable();
 
-    LCharBuffer buffer { characters };
+    LCharBuffer buffer = { characters, length };
     auto iterator = table.find<LCharBufferTranslator>(buffer);
     if (iterator != table.end())
         return static_cast<AtomStringImpl*>(iterator->get());
     return nullptr;
 }
 
-RefPtr<AtomStringImpl> AtomStringImpl::lookUp(std::span<const UChar> characters)
+RefPtr<AtomStringImpl> AtomStringImpl::lookUp(const UChar* characters, unsigned length)
 {
     AtomStringTableLocker locker;
     auto& table = stringTable();
 
-    UCharBuffer buffer { characters };
+    UCharBuffer buffer { characters, length };
     auto iterator = table.find<UCharBufferTranslator>(buffer);
     if (iterator != table.end())
         return static_cast<AtomStringImpl*>(iterator->get());

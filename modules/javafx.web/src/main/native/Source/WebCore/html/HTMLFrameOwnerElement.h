@@ -33,13 +33,11 @@ namespace WebCore {
 class RenderWidget;
 
 class HTMLFrameOwnerElement : public HTMLElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLFrameOwnerElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLFrameOwnerElement);
+    WTF_MAKE_ISO_ALLOCATED(HTMLFrameOwnerElement);
 public:
     virtual ~HTMLFrameOwnerElement();
 
     Frame* contentFrame() const { return m_contentFrame.get(); }
-    RefPtr<Frame> protectedContentFrame() const;
     WEBCORE_EXPORT WindowProxy* contentWindow() const;
     WEBCORE_EXPORT Document* contentDocument() const;
     RefPtr<Document> protectedContentDocument() const { return contentDocument(); }
@@ -88,13 +86,13 @@ public:
         : m_root(root)
     {
         if (m_root)
-            disabledSubtreeRoots().add(m_root.get());
+            disabledSubtreeRoots().add(m_root);
     }
 
     ~SubframeLoadingDisabler()
     {
         if (m_root)
-            disabledSubtreeRoots().remove(m_root.get());
+            disabledSubtreeRoots().remove(m_root);
     }
 
     static bool canLoadFrame(HTMLFrameOwnerElement&);
@@ -106,7 +104,7 @@ private:
         return nodes;
     }
 
-    WeakPtr<ContainerNode, WeakPtrImplWithEventTargetData> m_root;
+    ContainerNode* m_root;
 };
 
 inline HTMLFrameOwnerElement* Frame::ownerElement() const

@@ -48,10 +48,6 @@ class DOMTimer final : public RefCounted<DOMTimer>, public ActiveDOMObject, publ
 public:
     WEBCORE_EXPORT virtual ~DOMTimer();
 
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
-
     static Seconds defaultMinimumInterval() { return 4_ms; }
     static Seconds defaultAlignmentInterval() { return 0_s; }
     static Seconds defaultAlignmentIntervalInLowPowerOrThermallyMitigatedMode() { return 30_ms; }
@@ -83,7 +79,8 @@ private:
 
     void fired();
 
-    // ActiveDOMObject.
+    // ActiveDOMObject API.
+    const char* activeDOMObjectName() const final;
     void stop() final;
 
     void makeImminentlyScheduledWorkScopeIfPossible(ScriptExecutionContext&);

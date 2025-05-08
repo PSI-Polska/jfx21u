@@ -30,8 +30,8 @@
 
 #include "Document.h"
 #include "DocumentLoader.h"
+#include "FeaturePolicy.h"
 #include "FrameDestructionObserverInlines.h"
-#include "PermissionsPolicy.h"
 #include "SecurityOrigin.h"
 
 namespace WebCore {
@@ -49,7 +49,7 @@ static bool isSecure(DocumentLoader& documentLoader)
 
 ExceptionOr<void> PaymentSession::canCreateSession(Document& document)
 {
-    if (!PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Payment, document))
+    if (!isFeaturePolicyAllowedByDocumentAndAllOwners(FeaturePolicy::Type::Payment, document, LogFeaturePolicyFailure::Yes))
         return Exception { ExceptionCode::SecurityError, "Third-party iframes are not allowed to request payments unless explicitly allowed via Feature-Policy (payment)"_s };
 
     if (!document.frame())

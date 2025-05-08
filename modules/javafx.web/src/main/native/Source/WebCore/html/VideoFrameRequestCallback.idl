@@ -27,5 +27,4 @@ typedef double DOMHighResTimeStamp;
 
 [
     Conditional=VIDEO,
-    GenerateIsReachable=ImplScriptExecutionContext
 ] callback VideoFrameRequestCallback = undefined(DOMHighResTimeStamp now, VideoFrameMetadata metadata);

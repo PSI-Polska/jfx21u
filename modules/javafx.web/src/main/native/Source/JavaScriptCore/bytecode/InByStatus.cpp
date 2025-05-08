@@ -51,14 +51,14 @@ void InByStatus::shrinkToFit()
 }
 
 #if ENABLE(JIT)
-InByStatus InByStatus::computeFor(CodeBlock* profiledBlock, ICStatusMap& map, BytecodeIndex bytecodeIndex, ExitFlag didExit, CallLinkStatus::ExitSiteData callExitSiteData, CodeOrigin codeOrigin)
+InByStatus InByStatus::computeFor(CodeBlock* profiledBlock, ICStatusMap& map, BytecodeIndex bytecodeIndex, ExitFlag didExit)
 {
     ConcurrentJSLocker locker(profiledBlock->m_lock);
 
     InByStatus result;
 
 #if ENABLE(DFG_JIT)
-    result = computeForStubInfoWithoutExitSiteFeedback(locker, profiledBlock, map.get(CodeOrigin(bytecodeIndex)).stubInfo, callExitSiteData, codeOrigin);
+    result = computeForStubInfoWithoutExitSiteFeedback(locker, profiledBlock->vm(), map.get(CodeOrigin(bytecodeIndex)).stubInfo);
 
     if (!result.takesSlowPath() && didExit)
         return InByStatus(TakesSlowPath);
@@ -66,10 +66,14 @@ InByStatus InByStatus::computeFor(CodeBlock* profiledBlock, ICStatusMap& map, By
     UNUSED_PARAM(map);
     UNUSED_PARAM(bytecodeIndex);
     UNUSED_PARAM(didExit);
-    UNUSED_PARAM(callExitSiteData);
 #endif
 
     return result;
+}
+
+InByStatus InByStatus::computeFor(CodeBlock* profiledBlock, ICStatusMap& map, BytecodeIndex bytecodeIndex)
+{
+    return computeFor(profiledBlock, map, bytecodeIndex, hasBadCacheExitSite(profiledBlock, bytecodeIndex));
 }
 
 InByStatus InByStatus::computeFor(
@@ -77,7 +81,6 @@ InByStatus InByStatus::computeFor(
     ICStatusContextStack& contextStack, CodeOrigin codeOrigin)
 {
     BytecodeIndex bytecodeIndex = codeOrigin.bytecodeIndex();
-    CallLinkStatus::ExitSiteData callExitSiteData = CallLinkStatus::computeExitSiteData(profiledBlock, bytecodeIndex);
     ExitFlag didExit = hasBadCacheExitSite(profiledBlock, bytecodeIndex);
 
     for (ICStatusContext* context : contextStack) {
@@ -85,7 +88,8 @@ InByStatus InByStatus::computeFor(
 
         auto bless = [&] (const InByStatus& result) -> InByStatus {
             if (!context->isInlined(codeOrigin)) {
-                InByStatus baselineResult = computeFor(profiledBlock, baselineMap, bytecodeIndex, didExit, callExitSiteData, codeOrigin);
+                InByStatus baselineResult = computeFor(
+                    profiledBlock, baselineMap, bytecodeIndex, didExit);
                 baselineResult.merge(result);
                 return baselineResult;
             }
@@ -99,7 +103,7 @@ InByStatus InByStatus::computeFor(
             InByStatus result;
             {
                 ConcurrentJSLocker locker(context->optimizedCodeBlock->m_lock);
-                result = computeForStubInfoWithoutExitSiteFeedback(locker, profiledBlock, status.stubInfo, callExitSiteData, codeOrigin);
+                result = computeForStubInfoWithoutExitSiteFeedback(locker, profiledBlock->vm(), status.stubInfo);
             }
             if (result.isSet())
                 return bless(result);
@@ -110,14 +114,23 @@ InByStatus InByStatus::computeFor(
             return bless(*status.inStatus);
     }
 
-    return computeFor(profiledBlock, baselineMap, bytecodeIndex, didExit, callExitSiteData, codeOrigin);
+    return computeFor(profiledBlock, baselineMap, bytecodeIndex, didExit);
 }
 #endif // ENABLE(JIT)
 
 #if ENABLE(DFG_JIT)
-InByStatus InByStatus::computeForStubInfoWithoutExitSiteFeedback(const ConcurrentJSLocker& locker, CodeBlock* profiledBlock, StructureStubInfo* stubInfo, CallLinkStatus::ExitSiteData callExitSiteData, CodeOrigin)
+InByStatus InByStatus::computeForStubInfo(const ConcurrentJSLocker& locker, CodeBlock* profiledBlock, StructureStubInfo* stubInfo, CodeOrigin codeOrigin)
 {
-    StubInfoSummary summary = StructureStubInfo::summary(profiledBlock->vm(), stubInfo);
+    InByStatus result = InByStatus::computeForStubInfoWithoutExitSiteFeedback(locker, profiledBlock->vm(), stubInfo);
+
+    if (!result.takesSlowPath() && hasBadCacheExitSite(profiledBlock, codeOrigin.bytecodeIndex()))
+        return InByStatus(TakesSlowPath);
+    return result;
+}
+
+InByStatus InByStatus::computeForStubInfoWithoutExitSiteFeedback(const ConcurrentJSLocker&, VM& vm, StructureStubInfo* stubInfo)
+{
+    StubInfoSummary summary = StructureStubInfo::summary(vm, stubInfo);
     if (!isInlineable(summary))
         return InByStatus(summary);
 
@@ -151,29 +164,6 @@ InByStatus InByStatus::computeForStubInfoWithoutExitSiteFeedback(const Concurren
 
     case CacheType::Stub: {
         PolymorphicAccess* list = stubInfo->m_stub.get();
-        if (list->size() == 1) {
-            const AccessCase& access = list->at(0);
-            switch (access.type()) {
-            case AccessCase::InMegamorphic:
-            case AccessCase::IndexedMegamorphicIn: {
-                if (!stubInfo->tookSlowPath)
-                    return InByStatus(Megamorphic);
-                break;
-            }
-            case AccessCase::ProxyObjectIn:
-            case AccessCase::IndexedProxyObjectIn: {
-                auto status = InByStatus(InByStatus::ProxyObject);
-                auto callLinkStatus = makeUnique<CallLinkStatus>();
-                if (CallLinkInfo* callLinkInfo = stubInfo->callLinkInfoAt(locker, 0, access))
-                    *callLinkStatus = CallLinkStatus::computeFor(locker, profiledBlock, *callLinkInfo, callExitSiteData);
-                status.appendVariant(InByVariant(access.identifier(), { }, invalidOffset, { }, WTFMove(callLinkStatus)));
-                return status;
-            }
-            default:
-                break;
-            }
-        }
-
         for (unsigned listIndex = 0; listIndex < list->size(); ++listIndex) {
             const AccessCase& access = list->at(listIndex);
             if (access.viaGlobalProxy())
@@ -251,20 +241,8 @@ void InByStatus::merge(const InByStatus& other)
         *this = other;
         return;
 
-    case Megamorphic:
-        if (m_state != other.m_state) {
-            if (other.m_state == Simple) {
-                *this = other;
-                return;
-            }
-            *this = InByStatus(TakesSlowPath);
-            return;
-        }
-        return;
-
     case Simple:
-    case ProxyObject:
-        if (m_state != other.m_state) {
+        if (other.m_state != Simple) {
             *this = InByStatus(TakesSlowPath);
             return;
         }
@@ -335,12 +313,6 @@ void InByStatus::dump(PrintStream& out) const
         break;
     case Simple:
         out.print("Simple");
-        break;
-    case ProxyObject:
-        out.print("ProxyObject");
-        break;
-    case Megamorphic:
-        out.print("Megamorphic");
         break;
     case TakesSlowPath:
         out.print("TakesSlowPath");

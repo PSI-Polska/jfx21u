@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ContextDestructionObserver.h"
 #include "ScriptWrappable.h"
 #include "TrustedTypePolicy.h"
 #include <wtf/Forward.h>
@@ -40,10 +39,10 @@ class TrustedScript;
 struct TrustedTypePolicyOptions;
 class ScriptExecutionContext;
 
-class TrustedTypePolicyFactory : public ScriptWrappable, public RefCounted<TrustedTypePolicyFactory>, public ContextDestructionObserver {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(TrustedTypePolicyFactory);
+class TrustedTypePolicyFactory : public ScriptWrappable, public RefCounted<TrustedTypePolicyFactory> {
+    WTF_MAKE_ISO_ALLOCATED(TrustedTypePolicyFactory);
 public:
-    static Ref<TrustedTypePolicyFactory> create(ScriptExecutionContext&);
+    static Ref<TrustedTypePolicyFactory> create();
     ~TrustedTypePolicyFactory() = default;
 
     ExceptionOr<Ref<TrustedTypePolicy>> createPolicy(ScriptExecutionContext&, const String& policyName, const TrustedTypePolicyOptions&);
@@ -53,15 +52,12 @@ public:
     Ref<TrustedHTML> emptyHTML() const;
     Ref<TrustedScript> emptyScript() const;
 
-    String getAttributeType(const String& tagName, const String& attribute, const String& elementNamespace, const String& attributeNamespace) const;
+    String getAttributeType(const String& tagName, const String& attribute, const String& elementNamespace, const String& attrNamespace) const;
     String getPropertyType(const String& tagName, const String& property, const String& elementNamespace) const;
 
     RefPtr<TrustedTypePolicy> defaultPolicy() const { return m_defaultPolicy; }
-    TrustedTypePolicy* defaultPolicyConcurrently() const { return m_defaultPolicy.get(); }
 
 private:
-    TrustedTypePolicyFactory(ScriptExecutionContext&);
-
     RefPtr<TrustedTypePolicy> m_defaultPolicy;
     ListHashSet<String> m_createdPolicyNames;
 };

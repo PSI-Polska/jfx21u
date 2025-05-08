@@ -26,6 +26,7 @@
 // https://drafts.css-houdini.org/css-typed-om/#cssstyleimagevalue
 [
     InterfaceName=CSSImageValue,
+    EnabledBySetting=CSSTypedOMEnabled,
     Exposed=(Window,Worker,PaintWorklet),
     JSGenerateToNativeObject,
 ] interface CSSStyleImageValue : CSSStyleValue {

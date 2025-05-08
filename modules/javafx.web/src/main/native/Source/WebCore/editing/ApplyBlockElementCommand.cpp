@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2006-2024 Apple Inc. All rights reserved.
- * Copyright (C) 2010-2013 Google Inc. All rights reserved.
+ * Copyright (C) 2006, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -129,9 +129,8 @@ void ApplyBlockElementCommand::formatSelection(const VisiblePosition& startOfSel
 
     RefPtr<Element> blockquoteForNextIndent;
     VisiblePosition endOfCurrentParagraph = endOfParagraph(startOfSelection);
-    VisiblePosition endOfLastParagraph = endOfParagraph(endOfSelection);
-    VisiblePosition endAfterSelection = endOfParagraph(endOfLastParagraph.next());
-    m_endOfLastParagraph = endOfLastParagraph.deepEquivalent();
+    VisiblePosition endAfterSelection = endOfParagraph(endOfParagraph(endOfSelection).next());
+    m_endOfLastParagraph = endOfParagraph(endOfSelection).deepEquivalent();
 
     bool atEnd = false;
     Position end;
@@ -246,7 +245,7 @@ void ApplyBlockElementCommand::rangeForParagraphSplittingTextNodesIfNeeded(const
         unsigned endOffset = end.offsetInContainerNode();
         bool preservesNewLine = endStyle->preserveNewline();
         bool collapseWhiteSpace = endStyle->collapseWhiteSpace();
-        auto userModify = endStyle->usedUserModify();
+        auto userModify = endStyle->effectiveUserModify();
         endStyle = nullptr;
 
         if (preservesNewLine && start == end && endOffset < end.containerNode()->length()) {

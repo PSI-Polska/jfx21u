@@ -30,7 +30,7 @@
 #include "ContentSecurityPolicy.h"
 #include "ContentSecurityPolicyDirectiveNames.h"
 #include "ParsingUtilities.h"
-#include "PublicSuffixStore.h"
+#include "PublicSuffix.h"
 #include <pal/text/TextEncoding.h>
 #include <wtf/ASCIICType.h>
 #include <wtf/NeverDestroyed.h>
@@ -205,6 +205,11 @@ static bool isRestrictedDirectiveForMode(const String& directive, ContentSecurit
 
 bool ContentSecurityPolicySourceList::isValidSourceForExtensionMode(const ContentSecurityPolicySourceList::Source& parsedSource)
 {
+    bool hostIsPublicSuffix = false;
+#if ENABLE(PUBLIC_SUFFIX_LIST)
+    hostIsPublicSuffix = isPublicSuffix(parsedSource.host.value);
+#endif
+
     switch (m_contentSecurityPolicyModeForExtension) {
     case ContentSecurityPolicyModeForExtension::None:
         return true;
@@ -212,7 +217,7 @@ bool ContentSecurityPolicySourceList::isValidSourceForExtensionMode(const Conten
         if (!isRestrictedDirectiveForMode(m_directiveName, ContentSecurityPolicyModeForExtension::ManifestV2))
             return true;
 
-        if (parsedSource.host.hasWildcard && PublicSuffixStore::singleton().isPublicSuffix(parsedSource.host.value))
+        if (parsedSource.host.hasWildcard && hostIsPublicSuffix)
             return false;
 
         if (equalLettersIgnoringASCIICase(parsedSource.scheme, "blob"_s))
@@ -249,7 +254,7 @@ template<typename CharacterType> void ContentSecurityPolicySourceList::parse(Str
         auto beginSource = buffer.position();
         skipWhile<isSourceCharacter>(buffer);
 
-        StringParsingBuffer sourceBuffer(std::span(beginSource, buffer.position()));
+        auto sourceBuffer = StringParsingBuffer { beginSource, buffer.position() };
 
         if (parseNonceSource(sourceBuffer))
             continue;
@@ -268,7 +273,7 @@ template<typename CharacterType> void ContentSecurityPolicySourceList::parse(Str
             if (isValidSourceForExtensionMode(source.value()))
                 m_list.append(ContentSecurityPolicySource(m_policy, source->scheme.convertToASCIILowercase(), source->host.value.toString(), source->port.value, source->path, source->host.hasWildcard, source->port.hasWildcard, IsSelfSource::No));
         } else
-            m_policy.reportInvalidSourceExpression(m_directiveName, String({ beginSource, buffer.position() }));
+            m_policy.reportInvalidSourceExpression(m_directiveName, String(beginSource, buffer.position() - beginSource));
 
         ASSERT(buffer.atEnd() || isUnicodeCompatibleASCIIWhitespace(*buffer));
     }
@@ -349,7 +354,7 @@ template<typename CharacterType> std::optional<ContentSecurityPolicySourceList::
     if (buffer.atEnd()) {
         // host
         //     ^
-        auto host = parseHost(std::span { beginHost, buffer.position() });
+        auto host = parseHost(StringParsingBuffer { beginHost, buffer.position() });
         if (!host)
             return std::nullopt;
 
@@ -360,11 +365,11 @@ template<typename CharacterType> std::optional<ContentSecurityPolicySourceList::
     if (buffer.hasCharactersRemaining() && *buffer == '/') {
         // host/path || host/ || /
         //     ^            ^    ^
-        auto host = parseHost(std::span { beginHost, buffer.position() });
+        auto host = parseHost(StringParsingBuffer { beginHost, buffer.position() });
         if (!host)
             return std::nullopt;
 
-        auto path = parsePath(buffer.span());
+        auto path = parsePath(buffer);
         if (!path)
             return std::nullopt;
 
@@ -377,7 +382,7 @@ template<typename CharacterType> std::optional<ContentSecurityPolicySourceList::
         if (buffer.lengthRemaining() == 1) {
             // scheme:
             //       ^
-            auto scheme = parseScheme(StringParsingBuffer(std::span { begin, buffer.position() }));
+            auto scheme = parseScheme(StringParsingBuffer { begin, buffer.position() });
             if (!scheme)
                 return std::nullopt;
 
@@ -388,7 +393,7 @@ template<typename CharacterType> std::optional<ContentSecurityPolicySourceList::
         if (buffer[1] == '/') {
             // scheme://host || scheme://
             //       ^                ^
-            auto scheme = parseScheme(StringParsingBuffer(std::span { begin, buffer.position() }));
+            auto scheme = parseScheme(StringParsingBuffer { begin, buffer.position() });
             if (!scheme
                 || !skipExactly(buffer, ':')
                 || !skipExactly(buffer, '/')
@@ -420,12 +425,12 @@ template<typename CharacterType> std::optional<ContentSecurityPolicySourceList::
         beginPath = buffer.position();
     }
 
-    auto host = parseHost(std::span { beginHost, beginPort ? beginPort : beginPath });
+    auto host = parseHost(StringParsingBuffer { beginHost, beginPort ? beginPort : beginPath });
     if (!host)
         return std::nullopt;
 
     if (beginPort) {
-        auto port = parsePort(std::span { beginPort, beginPath });
+        auto port = parsePort(StringParsingBuffer { beginPort, beginPath });
         if (!port)
             return std::nullopt;
 
@@ -433,7 +438,7 @@ template<typename CharacterType> std::optional<ContentSecurityPolicySourceList::
     }
 
     if (beginPath != buffer.end()) {
-        auto path = parsePath(std::span { beginPath, buffer.end() });
+        auto path = parsePath(StringParsingBuffer { beginPath, buffer.end() });
         if (!path)
             return std::nullopt;
 
@@ -464,16 +469,15 @@ template<typename CharacterType> StringView ContentSecurityPolicySourceList::par
     if (!buffer.atEnd())
         return { };
 
-    return std::span(begin, buffer.position() - begin);
+    return StringView(begin, buffer.position() - begin);
 }
 
 // host              = [ "*." ] 1*host-char *( "." 1*host-char )
 //                   / "*"
 // host-char         = ALPHA / DIGIT / "-"
 //
-template<typename CharacterType> std::optional<ContentSecurityPolicySourceList::Host> ContentSecurityPolicySourceList::parseHost(std::span<const CharacterType> span)
+template<typename CharacterType> std::optional<ContentSecurityPolicySourceList::Host> ContentSecurityPolicySourceList::parseHost(StringParsingBuffer<CharacterType> buffer)
 {
-    StringParsingBuffer buffer { span };
     ASSERT(buffer.position() <= buffer.end());
 
     if (buffer.atEnd())
@@ -504,13 +508,12 @@ template<typename CharacterType> std::optional<ContentSecurityPolicySourceList::
     }
 
     ASSERT(buffer.atEnd());
-    host.value = std::span(hostBegin, buffer.position() - hostBegin);
+    host.value = StringView(hostBegin, buffer.position() - hostBegin);
     return host;
 }
 
-template<typename CharacterType> String ContentSecurityPolicySourceList::parsePath(std::span<const CharacterType> span)
+template<typename CharacterType> String ContentSecurityPolicySourceList::parsePath(StringParsingBuffer<CharacterType> buffer)
 {
-    StringParsingBuffer buffer { span };
     ASSERT(buffer.position() <= buffer.end());
 
     auto begin = buffer.position();
@@ -518,19 +521,18 @@ template<typename CharacterType> String ContentSecurityPolicySourceList::parsePa
     // path/to/file.js?query=string || path/to/file.js#anchor
     //                ^                               ^
     if (buffer.hasCharactersRemaining())
-        m_policy.reportInvalidPathCharacter(m_directiveName, String({ begin, buffer.end() }), *buffer);
+        m_policy.reportInvalidPathCharacter(m_directiveName, String(begin, buffer.end() - begin), *buffer);
 
     ASSERT(buffer.position() <= buffer.end());
     ASSERT(buffer.atEnd() || (*buffer == '#' || *buffer == '?'));
 
-    return PAL::decodeURLEscapeSequences(std::span(begin, buffer.position() - begin));
+    return PAL::decodeURLEscapeSequences(StringView(begin, buffer.position() - begin));
 }
 
 // port              = ":" ( 1*DIGIT / "*" )
 //
-template<typename CharacterType> std::optional<ContentSecurityPolicySourceList::Port> ContentSecurityPolicySourceList::parsePort(std::span<const CharacterType> span)
+template<typename CharacterType> std::optional<ContentSecurityPolicySourceList::Port> ContentSecurityPolicySourceList::parsePort(StringParsingBuffer<CharacterType> buffer)
 {
-    StringParsingBuffer buffer { span };
     ASSERT(buffer.position() <= buffer.end());
 
     if (!skipExactly(buffer, ':'))
@@ -552,7 +554,7 @@ template<typename CharacterType> std::optional<ContentSecurityPolicySourceList::
         return std::nullopt;
 
     unsigned length = buffer.position() - begin;
-    auto portInteger = parseInteger<uint16_t>(std::span { begin, length }).value_or(0);
+    auto portInteger = parseInteger<uint16_t>({ begin, length }).value_or(0);
     if (!portInteger)
         return std::nullopt;
 
@@ -581,7 +583,7 @@ template<typename CharacterType> bool ContentSecurityPolicySourceList::parseNonc
     if (buffer.atEnd() || buffer.position() == beginNonceValue || *buffer != '\'')
         return false;
     if (extensionModeAllowsKeywordsForDirective(m_contentSecurityPolicyModeForExtension, m_directiveName))
-        m_nonces.add(String({ beginNonceValue, buffer.position() }));
+        m_nonces.add(String(beginNonceValue, buffer.position() - beginNonceValue));
     return true;
 }
 

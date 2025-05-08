@@ -138,14 +138,14 @@ LayoutRect AccessibilitySpinButtonPart::elementRect() const
 
 bool AccessibilitySpinButtonPart::press()
 {
-    auto* spinButton = dynamicDowncast<AccessibilitySpinButton>(m_parent.get());
-    if (!spinButton)
+    if (!is<AccessibilitySpinButton>(m_parent))
         return false;
 
+    auto& spinButton = downcast<AccessibilitySpinButton>(*m_parent);
     if (m_isIncrementor)
-        spinButton->step(1);
+        spinButton.step(1);
     else
-        spinButton->step(-1);
+        spinButton.step(-1);
 
     return true;
 }

@@ -54,7 +54,7 @@ public:
     std::optional<ApplicationManifest>& processManifest();
 
 private:
-    void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess);
+    void notifyFinished(CachedResource&, const NetworkLoadMetrics&);
 
     SingleThreadWeakRef<DocumentLoader> m_documentLoader;
     std::optional<ApplicationManifest> m_processedManifest;

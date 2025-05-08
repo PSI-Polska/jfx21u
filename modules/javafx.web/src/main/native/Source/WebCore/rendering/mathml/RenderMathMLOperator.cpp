@@ -39,16 +39,18 @@
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderStyleInlines.h"
 #include "RenderText.h"
+#include "ScaleTransformOperation.h"
+#include "TransformOperations.h"
 #include <cmath>
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/MathExtras.h>
-#include <wtf/TZoneMallocInlines.h>
 #include <wtf/unicode/CharacterNames.h>
 
 namespace WebCore {
 
 using namespace MathMLNames;
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderMathMLOperator);
+WTF_MAKE_ISO_ALLOCATED_IMPL(RenderMathMLOperator);
 
 RenderMathMLOperator::RenderMathMLOperator(Type type, MathMLOperatorElement& element, RenderStyle&& style)
     : RenderMathMLToken(type, element, WTFMove(style))
@@ -60,8 +62,6 @@ RenderMathMLOperator::RenderMathMLOperator(Type type, Document& document, Render
     : RenderMathMLToken(type, document, WTFMove(style))
 {
 }
-
-RenderMathMLOperator::~RenderMathMLOperator() = default;
 
 MathMLOperatorElement& RenderMathMLOperator::element() const
 {
@@ -159,7 +159,7 @@ void RenderMathMLOperator::stretchTo(LayoutUnit heightAboveBaseline, LayoutUnit 
 
     m_mathOperator.stretchTo(style(), m_stretchHeightAboveBaseline + m_stretchDepthBelowBaseline);
 
-    setLogicalHeight(m_mathOperator.ascent() + m_mathOperator.descent() + borderAndPaddingLogicalHeight());
+    setLogicalHeight(m_mathOperator.ascent() + m_mathOperator.descent());
 }
 
 void RenderMathMLOperator::stretchTo(LayoutUnit width)
@@ -174,8 +174,8 @@ void RenderMathMLOperator::stretchTo(LayoutUnit width)
     m_stretchWidth = width;
     m_mathOperator.stretchTo(style(), width);
 
-    setLogicalWidth(leadingSpace() + width + trailingSpace() + borderAndPaddingLogicalWidth());
-    setLogicalHeight(m_mathOperator.ascent() + m_mathOperator.descent() + borderAndPaddingLogicalHeight());
+    setLogicalWidth(leadingSpace() + width + trailingSpace());
+    setLogicalHeight(m_mathOperator.ascent() + m_mathOperator.descent());
 }
 
 void RenderMathMLOperator::resetStretchSize()
@@ -196,7 +196,6 @@ void RenderMathMLOperator::computePreferredLogicalWidths()
     LayoutUnit preferredWidth;
 
     if (!useMathOperator()) {
-        // No need to include padding/border/margin here, RenderMathMLToken::computePreferredLogicalWidths takes care of them.
         RenderMathMLToken::computePreferredLogicalWidths();
         preferredWidth = m_maxPreferredLogicalWidth;
         if (isInvisibleOperator()) {
@@ -206,7 +205,7 @@ void RenderMathMLOperator::computePreferredLogicalWidths()
             preferredWidth -= std::min(LayoutUnit(glyphWidth), preferredWidth);
         }
     } else
-        preferredWidth = m_mathOperator.maxPreferredWidth() + borderAndPaddingLogicalWidth();
+        preferredWidth = m_mathOperator.maxPreferredWidth();
 
     // FIXME: The spacing should be added to the whole embellished operator (https://webkit.org/b/124831).
     // FIXME: The spacing should only be added inside (perhaps inferred) mrow (http://www.w3.org/TR/MathML/chapter3.html#presm.opspacing).
@@ -228,16 +227,14 @@ void RenderMathMLOperator::layoutBlock(bool relayoutChildren, LayoutUnit pageLog
     LayoutUnit trailingSpaceValue = trailingSpace();
 
     if (useMathOperator()) {
-        recomputeLogicalWidth();
         for (auto child = firstChildBox(); child; child = child->nextSiblingBox())
             child->layoutIfNeeded();
-        setLogicalWidth(leadingSpaceValue + m_mathOperator.width() + trailingSpaceValue + borderAndPaddingLogicalWidth());
-        setLogicalHeight(m_mathOperator.ascent() + m_mathOperator.descent() + borderAndPaddingLogicalHeight());
+        setLogicalWidth(leadingSpaceValue + m_mathOperator.width() + trailingSpaceValue);
+        setLogicalHeight(m_mathOperator.ascent() + m_mathOperator.descent());
 
         layoutPositionedObjects(relayoutChildren);
     } else {
         // We first do the normal layout without spacing.
-        // No need to handle padding/border/margin here, RenderMathMLToken::layoutBlock takes care of them.
         recomputeLogicalWidth();
         LayoutUnit width = logicalWidth();
         setLogicalWidth(width - leadingSpaceValue - trailingSpaceValue);
@@ -311,7 +308,7 @@ LayoutUnit RenderMathMLOperator::verticalStretchedOperatorShift() const
 std::optional<LayoutUnit> RenderMathMLOperator::firstLineBaseline() const
 {
     if (useMathOperator())
-        return LayoutUnit { static_cast<int>(lround(static_cast<float>(m_mathOperator.ascent() - verticalStretchedOperatorShift()))) } + borderAndPaddingBefore();
+        return LayoutUnit { static_cast<int>(lround(static_cast<float>(m_mathOperator.ascent() - verticalStretchedOperatorShift()))) };
     return RenderMathMLToken::firstLineBaseline();
 }
 
@@ -322,7 +319,7 @@ void RenderMathMLOperator::paint(PaintInfo& info, const LayoutPoint& paintOffset
         return;
 
     LayoutPoint operatorTopLeft = paintOffset + location();
-    operatorTopLeft.move((style().isLeftToRightDirection() ? leadingSpace() : trailingSpace()) + borderLeft() + paddingLeft(), borderAndPaddingBefore());
+    operatorTopLeft.move(style().isLeftToRightDirection() ? leadingSpace() : trailingSpace(), 0_lu);
 
     m_mathOperator.paint(style(), info, operatorTopLeft);
 }

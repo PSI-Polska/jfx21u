@@ -70,8 +70,8 @@ CallLinkStatus CallLinkStatus::computeFor(
     CallLinkInfo* callLinkInfo = map.get(CodeOrigin(bytecodeIndex)).callLinkInfo;
     if (!callLinkInfo)
         return CallLinkStatus();
-    // m_jitData is nullptr when it is tied to LLInt (not Baseline).
-    if (callLinkInfo->type() == CallLinkInfo::Type::DataOnly && !profiledBlock->m_jitData) {
+    // doneLocation is nullptr when it is tied to LLInt (not Baseline).
+    if (!callLinkInfo->doneLocation()) {
         if (exitSiteData.takesSlowPath)
             return takesSlowPath();
 #if ENABLE(DFG_JIT)
@@ -427,26 +427,26 @@ void CallLinkStatus::filter(JSValue value)
 void CallLinkStatus::dump(PrintStream& out) const
 {
     if (!isSet()) {
-        out.print("Not Set"_s);
+        out.print("Not Set");
         return;
     }
 
     CommaPrinter comma;
 
     if (m_isProved)
-        out.print(comma, "Statically Proved"_s);
+        out.print(comma, "Statically Proved");
 
     if (m_couldTakeSlowPath)
-        out.print(comma, "Could Take Slow Path"_s);
+        out.print(comma, "Could Take Slow Path");
 
     if (m_isBasedOnStub)
-        out.print(comma, "Based On Stub"_s);
+        out.print(comma, "Based On Stub");
 
     if (!m_variants.isEmpty())
         out.print(comma, listDump(m_variants));
 
     if (m_maxArgumentCountIncludingThisForVarargs)
-        out.print(comma, "maxArgumentCountIncludingThisForVarargs = "_s, m_maxArgumentCountIncludingThisForVarargs);
+        out.print(comma, "maxArgumentCountIncludingThisForVarargs = ", m_maxArgumentCountIncludingThisForVarargs);
 }
 
 } // namespace JSC

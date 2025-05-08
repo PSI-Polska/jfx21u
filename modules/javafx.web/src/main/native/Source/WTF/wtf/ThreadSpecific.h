@@ -102,9 +102,7 @@ private:
 
         PointerType storagePointer() const { return const_cast<PointerType>(reinterpret_cast<const T*>(&m_storage)); }
 
-        ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         typename std::aligned_storage<sizeof(T), std::alignment_of<T>::value>::type m_storage;
-        ALLOW_DEPRECATED_DECLARATIONS_END
         ThreadSpecific<T, canBeGCThread>* owner;
     };
 

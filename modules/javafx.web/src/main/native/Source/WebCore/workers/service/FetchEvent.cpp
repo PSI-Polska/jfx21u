@@ -33,12 +33,11 @@
 #include "JSDOMPromise.h"
 #include "JSFetchResponse.h"
 #include "Logging.h"
-#include <wtf/TZoneMallocInlines.h>
-#include <wtf/text/MakeString.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(FetchEvent);
+WTF_MAKE_ISO_ALLOCATED_IMPL(FetchEvent);
 
 Ref<FetchEvent> FetchEvent::createForTesting(ScriptExecutionContext& context)
 {
@@ -60,7 +59,7 @@ static inline Ref<DOMPromise> retrieveHandledPromise(JSC::JSGlobalObject& global
 }
 
 FetchEvent::FetchEvent(JSC::JSGlobalObject& globalObject, const AtomString& type, Init&& initializer, IsTrusted isTrusted)
-    : ExtendableEvent(EventInterfaceType::FetchEvent, type, initializer, isTrusted)
+    : ExtendableEvent(type, initializer, isTrusted)
     , m_request(initializer.request.releaseNonNull())
     , m_clientId(WTFMove(initializer.clientId))
     , m_resultingClientId(WTFMove(initializer.resultingClientId))
@@ -78,7 +77,7 @@ FetchEvent::~FetchEvent()
 
 ResourceError FetchEvent::createResponseError(const URL& url, const String& errorMessage, ResourceError::IsSanitized isSanitized)
 {
-    return ResourceError { errorDomainWebKitServiceWorker, 0, url, makeString("FetchEvent.respondWith received an error: "_s, errorMessage), ResourceError::Type::General, isSanitized };
+    return ResourceError { errorDomainWebKitServiceWorker, 0, url, makeString("FetchEvent.respondWith received an error: ", errorMessage), ResourceError::Type::General, isSanitized };
 
 }
 

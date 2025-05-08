@@ -26,6 +26,7 @@
 #include "config.h"
 #include "FontFace.h"
 
+#include "AllowedFonts.h"
 #include "CSSFontFaceSource.h"
 #include "CSSFontSelector.h"
 #include "CSSPrimitiveValueMappings.h"
@@ -36,7 +37,6 @@
 #include "Document.h"
 #include "DocumentInlines.h"
 #include "JSFontFace.h"
-#include "TrustedFonts.h"
 #include <JavaScriptCore/ArrayBuffer.h>
 #include <JavaScriptCore/ArrayBufferView.h>
 #include <JavaScriptCore/JSCInlines.h>
@@ -62,7 +62,7 @@ Ref<FontFace> FontFace::create(ScriptExecutionContext& context, const String& fa
     auto result = adoptRef(*new FontFace(*context.cssFontSelector()));
     result->suspendIfNeeded();
 
-#if COMPILER(GCC) && (CPU(ARM) || CPU(ARM64))
+#if COMPILER(GCC) && CPU(ARM64)
     // FIXME: Workaround for GCC bug https://gcc.gnu.org/bugzilla/show_bug.cgi?id=115033
     // that is related to https://gcc.gnu.org/bugzilla/show_bug.cgi?id=115135 as well.
     volatile
@@ -75,7 +75,7 @@ Ref<FontFace> FontFace::create(ScriptExecutionContext& context, const String& fa
         return result;
     }
 
-    auto fontTrustedTypes = context.settingsValues().downloadableBinaryFontTrustedTypes;
+    auto fontAllowedTypes = context.settingsValues().downloadableBinaryFontAllowedTypes;
     auto sourceConversionResult = WTF::switchOn(source,
         [&] (String& string) -> ExceptionOr<void> {
             auto* document = dynamicDowncast<Document>(context);
@@ -85,15 +85,15 @@ Ref<FontFace> FontFace::create(ScriptExecutionContext& context, const String& fa
             CSSFontFace::appendSources(result->backing(), *value, &context, false);
             return { };
         },
-        [&, fontTrustedTypes] (RefPtr<ArrayBufferView>& arrayBufferView) -> ExceptionOr<void> {
-            if (!arrayBufferView || fontBinaryParsingPolicy(arrayBufferView->span(), fontTrustedTypes) == FontParsingPolicy::Deny)
+        [&, fontAllowedTypes] (RefPtr<ArrayBufferView>& arrayBufferView) -> ExceptionOr<void> {
+            if (!arrayBufferView || !isFontBinaryAllowed(arrayBufferView->data(), arrayBufferView->byteLength(), fontAllowedTypes))
                 return { };
 
             dataRequiresAsynchronousLoading = populateFontFaceWithArrayBuffer(result->backing(), arrayBufferView.releaseNonNull());
             return { };
         },
-        [&, fontTrustedTypes] (RefPtr<ArrayBuffer>& arrayBuffer) -> ExceptionOr<void> {
-            if (!arrayBuffer || fontBinaryParsingPolicy(arrayBuffer->span(), fontTrustedTypes) == FontParsingPolicy::Deny)
+        [&, fontAllowedTypes] (RefPtr<ArrayBuffer>& arrayBuffer) -> ExceptionOr<void> {
+            if (!arrayBuffer || !isFontBinaryAllowed(arrayBuffer->data(), arrayBuffer->byteLength(), fontAllowedTypes))
                 return { };
 
             unsigned byteLength = arrayBuffer->byteLength();
@@ -378,6 +378,11 @@ auto FontFace::loadedForBindings() -> LoadedPromise&
 FontFace& FontFace::loadedPromiseResolve()
 {
     return *this;
+}
+
+const char* FontFace::activeDOMObjectName() const
+{
+    return "FontFace";
 }
 
 bool FontFace::virtualHasPendingActivity() const

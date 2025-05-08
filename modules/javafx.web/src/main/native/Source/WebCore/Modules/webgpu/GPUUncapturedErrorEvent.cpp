@@ -26,14 +26,14 @@
 #include "config.h"
 #include "GPUUncapturedErrorEvent.h"
 
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(GPUUncapturedErrorEvent);
+WTF_MAKE_ISO_ALLOCATED_IMPL(GPUUncapturedErrorEvent);
 
 GPUUncapturedErrorEvent::GPUUncapturedErrorEvent(const AtomString& type, GPUUncapturedErrorEventInit&& uncapturedErrorEventInit)
-    : Event(EventInterfaceType::GPUUncapturedErrorEvent, type, uncapturedErrorEventInit, IsTrusted::Yes)
+    : Event(type, uncapturedErrorEventInit, IsTrusted::Yes)
     , m_uncapturedErrorEventInit(WTFMove(uncapturedErrorEventInit))
 {
 }
@@ -41,6 +41,11 @@ GPUUncapturedErrorEvent::GPUUncapturedErrorEvent(const AtomString& type, GPUUnca
 GPUError GPUUncapturedErrorEvent::error() const
 {
         return m_uncapturedErrorEventInit.error;
+}
+
+EventInterface GPUUncapturedErrorEvent::eventInterface() const
+{
+    return GPUUncapturedErrorEventInterfaceType;
 }
 
 }

@@ -42,8 +42,7 @@ enum WebGLPowerPreference {
 
 [
     Conditional=WEBGL,
-    JSGenerateToJSObject,
-    JSGenerateToNativeObject
+    JSGenerateToJSObject
 ] dictionary WebGLContextAttributes {
     GLboolean alpha = true;
     GLboolean depth = true;

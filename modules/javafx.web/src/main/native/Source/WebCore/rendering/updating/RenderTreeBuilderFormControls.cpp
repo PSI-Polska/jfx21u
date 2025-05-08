@@ -49,22 +49,22 @@ void RenderTreeBuilder::FormControls::attach(RenderMenuList& parent, RenderPtr<R
     parent.didAttachChild(newChild, beforeChild);
 }
 
-RenderPtr<RenderObject> RenderTreeBuilder::FormControls::detach(RenderMenuList& parent, RenderObject& child, RenderTreeBuilder::WillBeDestroyed willBeDestroyed)
+RenderPtr<RenderObject> RenderTreeBuilder::FormControls::detach(RenderMenuList& parent, RenderObject& child)
 {
     auto* innerRenderer = parent.innerRenderer();
     if (!innerRenderer || &child == innerRenderer)
-        return m_builder.blockBuilder().detach(parent, child, willBeDestroyed);
-    return m_builder.detach(*innerRenderer, child, willBeDestroyed);
+        return m_builder.blockBuilder().detach(parent, child);
+    return m_builder.detach(*innerRenderer, child);
 }
 
-RenderPtr<RenderObject> RenderTreeBuilder::FormControls::detach(RenderButton& parent, RenderObject& child, RenderTreeBuilder::WillBeDestroyed willBeDestroyed)
+RenderPtr<RenderObject> RenderTreeBuilder::FormControls::detach(RenderButton& parent, RenderObject& child)
 {
     auto* innerRenderer = parent.innerRenderer();
     if (!innerRenderer || &child == innerRenderer || child.parent() == &parent) {
         ASSERT(&child == innerRenderer || !innerRenderer);
-        return m_builder.blockBuilder().detach(parent, child, willBeDestroyed);
+        return m_builder.blockBuilder().detach(parent, child);
     }
-    return m_builder.detach(*innerRenderer, child, willBeDestroyed);
+    return m_builder.detach(*innerRenderer, child);
 }
 
 

@@ -223,7 +223,7 @@ AppHighlightStorage::AppHighlightStorage(Document& document)
 
 AppHighlightStorage::~AppHighlightStorage() = default;
 
-void AppHighlightStorage::storeAppHighlight(Ref<StaticRange>&& range, CompletionHandler<void(AppHighlight&&)>&& completionHandler)
+void AppHighlightStorage::storeAppHighlight(Ref<StaticRange>&& range)
 {
     auto data = createAppHighlightRangeData(range);
     std::optional<String> text;
@@ -231,8 +231,9 @@ void AppHighlightStorage::storeAppHighlight(Ref<StaticRange>&& range, Completion
     if (!data.text().isEmpty())
         text = data.text();
 
-    AppHighlight highlight = { data.toSharedBuffer(), text, CreateNewGroupForHighlight::No, HighlightRequestOriginatedInApp::No };
-    completionHandler(WTFMove(highlight));
+    AppHighlight highlight = {data.toSharedBuffer(), text, CreateNewGroupForHighlight::No, HighlightRequestOriginatedInApp::No};
+
+    m_document->page()->chrome().storeAppHighlight(WTFMove(highlight));
 }
 
 void AppHighlightStorage::restoreAndScrollToAppHighlight(Ref<FragmentedSharedBuffer>&& buffer, ScrollToHighlight scroll)

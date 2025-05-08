@@ -36,17 +36,11 @@
 #include <wtf/HashMap.h>
 #include <wtf/ListHashSet.h>
 #include <wtf/SetForScope.h>
-#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WGSL {
 
 constexpr bool shouldLogGlobalSorting = false;
-
-inline String nameForDeclaration(AST::Declaration& declaration)
-{
-    return is<AST::ConstAssert>(declaration) ? "const_assert"_s : declaration.name().id();
-}
 
 class Graph {
 public:
@@ -158,8 +152,10 @@ public:
     EdgeSet& edges() { return m_edges; }
     void addEdge(Node& source, Node& target)
     {
-        if constexpr (shouldLogGlobalSorting)
-            dataLogLn("addEdge: source: ", nameForDeclaration(source.astNode()), ", target: ", target.astNode().name());
+        if constexpr (shouldLogGlobalSorting) {
+            String sourceNodeName = is<AST::ConstAssert>(source.astNode()) ? "const_assert"_s : source.astNode().name().id();
+            dataLogLnIf(shouldLogGlobalSorting, "addEdge: source: ", sourceNodeName, ", target: ", target.astNode().name());
+        }
         auto result = m_edges.add(Edge(source, target));
         Edge& edge = *result.iterator;
         source.outgoingEdges().add(edge);
@@ -217,7 +213,7 @@ GraphBuilder::GraphBuilder(Graph& graph, Graph::Node& node)
 void GraphBuilder::visit(AST::Parameter& parameter)
 {
     introduceVariable(parameter.name());
-    Base::visit(parameter);
+    Base::visit(parameter.typeName());
 }
 
 void GraphBuilder::visit(AST::VariableStatement& variable)
@@ -270,7 +266,7 @@ static std::optional<FailedCheck> reorder(AST::Declaration::List& list)
             // variables with the same name), while the type checker will also identify
             // redeclarations of different types (e.g. a variable and a struct with the
             // same name)
-            return FailedCheck { Vector<Error> { Error(makeString("redeclaration of '"_s, node.name(), '\''), node.span()) }, { } };
+            return FailedCheck { Vector<Error> { Error(makeString("redeclaration of '", node.name(), "'"), node.span()) }, { } };
         }
         graphNodeList.append(graphNode);
     }
@@ -286,8 +282,10 @@ static std::optional<FailedCheck> reorder(AST::Declaration::List& list)
 
     std::function<void(Graph::Node&, unsigned)> processNode;
     processNode = [&](Graph::Node& node, unsigned currentIndex) {
-        if constexpr (shouldLogGlobalSorting)
-            dataLogLn("Process: ", nameForDeclaration(node.astNode()));
+        if constexpr (shouldLogGlobalSorting) {
+            String nodeName = is<AST::ConstAssert>(node.astNode()) ? "const_assert"_s : node.astNode().name().id();
+            dataLogLn("Process: ", nodeName);
+        }
         list.append(node.astNode());
         for (auto edge : node.incomingEdges()) {
             auto& source = edge.source();
@@ -319,8 +317,7 @@ static std::optional<FailedCheck> reorder(AST::Declaration::List& list)
     auto* node = cycleNode;
     HashSet<Graph::Node*> visited;
     while (true) {
-        if constexpr (shouldLogGlobalSorting)
-            dataLogLn("cycle node: ", nameForDeclaration(node->astNode()));
+        dataLogLnIf(shouldLogGlobalSorting, "cycle node: ", node->astNode().name());
         ASSERT(!node->outgoingEdges().isEmpty());
         visited.add(node);
         node = &node->outgoingEdges().first().target();
@@ -329,11 +326,11 @@ static std::optional<FailedCheck> reorder(AST::Declaration::List& list)
             break;
         }
     }
-    error.append("encountered a dependency cycle: "_s, cycleNode->astNode().name());
+    error.append("encountered a dependency cycle: ", cycleNode->astNode().name());
     do {
         ASSERT(!node->outgoingEdges().isEmpty());
         node = &node->outgoingEdges().first().target();
-        error.append(" -> "_s, node->astNode().name());
+        error.append(" -> ", node->astNode().name());
     } while (node != cycleNode);
     return FailedCheck { Vector<Error> { Error(error.toString(), cycleNode->astNode().span()) }, { } };
 }

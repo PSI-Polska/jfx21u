@@ -43,8 +43,7 @@ enum SkipEmptySectionsValue { DoNotSkipEmptySections, SkipEmptySections };
 enum class TableIntrinsics : uint8_t { ForLayout, ForKeyword };
 
 class RenderTable : public RenderBlock {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderTable);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderTable);
+    WTF_MAKE_ISO_ALLOCATED(RenderTable);
 public:
     RenderTable(Type, Element&, RenderStyle&&);
     RenderTable(Type, Document&, RenderStyle&&);
@@ -57,16 +56,15 @@ public:
 
     bool collapseBorders() const { return style().borderCollapse() == BorderCollapse::Collapse; }
 
-    LayoutUnit borderStart() const final { return m_borderStart; }
-    LayoutUnit borderEnd() const final { return m_borderEnd; }
-    LayoutUnit borderBefore() const final;
-    LayoutUnit borderAfter() const final;
+    LayoutUnit borderStart() const override { return m_borderStart; }
+    LayoutUnit borderEnd() const override { return m_borderEnd; }
+    LayoutUnit borderBefore() const override;
+    LayoutUnit borderAfter() const override;
 
-    RectEdges<LayoutUnit> borderWidths() const final;
-    inline LayoutUnit borderLeft() const final;
-    inline LayoutUnit borderRight() const final;
-    inline LayoutUnit borderTop() const final;
-    inline LayoutUnit borderBottom() const final;
+    inline LayoutUnit borderLeft() const override;
+    inline LayoutUnit borderRight() const override;
+    inline LayoutUnit borderTop() const override;
+    inline LayoutUnit borderBottom() const override;
 
     Color bgColor() const { return style().visitedDependentColorWithColorFilter(CSSPropertyBackgroundColor); }
 

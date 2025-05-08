@@ -53,7 +53,7 @@ struct UnlinkedWasmToWasmCall;
 class CalleeGroup final : public ThreadSafeRefCounted<CalleeGroup> {
 public:
     friend class CallsiteCollection;
-    typedef void CallbackType(Ref<CalleeGroup>&&, bool);
+    typedef void CallbackType(Ref<CalleeGroup>&&);
     using AsyncCompilationCallback = RefPtr<WTF::SharedTask<CallbackType>>;
     static Ref<CalleeGroup> createFromLLInt(VM&, MemoryMode, ModuleInformation&, RefPtr<LLIntCallees>);
     static Ref<CalleeGroup> createFromIPInt(VM&, MemoryMode, ModuleInformation&, RefPtr<IPIntCallees>);
@@ -80,7 +80,7 @@ public:
 
     // These two callee getters are only valid once the callees have been populated.
 
-    JSEntrypointCallee& jsEntrypointCalleeFromFunctionIndexSpace(unsigned functionIndexSpace)
+    Callee& jsEntrypointCalleeFromFunctionIndexSpace(unsigned functionIndexSpace)
     {
         ASSERT(runnable());
         RELEASE_ASSERT(functionIndexSpace >= functionImportCount());

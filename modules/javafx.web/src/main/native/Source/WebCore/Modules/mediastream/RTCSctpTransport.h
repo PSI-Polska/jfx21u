@@ -35,15 +35,14 @@ namespace WebCore {
 
 class RTCDtlsTransport;
 
-class RTCSctpTransport final : public RefCounted<RTCSctpTransport>, public ActiveDOMObject, public EventTarget, public RTCSctpTransportBackendClient {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RTCSctpTransport);
+class RTCSctpTransport final : public RefCounted<RTCSctpTransport>, public ActiveDOMObject, public EventTarget, public RTCSctpTransportBackend::Client {
+    WTF_MAKE_ISO_ALLOCATED(RTCSctpTransport);
 public:
     static Ref<RTCSctpTransport> create(ScriptExecutionContext&, UniqueRef<RTCSctpTransportBackend>&&, Ref<RTCDtlsTransport>&&);
     ~RTCSctpTransport();
 
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
+    using RefCounted<RTCSctpTransport>::ref;
+    using RefCounted<RTCSctpTransport>::deref;
 
     RTCDtlsTransport& transport() { return m_transport.get(); }
     RTCSctpTransportState state() const { return m_state; }
@@ -58,13 +57,14 @@ private:
     RTCSctpTransport(ScriptExecutionContext&, UniqueRef<RTCSctpTransportBackend>&&, Ref<RTCDtlsTransport>&&);
 
     // EventTarget
-    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::RTCSctpTransport; }
+    EventTargetInterface eventTargetInterface() const final { return RTCSctpTransportEventTargetInterfaceType; }
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
     // ActiveDOMObject
     void stop() final;
+    const char* activeDOMObjectName() const final { return "RTCSctpTransport"; }
     bool virtualHasPendingActivity() const final;
 
     // RTCSctpTransport::Client

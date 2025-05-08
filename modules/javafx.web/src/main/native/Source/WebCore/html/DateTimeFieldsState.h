@@ -44,7 +44,6 @@ struct DateTimeFieldsState {
 
     std::optional<unsigned> year;
     std::optional<unsigned> month;
-    std::optional<unsigned> week;
     std::optional<unsigned> dayOfMonth;
     std::optional<unsigned> hour;
     std::optional<unsigned> minute;

@@ -48,6 +48,10 @@ bool WebRTCProvider::webRTCAvailable()
     return false;
 }
 
+void WebRTCProvider::setActive(bool)
+{
+}
+
 void WebRTCProvider::setH264HardwareEncoderAllowed(bool)
 {
 }

@@ -26,7 +26,6 @@
 #pragma once
 
 #include "FloatRect.h"
-#include "ImageBuffer.h"
 #include "IntRect.h"
 #include "PixelBuffer.h"
 #include "RenderingMode.h"
@@ -38,15 +37,11 @@
 OBJC_CLASS CIImage;
 #endif
 
-#if USE(SKIA)
-#include <skia/core/SkPicture.h>
-#include <skia/core/SkPictureRecorder.h>
-#endif
-
 namespace WebCore {
 
 class Filter;
 class FloatRect;
+class ImageBuffer;
 class ImageBufferAllocator;
 
 class FilterImage : public RefCounted<FilterImage> {

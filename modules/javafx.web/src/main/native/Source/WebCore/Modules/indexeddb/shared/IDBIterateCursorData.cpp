@@ -25,8 +25,7 @@
 
 #include "config.h"
 #include "IDBIterateCursorData.h"
-
-#include <wtf/text/MakeString.h>
+#include <wtf/text/StringConcatenateNumbers.h>
 
 namespace WebCore {
 
@@ -39,7 +38,7 @@ IDBIterateCursorData IDBIterateCursorData::isolatedCopy() const
 
 String IDBIterateCursorData::loggingString() const
 {
-    return makeString("<Itr8Crsr: key "_s, keyData.loggingString(), ", primaryKey "_s, primaryKeyData.loggingString(), ", count "_s, count, '>');
+    return makeString("<Itr8Crsr: key ", keyData.loggingString(), ", primaryKey ", primaryKeyData.loggingString(), ", count ", count, '>');
 }
 
 #endif

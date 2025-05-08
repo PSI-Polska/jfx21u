@@ -43,7 +43,6 @@
 #include <wtf/EnumTraits.h>
 #include <wtf/SafeStrerror.h>
 #include <wtf/text/CString.h>
-#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
 
@@ -62,7 +61,7 @@ PlatformFileHandle openFile(const String& path, FileOpenMode mode, FileAccessPer
     if (fsRep.isNull())
         return invalidPlatformFileHandle;
 
-    int platformFlag = O_CLOEXEC;
+    int platformFlag = 0;
     switch (mode) {
     case FileOpenMode::Read:
         platformFlag |= O_RDONLY;
@@ -135,20 +134,20 @@ bool flushFile(PlatformFileHandle handle)
     return !fsync(handle);
 }
 
-int64_t writeToFile(PlatformFileHandle handle, std::span<const uint8_t> data)
+int writeToFile(PlatformFileHandle handle, const void* data, int length)
 {
     do {
-        auto bytesWritten = write(handle, data.data(), data.size());
+        int bytesWritten = write(handle, data, static_cast<size_t>(length));
         if (bytesWritten >= 0)
             return bytesWritten;
     } while (errno == EINTR);
     return -1;
 }
 
-int64_t readFromFile(PlatformFileHandle handle, std::span<uint8_t> data)
+int readFromFile(PlatformFileHandle handle, void* data, int length)
 {
     do {
-        auto bytesRead = read(handle, data.data(), data.size());
+        int bytesRead = read(handle, data, static_cast<size_t>(length));
         if (bytesRead >= 0)
             return bytesRead;
     } while (errno == EINTR);
@@ -260,9 +259,8 @@ static const char* temporaryFileDirectory()
 #endif
 }
 
-std::pair<String, PlatformFileHandle> openTemporaryFile(StringView prefix, StringView suffix)
+String openTemporaryFile(StringView prefix, PlatformFileHandle& handle, StringView suffix)
 {
-    PlatformFileHandle handle = invalidPlatformFileHandle;
     // Suffix is not supported because that's incompatible with mkstemp.
     // This is OK for now since the code using it is built on macOS only.
     ASSERT_UNUSED(suffix, suffix.isEmpty());
@@ -271,15 +269,15 @@ std::pair<String, PlatformFileHandle> openTemporaryFile(StringView prefix, Strin
     if (snprintf(buffer, PATH_MAX, "%s/%sXXXXXX", temporaryFileDirectory(), prefix.utf8().data()) >= PATH_MAX)
         goto end;
 
-    handle = mkostemp(buffer, O_CLOEXEC);
+    handle = mkstemp(buffer);
     if (handle < 0)
         goto end;
 
-    return { String::fromUTF8(buffer), handle };
+    return String::fromUTF8(buffer);
 
 end:
     handle = invalidPlatformFileHandle;
-    return { String(), handle };
+    return String();
 }
 #endif // !PLATFORM(COCOA)
 

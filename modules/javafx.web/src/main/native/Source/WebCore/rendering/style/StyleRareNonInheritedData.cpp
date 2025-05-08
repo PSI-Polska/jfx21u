@@ -27,7 +27,6 @@
 #include "StyleImage.h"
 #include "StyleReflection.h"
 #include "StyleResolver.h"
-#include "StyleTextEdge.h"
 #include <wtf/PointerComparison.h>
 #include <wtf/RefPtr.h>
 #include <wtf/text/TextStream.h>
@@ -68,7 +67,6 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , translate(RenderStyle::initialTranslate())
     , offsetPath(RenderStyle::initialOffsetPath())
     // containerNames
-    , viewTransitionClasses(RenderStyle::initialViewTransitionClasses())
     // viewTransitionName
     , columnGap(RenderStyle::initialColumnGap())
     , rowGap(RenderStyle::initialRowGap())
@@ -94,14 +92,11 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , scrollbarWidth(RenderStyle::initialScrollbarWidth())
     , zoom(RenderStyle::initialZoom())
     , pseudoElementNameArgument(nullAtom())
-    , anchorNames(RenderStyle::initialAnchorNames())
-    , positionAnchor(RenderStyle::initialPositionAnchor())
-    , textBoxEdge(RenderStyle::initialTextBoxEdge())
     , blockStepSize(RenderStyle::initialBlockStepSize())
     , blockStepInsert(static_cast<unsigned>(RenderStyle::initialBlockStepInsert()))
     , overscrollBehaviorX(static_cast<unsigned>(RenderStyle::initialOverscrollBehaviorX()))
     , overscrollBehaviorY(static_cast<unsigned>(RenderStyle::initialOverscrollBehaviorY()))
-    , pageSizeType(static_cast<unsigned>(PageSizeType::Auto))
+    , pageSizeType(PAGE_SIZE_AUTO)
     , transformStyle3D(static_cast<unsigned>(RenderStyle::initialTransformStyle3D()))
     , transformStyleForcedToFlat(false)
     , backfaceVisibility(static_cast<unsigned>(RenderStyle::initialBackfaceVisibility()))
@@ -125,7 +120,6 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , textBoxTrim(static_cast<unsigned>(RenderStyle::initialTextBoxTrim()))
     , overflowAnchor(static_cast<unsigned>(RenderStyle::initialOverflowAnchor()))
     , hasClip(false)
-    , fieldSizing(RenderStyle::initialFieldSizing())
 {
 }
 
@@ -162,7 +156,6 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , translate(o.translate)
     , offsetPath(o.offsetPath)
     , containerNames(o.containerNames)
-    , viewTransitionClasses(o.viewTransitionClasses)
     , viewTransitionName(o.viewTransitionName)
     , columnGap(o.columnGap)
     , rowGap(o.rowGap)
@@ -188,9 +181,6 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , scrollbarWidth(o.scrollbarWidth)
     , zoom(o.zoom)
     , pseudoElementNameArgument(o.pseudoElementNameArgument)
-    , anchorNames(o.anchorNames)
-    , positionAnchor(o.positionAnchor)
-    , textBoxEdge(o.textBoxEdge)
     , blockStepSize(o.blockStepSize)
     , blockStepInsert(o.blockStepInsert)
     , overscrollBehaviorX(o.overscrollBehaviorX)
@@ -219,7 +209,6 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , textBoxTrim(o.textBoxTrim)
     , overflowAnchor(o.overflowAnchor)
     , hasClip(o.hasClip)
-    , fieldSizing(o.fieldSizing)
 {
 }
 
@@ -287,8 +276,6 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && scrollbarWidth == o.scrollbarWidth
         && zoom == o.zoom
         && pseudoElementNameArgument == o.pseudoElementNameArgument
-        && anchorNames == o.anchorNames
-        && positionAnchor == o.positionAnchor
         && blockStepSize == o.blockStepSize
         && blockStepInsert == o.blockStepInsert
         && overscrollBehaviorX == o.overscrollBehaviorX
@@ -315,15 +302,12 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && containIntrinsicHeightType == o.containIntrinsicHeightType
         && containerType == o.containerType
         && textBoxTrim == o.textBoxTrim
-        && textBoxEdge == o.textBoxEdge
         && overflowAnchor == o.overflowAnchor
-        && viewTransitionClasses == o.viewTransitionClasses
         && viewTransitionName == o.viewTransitionName
-        && hasClip == o.hasClip
-        && fieldSizing == o.fieldSizing;
+        && hasClip == o.hasClip;
 }
 
-OptionSet<Containment> StyleRareNonInheritedData::usedContain() const
+OptionSet<Containment> StyleRareNonInheritedData::effectiveContainment() const
 {
     auto containment = contain;
 

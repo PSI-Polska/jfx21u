@@ -22,7 +22,6 @@
 
 #pragma once
 
-#include "DocumentMarker.h"
 #include "RenderElement.h"
 #include "RenderTextLineBoxes.h"
 #include "Text.h"
@@ -37,31 +36,23 @@ class LegacyInlineTextBox;
 struct GlyphOverflow;
 struct WordTrailingSpace;
 
-namespace Layout {
-class InlineTextBox;
-}
-
 namespace LayoutIntegration {
 class LineLayout;
 }
 
 class RenderText : public RenderObject {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderText);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderText);
+    WTF_MAKE_ISO_ALLOCATED(RenderText);
 public:
     RenderText(Type, Text&, const String&);
     RenderText(Type, Document&, const String&);
 
     virtual ~RenderText();
 
-    Layout::InlineTextBox* layoutBox();
-    const Layout::InlineTextBox* layoutBox() const;
-
     WEBCORE_EXPORT Text* textNode() const;
 
     const RenderStyle& style() const;
     const RenderStyle& firstLineStyle() const;
-    const RenderStyle* getCachedPseudoStyle(const Style::PseudoElementIdentifier&, const RenderStyle* parentStyle = nullptr) const;
+    const RenderStyle* getCachedPseudoStyle(PseudoId, const RenderStyle* parentStyle = nullptr) const;
 
     Color selectionBackgroundColor() const;
     Color selectionForegroundColor() const;
@@ -70,7 +61,6 @@ public:
 
     const RenderStyle* spellingErrorPseudoStyle() const;
     const RenderStyle* grammarErrorPseudoStyle() const;
-    const RenderStyle* targetTextPseudoStyle() const;
 
     virtual String originalText() const;
 
@@ -96,7 +86,7 @@ public:
 
     Vector<FloatQuad> absoluteQuadsClippedToEllipsis() const;
 
-    Position positionForPoint(const LayoutPoint&, HitTestSource) final;
+    Position positionForPoint(const LayoutPoint&) final;
 
     UChar characterAt(unsigned) const;
     unsigned length() const final { return text().length(); }
@@ -185,7 +175,7 @@ public:
 
     bool containsOnlyCSSWhitespace(unsigned from, unsigned length) const;
 
-    Vector<std::pair<unsigned, unsigned>> contentRangesBetweenOffsetsForType(const DocumentMarker::Type, unsigned startOffset, unsigned endOffset) const;
+    Vector<std::pair<unsigned, unsigned>> draggedContentRangesBetweenOffsets(unsigned startOffset, unsigned endOffset) const;
 
     RenderInline* inlineWrapperForDisplayContents();
     void setInlineWrapperForDisplayContents(RenderInline*);
@@ -201,8 +191,6 @@ public:
     std::optional<bool> canUseSimplifiedTextMeasuring() const { return m_canUseSimplifiedTextMeasuring; }
     void setHasPositionDependentContentWidth(bool hasPositionDependentContentWidth) { m_hasPositionDependentContentWidth = hasPositionDependentContentWidth; }
     std::optional<bool> hasPositionDependentContentWidth() const { return m_hasPositionDependentContentWidth; }
-    void setHasStrongDirectionalityContent(bool hasStrongDirectionalityContent) { m_hasStrongDirectionalityContent = hasStrongDirectionalityContent; }
-    std::optional<bool> hasStrongDirectionalityContent() const { return m_hasStrongDirectionalityContent; }
 
 protected:
     virtual void computePreferredLogicalWidths(float leadWidth, bool forcedMinMaxWidthComputation = false);
@@ -222,7 +210,7 @@ private:
 
     bool canHaveChildren() const final { return false; }
 
-    VisiblePosition positionForPoint(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*) override;
+    VisiblePosition positionForPoint(const LayoutPoint&, const RenderFragmentContainer*) override;
 
     void setSelectionState(HighlightState) final;
     LayoutRect selectionRectForRepaint(const RenderLayerModelObject* repaintContainer, bool clipToVisibleContent = true) final;
@@ -261,9 +249,7 @@ private:
 
     String m_text;
 
-protected:
     std::optional<bool> m_canUseSimplifiedTextMeasuring;
-private:
     std::optional<bool> m_hasPositionDependentContentWidth;
     std::optional<bool> m_hasStrongDirectionalityContent;
     unsigned m_hasBreakableChar : 1 { false }; // Whether or not we can be broken into multiple lines.
@@ -282,7 +268,6 @@ private:
     unsigned m_useBackslashAsYenSymbol : 1 { false };
     unsigned m_originalTextDiffersFromRendered : 1 { false };
     unsigned m_hasInlineWrapperForDisplayContents : 1 { false };
-    unsigned m_hasSecureTextTimer : 1 { false };
 };
 
 String applyTextTransform(const RenderStyle&, const String&, UChar previousCharacter);
@@ -305,11 +290,11 @@ inline const RenderStyle& RenderText::firstLineStyle() const
     return parent()->firstLineStyle();
 }
 
-inline const RenderStyle* RenderText::getCachedPseudoStyle(const Style::PseudoElementIdentifier& pseudoElementIdentifier, const RenderStyle* parentStyle) const
+inline const RenderStyle* RenderText::getCachedPseudoStyle(PseudoId pseudoId, const RenderStyle* parentStyle) const
 {
     // Pseudostyle is associated with an element, so ascend the tree until we find a non-anonymous ancestor.
     if (auto* ancestor = firstNonAnonymousAncestor())
-        return ancestor->getCachedPseudoStyle(pseudoElementIdentifier, parentStyle);
+        return ancestor->getCachedPseudoStyle(pseudoId, parentStyle);
     return nullptr;
 }
 
@@ -352,13 +337,6 @@ inline const RenderStyle* RenderText::grammarErrorPseudoStyle() const
 {
     if (auto* ancestor = firstNonAnonymousAncestor())
         return ancestor->grammarErrorPseudoStyle();
-    return nullptr;
-}
-
-inline const RenderStyle* RenderText::targetTextPseudoStyle() const
-{
-    if (auto* ancestor = firstNonAnonymousAncestor())
-        return ancestor->targetTextPseudoStyle();
     return nullptr;
 }
 

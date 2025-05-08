@@ -92,7 +92,7 @@ void TextTrackLoader::processNewCueData(CachedResource& resource)
 
     while (m_parseOffset < buffer->size()) {
         auto data = buffer->getSomeData(m_parseOffset);
-        m_cueParser->parseBytes(data.span());
+        m_cueParser->parseBytes(data.data(), data.size());
         m_parseOffset += data.size();
     }
 }
@@ -115,7 +115,7 @@ void TextTrackLoader::corsPolicyPreventedLoad()
     m_state = Failed;
 }
 
-void TextTrackLoader::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess)
+void TextTrackLoader::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&)
 {
     ASSERT_UNUSED(resource, m_resource == &resource);
 

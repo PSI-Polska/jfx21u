@@ -37,7 +37,6 @@
 #include <pal/crypto/CryptoDigest.h>
 #include <sqlite3.h>
 #include <wtf/FileSystem.h>
-#include <wtf/text/MakeString.h>
 
 #if PLATFORM(COCOA)
 #include <pal/spi/cocoa/SQLite3SPI.h>
@@ -49,7 +48,7 @@
 
 namespace WebCore {
 
-static constexpr std::array<ASCIILiteral, 3> databaseFileSuffixes { ""_s, "-shm"_s, "-wal"_s };
+static constexpr std::array<const char *, 3> databaseFileSuffixes { "", "-shm", "-wal" };
 
 SQLiteFileSystem::SQLiteFileSystem()
 {
@@ -88,8 +87,8 @@ bool SQLiteFileSystem::deleteEmptyDatabaseDirectory(const String& path)
 bool SQLiteFileSystem::deleteDatabaseFile(const String& filePath)
 {
     bool fileExists = false;
-    for (auto suffix : databaseFileSuffixes) {
-        auto path = makeString(filePath, suffix);
+    for (const auto* suffix : databaseFileSuffixes) {
+        String path = filePath + suffix;
         FileSystem::deleteFile(path);
         fileExists |= FileSystem::fileExists(path);
     }
@@ -100,8 +99,8 @@ bool SQLiteFileSystem::deleteDatabaseFile(const String& filePath)
 #if PLATFORM(COCOA)
 void SQLiteFileSystem::setCanSuspendLockedFileAttribute(const String& filePath)
 {
-    for (auto suffix : databaseFileSuffixes) {
-        auto path = makeString(filePath, suffix);
+    for (const auto* suffix : databaseFileSuffixes) {
+        String path = filePath + suffix;
         char excluded = 0xff;
         auto result = setxattr(FileSystem::fileSystemRepresentation(path).data(), "com.apple.runningboard.can-suspend-locked", &excluded, sizeof(excluded), 0, 0);
         if (result < 0 && !strcmp(suffix, ""))
@@ -113,7 +112,7 @@ void SQLiteFileSystem::setCanSuspendLockedFileAttribute(const String& filePath)
 bool SQLiteFileSystem::moveDatabaseFile(const String& oldFilePath, const String& newFilePath)
 {
     bool allMoved = true;
-    for (auto suffix : databaseFileSuffixes)
+    for (const auto* suffix : databaseFileSuffixes)
         allMoved &= FileSystem::moveFile(makeString(oldFilePath, suffix), makeString(newFilePath, suffix));
 
     return allMoved;
@@ -129,8 +128,8 @@ bool SQLiteFileSystem::truncateDatabaseFile(sqlite3* database)
 uint64_t SQLiteFileSystem::databaseFileSize(const String& filePath)
 {
     uint64_t totalSize = 0;
-    for (auto suffix : databaseFileSuffixes) {
-        if (auto fileSize = FileSystem::fileSize(makeString(filePath, suffix)))
+    for (const auto* suffix : databaseFileSuffixes) {
+        if (auto fileSize = FileSystem::fileSize(filePath + suffix))
             totalSize += *fileSize;
     }
 
@@ -151,7 +150,7 @@ String SQLiteFileSystem::computeHashForFileName(StringView fileName)
 {
     auto cryptoDigest = PAL::CryptoDigest::create(PAL::CryptoDigest::Algorithm::SHA_256);
     auto utf8FileName = fileName.utf8();
-    cryptoDigest->addBytes(utf8FileName.span());
+    cryptoDigest->addBytes(utf8FileName.data(), utf8FileName.length());
     auto digest = cryptoDigest->computeHash();
 
     // Convert digest to hex.
@@ -163,7 +162,7 @@ String SQLiteFileSystem::computeHashForFileName(StringView fileName)
         snprintf(buffer, 3, "%02X", digest.at(i));
         buffer += 2;
     }
-    return String::fromUTF8(result.span());
+    return String::fromUTF8(result);
 }
 
 } // namespace WebCore

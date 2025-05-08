@@ -99,7 +99,9 @@ AbstractHeapRepository::AbstractHeapRepository()
     RELEASE_ASSERT(!JSCell_freeListNext.offset());
 }
 
-AbstractHeapRepository::~AbstractHeapRepository() = default;
+AbstractHeapRepository::~AbstractHeapRepository()
+{
+}
 
 void AbstractHeapRepository::decorateMemory(const AbstractHeap* heap, B3::Value* value)
 {

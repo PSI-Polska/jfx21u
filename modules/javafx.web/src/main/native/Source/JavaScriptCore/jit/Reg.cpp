@@ -33,7 +33,7 @@
 
 namespace JSC {
 
-ASCIILiteral Reg::debugName() const
+const char* Reg::debugName() const
 {
     if (!*this)
         return nullptr;

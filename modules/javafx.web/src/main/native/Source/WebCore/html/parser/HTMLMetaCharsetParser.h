@@ -41,7 +41,7 @@ public:
     HTMLMetaCharsetParser();
 
     // Returns true if done checking, regardless whether an encoding is found.
-    bool checkForMetaCharset(std::span<const uint8_t>);
+    bool checkForMetaCharset(const char*, size_t);
 
     const PAL::TextEncoding& encoding() { return m_encoding; }
 

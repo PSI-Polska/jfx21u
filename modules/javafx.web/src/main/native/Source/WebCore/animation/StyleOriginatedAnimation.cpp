@@ -36,27 +36,29 @@
 #include "Logging.h"
 #include "RenderStyle.h"
 #include "StyleOriginatedAnimationEvent.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(StyleOriginatedAnimation);
+WTF_MAKE_ISO_ALLOCATED_IMPL(StyleOriginatedAnimation);
 
 StyleOriginatedAnimation::StyleOriginatedAnimation(const Styleable& styleable, const Animation& backingAnimation)
     : WebAnimation(styleable.element.document())
     , m_owningElement(styleable.element)
-    , m_owningPseudoElementIdentifier(styleable.pseudoElementIdentifier)
+    , m_owningPseudoId(styleable.pseudoId)
     , m_backingAnimation(const_cast<Animation&>(backingAnimation))
 {
 }
 
-StyleOriginatedAnimation::~StyleOriginatedAnimation() = default;
+StyleOriginatedAnimation::~StyleOriginatedAnimation()
+{
+}
 
 const std::optional<const Styleable> StyleOriginatedAnimation::owningElement() const
 {
     if (m_owningElement)
-        return Styleable(*m_owningElement, m_owningPseudoElementIdentifier);
+        return Styleable(*m_owningElement, m_owningPseudoId);
     return std::nullopt;
 }
 
@@ -114,10 +116,9 @@ void StyleOriginatedAnimation::initialize(const RenderStyle* oldStyle, const Ren
 
     ASSERT(m_owningElement);
 
-    Ref effect = KeyframeEffect::create(Ref { *m_owningElement }, m_owningPseudoElementIdentifier);
-    setEffect(effect.copyRef());
+    setEffect(KeyframeEffect::create(*m_owningElement, m_owningPseudoId));
     setTimeline(&m_owningElement->document().timeline());
-    effect->computeStyleOriginatedAnimationBlendingKeyframes(oldStyle, newStyle, resolutionContext);
+    downcast<KeyframeEffect>(effect())->computeStyleOriginatedAnimationBlendingKeyframes(oldStyle, newStyle, resolutionContext);
     syncPropertiesWithBackingAnimation();
     if (backingAnimation().playState() == AnimationPlayState::Playing)
         play();
@@ -201,7 +202,7 @@ void StyleOriginatedAnimation::setTimeline(RefPtr<AnimationTimeline>&& newTimeli
     WebAnimation::setTimeline(WTFMove(newTimeline));
 }
 
-void StyleOriginatedAnimation::cancel(WebAnimation::Silently silently)
+void StyleOriginatedAnimation::cancel()
 {
     auto cancelationTime = 0_s;
 
@@ -213,14 +214,14 @@ void StyleOriginatedAnimation::cancel(WebAnimation::Silently silently)
         }
     }
 
-    WebAnimation::cancel(silently);
+    WebAnimation::cancel();
 
     invalidateDOMEvents(shouldFireEvents, cancelationTime);
 }
 
-void StyleOriginatedAnimation::cancelFromStyle(WebAnimation::Silently silently)
+void StyleOriginatedAnimation::cancelFromStyle()
 {
-    cancel(silently);
+    cancel();
     disassociateFromOwningElement();
 }
 
@@ -392,7 +393,7 @@ void StyleOriginatedAnimation::enqueueDOMEvent(const AtomString& eventType, Seco
     }();
 
     auto time = secondsToWebAnimationsAPITime(elapsedTime) / 1000;
-    auto event = createEvent(eventType, scheduledTimelineTime, time, m_owningPseudoElementIdentifier);
+    auto event = createEvent(eventType, scheduledTimelineTime, time, m_owningPseudoId);
     event->setTarget(RefPtr { m_owningElement.get() });
     enqueueAnimationEvent(WTFMove(event));
 }

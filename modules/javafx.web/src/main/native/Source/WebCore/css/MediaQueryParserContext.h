@@ -39,7 +39,6 @@ public:
     WEBCORE_EXPORT MediaQueryParserContext(const Document&);
 
     bool useSystemAppearance { false };
-    bool cssStyleQueriesEnabled { false };
     CSSParserMode mode { HTMLStandardMode };
 };
 

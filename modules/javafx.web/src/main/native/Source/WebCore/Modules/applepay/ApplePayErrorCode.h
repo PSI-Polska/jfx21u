@@ -40,10 +40,6 @@ enum class ApplePayErrorCode : uint8_t {
     CouponCodeInvalid,
     CouponCodeExpired,
 #endif
-#if ENABLE(APPLE_PAY_DISBURSEMENTS)
-    UnsupportedCard,
-    RecipientContactInvalid
-#endif
 };
 
 } // namespace WebCore

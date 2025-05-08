@@ -61,18 +61,12 @@ namespace WebCore {
 DEFINE_DEBUG_ONLY_GLOBAL(WTF::RefCountedLeakCounter, cachedFrameCounter, ("CachedFrame"));
 
 CachedFrameBase::CachedFrameBase(Frame& frame)
-    : m_view(frame.virtualView())
+    : m_document(is<LocalFrame>(frame) ? downcast<LocalFrame>(frame).document() : nullptr)
+    , m_documentLoader(is<LocalFrame>(frame) ? downcast<LocalFrame>(frame).loader().documentLoader() : nullptr)
+    , m_view(frame.virtualView())
+    , m_url(is<LocalFrame>(frame) ? downcast<LocalFrame>(frame).document()->url() : URL())
     , m_isMainFrame(!frame.tree().parent())
 {
-    if (auto* localFrame = dynamicDowncast<LocalFrame>(frame))
-        initializeWithLocalFrame(*localFrame);
-}
-
-void CachedFrameBase::initializeWithLocalFrame(LocalFrame& frame)
-{
-    m_document = frame.document();
-    m_documentLoader = frame.loader().documentLoader();
-    m_url = frame.document()->url();
 }
 
 CachedFrameBase::~CachedFrameBase()
@@ -118,8 +112,8 @@ void CachedFrameBase::restore()
         if (localFrame)
             m_cachedFrameScriptData->restore(*localFrame);
 
-        if (CheckedPtr svgExtensions = document->svgExtensionsIfExists())
-            svgExtensions->unpauseAnimations();
+        if (document->svgExtensions())
+            document->accessSVGExtensions().unpauseAnimations();
 
         document->resume(ReasonForSuspension::BackForwardCache);
 
@@ -184,8 +178,7 @@ CachedFrame::CachedFrame(Frame& frame)
         document->suspend(ReasonForSuspension::BackForwardCache);
     }
 
-    RefPtr localFrame = dynamicDowncast<LocalFrame>(frame);
-    m_cachedFrameScriptData = localFrame ? makeUnique<ScriptCachedFrameData>(*localFrame) : nullptr;
+    m_cachedFrameScriptData = is<LocalFrame>(frame) ? makeUnique<ScriptCachedFrameData>(downcast<LocalFrame>(frame)) : nullptr;
 
     if (document)
         document->protectedWindow()->suspendForBackForwardCache();
@@ -196,10 +189,11 @@ CachedFrame::CachedFrame(Frame& frame)
         localFrameView->resetLayoutMilestones();
 
     // The main frame is reused for the navigation and the opener link to its should thus persist.
+    RefPtr localFrame = dynamicDowncast<LocalFrame>(frame);
     if (localFrame) {
         CheckedRef frameLoader = localFrame->loader();
     if (!frame.isMainFrame())
-            localFrame->detachFromAllOpenedFrames();
+            frameLoader->detachFromAllOpenedFrames();
 
         frameLoader->client().savePlatformDataToCachedFrame(this);
 

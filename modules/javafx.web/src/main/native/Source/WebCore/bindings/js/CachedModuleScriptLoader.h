@@ -59,7 +59,7 @@ public:
 private:
     CachedModuleScriptLoader(ModuleScriptLoaderClient&, DeferredPromise&, CachedScriptFetcher&, RefPtr<JSC::ScriptFetchParameters>&&);
 
-    void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) final;
+    void notifyFinished(CachedResource&, const NetworkLoadMetrics&) final;
 
     CachedResourceHandle<CachedScript> m_cachedScript;
     URL m_sourceURL;

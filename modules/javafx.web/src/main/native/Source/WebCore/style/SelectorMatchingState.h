@@ -25,7 +25,6 @@
 #pragma once
 
 #include "ContainerQuery.h"
-#include "ContainerQueryEvaluator.h"
 #include "HasSelectorFilter.h"
 #include "SelectorFilter.h"
 #include <wtf/HashMap.h>
@@ -40,7 +39,7 @@ enum class HasPseudoClassMatch : uint8_t { None, Matches, Fails, FailsSubtree };
 struct SelectorMatchingState {
     SelectorFilter selectorFilter;
 
-    ContainerQueryEvaluationState containerQueryEvaluationState;
+    CachedQueryContainers queryContainers;
 
     HashMap<HasPseudoClassCacheKey, HasPseudoClassMatch> hasPseudoClassMatchCache;
     HashMap<HasPseudoClassFilterKey, std::unique_ptr<HasSelectorFilter>> hasPseudoClassSelectorFilters;

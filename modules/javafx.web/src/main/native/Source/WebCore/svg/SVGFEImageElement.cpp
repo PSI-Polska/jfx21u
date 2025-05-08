@@ -35,11 +35,11 @@
 #include "SVGNames.h"
 #include "SVGPreserveAspectRatioValue.h"
 #include "SVGRenderingContext.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGFEImageElement);
+WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFEImageElement);
 
 inline SVGFEImageElement::SVGFEImageElement(const QualifiedName& tagName, Document& document)
     : SVGFilterPrimitiveStandardAttributes(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -67,14 +67,16 @@ bool SVGFEImageElement::renderingTaintsOrigin() const
 {
     if (!m_cachedImage)
         return false;
-    RefPtr image = m_cachedImage->image();
+    auto* image = m_cachedImage->image();
     return image && image->renderingTaintsOrigin();
 }
 
 void SVGFEImageElement::clearResourceReferences()
 {
-    if (CachedResourceHandle cachedImage = std::exchange(m_cachedImage, nullptr))
-        cachedImage->removeClient(*this);
+    if (m_cachedImage) {
+        m_cachedImage->removeClient(*this);
+        m_cachedImage = nullptr;
+    }
 
     removeElementReference();
 }
@@ -86,10 +88,10 @@ void SVGFEImageElement::requestImageResource()
 
     CachedResourceRequest request(ResourceRequest(document().completeURL(href())), options);
     request.setInitiator(*this);
-    m_cachedImage = document().protectedCachedResourceLoader()->requestImage(WTFMove(request)).value_or(nullptr);
+    m_cachedImage = document().cachedResourceLoader().requestImage(WTFMove(request)).value_or(nullptr);
 
-    if (CachedResourceHandle cachedImage = m_cachedImage)
-        cachedImage->addClient(*this);
+    if (m_cachedImage)
+        m_cachedImage->addClient(*this);
 }
 
 void SVGFEImageElement::buildPendingResource()
@@ -161,7 +163,7 @@ void SVGFEImageElement::removedFromAncestor(RemovalType removalType, ContainerNo
         clearResourceReferences();
 }
 
-void SVGFEImageElement::notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess)
+void SVGFEImageElement::notifyFinished(CachedResource&, const NetworkLoadMetrics&)
 {
     if (!isConnected())
         return;
@@ -171,14 +173,15 @@ void SVGFEImageElement::notifyFinished(CachedResource&, const NetworkLoadMetrics
     if (!parent || !parent->hasTagName(SVGNames::filterTag))
         return;
 
-    CheckedPtr parentRenderer = parent->renderer();
+    RenderElement* parentRenderer = parent->renderer();
     if (!parentRenderer)
         return;
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
     // FIXME: [LBSE] Implement filters.
     if (document().settings().layerBasedSVGEngineEnabled())
         return;
-
+#endif
     LegacyRenderSVGResource::markForLayoutAndParentResourceInvalidation(*parentRenderer);
 }
 
@@ -191,8 +194,8 @@ std::tuple<RefPtr<ImageBuffer>, FloatRect> SVGFEImageElement::imageBufferForEffe
     if (isDescendantOrShadowDescendantOf(target.element.get()))
         return { };
 
-    RefPtr contextNode = static_pointer_cast<SVGElement>(target.element);
-    CheckedPtr renderer = contextNode->renderer();
+    auto contextNode = static_pointer_cast<SVGElement>(target.element);
+    auto renderer = contextNode->renderer();
     if (!renderer)
         return { };
 
@@ -204,24 +207,24 @@ std::tuple<RefPtr<ImageBuffer>, FloatRect> SVGFEImageElement::imageBufferForEffe
     FloatSize scale(absoluteTransform.xScale(), absoluteTransform.yScale());
     auto imageRect = renderer->repaintRectInLocalCoordinates();
 
-    RefPtr imageBuffer = destinationContext.createScaledImageBuffer(imageRect, scale);
+    auto imageBuffer = destinationContext.createScaledImageBuffer(imageRect, scale);
     if (!imageBuffer)
         return { };
 
     auto& context = imageBuffer->context();
     SVGRenderingContext::renderSubtreeToContext(context, *renderer, AffineTransform());
 
-    return { WTFMove(imageBuffer), imageRect };
+    return { imageBuffer, imageRect };
 }
 
 RefPtr<FilterEffect> SVGFEImageElement::createFilterEffect(const FilterEffectVector&, const GraphicsContext& destinationContext) const
 {
-    if (CachedResourceHandle cachedImage = m_cachedImage) {
-        RefPtr image = cachedImage->imageForRenderer(renderer());
+    if (m_cachedImage) {
+        auto image = m_cachedImage->imageForRenderer(renderer());
         if (!image || image->isNull())
             return nullptr;
 
-        RefPtr nativeImage = image->currentPreTransformedNativeImage();
+        auto nativeImage = image->preTransformedNativeImageForCurrentFrame();
         if (!nativeImage)
             return nullptr;
 

@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "AcceleratedEffect.h"
 #include "AnimationEffect.h"
 #include "AnimationEffectPhase.h"
 #include "BlendingKeyframes.h"
@@ -52,20 +51,16 @@ class FilterOperations;
 class MutableStyleProperties;
 class RenderStyle;
 
-#if ENABLE(THREADED_ANIMATION_RESOLUTION)
-class AcceleratedEffect;
-#endif
-
 namespace Style {
 struct ResolutionContext;
 }
 
 class KeyframeEffect final : public AnimationEffect, public CSSPropertyBlendingClient, public KeyframeInterpolation {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(KeyframeEffect);
+    WTF_MAKE_ISO_ALLOCATED(KeyframeEffect);
 public:
     static ExceptionOr<Ref<KeyframeEffect>> create(JSC::JSGlobalObject&, Document&, Element*, JSC::Strong<JSC::JSObject>&&, std::optional<std::variant<double, KeyframeEffectOptions>>&&);
     static Ref<KeyframeEffect> create(Ref<KeyframeEffect>&&);
-    static Ref<KeyframeEffect> create(const Element&, const std::optional<Style::PseudoElementIdentifier>&);
+    static Ref<KeyframeEffect> create(const Element&, PseudoId);
 
     struct BasePropertyIndexedKeyframe {
         std::variant<std::nullptr_t, Vector<std::optional<double>>, double> offset = Vector<std::optional<double>>();
@@ -130,7 +125,7 @@ public:
     void setBindingsComposite(CompositeOperation);
 
     void getAnimatedStyle(std::unique_ptr<RenderStyle>& animatedStyle);
-    OptionSet<AnimationImpact> apply(RenderStyle& targetStyle, const Style::ResolutionContext&, std::optional<Seconds> = std::nullopt);
+    void apply(RenderStyle& targetStyle, const Style::ResolutionContext&, std::optional<Seconds> = std::nullopt);
     void invalidate();
 
     void animationTimingDidChange();
@@ -158,8 +153,6 @@ public:
     const BlendingKeyframes& blendingKeyframes() const { return m_blendingKeyframes; }
     const HashSet<AnimatableCSSProperty>& animatedProperties();
     bool animatesProperty(const AnimatableCSSProperty&) const;
-    const HashSet<AnimatableCSSProperty>& acceleratedProperties() const { return m_acceleratedProperties; }
-    const HashSet<AnimatableCSSProperty>& acceleratedPropertiesWithImplicitKeyframe() const { return m_acceleratedPropertiesWithImplicitKeyframe; }
 
     bool computeExtentOfTransformAnimation(LayoutRect&) const;
     bool computeTransformedExtentViaTransformList(const FloatRect&, const RenderStyle&, LayoutRect&) const;
@@ -178,11 +171,9 @@ public:
     void customPropertyRegistrationDidChange(const AtomString&);
 
     bool canBeAccelerated() const;
-    bool accelerationWasPrevented() const { return m_runningAccelerated == RunningAccelerated::Prevented; }
     bool preventsAcceleration() const;
     void effectStackNoLongerPreventsAcceleration();
     void effectStackNoLongerAllowsAcceleration();
-    void effectStackNoLongerAllowsAccelerationDuringAcceleratedActionApplication();
     void wasAddedToEffectStack();
     void wasRemovedFromEffectStack();
 
@@ -193,13 +184,8 @@ public:
 
     WebAnimationType animationType() const { return m_animationType; }
 
-#if ENABLE(THREADED_ANIMATION_RESOLUTION)
-    const AcceleratedEffect* acceleratedRepresentation() const { return m_acceleratedRepresentation.get(); }
-    void setAcceleratedRepresentation(const AcceleratedEffect* acceleratedRepresentation) { m_acceleratedRepresentation = acceleratedRepresentation; }
-#endif
-
 private:
-    KeyframeEffect(Element*, const std::optional<Style::PseudoElementIdentifier>&);
+    KeyframeEffect(Element*, PseudoId);
 
     enum class AcceleratedAction : uint8_t { Play, Pause, UpdateProperties, TransformChange, Stop };
     enum class AcceleratedProperties : uint8_t { None, Some, All };
@@ -212,7 +198,7 @@ private:
         ~CanBeAcceleratedMutationScope();
 
     private:
-        RefPtr<KeyframeEffect> m_effect;
+        KeyframeEffect* m_effect;
         bool m_couldOriginallyPreventAcceleration;
 #if ENABLE(THREADED_ANIMATION_RESOLUTION)
         bool m_couldOriginallyBeAccelerated;
@@ -239,14 +225,13 @@ private:
     void computeCSSTransitionBlendingKeyframes(const RenderStyle& oldStyle, const RenderStyle& newStyle);
     void computeAcceleratedPropertiesState();
     void setBlendingKeyframes(BlendingKeyframes&&);
+    bool isTargetingTransformRelatedProperty() const;
     void checkForMatchingTransformFunctionLists();
     void computeHasImplicitKeyframeForAcceleratedProperty();
     void computeHasKeyframeComposingAcceleratedProperty();
     void computeHasAcceleratedPropertyOverriddenByCascadeProperty();
     void computeHasReferenceFilter();
     void computeHasSizeDependentTransform();
-    void analyzeAcceleratedProperties();
-
     void abilityToBeAcceleratedDidChange();
     void updateAcceleratedAnimationIfNecessary();
 
@@ -260,7 +245,7 @@ private:
     private:
         KeyframeEffect* m_effect;
         RefPtr<Element> m_originalTarget;
-        std::optional<Style::PseudoElementIdentifier> m_originalPseudoElementIdentifier;
+        PseudoId m_originalPseudoId;
     };
 
     bool threadedAnimationResolutionEnabled() const;
@@ -294,16 +279,10 @@ private:
     AtomString m_keyframesName;
     BlendingKeyframes m_blendingKeyframes { emptyAtom() };
     HashSet<AnimatableCSSProperty> m_animatedProperties;
-    HashSet<AnimatableCSSProperty> m_acceleratedProperties;
-    HashSet<AnimatableCSSProperty> m_acceleratedPropertiesWithImplicitKeyframe;
     Vector<ParsedKeyframe> m_parsedKeyframes;
     Vector<AcceleratedAction> m_pendingAcceleratedActions;
     RefPtr<Element> m_target;
-    std::optional<Style::PseudoElementIdentifier> m_pseudoElementIdentifier { };
-
-#if ENABLE(THREADED_ANIMATION_RESOLUTION)
-    WeakPtr<AcceleratedEffect> m_acceleratedRepresentation;
-#endif
+    PseudoId m_pseudoId { PseudoId::None };
 
     AcceleratedAction m_lastRecordedAcceleratedAction { AcceleratedAction::Stop };
     WebAnimationType m_animationType { WebAnimationType::WebAnimation };

@@ -77,10 +77,10 @@ public:
 
     unsigned length() const { return m_length; }
     bool is8Bit() const { return true; }
-    template<typename CharacterType> void writeTo(CharacterType* destination) const { StringImpl::copyCharacters(destination, span()); }
+    template<typename CharacterType> void writeTo(CharacterType* destination) const { StringImpl::copyCharacters(destination, buffer(), m_length); }
 
 private:
-    std::span<const LChar> span() const { return spanReinterpretCast<const LChar>(std::span { m_buffer }).first(m_length); }
+    const LChar* buffer() const { return reinterpret_cast<const LChar*>(&m_buffer[0]); }
 
     NumberToStringBuffer m_buffer;
     unsigned m_length;
@@ -106,8 +106,7 @@ public:
     }
 
     unsigned length() const { return m_length; }
-    const LChar* buffer() const { return byteCast<LChar>(&m_buffer[0]); }
-    std::span<const LChar> span() const { return spanReinterpretCast<const LChar>(std::span { m_buffer }).first(m_length); }
+    const LChar* buffer() const { return reinterpret_cast<const LChar*>(&m_buffer[0]); }
 
 private:
     NumberToStringBuffer m_buffer;
@@ -123,7 +122,7 @@ public:
 
     unsigned length() const { return m_number.length(); }
     bool is8Bit() const { return true; }
-    template<typename CharacterType> void writeTo(CharacterType* destination) const { StringImpl::copyCharacters(destination, m_number.span()); }
+    template<typename CharacterType> void writeTo(CharacterType* destination) const { StringImpl::copyCharacters(destination, m_number.buffer(), m_number.length()); }
 
 private:
     const FormattedNumber& m_number;
@@ -141,8 +140,7 @@ public:
     }
 
     unsigned length() const { return m_length; }
-    const LChar* buffer() const { return byteCast<LChar>(&m_buffer[0]); }
-    std::span<const LChar> span() const { return spanReinterpretCast<const LChar>(std::span { m_buffer }).first(m_length); }
+    const LChar* buffer() const { return reinterpret_cast<const LChar*>(&m_buffer[0]); }
 
 private:
     NumberToCSSStringBuffer m_buffer;
@@ -158,7 +156,7 @@ public:
 
     unsigned length() const { return m_number.length(); }
     bool is8Bit() const { return true; }
-    template<typename CharacterType> void writeTo(CharacterType* destination) const { StringImpl::copyCharacters(destination, m_number.span()); }
+    template<typename CharacterType> void writeTo(CharacterType* destination) const { StringImpl::copyCharacters(destination, m_number.buffer(), m_number.length()); }
 
 private:
     const FormattedCSSNumber& m_number;

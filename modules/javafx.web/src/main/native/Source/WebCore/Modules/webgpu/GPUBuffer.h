@@ -40,14 +40,13 @@
 #include <wtf/RangeSet.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
-#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 class GPUDevice;
 
-class GPUBuffer : public RefCounted<GPUBuffer>, public CanMakeWeakPtr<GPUBuffer> {
+class GPUBuffer : public RefCounted<GPUBuffer> {
 public:
     static Ref<GPUBuffer> create(Ref<WebGPU::Buffer>&& backing, size_t bufferSize, GPUBufferUsageFlags usage, bool mappedAtCreation, GPUDevice& device)
     {
@@ -78,18 +77,15 @@ private:
     void internalUnmap(ScriptExecutionContext&);
 
     Ref<WebGPU::Buffer> m_backing;
-    struct ArrayBufferWithOffset {
-        RefPtr<JSC::ArrayBuffer> buffer;
-        size_t offset { 0 };
-    };
-    Vector<ArrayBufferWithOffset> m_arrayBuffers;
+    WebGPU::Buffer::MappedRange m_mappedRange;
+    JSC::ArrayBuffer* m_arrayBuffer { nullptr };
     size_t m_bufferSize { 0 };
     size_t m_mappedRangeOffset { 0 };
     size_t m_mappedRangeSize { 0 };
     const GPUBufferUsageFlags m_usage { 0 };
     GPUBufferMapState m_mapState { GPUBufferMapState::Unmapped };
     std::optional<MapAsyncPromise> m_pendingMapPromise;
-    WeakPtr<GPUDevice, WeakPtrImplWithEventTargetData> m_device;
+    GPUDevice& m_device;
     using MappedRanges = WTF::RangeSet<WTF::Range<size_t>>;
     MappedRanges m_mappedRanges;
     HashSet<size_t, DefaultHash<size_t>, WTF::UnsignedWithZeroKeyHashTraits<size_t>> m_mappedPoints;

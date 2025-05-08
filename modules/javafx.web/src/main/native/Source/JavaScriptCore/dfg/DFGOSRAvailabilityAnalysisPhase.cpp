@@ -41,7 +41,7 @@ class OSRAvailabilityAnalysisPhase : public Phase {
     static constexpr bool verbose = false;
 public:
     OSRAvailabilityAnalysisPhase(Graph& graph, HeadFunctor& availabilityAtHead, TailFunctor& availabilityAtTail)
-        : Phase(graph, "OSR availability analysis"_s)
+        : Phase(graph, "OSR availability analysis")
         , availabilityAtHead(availabilityAtHead)
         , availabilityAtTail(availabilityAtTail)
     {
@@ -224,7 +224,9 @@ LocalOSRAvailabilityCalculator::LocalOSRAvailabilityCalculator(Graph& graph)
 {
 }
 
-LocalOSRAvailabilityCalculator::~LocalOSRAvailabilityCalculator() = default;
+LocalOSRAvailabilityCalculator::~LocalOSRAvailabilityCalculator()
+{
+}
 
 void LocalOSRAvailabilityCalculator::beginBlock(BasicBlock* block)
 {

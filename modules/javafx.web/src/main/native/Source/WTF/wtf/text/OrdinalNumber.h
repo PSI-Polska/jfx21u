@@ -24,10 +24,6 @@
 
 #pragma once
 
-#include <compare>
-#include <wtf/HashFunctions.h>
-#include <wtf/HashTraits.h>
-
 namespace WTF {
 
 // An abstract number of element in a sequence. The sequence has a first element.
@@ -46,30 +42,11 @@ public:
     int oneBasedInt() const { return m_zeroBasedValue + 1; }
 
     friend bool operator==(OrdinalNumber, OrdinalNumber) = default;
-    friend std::strong_ordering operator<=>(OrdinalNumber, OrdinalNumber) = default;
+    bool operator>(OrdinalNumber other) const { return m_zeroBasedValue > other.m_zeroBasedValue; }
 
 private:
     OrdinalNumber(int zeroBasedInt) : m_zeroBasedValue(zeroBasedInt) { }
     int m_zeroBasedValue;
-};
-
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<OrdinalNumber> {
-    static unsigned hash(OrdinalNumber key) { return intHash(static_cast<unsigned>(key.zeroBasedInt())); }
-    static bool equal(OrdinalNumber a, OrdinalNumber b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
-
-template<typename T> struct HashTraits;
-template<> struct HashTraits<OrdinalNumber> : GenericHashTraits<OrdinalNumber> {
-    static void constructDeletedValue(OrdinalNumber& slot)
-    {
-        slot = OrdinalNumber::beforeFirst();
-    }
-    static bool isDeletedValue(OrdinalNumber value)
-    {
-        return value == OrdinalNumber::beforeFirst();
-    }
 };
 
 }

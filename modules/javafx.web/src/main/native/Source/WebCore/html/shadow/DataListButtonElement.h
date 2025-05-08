@@ -34,8 +34,7 @@ namespace WebCore {
 class TextFieldInputType;
 
 class DataListButtonElement final : public HTMLDivElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DataListButtonElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DataListButtonElement);
+    WTF_MAKE_ISO_ALLOCATED(DataListButtonElement);
 public:
     class DataListButtonOwner {
     public:

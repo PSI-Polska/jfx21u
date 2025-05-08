@@ -36,7 +36,7 @@
 
 namespace WebCore {
 
-AccessibilityMathMLElement::AccessibilityMathMLElement(RenderObject& renderer, bool isAnonymousOperator)
+AccessibilityMathMLElement::AccessibilityMathMLElement(RenderObject* renderer, bool isAnonymousOperator)
     : AccessibilityRenderObject(renderer)
     , m_isAnonymousOperator(isAnonymousOperator)
 {
@@ -44,7 +44,7 @@ AccessibilityMathMLElement::AccessibilityMathMLElement(RenderObject& renderer, b
 
 AccessibilityMathMLElement::~AccessibilityMathMLElement() = default;
 
-Ref<AccessibilityMathMLElement> AccessibilityMathMLElement::create(RenderObject& renderer, bool isAnonymousOperator)
+Ref<AccessibilityMathMLElement> AccessibilityMathMLElement::create(RenderObject* renderer, bool isAnonymousOperator)
 {
     return adoptRef(*new AccessibilityMathMLElement(renderer, isAnonymousOperator));
 }
@@ -66,11 +66,11 @@ AccessibilityRole AccessibilityMathMLElement::determineAccessibilityRole()
     return AccessibilityRole::MathElement;
 }
 
-String AccessibilityMathMLElement::textUnderElement(TextUnderElementMode mode) const
+String AccessibilityMathMLElement::textUnderElement(AccessibilityTextUnderElementMode mode) const
 {
-    if (m_isAnonymousOperator && !mode.isHidden()) {
+    if (m_isAnonymousOperator) {
         UChar operatorChar = downcast<RenderMathMLOperator>(*m_renderer).textContent();
-        return operatorChar ? String(span(operatorChar)) : String();
+        return operatorChar ? String(&operatorChar, 1) : String();
     }
 
     return AccessibilityRenderObject::textUnderElement(mode);
@@ -117,7 +117,7 @@ bool AccessibilityMathMLElement::isMathSubscriptSuperscript() const
 
 bool AccessibilityMathMLElement::isMathRow() const
 {
-    return m_renderer && m_renderer->isRenderMathMLRow() && !isMathRoot() && !isMathUnderOver() && !isMathMultiscript() && !isMathFraction();
+    return m_renderer && m_renderer->isRenderMathMLRow() && !isMathRoot();
 }
 
 bool AccessibilityMathMLElement::isMathUnderOver() const
@@ -152,14 +152,18 @@ bool AccessibilityMathMLElement::isAnonymousMathOperator() const
 
 bool AccessibilityMathMLElement::isMathFenceOperator() const
 {
-    auto* mathMLOperator = dynamicDowncast<RenderMathMLOperator>(renderer());
-    return mathMLOperator && mathMLOperator->hasOperatorFlag(MathMLOperatorDictionary::Fence);
+    if (!is<RenderMathMLOperator>(renderer()))
+        return false;
+
+    return downcast<RenderMathMLOperator>(*m_renderer).hasOperatorFlag(MathMLOperatorDictionary::Fence);
 }
 
 bool AccessibilityMathMLElement::isMathSeparatorOperator() const
 {
-    auto* mathMLOperator = dynamicDowncast<RenderMathMLOperator>(renderer());
-    return mathMLOperator && mathMLOperator->hasOperatorFlag(MathMLOperatorDictionary::Separator);
+    if (!is<RenderMathMLOperator>(renderer()))
+        return false;
+
+    return downcast<RenderMathMLOperator>(*m_renderer).hasOperatorFlag(MathMLOperatorDictionary::Separator);
 }
 
 bool AccessibilityMathMLElement::isMathText() const
@@ -384,7 +388,7 @@ void AccessibilityMathMLElement::mathPrescripts(AccessibilityMathMultiscriptPair
     std::pair<AccessibilityObject*, AccessibilityObject*> prescriptPair;
     for (Node* child = node()->firstChild(); child; child = child->nextSibling()) {
         if (foundPrescript) {
-            AccessibilityObject* axChild = axObjectCache()->getOrCreate(*child);
+            AccessibilityObject* axChild = axObjectCache()->getOrCreate(child);
             if (axChild && axChild->isMathElement()) {
                 if (!prescriptPair.first)
                     prescriptPair.first = axChild;
@@ -417,7 +421,7 @@ void AccessibilityMathMLElement::mathPostscripts(AccessibilityMathMultiscriptPai
         if (child->hasTagName(MathMLNames::mprescriptsTag))
             break;
 
-        AccessibilityObject* axChild = axObjectCache()->getOrCreate(*child);
+        AccessibilityObject* axChild = axObjectCache()->getOrCreate(child);
         if (axChild && axChild->isMathElement()) {
             if (!foundBaseElement)
                 foundBaseElement = true;
@@ -439,11 +443,10 @@ void AccessibilityMathMLElement::mathPostscripts(AccessibilityMathMultiscriptPai
 
 int AccessibilityMathMLElement::mathLineThickness() const
 {
-    auto* fraction = dynamicDowncast<RenderMathMLFraction>(renderer());
-    if (!fraction)
+    if (!is<RenderMathMLFraction>(renderer()))
         return -1;
 
-    return fraction->relativeLineThickness();
+    return downcast<RenderMathMLFraction>(*m_renderer).relativeLineThickness();
 }
 
 } // namespace WebCore

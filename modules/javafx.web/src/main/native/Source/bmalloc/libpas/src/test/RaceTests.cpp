@@ -157,7 +157,7 @@ void testLocalAllocatorStopRace(pas_race_test_hook_kind kindToStopOn)
 
     thread thread1 = thread(
         [&] () {
-            void* ptr = iso_allocate(&heap, pas_non_compact_allocation_mode);
+            void* ptr = iso_allocate(&heap);
             CHECK(ptr);
             CHECK(pas_segregated_view_is_exclusive(
                       pas_segregated_view_for_object(
@@ -179,7 +179,7 @@ void testLocalAllocatorStopRace(pas_race_test_hook_kind kindToStopOn)
         globalCond.notify_all();
     }
 
-    void* ptr = iso_allocate(&heap, pas_non_compact_allocation_mode);
+    void* ptr = iso_allocate(&heap);
     if (kindToStopOn == pas_race_test_hook_local_allocator_stop_before_unlock)
         CHECK_EQUAL(ptr, thePtr);
     thread1.join();
@@ -218,7 +218,7 @@ void testLocalAllocatorStopRaceAgainstScavenge(pas_race_test_hook_kind kindToSto
 
     thread thread1 = thread(
         [&] () {
-            void* ptr = iso_allocate(&heap, pas_non_compact_allocation_mode);
+            void* ptr = iso_allocate(&heap);
             CHECK(ptr);
             CHECK(pas_segregated_view_is_exclusive(
                       pas_segregated_view_for_object(
@@ -242,7 +242,7 @@ void testLocalAllocatorStopRaceAgainstScavenge(pas_race_test_hook_kind kindToSto
 
     pas_scavenger_decommit_free_memory();
 
-    void* ptr = iso_allocate(&heap, pas_non_compact_allocation_mode);
+    void* ptr = iso_allocate(&heap);
     if (kindToStopOn == pas_race_test_hook_local_allocator_stop_before_unlock)
         CHECK_EQUAL(ptr, thePtr);
     hookShouldStop = true;

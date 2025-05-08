@@ -28,7 +28,6 @@
 
 #include "JSGlobalObject.h"
 #include <wtf/SafeStrerror.h>
-#include <wtf/text/MakeString.h>
 
 namespace JSC {
 

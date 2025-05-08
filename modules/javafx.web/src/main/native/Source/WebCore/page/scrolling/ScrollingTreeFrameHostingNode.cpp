@@ -51,44 +51,13 @@ ScrollingTreeFrameHostingNode::~ScrollingTreeFrameHostingNode() = default;
 
 bool ScrollingTreeFrameHostingNode::commitStateBeforeChildren(const ScrollingStateNode& stateNode)
 {
-    auto* state = dynamicDowncast<ScrollingStateFrameHostingNode>(stateNode);
-    if (!state)
+    if (!is<ScrollingStateFrameHostingNode>(stateNode))
         return false;
 
-    if (state->hasChangedProperty(ScrollingStateNode::Property::LayerHostingContextIdentifier))
-        setLayerHostingContextIdentifier(state->layerHostingContextIdentifier());
+    const auto& state = downcast<ScrollingStateFrameHostingNode>(stateNode);
+    if (state.hasChangedProperty(ScrollingStateNode::Property::LayerHostingContextIdentifier))
+        setLayerHostingContextIdentifier(state.layerHostingContextIdentifier());
     return true;
-}
-
-void ScrollingTreeFrameHostingNode::setLayerHostingContextIdentifier(std::optional<LayerHostingContextIdentifier> identifier)
-{
-    if (m_hostingContext != identifier)
-        removeHostedChildren();
-    m_hostingContext = identifier;
-    if (m_hostingContext)
-        scrollingTree().addScrollingNodeToHostedSubtreeMap(*m_hostingContext, *this);
-}
-
-void ScrollingTreeFrameHostingNode::removeHostedChildren()
-{
-    auto hostedChildren = std::exchange(m_hostedChildren, { });
-    for (auto& children : hostedChildren)
-        scrollingTree().removeNode(children->scrollingNodeID());
-}
-
-void ScrollingTreeFrameHostingNode::willBeDestroyed()
-{
-    if (m_hostingContext)
-        scrollingTree().removeFrameHostingNode(*m_hostingContext);
-    removeHostedChildren();
-}
-
-void ScrollingTreeFrameHostingNode::removeHostedChild(RefPtr<ScrollingTreeNode> node)
-{
-    if (node) {
-        m_hostedChildren.remove(node);
-        m_children.removeFirst(node.releaseNonNull());
-    }
 }
 
 void ScrollingTreeFrameHostingNode::applyLayerPositions()
@@ -98,12 +67,8 @@ void ScrollingTreeFrameHostingNode::applyLayerPositions()
 void ScrollingTreeFrameHostingNode::dumpProperties(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
     ts << "frame hosting node";
-    if (auto hostingContextIdentifier = m_hostingContext) {
-        if (behavior & ScrollingStateTreeAsTextBehavior::IncludeNodeIDs)
+    if (auto hostingContextIdentifier = m_hostingContext)
         ts.dumpProperty("hosting context identifier", *m_hostingContext);
-        else
-            ts.dumpProperty("has hosting context identifier", "");
-    }
     ScrollingTreeNode::dumpProperties(ts, behavior);
 }
 

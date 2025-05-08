@@ -53,6 +53,12 @@
 #endif
 #endif
 
+#if !COMPILER(MSVC)
+#include <limits.h>
+#include <sched.h>
+#include <sys/time.h>
+#endif
+
 #if !OS(DARWIN) && OS(UNIX)
 
 #include <semaphore.h>
@@ -77,7 +83,9 @@
 
 namespace WTF {
 
-Thread::~Thread() = default;
+Thread::~Thread()
+{
+}
 
 #if !OS(DARWIN)
 class Semaphore final {

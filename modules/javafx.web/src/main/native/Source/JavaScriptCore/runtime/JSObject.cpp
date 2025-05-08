@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2024 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2022 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Eric Seidel (eric@webkit.org)
  *
  *  This library is free software; you can redistribute it and/or
@@ -24,7 +24,6 @@
 #include "config.h"
 #include "JSObject.h"
 
-#include "AllocationFailureMode.h"
 #include "CatchScope.h"
 #include "CustomGetterSetter.h"
 #include "Exception.h"
@@ -45,7 +44,6 @@
 #include "VMInlines.h"
 #include "VMTrapsInlines.h"
 #include <wtf/Assertions.h>
-#include <wtf/text/MakeString.h>
 
 namespace JSC {
 
@@ -542,7 +540,7 @@ String JSObject::calculatedClassName(JSObject* object)
             if (slot.isValue()) {
                 JSValue value = slot.getValue(globalObject, vm.propertyNames->toStringTagSymbol);
                 if (value.isString()) {
-                    auto tag = asString(value)->value(globalObject);
+                    String tag = asString(value)->value(globalObject);
                     if (UNLIKELY(scope.exception()))
                         scope.clearException();
                     return tag;
@@ -1268,19 +1266,12 @@ ContiguousJSValues JSObject::createInitialContiguous(VM& vm, unsigned length)
     return newButterfly->contiguous();
 }
 
-static Butterfly* createArrayStorageButterflyImpl(VM& vm, JSObject* intendedOwner, Structure* structure, unsigned length, unsigned vectorLength, Butterfly* oldButterfly, AllocationFailureMode mode)
+Butterfly* JSObject::createArrayStorageButterfly(VM& vm, JSObject* intendedOwner, Structure* structure, unsigned length, unsigned vectorLength, Butterfly* oldButterfly)
 {
     Butterfly* newButterfly = Butterfly::createOrGrowArrayRight(
         oldButterfly, vm, intendedOwner, structure, structure->outOfLineCapacity(), false, 0,
         ArrayStorage::sizeFor(vectorLength));
-    if (UNLIKELY(!newButterfly)) {
-        if (mode == AllocationFailureMode::Assert)
-            RELEASE_ASSERT(newButterfly, length, vectorLength, oldButterfly);
-        else {
-            ASSERT(mode == AllocationFailureMode::ReturnNull);
-            return nullptr;
-        }
-    }
+    RELEASE_ASSERT(newButterfly);
 
     ArrayStorage* result = newButterfly->arrayStorage();
     result->setLength(length);
@@ -1293,17 +1284,6 @@ static Butterfly* createArrayStorageButterflyImpl(VM& vm, JSObject* intendedOwne
 
     return newButterfly;
 }
-
-Butterfly* JSObject::createArrayStorageButterfly(VM& vm, JSObject* intendedOwner, Structure* structure, unsigned length, unsigned vectorLength, Butterfly* oldButterfly)
-{
-    return createArrayStorageButterflyImpl(vm, intendedOwner, structure, length, vectorLength, oldButterfly, AllocationFailureMode::Assert);
-}
-
-Butterfly* JSObject::tryCreateArrayStorageButterfly(VM& vm, JSObject* intendedOwner, Structure* structure, unsigned length, unsigned vectorLength, Butterfly* oldButterfly)
-{
-    return createArrayStorageButterflyImpl(vm, intendedOwner, structure, length, vectorLength, oldButterfly, AllocationFailureMode::ReturnNull);
-}
-
 
 ArrayStorage* JSObject::createArrayStorage(VM& vm, unsigned length, unsigned vectorLength)
 {
@@ -1388,8 +1368,7 @@ ArrayStorage* JSObject::constructConvertedArrayStorageWithoutCopyingElements(VM&
 
     Butterfly* newButterfly = Butterfly::createUninitialized(vm, this, 0, propertyCapacity, true, ArrayStorage::sizeFor(neededLength));
 
-    // memcpy is fine since newButterfly is not tied to any object yet.
-    memcpy(
+    gcSafeMemcpy(
         static_cast<JSValue*>(newButterfly->base(0, propertyCapacity)),
         static_cast<JSValue*>(m_butterfly->base(0, propertyCapacity)),
         propertyCapacity * sizeof(EncodedJSValue));
@@ -1707,8 +1686,7 @@ void JSObject::convertFromCopyOnWrite(VM& vm)
     unsigned newVectorLength = Butterfly::optimalContiguousVectorLength(propertyCapacity, std::min(oldButterfly->vectorLength() * 2, MAX_STORAGE_VECTOR_LENGTH));
     Butterfly* newButterfly = Butterfly::createUninitialized(vm, this, 0, propertyCapacity, hasIndexingHeader, newVectorLength * sizeof(JSValue));
 
-    // memcpy is fine since newButterfly is not tied to any object yet.
-    memcpy(newButterfly->propertyStorage(), oldButterfly->propertyStorage(), oldButterfly->vectorLength() * sizeof(JSValue) + sizeof(IndexingHeader));
+    gcSafeMemcpy(newButterfly->propertyStorage(), oldButterfly->propertyStorage(), oldButterfly->vectorLength() * sizeof(JSValue) + sizeof(IndexingHeader));
 
     WTF::storeStoreFence();
     TransitionKind transition = ([&] () {
@@ -3513,14 +3491,14 @@ JSFunction* JSObject::putDirectBuiltinFunction(VM& vm, JSGlobalObject* globalObj
     if (!name)
         name = vm.propertyNames->anonymous.impl();
     ASSERT(name);
-    JSFunction* function = JSFunction::create(vm, globalObject, static_cast<FunctionExecutable*>(functionExecutable), globalObject);
+    JSFunction* function = JSFunction::create(vm, static_cast<FunctionExecutable*>(functionExecutable), globalObject);
     putDirect(vm, propertyName, function, attributes);
     return function;
 }
 
 JSFunction* JSObject::putDirectBuiltinFunctionWithoutTransition(VM& vm, JSGlobalObject* globalObject, const PropertyName& propertyName, FunctionExecutable* functionExecutable, unsigned attributes)
 {
-    JSFunction* function = JSFunction::create(vm, globalObject, static_cast<FunctionExecutable*>(functionExecutable), globalObject);
+    JSFunction* function = JSFunction::create(vm, static_cast<FunctionExecutable*>(functionExecutable), globalObject);
     putDirectWithoutTransition(vm, propertyName, function, attributes);
     return function;
 }
@@ -3959,8 +3937,7 @@ void JSObject::shiftButterflyAfterFlattening(const GCSafeConcurrentJSLocker&, VM
     void* currentBase = oldButterfly->base(0, outOfLineCapacityAfter);
     void* newBase = newButterfly->base(0, outOfLineCapacityAfter);
 
-    // memcpy is fine since newButterfly is not tied to any object yet.
-    memcpy(static_cast<JSValue*>(newBase), static_cast<JSValue*>(currentBase), Butterfly::totalSize(0, outOfLineCapacityAfter, hasIndexingHeader, indexingPayloadSizeInBytes));
+    gcSafeMemcpy(static_cast<JSValue*>(newBase), static_cast<JSValue*>(currentBase), Butterfly::totalSize(0, outOfLineCapacityAfter, hasIndexingHeader, indexingPayloadSizeInBytes));
 
     setButterfly(vm, newButterfly);
 }

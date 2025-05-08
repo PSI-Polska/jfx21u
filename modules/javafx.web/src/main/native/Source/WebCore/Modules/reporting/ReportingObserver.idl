@@ -30,7 +30,7 @@ typedef sequence<Report> ReportList;
 [
     EnabledBySetting=ReportingEnabled,
     Exposed=(Window,Worker),
-    ActiveDOMObject,
+    GenerateIsReachable=ImplScriptExecutionContext,
     JSCustomMarkFunction
 ] interface ReportingObserver {
     [CallWith=CurrentScriptExecutionContext] constructor(ReportingObserverCallback callback, optional ReportingObserverOptions options);

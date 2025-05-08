@@ -118,12 +118,9 @@ namespace StringWrapperCFAllocator {
 RetainPtr<CFStringRef> StringImpl::createCFString()
 {
     if (!m_length || !isMainThread()) {
-        if (is8Bit()) {
-            auto characters = span8();
-            return adoptCF(CFStringCreateWithBytes(nullptr, characters.data(), characters.size(), kCFStringEncodingISOLatin1, false));
-        }
-        auto characters = span16();
-        return adoptCF(CFStringCreateWithCharacters(nullptr, reinterpret_cast<const UniChar*>(characters.data()), characters.size()));
+        if (is8Bit())
+            return adoptCF(CFStringCreateWithBytes(nullptr, characters8(), m_length, kCFStringEncodingISOLatin1, false));
+        return adoptCF(CFStringCreateWithCharacters(nullptr, reinterpret_cast<const UniChar*>(characters16()), m_length));
     }
     CFAllocatorRef allocator = StringWrapperCFAllocator::allocator();
 
@@ -132,13 +129,10 @@ RetainPtr<CFStringRef> StringImpl::createCFString()
     StringWrapperCFAllocator::currentString = this;
 
     RetainPtr<CFStringRef> string;
-    if (is8Bit()) {
-        auto characters = span8();
-        string = adoptCF(CFStringCreateWithBytesNoCopy(allocator, characters.data(), characters.size(), kCFStringEncodingISOLatin1, false, kCFAllocatorNull));
-    } else {
-        auto characters = span16();
-        string = adoptCF(CFStringCreateWithCharactersNoCopy(allocator, reinterpret_cast<const UniChar*>(characters.data()), characters.size(), kCFAllocatorNull));
-    }
+    if (is8Bit())
+        string = adoptCF(CFStringCreateWithBytesNoCopy(allocator, characters8(), m_length, kCFStringEncodingISOLatin1, false, kCFAllocatorNull));
+    else
+        string = adoptCF(CFStringCreateWithCharactersNoCopy(allocator, reinterpret_cast<const UniChar*>(characters16()), m_length, kCFAllocatorNull));
     // CoreFoundation might not have to allocate anything, we clear currentString in case we did not execute allocate().
     StringWrapperCFAllocator::currentString = nullptr;
 

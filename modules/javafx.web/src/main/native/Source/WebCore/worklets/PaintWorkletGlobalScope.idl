@@ -26,6 +26,7 @@
 [
     Exposed=PaintWorklet,
     EnabledBySetting=CSSPaintingAPIEnabled,
+    Conditional=CSS_PAINTING_API,
     JSCustomMarkFunction,
     JSGenerateToNativeObject,
     IsImmutablePrototypeExoticObject,

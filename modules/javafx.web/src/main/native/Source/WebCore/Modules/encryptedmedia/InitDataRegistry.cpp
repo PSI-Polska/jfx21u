@@ -69,7 +69,7 @@ static std::optional<Vector<Ref<SharedBuffer>>> extractKeyIDsKeyids(const Shared
     // https://w3c.github.io/encrypted-media/format-registry/initdata/keyids.html#format
     if (buffer.size() > std::numeric_limits<unsigned>::max())
         return std::nullopt;
-    String json { buffer.span() };
+    String json { buffer.data(), static_cast<unsigned>(buffer.size()) };
 
     auto value = JSON::Value::parseJSON(json);
     if (!value)
@@ -113,10 +113,11 @@ static RefPtr<SharedBuffer> sanitizeKeyids(const SharedBuffer& buffer)
     auto object = JSON::Object::create();
     auto kidsArray = JSON::Array::create();
     for (auto& buffer : keyIDBuffer.value())
-        kidsArray->pushString(base64URLEncodeToString(buffer->span()));
+        kidsArray->pushString(base64URLEncodeToString(buffer->data(), buffer->size()));
     object->setArray("kids"_s, WTFMove(kidsArray));
 
-    return SharedBuffer::create(object->toJSONString().utf8().span());
+    CString jsonData = object->toJSONString().utf8();
+    return SharedBuffer::create(jsonData.data(), jsonData.length());
 }
 
 std::optional<Vector<std::unique_ptr<ISOProtectionSystemSpecificHeaderBox>>> InitDataRegistry::extractPsshBoxesFromCenc(const SharedBuffer& buffer)
@@ -178,7 +179,7 @@ std::optional<Vector<Ref<SharedBuffer>>> InitDataRegistry::extractKeyIDsCenc(con
             if (CDMPrivateFairPlayStreaming::validFairPlayStreamingSchemes().contains(scheme)) {
                 for (const auto& request : fpsPssh->initDataBox().requests()) {
                     auto& keyID = request.requestInfo().keyID();
-                    keyIDs.append(SharedBuffer::create(keyID.span()));
+                    keyIDs.append(SharedBuffer::create(keyID.data(), keyID.size()));
                 }
             }
         }
@@ -194,7 +195,7 @@ std::optional<Vector<Ref<SharedBuffer>>> InitDataRegistry::extractKeyIDsCenc(con
 #if USE(GSTREAMER)
 bool isPlayReadySanitizedInitializationData(const SharedBuffer& buffer)
 {
-    auto* protectionData = byteCast<char>(buffer.span().data());
+    const char* protectionData = buffer.dataAsCharPtr();
     size_t protectionDataLength = buffer.size();
 
     // The protection data starts with a 10-byte PlayReady version
@@ -245,7 +246,7 @@ bool isPlayReadySanitizedInitializationData(const SharedBuffer& buffer)
         return false;
 
     xmlChar* encodedKeyID = xmlNodeGetContent(keyIDNode->nodeTab[0]);
-    std::optional<Vector<uint8_t>> decodedKeyID = base64Decode({ reinterpret_cast<const uint8_t*>(encodedKeyID), static_cast<size_t>(xmlStrlen(encodedKeyID)) });
+    std::optional<Vector<uint8_t>> decodedKeyID = base64Decode(encodedKeyID, xmlStrlen(encodedKeyID));
     xmlFree(encodedKeyID);
     if (!decodedKeyID)
         return false;

@@ -52,7 +52,6 @@ struct LinkRelAttribute {
 #if ENABLE(APPLICATION_MANIFEST)
     bool isApplicationManifest : 1 { false };
 #endif
-    bool isInternalResourceLink : 1 { false };
 
     LinkRelAttribute() = default;
     LinkRelAttribute(Document&, StringView);

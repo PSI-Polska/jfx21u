@@ -78,7 +78,6 @@ pas_try_allocate_intrinsic_impl_casual_case(
     pas_heap* heap,
     size_t size,
     size_t alignment,
-    pas_allocation_mode allocation_mode,
     pas_intrinsic_heap_support* intrinsic_support,
     pas_heap_config config,
     pas_try_allocate_common_fast try_allocate_common_fast,
@@ -102,7 +101,7 @@ pas_try_allocate_intrinsic_impl_casual_case(
         return pas_allocation_result_create_failure();
 
     if (PAS_UNLIKELY(pas_debug_heap_is_enabled(config.kind)))
-        return pas_debug_heap_allocate(size, alignment, allocation_mode);
+        return pas_debug_heap_allocate(size, alignment);
 
     if (verbose)
         pas_log("not doing debug heap in impl_casual_case for %s\n", pas_heap_config_kind_get_string(config.kind));
@@ -165,21 +164,20 @@ pas_try_allocate_intrinsic_impl_casual_case(
         }
 
         if (PAS_LIKELY(allocator_result.did_succeed))
-            return try_allocate_common_fast(allocator, aligned_size, alignment, allocation_mode);
+            return try_allocate_common_fast(allocator, aligned_size, alignment);
     }
 
     fake_heap_ref.type = heap->type;
     fake_heap_ref.heap = heap;
     fake_heap_ref.allocator_index = 0;
 
-    return try_allocate_common_slow(&fake_heap_ref, aligned_size, alignment, allocation_mode);
+    return try_allocate_common_slow(&fake_heap_ref, aligned_size, alignment);
 }
 
 static PAS_ALWAYS_INLINE pas_allocation_result
 pas_try_allocate_intrinsic_impl_inline_only(
     size_t size,
     size_t alignment,
-    pas_allocation_mode allocation_mode,
     pas_intrinsic_heap_support* intrinsic_support,
     pas_heap_config config,
     pas_try_allocate_common_fast_inline_only try_allocate_common_fast_inline_only,
@@ -261,7 +259,7 @@ pas_try_allocate_intrinsic_impl_inline_only(
         return pas_allocation_result_create_failure();
     }
 
-    return try_allocate_common_fast_inline_only(allocator, allocation_mode);
+    return try_allocate_common_fast_inline_only(allocator);
 }
 
 #define PAS_CREATE_TRY_ALLOCATE_INTRINSIC(name, heap_config, runtime_config, allocator_counts, result_filter, heap, heap_support, designation_mode) \
@@ -275,38 +273,38 @@ pas_try_allocate_intrinsic_impl_inline_only(
         (result_filter)); \
     \
     static PAS_NEVER_INLINE pas_allocation_result \
-    name ## _casual_case(size_t size, size_t alignment, pas_allocation_mode allocation_mode) \
+    name ## _casual_case(size_t size, size_t alignment) \
     { \
         return pas_try_allocate_intrinsic_impl_casual_case( \
-            (heap), size, alignment, allocation_mode, (heap_support), (heap_config), \
+            (heap), size, alignment, (heap_support), (heap_config), \
             name ## _impl_fast, name ## _impl_slow, (designation_mode)); \
     } \
     \
-    static PAS_ALWAYS_INLINE pas_allocation_result name ## _inline_only(size_t size, size_t alignment, pas_allocation_mode allocation_mode) \
+    static PAS_ALWAYS_INLINE pas_allocation_result name ## _inline_only(size_t size, size_t alignment) \
     { \
         return pas_try_allocate_intrinsic_impl_inline_only( \
-            size, alignment, allocation_mode, (heap_support), (heap_config), \
+            size, alignment, (heap_support), (heap_config), \
             name ## _impl_fast_inline_only, (designation_mode)); \
     } \
     \
-    static PAS_ALWAYS_INLINE pas_allocation_result name(size_t size, size_t alignment, pas_allocation_mode allocation_mode) \
+    static PAS_ALWAYS_INLINE pas_allocation_result name(size_t size, size_t alignment) \
     { \
         static const bool verbose = false; \
         pas_allocation_result result; \
-        result = name ## _inline_only(size, alignment, allocation_mode); \
+        result = name ## _inline_only(size, alignment); \
         if (PAS_LIKELY(result.did_succeed)) { \
             if (verbose) \
                 pas_log("Returning successful result (begin = %p)\n", (void*)result.begin); \
             return result; \
         } \
-        return name ## _casual_case(size, alignment, allocation_mode); \
+        return name ## _casual_case(size, alignment); \
     } \
     \
     static PAS_UNUSED PAS_NEVER_INLINE pas_allocation_result \
-    name ## _for_realloc(size_t size, pas_allocation_mode allocation_mode) \
+    name ## _for_realloc(size_t size) \
     { \
         static const bool verbose = false; \
-        pas_allocation_result result = name(size, 1, allocation_mode); \
+        pas_allocation_result result = name(size, 1); \
         if (verbose) \
             pas_log("result.begin = %p\n", (void*)result.begin); \
         return result; \
@@ -315,10 +313,9 @@ pas_try_allocate_intrinsic_impl_inline_only(
     struct pas_dummy
 
 typedef pas_allocation_result (*pas_try_allocate_intrinsic)(size_t size,
-                                                            size_t alignment,
-                                                            pas_allocation_mode allocation_mode);
+                                                            size_t alignment);
 
-typedef pas_allocation_result (*pas_try_allocate_intrinsic_for_realloc)(size_t size, pas_allocation_mode allocation_mode);
+typedef pas_allocation_result (*pas_try_allocate_intrinsic_for_realloc)(size_t size);
 
 PAS_END_EXTERN_C;
 

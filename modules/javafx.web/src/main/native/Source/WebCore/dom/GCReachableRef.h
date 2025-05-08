@@ -49,7 +49,7 @@ public:
     }
 
 private:
-    WEBCORE_EXPORT static HashCountedSet<EventTarget*>& map();
+    static HashCountedSet<EventTarget*>& map();
 };
 
 template <typename T, typename = std::enable_if_t<std::is_same<T, typename std::remove_const<T>::type>::value>>

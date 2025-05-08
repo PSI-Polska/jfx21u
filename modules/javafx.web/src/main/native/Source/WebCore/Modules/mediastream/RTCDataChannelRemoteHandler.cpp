@@ -48,7 +48,9 @@ RTCDataChannelRemoteHandler::RTCDataChannelRemoteHandler(RTCDataChannelIdentifie
 {
 }
 
-RTCDataChannelRemoteHandler::~RTCDataChannelRemoteHandler() = default;
+RTCDataChannelRemoteHandler::~RTCDataChannelRemoteHandler()
+{
+}
 
 void RTCDataChannelRemoteHandler::didChangeReadyState(RTCDataChannelState state)
 {
@@ -60,9 +62,9 @@ void RTCDataChannelRemoteHandler::didReceiveStringData(String&& text)
     m_client->didReceiveStringData(text);
 }
 
-void RTCDataChannelRemoteHandler::didReceiveRawData(std::span<const uint8_t> data)
+void RTCDataChannelRemoteHandler::didReceiveRawData(const uint8_t* data, size_t size)
 {
-    m_client->didReceiveRawData(data);
+    m_client->didReceiveRawData(data, size);
 }
 
 void RTCDataChannelRemoteHandler::didDetectError(Ref<RTCError>&& error)
@@ -80,7 +82,7 @@ void RTCDataChannelRemoteHandler::readyToSend()
     m_isReadyToSend = true;
 
     for (auto& message : m_pendingMessages)
-        m_connection->sendData(m_remoteIdentifier, message.isRaw, message.buffer->makeContiguous()->span());
+        m_connection->sendData(m_remoteIdentifier, message.isRaw, message.buffer->makeContiguous()->data(), message.buffer->size());
     m_pendingMessages.clear();
 
     if (m_isPendingClose)
@@ -97,20 +99,20 @@ void RTCDataChannelRemoteHandler::setClient(RTCDataChannelHandlerClient& client,
 bool RTCDataChannelRemoteHandler::sendStringData(const CString& text)
 {
     if (!m_isReadyToSend) {
-        m_pendingMessages.append(Message { false, SharedBuffer::create(text.span()) });
+        m_pendingMessages.append(Message { false, SharedBuffer::create(text.data(), text.length()) });
         return true;
     }
-    m_connection->sendData(m_remoteIdentifier, false, text.span());
+    m_connection->sendData(m_remoteIdentifier, false, text.dataAsUInt8Ptr(), text.length());
     return true;
 }
 
-bool RTCDataChannelRemoteHandler::sendRawData(std::span<const uint8_t> data)
+bool RTCDataChannelRemoteHandler::sendRawData(const uint8_t* data, size_t size)
 {
     if (!m_isReadyToSend) {
-        m_pendingMessages.append(Message { true, SharedBuffer::create(data) });
+        m_pendingMessages.append(Message { true, SharedBuffer::create(data, size) });
         return true;
     }
-    m_connection->sendData(m_remoteIdentifier, true, data);
+    m_connection->sendData(m_remoteIdentifier, true, data, size);
     return true;
 }
 

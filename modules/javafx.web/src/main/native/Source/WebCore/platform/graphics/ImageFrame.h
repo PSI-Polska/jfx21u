@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2024 Apple Inc.  All rights reserved.
+ * Copyright (C) 2016 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,14 +42,11 @@
 namespace WebCore {
 
 class ImageFrame {
-    friend class BitmapImageSource;
-    friend class ImageDecoder;
-    friend class ImageDecoderCG;
+    friend class ImageSource;
 public:
     enum class Caching { Metadata, MetadataAndImage };
 
     ImageFrame();
-    ImageFrame(Ref<NativeImage>&&);
     ImageFrame(const ImageFrame& other) { operator=(other); }
 
     ~ImageFrame();
@@ -68,12 +65,9 @@ public:
     bool isPartial() const { return m_decodingStatus == DecodingStatus::Partial; }
     bool isComplete() const { return m_decodingStatus == DecodingStatus::Complete; }
 
-    void setSize(const IntSize& size) { m_size = size; }
-    IntSize size() const { return m_size; }
-
+    IntSize size() const;
     unsigned frameBytes() const { return hasNativeImage() ? (size().area() * sizeof(uint32_t)).value() : 0; }
     SubsamplingLevel subsamplingLevel() const { return m_subsamplingLevel; }
-    DecodingOptions decodingOptions() const { return m_decodingOptions; }
 
     RefPtr<NativeImage> nativeImage() const { return m_nativeImage; }
 
@@ -94,13 +88,15 @@ public:
     bool hasDecodedNativeImageCompatibleWithOptions(const std::optional<SubsamplingLevel>&, const DecodingOptions&) const;
     bool hasMetadata() const { return !size().isEmpty(); }
 
+    Color singlePixelSolidColor() const;
+
 private:
     DecodingStatus m_decodingStatus { DecodingStatus::Invalid };
     IntSize m_size;
 
     RefPtr<NativeImage> m_nativeImage;
     SubsamplingLevel m_subsamplingLevel { SubsamplingLevel::Default };
-    DecodingOptions m_decodingOptions { DecodingMode::Auto };
+    DecodingOptions m_decodingOptions;
 
     ImageOrientation m_orientation { ImageOrientation::Orientation::None };
     std::optional<IntSize> m_densityCorrectedSize;
@@ -108,4 +104,4 @@ private:
     bool m_hasAlpha { true };
 };
 
-} // namespace WebCore
+}

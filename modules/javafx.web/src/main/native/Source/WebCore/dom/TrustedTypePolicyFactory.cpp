@@ -27,32 +27,25 @@
 #include "TrustedTypePolicyFactory.h"
 
 #include "ContentSecurityPolicy.h"
-#include "ContextDestructionObserver.h"
-#include "HTMLNames.h"
 #include "JSDOMConvertObject.h"
 #include "JSTrustedHTML.h"
 #include "JSTrustedScript.h"
 #include "JSTrustedScriptURL.h"
-#include "SVGNames.h"
 #include "ScriptExecutionContext.h"
-#include "TrustedType.h"
+#include "TrustedHTML.h"
+#include "TrustedScript.h"
+#include "TrustedScriptURL.h"
 #include "TrustedTypePolicyOptions.h"
-#include "XLinkNames.h"
-#include <wtf/TZoneMallocInlines.h>
-#include <wtf/text/MakeString.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TrustedTypePolicyFactory);
+WTF_MAKE_ISO_ALLOCATED_IMPL(TrustedTypePolicyFactory);
 
-Ref<TrustedTypePolicyFactory> TrustedTypePolicyFactory::create(ScriptExecutionContext& context)
+Ref<TrustedTypePolicyFactory> TrustedTypePolicyFactory::create()
 {
-    return adoptRef(*new TrustedTypePolicyFactory(context));
+    return adoptRef(*new TrustedTypePolicyFactory());
 }
-
-TrustedTypePolicyFactory::TrustedTypePolicyFactory(ScriptExecutionContext& context)
-    : ContextDestructionObserver(&context)
-{ }
 
 ExceptionOr<Ref<TrustedTypePolicy>> TrustedTypePolicyFactory::createPolicy(ScriptExecutionContext& context, const String& policyName, const TrustedTypePolicyOptions& options)
 {
@@ -107,29 +100,21 @@ Ref<TrustedScript> TrustedTypePolicyFactory::emptyScript() const
     return TrustedScript::create(""_s);
 }
 
-String TrustedTypePolicyFactory::getAttributeType(const String& tagName, const String& attributeParameter, const String& elementNamespace, const String& attributeNamespace) const
+String TrustedTypePolicyFactory::getAttributeType(const String& tagName, const String& attribute, const String& elementNamespace, const String& attrNamespace) const
 {
-    return trustedTypeForAttribute(tagName, attributeParameter.convertToASCIILowercase(), elementNamespace, attributeNamespace).attributeType;
+    UNUSED_PARAM(tagName);
+    UNUSED_PARAM(attribute);
+    UNUSED_PARAM(elementNamespace);
+    UNUSED_PARAM(attrNamespace);
+    return String();
 }
 
-String TrustedTypePolicyFactory::getPropertyType(const String& tagName, const String& property, const String& elementNamespace) const
+String TrustedTypePolicyFactory::getPropertyType(const String& tagName, const String& attribute, const String& elementNamespace) const
 {
-    auto localName = tagName.convertToASCIILowercase();
-    AtomString elementNS = elementNamespace.isEmpty() ? HTMLNames::xhtmlNamespaceURI : AtomString(elementNamespace);
-
-    if (property == "innerHTML"_s || property == "outerHTML"_s)
-        return trustedTypeToString(TrustedType::TrustedHTML);
-
-    const QualifiedName element(nullAtom(), AtomString(localName), elementNS);
-
-    if (element.matches(HTMLNames::iframeTag) && property == "srcdoc"_s)
-        return trustedTypeToString(TrustedType::TrustedHTML);
-    if (element.matches(HTMLNames::scriptTag) && property == "src"_s)
-        return trustedTypeToString(TrustedType::TrustedScriptURL);
-    if (element.matches(HTMLNames::scriptTag) && (property == "innerText"_s || property == "textContent"_s || property == "text"_s))
-        return trustedTypeToString(TrustedType::TrustedScript);
-
-    return nullString();
+    UNUSED_PARAM(tagName);
+    UNUSED_PARAM(attribute);
+    UNUSED_PARAM(elementNamespace);
+    return String();
 }
 
 }

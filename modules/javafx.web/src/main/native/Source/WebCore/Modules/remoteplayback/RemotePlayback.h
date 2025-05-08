@@ -48,7 +48,7 @@ class RemotePlayback final
     , public ActiveDOMObject
     , public EventTarget
 {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RemotePlayback);
+    WTF_MAKE_ISO_ALLOCATED(RemotePlayback);
 public:
     static Ref<RemotePlayback> create(HTMLMediaElement&);
     ~RemotePlayback();
@@ -72,9 +72,8 @@ public:
 
     void invalidate();
 
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
+    using RefCounted::ref;
+    using RefCounted::deref;
 
     WebCoreOpaqueRoot opaqueRootConcurrently() const;
     Node* ownerNode() const;
@@ -82,30 +81,31 @@ public:
 private:
     explicit RemotePlayback(HTMLMediaElement&);
 
+    void refEventTarget() final { ref(); }
+    void derefEventTarget() final { deref(); }
+
     void setState(State);
     void establishConnection();
     void disconnect();
 
-    // EventTarget.
-    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::RemotePlayback; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
-    void refEventTarget() final { ref(); }
-    void derefEventTarget() final { deref(); }
+    // ActiveDOMObject.
+    const char* activeDOMObjectName() const final;
 
-    // ActiveDOMObject
-    void stop() final;
+    // EventTarget.
+    EventTargetInterface eventTargetInterface() const final { return RemotePlaybackEventTargetInterfaceType; }
+    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const { return m_logger.get(); }
     const void* logIdentifier() const { return m_logIdentifier; }
     WTFLogChannel& logChannel() const;
-    ASCIILiteral logClassName() const { return "RemotePlayback"_s; }
+    const char* logClassName() const { return "RemotePlayback"; }
 
     Ref<const Logger> m_logger;
     const void* m_logIdentifier { nullptr };
 #endif
 
-    WeakPtr<HTMLMediaElement> m_mediaElement;
+    WeakPtr<HTMLMediaElement, WeakPtrImplWithEventTargetData> m_mediaElement;
     uint32_t m_nextId { 0 };
 
     using CallbackMap = HashMap<int32_t, Ref<RemotePlaybackAvailabilityCallback>>;

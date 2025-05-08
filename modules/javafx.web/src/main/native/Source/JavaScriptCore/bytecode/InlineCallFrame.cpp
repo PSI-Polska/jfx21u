@@ -123,9 +123,6 @@ void printInternal(PrintStream& out, JSC::InlineCallFrame::Kind kind)
     case JSC::InlineCallFrame::ProxyObjectStoreCall:
         out.print("ProxyObjectStoreCall");
         return;
-    case JSC::InlineCallFrame::ProxyObjectInCall:
-        out.print("ProxyObjectInCall");
-        return;
     case JSC::InlineCallFrame::BoundFunctionCall:
         out.print("BoundFunctionCall");
         return;

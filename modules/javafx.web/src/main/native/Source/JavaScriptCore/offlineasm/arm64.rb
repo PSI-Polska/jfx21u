@@ -1,4 +1,4 @@
-# Copyright (C) 2011-2024 Apple Inc. All rights reserved.
+# Copyright (C) 2011-2022 Apple Inc. All rights reserved.
 # Copyright (C) 2014 University of Szeged. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -45,11 +45,10 @@ require "risc"
 #  x5  => t5, a5, wa5
 #  x6  => t6, a6, wa6
 #  x7  => t7, a7, wa7
-#  x8  => t8
-#  x9  => t9, ws0
-# x10  => t10, ws1
-# x11  => t11, ws2
-# x12  => t12, ws3
+#  x9  => ws0
+# x10  => ws1
+# x11  => ws2
+# x12  => ws3
 # x13  =>                  (scratch)
 # x16  =>                  (scratch)
 # x17  =>                  (scratch)
@@ -171,15 +170,13 @@ class RegisterID
           arm64GPRName('x6', kind)
         when 't7', 'a7', 'wa7'
           arm64GPRName('x7', kind)
-        when 't8'
-          arm64GPRName('x8', kind)
-        when 't9', 'ws0'
+        when 'ws0'
           arm64GPRName('x9', kind)
-        when 't10', 'ws1'
+        when 'ws1'
           arm64GPRName('x10', kind)
-        when 't11', 'ws2'
+        when 'ws2'
           arm64GPRName('x11', kind)
-        when 't12', 'ws3'
+        when 'ws3'
           arm64GPRName('x12', kind)
         when 'cfr'
             arm64GPRName('x29', kind)
@@ -1258,7 +1255,7 @@ class Instruction
                 emitARM64Unflipped("blr", operands, :quad)
             end
         when "break"
-            $asm.puts "brk \#\" STRINGIZE_VALUE_OF(WTF_FATAL_CRASH_CODE) \""
+            $asm.puts "brk \#0xc471"
         when "ret"
             $asm.puts "ret"
         when "cieq", "cbeq"

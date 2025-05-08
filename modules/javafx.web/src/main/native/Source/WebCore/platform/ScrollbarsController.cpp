@@ -67,13 +67,4 @@ void ScrollbarsController::mayBeginScrollGesture()
     setScrollbarAnimationsUnsuspendedByUserInteraction(true);
 }
 
-void ScrollbarsController::updateScrollbarsThickness()
-{
-    if (auto verticalScrollbar = scrollableArea().verticalScrollbar())
-        verticalScrollbar->updateScrollbarThickness();
-
-    if (auto horizontalScrollbar = scrollableArea().horizontalScrollbar())
-        horizontalScrollbar->updateScrollbarThickness();
-}
-
 } // namespace WebCore

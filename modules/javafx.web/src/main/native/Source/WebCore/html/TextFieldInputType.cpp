@@ -338,7 +338,7 @@ void TextFieldInputType::createShadowSubtree()
     ASSERT(!m_capsLockIndicator);
     ASSERT(!m_autoFillButton);
 
-    Ref document = element()->document();
+    Document& document = element()->document();
     bool shouldHaveSpinButton = this->shouldHaveSpinButton();
     bool shouldHaveCapsLockIndicator = this->shouldHaveCapsLockIndicator();
     bool shouldDrawAutoFillButton = this->shouldDrawAutoFillButton();
@@ -351,13 +351,11 @@ void TextFieldInputType::createShadowSubtree()
 #endif
         || needsContainer();
 
-    Ref innerText = TextControlInnerTextElement::create(document, element()->isInnerTextElementEditable());
-    m_innerText = innerText.copyRef();
+    m_innerText = TextControlInnerTextElement::create(document, element()->isInnerTextElementEditable());
 
-    Ref shadowRoot = *element()->userAgentShadowRoot();
-    ScriptDisallowedScope::EventAllowedScope eventAllowedScope { shadowRoot };
+    ScriptDisallowedScope::EventAllowedScope eventAllowedScope { *element()->userAgentShadowRoot() };
     if (!createsContainer) {
-        shadowRoot->appendChild(ContainerNode::ChildChange::Source::Parser, innerText);
+        element()->userAgentShadowRoot()->appendChild(ContainerNode::ChildChange::Source::Parser, *m_innerText);
         updatePlaceholderText();
         updateInnerTextValue();
         return;
@@ -368,20 +366,18 @@ void TextFieldInputType::createShadowSubtree()
     updateInnerTextValue();
 
     if (shouldHaveSpinButton) {
-        Ref innerSpinButton = SpinButtonElement::create(document, *this);
-        m_innerSpinButton = innerSpinButton.copyRef();
-        RefPtr { m_container }->appendChild(ContainerNode::ChildChange::Source::Parser, innerSpinButton);
+        m_innerSpinButton = SpinButtonElement::create(document, *this);
+        m_container->appendChild(ContainerNode::ChildChange::Source::Parser, *m_innerSpinButton);
     }
 
     if (shouldHaveCapsLockIndicator) {
-        Ref capsLockIndicator = HTMLDivElement::create(document);
-        m_capsLockIndicator = capsLockIndicator.copyRef();
-        RefPtr { m_container }->appendChild(ContainerNode::ChildChange::Source::Parser, capsLockIndicator);
+        m_capsLockIndicator = HTMLDivElement::create(document);
+        m_container->appendChild(ContainerNode::ChildChange::Source::Parser, *m_capsLockIndicator);
 
-        capsLockIndicator->setUserAgentPart(UserAgentParts::webkitCapsLockIndicator());
+        m_capsLockIndicator->setUserAgentPart(UserAgentParts::webkitCapsLockIndicator());
 
         bool shouldDrawCapsLockIndicator = this->shouldDrawCapsLockIndicator();
-        capsLockIndicator->setInlineStyleProperty(CSSPropertyDisplay, shouldDrawCapsLockIndicator ? CSSValueBlock : CSSValueNone, IsImportant::Yes);
+        m_capsLockIndicator->setInlineStyleProperty(CSSPropertyDisplay, shouldDrawCapsLockIndicator ? CSSValueBlock : CSSValueNone, true);
     }
 
     updateAutoFillButton();
@@ -493,17 +489,16 @@ void TextFieldInputType::createDataListDropdownIndicator()
     m_dataListDropdownIndicator = DataListButtonElement::create(element()->document(), *this);
     m_container->appendChild(*m_dataListDropdownIndicator);
     m_dataListDropdownIndicator->setUserAgentPart(UserAgentParts::webkitListButton());
-    m_dataListDropdownIndicator->setInlineStyleProperty(CSSPropertyDisplay, CSSValueNone, IsImportant::Yes);
+    m_dataListDropdownIndicator->setInlineStyleProperty(CSSPropertyDisplay, CSSValueNone, true);
 }
 
 #endif // ENABLE(DATALIST_ELEMENT)
 
 static String limitLength(const String& string, unsigned maxLength)
 {
-    if (LIKELY(string.length() <= maxLength))
+    unsigned newLength = std::min(maxLength, string.length());
+    if (newLength == string.length())
         return string;
-
-    unsigned newLength = maxLength;
     if (newLength > 0 && U16_IS_LEAD(string[newLength - 1]))
         --newLength;
     return string.left(newLength);
@@ -586,9 +581,6 @@ static bool isAutoFillButtonTypeChanged(const AtomString& attribute, AutoFillBut
 
 String TextFieldInputType::sanitizeValue(const String& proposedValue) const
 {
-    if (LIKELY(!containsHTMLLineBreak(proposedValue)))
-        return limitLength(proposedValue, HTMLInputElement::maxEffectiveLength);
-
     // Passing a lambda instead of a function name helps the compiler inline isHTMLLineBreak.
     auto proposedValueWithoutLineBreaks = proposedValue.removeCharacters([](auto character) {
         return isHTMLLineBreak(character);
@@ -659,19 +651,20 @@ void TextFieldInputType::updatePlaceholderText()
 
     String placeholderText = element()->placeholder();
     if (placeholderText.isEmpty()) {
-        if (RefPtr placeholder = std::exchange(m_placeholder, nullptr))
-            placeholder->remove();
+        if (m_placeholder) {
+            m_placeholder->parentNode()->removeChild(*m_placeholder);
+            m_placeholder = nullptr;
+        }
         return;
     }
     if (!m_placeholder) {
-        Ref placeholder = TextControlPlaceholderElement::create(element()->protectedDocument());
-        m_placeholder = placeholder.copyRef();
-        if (RefPtr container = m_container)
-            element()->protectedUserAgentShadowRoot()->insertBefore(placeholder, container);
+        m_placeholder = TextControlPlaceholderElement::create(element()->document());
+        if (m_container)
+            element()->userAgentShadowRoot()->insertBefore(*m_placeholder, m_container.copyRef());
         else
-            element()->protectedUserAgentShadowRoot()->insertBefore(placeholder, innerTextElement());
+            element()->userAgentShadowRoot()->insertBefore(*m_placeholder, innerTextElement());
     }
-    RefPtr { m_placeholder }->setInnerText(WTFMove(placeholderText));
+    m_placeholder->setInnerText(WTFMove(placeholderText));
 }
 
 bool TextFieldInputType::appendFormData(DOMFormData& formData) const
@@ -799,7 +792,7 @@ void TextFieldInputType::capsLockStateMayHaveChanged()
         return;
 
     bool shouldDrawCapsLockIndicator = this->shouldDrawCapsLockIndicator();
-    m_capsLockIndicator->setInlineStyleProperty(CSSPropertyDisplay, shouldDrawCapsLockIndicator ? CSSValueBlock : CSSValueNone, IsImportant::Yes);
+    m_capsLockIndicator->setInlineStyleProperty(CSSPropertyDisplay, shouldDrawCapsLockIndicator ? CSSValueBlock : CSSValueNone, true);
 }
 
 bool TextFieldInputType::shouldDrawAutoFillButton() const
@@ -825,27 +818,23 @@ void TextFieldInputType::createContainer(PreserveSelectionRange preserveSelectio
 
     static MainThreadNeverDestroyed<const AtomString> webkitTextfieldDecorationContainerName("-webkit-textfield-decoration-container"_s);
 
-    Ref shadowRoot = *element()->userAgentShadowRoot();
-    ScriptDisallowedScope::EventAllowedScope allowedScope(shadowRoot);
+    ScriptDisallowedScope::EventAllowedScope allowedScope(*element()->userAgentShadowRoot());
 
-    Ref document = element()->document();
     // FIXME: <https://webkit.org/b/245977> Suppress selectionchange events during subtree modification.
     std::optional<std::tuple<unsigned, unsigned, TextFieldSelectionDirection>> selectionState;
-    if (preserveSelection == PreserveSelectionRange::Yes && enclosingTextFormControl(document->selection().selection().start()) == element())
+    if (preserveSelection == PreserveSelectionRange::Yes && enclosingTextFormControl(element()->document().selection().selection().start()) == element())
         selectionState = { element()->selectionStart(), element()->selectionEnd(), element()->computeSelectionDirection() };
 
-    Ref container = TextControlInnerContainer::create(document);
-    m_container = container.copyRef();
-    shadowRoot->appendChild(container);
-    container->setUserAgentPart(UserAgentParts::webkitTextfieldDecorationContainer());
+    m_container = TextControlInnerContainer::create(element()->document());
+    element()->userAgentShadowRoot()->appendChild(*m_container);
+    m_container->setUserAgentPart(UserAgentParts::webkitTextfieldDecorationContainer());
 
-    Ref innerBlock = TextControlInnerElement::create(document);
-    m_innerBlock = innerBlock.copyRef();
-    m_container->appendChild(innerBlock);
-    innerBlock->appendChild(*m_innerText.copyRef());
+    m_innerBlock = TextControlInnerElement::create(element()->document());
+    m_container->appendChild(*m_innerBlock);
+    m_innerBlock->appendChild(*m_innerText);
 
     if (selectionState) {
-        document->checkedEventLoop()->queueTask(TaskSource::DOMManipulation, [selectionState = *selectionState, element = WeakPtr { element() }] {
+        element()->document().eventLoop().queueTask(TaskSource::DOMManipulation, [selectionState = *selectionState, element = WeakPtr { element() }] {
             if (!element || !element->focused())
                 return;
 
@@ -900,12 +889,12 @@ void TextFieldInputType::updateAutoFillButton()
             m_autoFillButton->setAttributeWithoutSynchronization(aria_labelAttr, AtomString { autoFillButtonTypeToAccessibilityLabel(autoFillButtonType) });
             m_autoFillButton->setTextContent(autoFillButtonTypeToAutoFillButtonText(autoFillButtonType));
         }
-        m_autoFillButton->setInlineStyleProperty(CSSPropertyDisplay, CSSValueBlock, IsImportant::Yes);
+        m_autoFillButton->setInlineStyleProperty(CSSPropertyDisplay, CSSValueBlock, true);
         return;
     }
 
     if (m_autoFillButton)
-        m_autoFillButton->setInlineStyleProperty(CSSPropertyDisplay, CSSValueNone, IsImportant::Yes);
+        m_autoFillButton->setInlineStyleProperty(CSSPropertyDisplay, CSSValueNone, true);
 }
 
 #if ENABLE(DATALIST_ELEMENT)
@@ -921,7 +910,7 @@ void TextFieldInputType::dataListMayHaveChanged()
         createDataListDropdownIndicator();
     if (!element())
         return;
-    m_dataListDropdownIndicator->setInlineStyleProperty(CSSPropertyDisplay, element()->list() ? CSSValueBlock : CSSValueNone, IsImportant::Yes);
+        m_dataListDropdownIndicator->setInlineStyleProperty(CSSPropertyDisplay, element()->list() ? CSSValueBlock : CSSValueNone, true);
     if (element()->list() && element()->focused())
         displaySuggestions(DataListSuggestionActivationType::DataListMayHaveChanged);
 }

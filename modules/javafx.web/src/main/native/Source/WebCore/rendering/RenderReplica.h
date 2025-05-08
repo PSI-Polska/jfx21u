@@ -33,8 +33,7 @@
 namespace WebCore {
 
 class RenderReplica final : public RenderBox {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderReplica);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderReplica);
+    WTF_MAKE_ISO_ALLOCATED(RenderReplica);
 public:
     RenderReplica(Document&, RenderStyle&&);
     virtual ~RenderReplica();

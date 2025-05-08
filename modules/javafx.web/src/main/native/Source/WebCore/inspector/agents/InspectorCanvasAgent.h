@@ -40,15 +40,6 @@
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
-namespace WebCore {
-class InspectorCanvasAgent;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::InspectorCanvasAgent> : std::true_type { };
-}
-
 namespace Inspector {
 class InjectedScriptManager;
 }

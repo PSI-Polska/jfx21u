@@ -39,7 +39,6 @@
 #include "RenderFragmentContainer.h"
 #include "RenderImage.h"
 #include "RenderView.h"
-#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -146,8 +145,8 @@ Ref<const Shape> makeShapeForShapeOutside(const RenderBox& renderer)
     case ShapeValue::Type::Image: {
         ASSERT(shapeValue.isImageValid());
         auto* styleImage = shapeValue.image();
-        auto imageSize = renderer.calculateImageIntrinsicDimensions(styleImage, boxSize, RenderImage::ScaleByUsedZoom::Yes);
-        styleImage->setContainerContextForRenderer(renderer, imageSize, style.usedZoom());
+        auto imageSize = renderer.calculateImageIntrinsicDimensions(styleImage, boxSize, RenderImage::ScaleByEffectiveZoom);
+        styleImage->setContainerContextForRenderer(renderer, imageSize, style.effectiveZoom());
 
         auto marginRect = getShapeImageMarginRect(renderer, boxSize);
         auto* renderImage = dynamicDowncast<RenderImage>(renderer);
@@ -180,7 +179,7 @@ static inline bool checkShapeImageOrigin(Document& document, const StyleImage& s
 
     const URL& url = cachedImage.url();
     String urlString = url.isNull() ? "''"_s : url.stringCenterEllipsizedToLength();
-    document.addConsoleMessage(MessageSource::Security, MessageLevel::Error, makeString("Unsafe attempt to load URL "_s, urlString, '.'));
+    document.addConsoleMessage(MessageSource::Security, MessageLevel::Error, "Unsafe attempt to load URL " + urlString + ".");
 
     return false;
 }

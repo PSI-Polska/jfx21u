@@ -87,9 +87,8 @@ struct ReferenceKey {
     const Type* elementType;
     AddressSpace addressSpace;
     AccessMode accessMode;
-    bool isVectorComponent;
 
-    TypeCache::EncodedKey encode() const { return std::tuple(TypeCache::Reference, WTF::enumToUnderlyingType(addressSpace), WTF::enumToUnderlyingType(accessMode), isVectorComponent, bitwise_cast<uintptr_t>(elementType)); }
+    TypeCache::EncodedKey encode() const { return std::tuple(TypeCache::Reference, WTF::enumToUnderlyingType(addressSpace), WTF::enumToUnderlyingType(accessMode), 0, bitwise_cast<uintptr_t>(elementType)); }
 };
 
 struct PointerKey {
@@ -213,18 +212,18 @@ const Type* TypeStore::textureStorageType(TextureStorage::Kind kind, TexelFormat
     return type;
 }
 
-const Type* TypeStore::functionType(WTF::Vector<const Type*>&& parameters, const Type* result, bool mustUse)
+const Type* TypeStore::functionType(WTF::Vector<const Type*>&& parameters, const Type* result)
 {
-    return allocateType<Function>(WTFMove(parameters), result, mustUse);
+    return allocateType<Function>(WTFMove(parameters), result);
 }
 
-const Type* TypeStore::referenceType(AddressSpace addressSpace, const Type* element, AccessMode accessMode, bool isVectorComponent)
+const Type* TypeStore::referenceType(AddressSpace addressSpace, const Type* element, AccessMode accessMode)
 {
-    ReferenceKey key { element, addressSpace, accessMode, isVectorComponent };
+    ReferenceKey key { element, addressSpace, accessMode };
     const Type* type = m_cache.find(key);
     if (type)
         return type;
-    type = allocateType<Reference>(addressSpace, accessMode, element, isVectorComponent);
+    type = allocateType<Reference>(addressSpace, accessMode, element);
     m_cache.insert(key, type);
     return type;
 }

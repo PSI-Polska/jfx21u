@@ -41,9 +41,8 @@ class WorkerGlobalScope;
 
 struct FontCustomPlatformData;
 
-class WorkerFontLoadRequest final : public FontLoadRequest, public ThreadableLoaderClient {
+class WorkerFontLoadRequest : public FontLoadRequest, public ThreadableLoaderClient {
     WTF_MAKE_FAST_ALLOCATED;
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WorkerFontLoadRequest);
 public:
     WorkerFontLoadRequest(URL&&, LoadedFromOpaqueSource);
     ~WorkerFontLoadRequest() = default;
@@ -63,10 +62,10 @@ private:
 
     bool isWorkerFontLoadRequest() const final { return true; }
 
-    void didReceiveResponse(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const ResourceResponse&) final;
+    void didReceiveResponse(ResourceLoaderIdentifier, const ResourceResponse&) final;
     void didReceiveData(const SharedBuffer&) final;
-    void didFinishLoading(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const NetworkLoadMetrics&) final;
-    void didFail(ScriptExecutionContextIdentifier, const ResourceError&) final;
+    void didFinishLoading(ResourceLoaderIdentifier, const NetworkLoadMetrics&) final;
+    void didFail(const ResourceError&) final;
 
     URL m_url;
     LoadedFromOpaqueSource m_loadedFromOpaqueSource;

@@ -41,13 +41,12 @@
 #include "NodeName.h"
 #include "NodeRareData.h"
 #include "RenderTable.h"
-#include <wtf/NeverDestroyed.h>
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/Ref.h>
-#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLTableElement);
+WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLTableElement);
 
 using namespace HTMLNames;
 
@@ -56,8 +55,6 @@ HTMLTableElement::HTMLTableElement(const QualifiedName& tagName, Document& docum
 {
     ASSERT(hasTagName(tableTag));
 }
-
-HTMLTableElement::~HTMLTableElement() = default;
 
 Ref<HTMLTableElement> HTMLTableElement::create(Document& document)
 {
@@ -449,14 +446,14 @@ void HTMLTableElement::attributeChanged(const QualifiedName& name, const AtomStr
     }
 }
 
-static Ref<MutableStyleProperties> createBorderStyle(CSSValueID value)
+static MutableStyleProperties* leakBorderStyle(CSSValueID value)
 {
-    Ref style = MutableStyleProperties::create();
+    auto style = MutableStyleProperties::create();
     style->setProperty(CSSPropertyBorderTopStyle, value);
     style->setProperty(CSSPropertyBorderBottomStyle, value);
     style->setProperty(CSSPropertyBorderLeftStyle, value);
     style->setProperty(CSSPropertyBorderRightStyle, value);
-    return style;
+    return &style.leakRef();
 }
 
 const MutableStyleProperties* HTMLTableElement::additionalPresentationalHintStyle() const
@@ -468,14 +465,14 @@ const MutableStyleProperties* HTMLTableElement::additionalPresentationalHintStyl
         // Setting the border to 'hidden' allows it to win over any border
         // set on the table's cells during border-conflict resolution.
         if (m_rulesAttr != UnsetRules) {
-            static NeverDestroyed<Ref<MutableStyleProperties>> solidBorderStyle = createBorderStyle(CSSValueHidden);
-            return solidBorderStyle.get().ptr();
+            static auto* solidBorderStyle = leakBorderStyle(CSSValueHidden);
+            return solidBorderStyle;
         }
         return nullptr;
     }
 
-    static NeverDestroyed<Ref<MutableStyleProperties>> outsetBorderStyle = createBorderStyle(CSSValueOutset);
-    return outsetBorderStyle.get().ptr();
+    static auto* outsetBorderStyle = leakBorderStyle(CSSValueOutset);
+    return outsetBorderStyle;
 }
 
 HTMLTableElement::CellBorders HTMLTableElement::cellBorders() const

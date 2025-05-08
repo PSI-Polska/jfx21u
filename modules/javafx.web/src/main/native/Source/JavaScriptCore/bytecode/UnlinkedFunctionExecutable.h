@@ -99,7 +99,7 @@ public:
         ensureRareData().m_classSource = source;
     }
 
-    bool isInStrictContext() const { return m_lexicallyScopedFeatures & StrictModeLexicallyScopedFeature; }
+    bool isInStrictContext() const { return m_lexicalScopeFeatures & StrictModeLexicalFeature; }
     FunctionMode functionMode() const { return static_cast<FunctionMode>(m_functionMode); }
     ConstructorKind constructorKind() const { return static_cast<ConstructorKind>(m_constructorKind); }
     SuperBinding superBinding() const { return static_cast<SuperBinding>(m_superBinding); }
@@ -121,7 +121,7 @@ public:
         ParserError&, SourceParseMode);
 
     static UnlinkedFunctionExecutable* fromGlobalCode(
-        const Identifier&, JSGlobalObject*, const SourceCode&, LexicallyScopedFeatures, JSObject*& exception,
+        const Identifier&, JSGlobalObject*, const SourceCode&, JSObject*& exception,
         int overrideLineNumber, std::optional<int> functionConstructorParametersEndPosition);
 
     SourceCode linkedSourceCode(const SourceCode&) const;
@@ -135,15 +135,15 @@ public:
         vm.heap.unlinkedFunctionExecutableSpaceAndSet.set.remove(this);
     }
 
-    void recordParse(CodeFeatures features, LexicallyScopedFeatures lexicallyScopedFeatures, bool hasCapturedVariables)
+    void recordParse(CodeFeatures features, LexicalScopeFeatures lexicalScopeFeatures, bool hasCapturedVariables)
     {
         m_features = features;
-        m_lexicallyScopedFeatures = lexicallyScopedFeatures;
+        m_lexicalScopeFeatures = lexicalScopeFeatures;
         m_hasCapturedVariables = hasCapturedVariables;
     }
 
-    CodeFeatures features() const { return m_features; }
-    LexicallyScopedFeatures lexicallyScopedFeatures() const { return m_lexicallyScopedFeatures; }
+    CodeFeatures features() const { return static_cast<CodeFeatures>(m_features); }
+    LexicalScopeFeatures lexicalScopeFeatures() const { return static_cast<LexicalScopeFeatures>(m_lexicalScopeFeatures); }
     bool hasCapturedVariables() const { return m_hasCapturedVariables; }
 
     PrivateBrandRequirement privateBrandRequirement() const { return static_cast<PrivateBrandRequirement>(m_privateBrandRequirement); }
@@ -307,7 +307,7 @@ private:
     uint16_t m_constructorKind : 2;
     SourceParseMode m_sourceParseMode;
     uint8_t m_implementationVisibility : bitWidthOfImplementationVisibility;
-    LexicallyScopedFeatures m_lexicallyScopedFeatures : bitWidthOfLexicallyScopedFeatures;
+    uint8_t m_lexicalScopeFeatures : bitWidthOfLexicalScopeFeatures;
     uint8_t m_functionMode : 2; // FunctionMode
     uint8_t m_derivedContextType : 2;
     uint8_t m_inlineAttribute : 1;

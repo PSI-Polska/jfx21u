@@ -33,7 +33,6 @@
 #include "Settings.h"
 #include "ShadowRoot.h"
 #include "YouTubeEmbedShadowElement.h"
-#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {

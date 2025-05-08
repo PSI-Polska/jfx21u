@@ -41,7 +41,7 @@ namespace JSC { namespace B3 { namespace Air {
 
 void lowerMacros(Code& code)
 {
-    PhaseScope phaseScope(code, "Air::lowerMacros"_s);
+    PhaseScope phaseScope(code, "Air::lowerMacros");
 
     InsertionSet insertionSet(code);
     for (BasicBlock* block : code) {

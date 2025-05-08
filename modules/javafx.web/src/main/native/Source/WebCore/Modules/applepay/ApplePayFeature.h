@@ -46,9 +46,6 @@ enum class ApplePayFeature : uint8_t {
 #if ENABLE(APPLE_PAY_COUPON_CODE)
     PaymentRequestCouponCode,
 #endif
-#if ENABLE(APPLE_PAY_MERCHANT_CATEGORY_CODE)
-    PaymentRequestMerchantCategoryCode,
-#endif
 #if ENABLE(APPLE_PAY_MULTI_MERCHANT_PAYMENTS)
     PaymentRequestMultiTokenContexts,
 #endif
@@ -77,9 +74,6 @@ enum class ApplePayFeature : uint8_t {
 #endif
 #if ENABLE(APPLE_PAY_SHIPPING_METHOD_DATE_COMPONENTS_RANGE)
     ShippingMethodDateComponentsRange,
-#endif
-#if ENABLE(APPLE_PAY_DISBURSEMENTS)
-    PaymentRequestDisbursements,
 #endif
 };
 

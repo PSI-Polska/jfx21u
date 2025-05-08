@@ -28,14 +28,14 @@
 
 #pragma once
 
-#include "AccessibilityNodeObject.h"
+#include "AccessibilityObject.h"
 
 namespace WebCore {
 
 class HTMLElement;
 class HTMLSelectElement;
 
-class AccessibilityListBoxOption final : public AccessibilityNodeObject {
+class AccessibilityListBoxOption final : public AccessibilityObject {
 public:
     static Ref<AccessibilityListBoxOption> create(HTMLElement&);
     virtual ~AccessibilityListBoxOption();
@@ -57,17 +57,17 @@ private:
     LayoutRect elementRect() const final;
     AccessibilityObject* parentObject() const final;
 
-    bool isAccessibilityListBoxOptionInstance() const final { return true; }
+    bool isListBoxOption() const final { return true; }
     bool canHaveChildren() const final { return false; }
     HTMLSelectElement* listBoxOptionParentNode() const;
     int listBoxOptionIndex() const;
     IntRect listBoxOptionRect() const;
     AccessibilityObject* listBoxOptionAccessibilityObject(HTMLElement*) const;
     bool computeAccessibilityIsIgnored() const final;
+
+    WeakPtr<HTMLElement, WeakPtrImplWithEventTargetData> m_optionElement;
 };
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::AccessibilityListBoxOption) \
-    static bool isType(const WebCore::AccessibilityObject& object) { return object.isAccessibilityListBoxOptionInstance(); } \
-SPECIALIZE_TYPE_TRAITS_END()
+SPECIALIZE_TYPE_TRAITS_ACCESSIBILITY(AccessibilityListBoxOption, isListBoxOption())

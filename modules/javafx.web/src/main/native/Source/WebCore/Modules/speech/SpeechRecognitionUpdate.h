@@ -30,6 +30,7 @@
 #include "SpeechRecognitionResultData.h"
 #include <variant>
 #include <wtf/ArgumentCoder.h>
+#include <wtf/EnumTraits.h>
 
 namespace WebCore {
 

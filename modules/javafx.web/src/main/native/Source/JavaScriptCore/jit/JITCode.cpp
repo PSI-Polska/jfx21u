@@ -42,7 +42,9 @@ JITCode::JITCode(JITType jitType, CodePtr<JSEntryPtrTag> code, ShareAttribute sh
 {
 }
 
-JITCode::~JITCode() = default;
+JITCode::~JITCode()
+{
+}
 
 ASCIILiteral JITCode::typeName(JITType jitType)
 {
@@ -123,7 +125,7 @@ FTL::ForOSREntryJITCode* JITCode::ftlForOSREntry()
     return nullptr;
 }
 
-void JITCode::shrinkToFit()
+void JITCode::shrinkToFit(const ConcurrentJSLocker&)
 {
 }
 
@@ -162,7 +164,7 @@ JITCodeWithCodeRef::JITCodeWithCodeRef(CodeRef<JSEntryPtrTag> ref, JITType jitTy
 
 JITCodeWithCodeRef::~JITCodeWithCodeRef()
 {
-    if ((Options::dumpDisassembly() || ((jitType() == JITType::BaselineJIT) && Options::dumpBaselineDisassembly()) || (isOptimizingJIT(jitType()) && Options::dumpDFGDisassembly()))
+    if ((Options::dumpDisassembly() || (isOptimizingJIT(jitType()) && Options::dumpDFGDisassembly()))
         && m_executableMemory)
         dataLog("Destroying JIT code at ", pointerDump(m_executableMemory.get()), "\n");
 }
@@ -195,9 +197,8 @@ unsigned JITCodeWithCodeRef::offsetOf(void* pointerIntoCode)
 
 size_t JITCodeWithCodeRef::size()
 {
-    if (RefPtr memory = m_executableMemory)
-        return memory->sizeInBytes();
-    return 0;
+    RELEASE_ASSERT(m_executableMemory);
+    return m_executableMemory->sizeInBytes();
 }
 
 bool JITCodeWithCodeRef::contains(void* address)
@@ -240,7 +241,9 @@ DirectJITCode::DirectJITCode(JITCode::CodeRef<JSEntryPtrTag> ref, CodePtr<JSEntr
     ASSERT(m_withArityCheck);
 }
 
-DirectJITCode::~DirectJITCode() = default;
+DirectJITCode::~DirectJITCode()
+{
+}
 
 void DirectJITCode::initializeCodeRefForDFG(JITCode::CodeRef<JSEntryPtrTag> ref, CodePtr<JSEntryPtrTag> withArityCheck)
 {
@@ -277,7 +280,9 @@ NativeJITCode::NativeJITCode(CodeRef<JSEntryPtrTag> ref, JITType jitType, Intrin
     m_intrinsic = intrinsic;
 }
 
-NativeJITCode::~NativeJITCode() = default;
+NativeJITCode::~NativeJITCode()
+{
+}
 
 CodePtr<JSEntryPtrTag> NativeJITCode::addressForCall(ArityCheckMode arity)
 {

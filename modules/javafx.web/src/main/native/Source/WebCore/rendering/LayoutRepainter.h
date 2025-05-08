@@ -34,9 +34,7 @@ class RenderLayerModelObject;
 
 class LayoutRepainter {
 public:
-    enum class CheckForRepaint : uint8_t { No, Yes };
-    enum class ShouldAlwaysIssueFullRepaint : uint8_t { No, Yes };
-    LayoutRepainter(RenderElement&, std::optional<CheckForRepaint> checkForRepaintOverride = { }, std::optional<ShouldAlwaysIssueFullRepaint> = { }, RepaintOutlineBounds = RepaintOutlineBounds::Yes);
+    LayoutRepainter(RenderElement&, bool checkForRepaint, RepaintOutlineBounds = RepaintOutlineBounds::Yes);
 
     // Return true if it repainted.
     bool repaintAfterLayout();
@@ -46,8 +44,7 @@ private:
     const RenderLayerModelObject* m_repaintContainer { nullptr };
     // We store these values as LayoutRects, but the final invalidations will be pixel snapped
     RenderObject::RepaintRects m_oldRects;
-    bool m_checkForRepaint { true };
-    bool m_forceFullRepaint { false };
+    bool m_checkForRepaint;
     RepaintOutlineBounds m_repaintOutlineBounds;
 };
 

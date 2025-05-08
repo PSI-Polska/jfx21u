@@ -33,8 +33,7 @@ class RenderTextControlMultiLine;
 enum class SelectionRestorationMode : uint8_t;
 
 class HTMLTextAreaElement final : public HTMLTextFormControlElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLTextAreaElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLTextAreaElement);
+    WTF_MAKE_ISO_ALLOCATED(HTMLTextAreaElement);
 public:
     WEBCORE_EXPORT static Ref<HTMLTextAreaElement> create(Document&);
     static Ref<HTMLTextAreaElement> create(const QualifiedName&, Document&, HTMLFormElement*);
@@ -73,7 +72,6 @@ private:
 
     bool supportsPlaceholder() const final { return true; }
     HTMLElement* placeholderElement() const final { return m_placeholder.get(); }
-    RefPtr<HTMLElement> protectedPlaceholderElement() const;
     void updatePlaceholderText() final;
     bool isEmptyValue() const final { return value().isEmpty(); }
 

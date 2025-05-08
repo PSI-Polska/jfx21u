@@ -28,8 +28,7 @@
 namespace WebCore {
 
 class RenderTextControlSingleLine : public RenderTextControl {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderTextControlSingleLine);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderTextControlSingleLine);
+    WTF_MAKE_ISO_ALLOCATED(RenderTextControlSingleLine);
 public:
     RenderTextControlSingleLine(Type, HTMLInputElement&, RenderStyle&&);
     virtual ~RenderTextControlSingleLine();
@@ -38,7 +37,6 @@ protected:
     HTMLElement* containerElement() const;
     HTMLElement* innerBlockElement() const;
     HTMLInputElement& inputElement() const;
-    Ref<HTMLInputElement> protectedInputElement() const;
 
 private:
     void textFormControlElement() const = delete;
@@ -85,11 +83,9 @@ inline HTMLElement* RenderTextControlSingleLine::innerBlockElement() const
 // ----------------------------
 
 class RenderTextControlInnerBlock final : public RenderBlockFlow {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderTextControlInnerBlock);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderTextControlInnerBlock);
+    WTF_MAKE_ISO_ALLOCATED(RenderTextControlInnerBlock);
 public:
     RenderTextControlInnerBlock(Element&, RenderStyle&&);
-    virtual ~RenderTextControlInnerBlock();
 
 private:
     bool hasLineIfEmpty() const override { return true; }

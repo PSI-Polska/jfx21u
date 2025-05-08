@@ -26,19 +26,9 @@
 #include "GenericMediaQueryParser.h"
 
 #include "CSSAspectRatioValue.h"
-#include "CSSCustomPropertyValue.h"
-#include "CSSParserImpl.h"
-#include "CSSPropertyParser.h"
-#include "CSSPropertyParserConsumer+Ident.h"
-#include "CSSPropertyParserConsumer+Integer.h"
-#include "CSSPropertyParserConsumer+Length.h"
-#include "CSSPropertyParserConsumer+Number.h"
-#include "CSSPropertyParserConsumer+Resolution.h"
 #include "CSSPropertyParserHelpers.h"
 #include "CSSValue.h"
-#include "CSSVariableParser.h"
 #include "MediaQueryParserContext.h"
-#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 namespace MQ {
@@ -47,10 +37,7 @@ static AtomString consumeFeatureName(CSSParserTokenRange& range)
 {
     if (range.peek().type() != IdentToken)
         return nullAtom();
-    auto name = range.consumeIncludingWhitespace().value();
-    if (isCustomPropertyName(name))
-        return name.toAtomString();
-    return name.convertToASCIILowercaseAtom();
+    return range.consumeIncludingWhitespace().value().convertToASCIILowercaseAtom();
 }
 
 std::optional<Feature> FeatureParser::consumeFeature(CSSParserTokenRange& range, const MediaQueryParserContext& context)
@@ -63,36 +50,20 @@ std::optional<Feature> FeatureParser::consumeFeature(CSSParserTokenRange& range,
     return consumeRangeFeature(range, context);
 };
 
-static RefPtr<CSSValue> consumeCustomPropertyValue(AtomString propertyName, CSSParserTokenRange& range)
-{
-    auto valueRange = range;
-    range.consumeAll();
-
-    // Syntax is that of a valid declaration so !important is allowed. It just gets ignored.
-    CSSParserImpl::consumeTrailingImportantAndWhitespace(valueRange);
-
-    if (valueRange.atEnd())
-        return CSSCustomPropertyValue::createEmpty(propertyName);
-
-    return CSSVariableParser::parseDeclarationValue(propertyName, valueRange, strictCSSParserContext());
-}
-
 std::optional<Feature> FeatureParser::consumeBooleanOrPlainFeature(CSSParserTokenRange& range, const MediaQueryParserContext& context)
 {
     auto consumePlainFeatureName = [&]() -> std::pair<AtomString, ComparisonOperator> {
         auto name = consumeFeatureName(range);
         if (name.isEmpty())
             return { };
-        if (isCustomPropertyName(name))
-            return { name, ComparisonOperator::Equal };
         if (name.startsWith("min-"_s))
             return { StringView(name).substring(4).toAtomString(), ComparisonOperator::GreaterThanOrEqual };
         if (name.startsWith("max-"_s))
             return { StringView(name).substring(4).toAtomString(), ComparisonOperator::LessThanOrEqual };
         if (name.startsWith("-webkit-min-"_s))
-            return { makeAtomString("-webkit-"_s, StringView(name).substring(12)), ComparisonOperator::GreaterThanOrEqual };
+            return { "-webkit-"_s + StringView(name).substring(12), ComparisonOperator::GreaterThanOrEqual };
         if (name.startsWith("-webkit-max-"_s))
-            return { makeAtomString("-webkit-"_s, StringView(name).substring(12)), ComparisonOperator::LessThanOrEqual };
+            return { "-webkit-"_s + StringView(name).substring(12), ComparisonOperator::LessThanOrEqual };
 
         return { name, ComparisonOperator::Equal };
     };
@@ -114,9 +85,10 @@ std::optional<Feature> FeatureParser::consumeBooleanOrPlainFeature(CSSParserToke
         return { };
 
     range.consumeIncludingWhitespace();
+    if (range.atEnd())
+        return { };
 
-    RefPtr value = isCustomPropertyName(featureName) ? consumeCustomPropertyValue(featureName, range) : consumeValue(range, context);
-
+    RefPtr value = consumeValue(range, context);
     if (!value)
         return { };
 
@@ -249,9 +221,9 @@ RefPtr<CSSValue> FeatureParser::consumeValue(CSSParserTokenRange& range, const M
 
     if (RefPtr value = CSSPropertyParserHelpers::consumeInteger(range))
         return value;
-    if (RefPtr value = CSSPropertyParserHelpers::consumeNumber(range))
+    if (RefPtr value = CSSPropertyParserHelpers::consumeNumber(range, ValueRange::All))
         return value;
-    if (RefPtr value = CSSPropertyParserHelpers::consumeLength(range, HTMLStandardMode))
+    if (RefPtr value = CSSPropertyParserHelpers::consumeLength(range, HTMLStandardMode, ValueRange::All))
         return value;
     if (RefPtr value = CSSPropertyParserHelpers::consumeResolution(range))
         return value;
@@ -291,9 +263,6 @@ bool FeatureParser::validateFeatureAgainstSchema(Feature& feature, const Feature
                 return true;
             }
             return is<CSSAspectRatioValue>(value.get());
-
-        case FeatureSchema::ValueType::CustomProperty:
-            return value && value->isCustomPropertyValue();
         }
         ASSERT_NOT_REACHED();
         return false;
@@ -306,10 +275,7 @@ bool FeatureParser::validateFeatureAgainstSchema(Feature& feature, const Feature
             if (feature.rightComparison && feature.rightComparison->op != ComparisonOperator::Equal)
                 return false;
         }
-        if (schema.valueType == FeatureSchema::ValueType::CustomProperty) {
-            if (!isCustomPropertyName(feature.name))
-                return false;
-        }
+
         if (feature.leftComparison) {
             if (!validateValue(feature.leftComparison->value))
                 return false;

@@ -38,15 +38,15 @@ namespace WebCore {
 
 class DeferredPromise;
 
-class ScreenOrientation final : public ActiveDOMObject, public EventTarget, public ScreenOrientationManagerObserver, public VisibilityChangeClient, public RefCounted<ScreenOrientation> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ScreenOrientation);
+class ScreenOrientation final : public ActiveDOMObject, public EventTarget, public ScreenOrientationManager::Observer, public VisibilityChangeClient, public RefCounted<ScreenOrientation> {
+    WTF_MAKE_ISO_ALLOCATED(ScreenOrientation);
 public:
     static Ref<ScreenOrientation> create(Document*);
     ~ScreenOrientation();
 
-    using ScreenOrientationManagerObserver::weakPtrFactory;
-    using ScreenOrientationManagerObserver::WeakValueType;
-    using ScreenOrientationManagerObserver::WeakPtrImplType;
+    using ScreenOrientationManager::Observer::weakPtrFactory;
+    using ScreenOrientationManager::Observer::WeakValueType;
+    using ScreenOrientationManager::Observer::WeakPtrImplType;
 
     using LockType = ScreenOrientationLockType;
     using Type = ScreenOrientationType;
@@ -56,9 +56,8 @@ public:
     Type type() const;
     uint16_t angle() const;
 
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
+    using RefCounted::ref;
+    using RefCounted::deref;
 
 private:
     ScreenOrientation(Document*);
@@ -71,17 +70,18 @@ private:
     // VisibilityChangeClient
     void visibilityStateChanged() final;
 
-    // ScreenOrientationManagerObserver
+    // ScreenOrientationManager::Observer
     void screenOrientationDidChange(ScreenOrientationType) final;
 
     // EventTarget
-    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::ScreenOrientation; }
+    EventTargetInterface eventTargetInterface() const final { return ScreenOrientationEventTargetInterfaceType; }
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
     void refEventTarget() final { RefCounted::ref(); }
     void derefEventTarget() final { RefCounted::deref(); }
     void eventListenersDidChange() final;
 
-    // ActiveDOMObject.
+    // ActiveDOMObject
+    const char* activeDOMObjectName() const final;
     bool virtualHasPendingActivity() const final;
     void suspend(ReasonForSuspension) final;
     void resume() final;

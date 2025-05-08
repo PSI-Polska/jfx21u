@@ -31,19 +31,17 @@
 #include "EventLoop.h"
 #include "EventNames.h"
 #include "FocusOptions.h"
-#include "HTMLElement.h"
 #include "HTMLNames.h"
 #include "PopoverData.h"
 #include "PseudoClassChangeInvalidation.h"
-#include "RenderBlock.h"
 #include "RenderElement.h"
 #include "ScopedEventQueue.h"
 #include "TypedElementDescendantIteratorInlines.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLDialogElement);
+WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLDialogElement);
 
 using namespace HTMLNames;
 
@@ -65,9 +63,7 @@ ExceptionOr<void> HTMLDialogElement::show()
 
     m_previouslyFocusedElement = document().focusedElement();
 
-    auto hideUntil = topmostPopoverAncestor(TopLayerElementType::Other);
-
-    document().hideAllPopoversUntil(hideUntil, FocusPreviousElement::No, FireEvents::No);
+    document().hideAllPopoversUntil(nullptr, FocusPreviousElement::No, FireEvents::No);
 
     runFocusingSteps();
     return { };
@@ -96,20 +92,12 @@ ExceptionOr<void> HTMLDialogElement::showModal()
 
     setIsModal(true);
 
-    auto containingBlockBeforeStyleResolution = SingleThreadWeakPtr<RenderBlock> { };
-    if (auto* renderer = this->renderer())
-        containingBlockBeforeStyleResolution = renderer->containingBlock();
-
     if (!isInTopLayer())
         addToTopLayer();
 
-    RenderElement::markRendererDirtyAfterTopLayerChange(this->checkedRenderer().get(), containingBlockBeforeStyleResolution.get());
-
     m_previouslyFocusedElement = document().focusedElement();
 
-    auto hideUntil = topmostPopoverAncestor(TopLayerElementType::Other);
-
-    document().hideAllPopoversUntil(hideUntil, FocusPreviousElement::No, FireEvents::No);
+    document().hideAllPopoversUntil(nullptr, FocusPreviousElement::No, FireEvents::No);
 
     runFocusingSteps();
 
@@ -140,34 +128,6 @@ void HTMLDialogElement::close(const String& result)
     queueTaskToDispatchEvent(TaskSource::UserInteraction, Event::create(eventNames().closeEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
-bool HTMLDialogElement::isValidCommandType(const CommandType command)
-{
-    return HTMLElement::isValidCommandType(command) || command == CommandType::ShowModal || command == CommandType::Close;
-}
-
-bool HTMLDialogElement::handleCommandInternal(const HTMLFormControlElement& invoker, const CommandType& command)
-{
-    if (HTMLElement::handleCommandInternal(invoker, command))
-        return true;
-
-    if (isPopoverShowing())
-        return false;
-
-    if (isOpen()) {
-        if (command == CommandType::Close) {
-            close(nullString());
-            return true;
-        }
-    } else {
-        if (command == CommandType::ShowModal) {
-            showModal();
-            return true;
-        }
-    }
-
-    return false;
-}
-
 void HTMLDialogElement::queueCancelTask()
 {
     queueTaskKeepingThisNodeAlive(TaskSource::UserInteraction, [this] {
@@ -182,7 +142,7 @@ void HTMLDialogElement::queueCancelTask()
 void HTMLDialogElement::runFocusingSteps()
 {
     RefPtr<Element> control;
-    if (hasAttributeWithoutSynchronization(HTMLNames::autofocusAttr))
+    if (m_isModal && hasAttributeWithoutSynchronization(HTMLNames::autofocusAttr))
         control = this;
     if (!control)
         control = findFocusDelegate();
@@ -201,11 +161,6 @@ void HTMLDialogElement::runFocusingSteps()
     Ref topDocument = control->document().topDocument();
     topDocument->clearAutofocusCandidates();
     topDocument->setAutofocusProcessed();
-}
-
-bool HTMLDialogElement::supportsFocus() const
-{
-    return true;
 }
 
 void HTMLDialogElement::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)

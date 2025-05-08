@@ -26,7 +26,6 @@
 #pragma once
 
 #include "MathCommon.h"
-#include "OperationResult.h"
 
 #if ENABLE(DFG_JIT)
 
@@ -62,8 +61,8 @@ enum class UnaryType : uint32_t {
 #undef DFG_ARITH_UNARY_ENUM
 };
 
-using UnaryFunction = double(JIT_OPERATION_ATTRIBUTES *)(double);
-using UnaryOperation = OperationReturnType<double>(JIT_OPERATION_ATTRIBUTES *)(JSGlobalObject*, EncodedJSValue);
+using UnaryFunction = double(JIT_OPERATION_ATTRIBUTES*)(double);
+using UnaryOperation = double(JIT_OPERATION_ATTRIBUTES*)(JSGlobalObject*, EncodedJSValue);
 
 } // namespace Arith
 

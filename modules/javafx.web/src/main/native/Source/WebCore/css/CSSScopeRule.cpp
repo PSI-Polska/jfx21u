@@ -49,13 +49,13 @@ const StyleRuleScope& CSSScopeRule::styleRuleScope() const
 String CSSScopeRule::cssText() const
 {
     StringBuilder builder;
-    builder.append("@scope"_s);
+    builder.append("@scope");
     auto start = this->start();
     if (!start.isEmpty())
-        builder.append(" ("_s, start, ')');
+        builder.append(" (", start, ')');
     auto end = this->end();
     if (!end.isEmpty())
-        builder.append(" to "_s, '(', end, ')');
+        builder.append(" to ", '(', end, ')');
     appendCSSTextForItems(builder);
     return builder.toString();
 }

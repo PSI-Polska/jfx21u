@@ -29,13 +29,12 @@
 
 namespace WGSL {
 
-class ShaderModule;
+class CallGraph;
 struct ConstantValue;
-struct PrepareResult;
 
 namespace Metal {
 
-void emitMetalFunctions(StringBuilder&, ShaderModule&, PrepareResult&, const HashMap<String, ConstantValue>&);
+void emitMetalFunctions(StringBuilder&, const CallGraph&, const HashMap<String, ConstantValue>&);
 
 } // namespace Metal
 } // namespace WGSL

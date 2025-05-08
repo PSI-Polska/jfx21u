@@ -41,13 +41,13 @@ static inline bool isStunMessage(uint16_t messageType)
     return !(messageType & 0xC000);
 }
 
-std::optional<STUNMessageLengths> getSTUNOrTURNMessageLengths(std::span<const uint8_t> data)
+std::optional<STUNMessageLengths> getSTUNOrTURNMessageLengths(const uint8_t* data, size_t size)
 {
-    if (data.size() < 4)
+    if (size < 4)
         return { };
 
-    auto messageType = be16toh(*reinterpret_cast<const uint16_t*>(data.data()));
-    auto messageLength = be16toh(*reinterpret_cast<const uint16_t*>(data.data() + 2));
+    auto messageType = be16toh(*reinterpret_cast<const uint16_t*>(data));
+    auto messageLength = be16toh(*reinterpret_cast<const uint16_t*>(data + 2));
 
     // STUN data message header is 20 bytes.
     if (isStunMessage(messageType)) {
@@ -61,29 +61,31 @@ std::optional<STUNMessageLengths> getSTUNOrTURNMessageLengths(std::span<const ui
     return STUNMessageLengths { length, roundedLength };
 }
 
-static inline Vector<uint8_t> extractSTUNOrTURNMessages(Vector<uint8_t>&& buffered, const Function<void(std::span<const uint8_t> data)>& processMessage)
+static inline Vector<uint8_t> extractSTUNOrTURNMessages(Vector<uint8_t>&& buffered, const Function<void(const uint8_t* data, size_t size)>& processMessage)
 {
-    auto data = buffered.span();
+    auto* data = buffered.data();
+    size_t size = buffered.size();
 
     while (true) {
-        auto lengths = getSTUNOrTURNMessageLengths(data);
+        auto lengths = getSTUNOrTURNMessageLengths(data, size);
 
-        if (!lengths || lengths->messageLengthWithPadding > data.size()) {
-            if (!data.size())
+        if (!lengths || lengths->messageLengthWithPadding > size) {
+            if (!size)
                 return { };
 
-            std::memcpy(buffered.data(), data.data(), data.size());
-            buffered.resize(data.size());
+            std::memcpy(buffered.data(), data, size);
+            buffered.resize(size);
             return WTFMove(buffered);
         }
 
-        processMessage(data.first(lengths->messageLength));
+        processMessage(data, lengths->messageLength);
 
-        data = data.subspan(lengths->messageLengthWithPadding);
+        data += lengths->messageLengthWithPadding;
+        size -= lengths->messageLengthWithPadding;
     }
 }
 
-static inline Vector<uint8_t> extractDataMessages(Vector<uint8_t>&& buffered, const Function<void(std::span<const uint8_t> data)>& processMessage)
+static inline Vector<uint8_t> extractDataMessages(Vector<uint8_t>&& buffered, const Function<void(const uint8_t* data, size_t size)>& processMessage)
 {
     constexpr size_t lengthFieldSize = 2; // number of bytes read by be16toh.
 
@@ -105,14 +107,14 @@ static inline Vector<uint8_t> extractDataMessages(Vector<uint8_t>&& buffered, co
         data += lengthFieldSize;
         size -= lengthFieldSize;
 
-        processMessage(std::span { data, length });
+        processMessage(data, length);
 
         data += length;
         size -= length;
     }
 }
 
-Vector<uint8_t> extractMessages(Vector<uint8_t>&& buffer, MessageType type, const Function<void(std::span<const uint8_t> data)>& processMessage)
+Vector<uint8_t> extractMessages(Vector<uint8_t>&& buffer, MessageType type, const Function<void(const uint8_t* data, size_t size)>& processMessage)
 {
     return type == MessageType::STUN ? extractSTUNOrTURNMessages(WTFMove(buffer), processMessage) : extractDataMessages(WTFMove(buffer), processMessage);
 }

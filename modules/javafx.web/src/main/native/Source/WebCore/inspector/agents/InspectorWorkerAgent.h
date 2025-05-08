@@ -34,10 +34,13 @@
 
 namespace WebCore {
 
-class InspectorWorkerAgent : public InspectorAgentBase, public Inspector::WorkerBackendDispatcherHandler, public WorkerInspectorProxy::PageChannel {
+class Page;
+
+class InspectorWorkerAgent final : public InspectorAgentBase, public Inspector::WorkerBackendDispatcherHandler, public WorkerInspectorProxy::PageChannel {
     WTF_MAKE_NONCOPYABLE(InspectorWorkerAgent);
     WTF_MAKE_FAST_ALLOCATED;
 public:
+    InspectorWorkerAgent(PageAgentContext&);
     ~InspectorWorkerAgent();
 
     // InspectorAgentBase
@@ -58,20 +61,16 @@ public:
     void workerStarted(WorkerInspectorProxy&);
     void workerTerminated(WorkerInspectorProxy&);
 
-protected:
-    InspectorWorkerAgent(WebAgentContext&);
-
-    virtual void connectToAllWorkerInspectorProxies() = 0;
-
-    void connectToWorkerInspectorProxy(WorkerInspectorProxy&);
-
 private:
+    void connectToAllWorkerInspectorProxiesForPage();
     void disconnectFromAllWorkerInspectorProxies();
+    void connectToWorkerInspectorProxy(WorkerInspectorProxy&);
     void disconnectFromWorkerInspectorProxy(WorkerInspectorProxy&);
 
     std::unique_ptr<Inspector::WorkerFrontendDispatcher> m_frontendDispatcher;
     RefPtr<Inspector::WorkerBackendDispatcher> m_backendDispatcher;
 
+    Page& m_page;
     MemoryCompactRobinHoodHashMap<String, WeakPtr<WorkerInspectorProxy>> m_connectedProxies;
     bool m_enabled { false };
 };

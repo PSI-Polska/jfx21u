@@ -25,12 +25,12 @@
 #include "NodeName.h"
 #include "SVGNames.h"
 #include "SVGParserUtilities.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGFETurbulenceElement);
+WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFETurbulenceElement);
 
 inline SVGFETurbulenceElement::SVGFETurbulenceElement(const QualifiedName& tagName, Document& document)
     : SVGFilterPrimitiveStandardAttributes(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -58,26 +58,26 @@ void SVGFETurbulenceElement::attributeChanged(const QualifiedName& name, const A
     case AttributeNames::typeAttr: {
         TurbulenceType propertyValue = SVGPropertyTraits<TurbulenceType>::fromString(newValue);
         if (propertyValue != TurbulenceType::Unknown)
-            Ref { m_type }->setBaseValInternal<TurbulenceType>(propertyValue);
+            m_type->setBaseValInternal<TurbulenceType>(propertyValue);
         break;
     }
     case AttributeNames::stitchTilesAttr: {
         SVGStitchOptions propertyValue = SVGPropertyTraits<SVGStitchOptions>::fromString(newValue);
         if (propertyValue > 0)
-            Ref { m_stitchTiles }->setBaseValInternal<SVGStitchOptions>(propertyValue);
+            m_stitchTiles->setBaseValInternal<SVGStitchOptions>(propertyValue);
         break;
     }
     case AttributeNames::baseFrequencyAttr:
         if (auto result = parseNumberOptionalNumber(newValue)) {
-            Ref { m_baseFrequencyX }->setBaseValInternal(result->first);
-            Ref { m_baseFrequencyY }->setBaseValInternal(result->second);
+            m_baseFrequencyX->setBaseValInternal(result->first);
+            m_baseFrequencyY->setBaseValInternal(result->second);
         }
         break;
     case AttributeNames::seedAttr:
-        Ref { m_seed }->setBaseValInternal(newValue.toFloat());
+        m_seed->setBaseValInternal(newValue.toFloat());
         break;
     case AttributeNames::numOctavesAttr:
-        Ref { m_numOctaves }->setBaseValInternal(parseInteger<unsigned>(newValue).value_or(0));
+        m_numOctaves->setBaseValInternal(parseInteger<unsigned>(newValue).value_or(0));
         break;
     default:
         break;

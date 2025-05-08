@@ -31,11 +31,9 @@ namespace WebCore {
 class SVGInlineTextBox;
 
 class RenderSVGInlineText final : public RenderText {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGInlineText);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGInlineText);
+    WTF_MAKE_ISO_ALLOCATED(RenderSVGInlineText);
 public:
     RenderSVGInlineText(Text&, const String&);
-    virtual ~RenderSVGInlineText();
 
     Text& textNode() const { return downcast<Text>(nodeForNonAnonymous()); }
 
@@ -50,7 +48,7 @@ public:
     float scalingFactor() const { return m_scalingFactor; }
     const FontCascade& scaledFont() const { return m_scaledFont; }
     void updateScaledFont();
-    static bool computeNewScaledFontForStyle(const RenderObject&, const RenderStyle&, float& scalingFactor, FontCascade& scaledFont);
+    static void computeNewScaledFontForStyle(const RenderObject&, const RenderStyle&, float& scalingFactor, FontCascade& scaledFont);
 
     // Preserves floating point precision for the use in DRT. It knows how to round and does a better job than enclosingIntRect.
     FloatRect floatLinesBoundingBox() const;
@@ -66,7 +64,7 @@ private:
 
     FloatRect objectBoundingBox() const override { return floatLinesBoundingBox(); }
 
-    VisiblePosition positionForPoint(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*) override;
+    VisiblePosition positionForPoint(const LayoutPoint&, const RenderFragmentContainer*) override;
     IntRect linesBoundingBox() const override;
     std::unique_ptr<LegacyInlineTextBox> createTextBox() override;
 

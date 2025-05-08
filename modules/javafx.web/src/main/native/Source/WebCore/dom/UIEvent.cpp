@@ -25,34 +25,33 @@
 #include "UIEvent.h"
 
 #include "Node.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(UIEvent);
+WTF_MAKE_ISO_ALLOCATED_IMPL(UIEvent);
 
-UIEvent::UIEvent(enum EventInterfaceType eventInterface)
-    : Event(eventInterface)
-    , m_detail(0)
+UIEvent::UIEvent()
+    : m_detail(0)
 {
 }
 
-UIEvent::UIEvent(enum EventInterfaceType eventInterface, const AtomString& eventType, CanBubble canBubble, IsCancelable isCancelable, IsComposed isComposed, RefPtr<WindowProxy>&& viewArg, int detailArg)
-    : Event(eventInterface, eventType, canBubble, isCancelable, isComposed)
+UIEvent::UIEvent(const AtomString& eventType, CanBubble canBubble, IsCancelable isCancelable, IsComposed isComposed, RefPtr<WindowProxy>&& viewArg, int detailArg)
+    : Event(eventType, canBubble, isCancelable, isComposed)
     , m_view(WTFMove(viewArg))
     , m_detail(detailArg)
 {
 }
 
-UIEvent::UIEvent(enum EventInterfaceType eventInterface, const AtomString& eventType, CanBubble canBubble, IsCancelable isCancelable, IsComposed isComposed, MonotonicTime timestamp, RefPtr<WindowProxy>&& viewArg, int detailArg, IsTrusted isTrusted)
-    : Event(eventInterface, eventType, canBubble, isCancelable, isComposed, timestamp, isTrusted)
+UIEvent::UIEvent(const AtomString& eventType, CanBubble canBubble, IsCancelable isCancelable, IsComposed isComposed, MonotonicTime timestamp, RefPtr<WindowProxy>&& viewArg, int detailArg, IsTrusted isTrusted)
+    : Event(eventType, canBubble, isCancelable, isComposed, timestamp, isTrusted)
     , m_view(WTFMove(viewArg))
     , m_detail(detailArg)
 {
 }
 
-UIEvent::UIEvent(enum EventInterfaceType eventInterface, const AtomString& eventType, const UIEventInit& initializer, IsTrusted isTrusted)
-    : Event(eventInterface, eventType, initializer, isTrusted)
+UIEvent::UIEvent(const AtomString& eventType, const UIEventInit& initializer, IsTrusted isTrusted)
+    : Event(eventType, initializer, isTrusted)
     , m_view(initializer.view.get())
     , m_detail(initializer.detail)
 {
@@ -74,6 +73,11 @@ void UIEvent::initUIEvent(const AtomString& typeArg, bool canBubbleArg, bool can
 bool UIEvent::isUIEvent() const
 {
     return true;
+}
+
+EventInterface UIEvent::eventInterface() const
+{
+    return UIEventInterfaceType;
 }
 
 int UIEvent::layerX()

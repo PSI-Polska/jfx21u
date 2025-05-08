@@ -55,7 +55,7 @@ class LICMPhase : public Phase {
 
 public:
     LICMPhase(Graph& graph)
-        : Phase(graph, "LICM"_s)
+        : Phase(graph, "LICM")
         , m_state(graph)
         , m_interpreter(graph, m_state)
     {

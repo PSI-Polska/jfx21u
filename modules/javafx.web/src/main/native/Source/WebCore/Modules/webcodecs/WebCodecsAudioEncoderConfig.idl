@@ -31,11 +31,10 @@ typedef [EnforceRange] unsigned long long WebCodecsAudioEncoderConfigBitrate;
 [
     Conditional=WEB_CODECS,
     JSGenerateToJSObject,
-    JSGenerateToNativeObject,
 ] dictionary WebCodecsAudioEncoderConfig {
     required DOMString codec;
-    required WebCodecsAudioEncoderConfigSize sampleRate;
-    required WebCodecsAudioEncoderConfigSize numberOfChannels;
+    WebCodecsAudioEncoderConfigSize sampleRate;
+    WebCodecsAudioEncoderConfigSize numberOfChannels;
     WebCodecsAudioEncoderConfigBitrate bitrate;
     BitrateMode bitrateMode = "variable";
     OpusEncoderConfig opus;

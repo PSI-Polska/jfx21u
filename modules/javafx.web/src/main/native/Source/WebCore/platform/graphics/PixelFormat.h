@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <wtf/EnumTraits.h>
 #include <wtf/Forward.h>
 
 namespace WebCore {

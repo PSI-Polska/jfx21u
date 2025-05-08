@@ -44,11 +44,21 @@ JITFinalizer::JITFinalizer(DFG::Plan& plan)
 {
 }
 
-JITFinalizer::~JITFinalizer() = default;
+JITFinalizer::~JITFinalizer()
+{
+}
 
 size_t JITFinalizer::codeSize()
 {
-    return m_codeSize;
+    size_t result = 0;
+
+    if (b3CodeLinkBuffer)
+        result += b3CodeLinkBuffer->size();
+
+    if (entrypointLinkBuffer)
+        result += entrypointLinkBuffer->size();
+
+    return result;
 }
 
 bool JITFinalizer::finalize()
@@ -56,11 +66,11 @@ bool JITFinalizer::finalize()
     VM& vm = *m_plan.vm();
     WTF::crossModifyingCodeFence();
 
-    m_plan.runMainThreadFinalizationTasks();
+    b3CodeLinkBuffer->runMainThreadFinalizationTasks();
 
     CodeBlock* codeBlock = m_plan.codeBlock();
 
-    codeBlock->setJITCode(*m_jitCode);
+    codeBlock->setJITCode(*jitCode);
 
     if (UNLIKELY(m_plan.compilation()))
         vm.m_perBytecodeProfiler->addCompilation(codeBlock, *m_plan.compilation());

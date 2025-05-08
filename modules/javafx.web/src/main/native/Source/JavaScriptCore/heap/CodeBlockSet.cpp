@@ -35,9 +35,13 @@ namespace JSC {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(CodeBlockSet);
 
-CodeBlockSet::CodeBlockSet() = default;
+CodeBlockSet::CodeBlockSet()
+{
+}
 
-CodeBlockSet::~CodeBlockSet() = default;
+CodeBlockSet::~CodeBlockSet()
+{
+}
 
 bool CodeBlockSet::contains(const AbstractLocker&, void* candidateCodeBlock)
 {
@@ -65,14 +69,14 @@ bool CodeBlockSet::isCurrentlyExecuting(CodeBlock* codeBlock)
 void CodeBlockSet::dump(PrintStream& out) const
 {
     CommaPrinter comma;
-    out.print("{codeBlocks = ["_s);
+    out.print("{codeBlocks = [");
     for (CodeBlock* codeBlock : m_codeBlocks)
         out.print(comma, pointerDump(codeBlock));
-    out.print("], currentlyExecuting = ["_s);
+    out.print("], currentlyExecuting = [");
     comma = CommaPrinter();
     for (CodeBlock* codeBlock : m_currentlyExecuting)
         out.print(comma, pointerDump(codeBlock));
-    out.print("]}"_s);
+    out.print("]}");
 }
 
 void CodeBlockSet::add(CodeBlock* codeBlock)

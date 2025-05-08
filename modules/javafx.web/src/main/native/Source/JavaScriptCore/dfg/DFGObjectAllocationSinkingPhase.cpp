@@ -279,50 +279,50 @@ public:
     {
         switch (m_kind) {
         case Kind::Escaped:
-            out.print("Escaped"_s);
+            out.print("Escaped");
             break;
 
         case Kind::Object:
-            out.print("Object"_s);
+            out.print("Object");
             break;
 
         case Kind::Function:
-            out.print("Function"_s);
+            out.print("Function");
             break;
 
         case Kind::GeneratorFunction:
-            out.print("GeneratorFunction"_s);
+            out.print("GeneratorFunction");
             break;
 
         case Kind::AsyncFunction:
-            out.print("AsyncFunction"_s);
+            out.print("AsyncFunction");
             break;
 
         case Kind::InternalFieldObject:
-            out.print("InternalFieldObject"_s);
+            out.print("InternalFieldObject");
             break;
 
         case Kind::AsyncGeneratorFunction:
-            out.print("AsyncGeneratorFunction"_s);
+            out.print("AsyncGeneratorFunction");
             break;
 
         case Kind::Activation:
-            out.print("Activation"_s);
+            out.print("Activation");
             break;
 
         case Kind::RegExpObject:
-            out.print("RegExpObject"_s);
+            out.print("RegExpObject");
             break;
         }
-        out.print("Allocation("_s);
+        out.print("Allocation(");
         if (!m_structuresForMaterialization.isEmpty())
             out.print(inContext(m_structuresForMaterialization.toStructureSet(), context));
         if (!m_fields.isEmpty()) {
             if (!m_structuresForMaterialization.isEmpty())
                 out.print(", ");
-            out.print(mapDump(m_fields, " => #"_s, ", "_s));
+            out.print(mapDump(m_fields, " => #", ", "));
         }
-        out.print(")"_s);
+        out.print(")");
     }
 
 private:
@@ -781,7 +781,7 @@ private:
 class ObjectAllocationSinkingPhase : public Phase {
 public:
     ObjectAllocationSinkingPhase(Graph& graph)
-        : Phase(graph, "object allocation elimination"_s)
+        : Phase(graph, "object allocation elimination")
         , m_pointerSSA(graph)
         , m_allocationSSA(graph)
         , m_insertionSet(graph)
@@ -2536,15 +2536,13 @@ private:
                         // nodes. Those nodes were guarded by the appropriate type checks. This means that
                         // at this point, we can simply trust that the incoming value has the right type
                         // for whatever structure we are using.
-                        // Now, this data is used directly for the base, so viaGlobalProxy or not does not matter.
-                        data->variants.append(PutByVariant::replace(nullptr, currentSet, currentOffset, /* viaGlobalProxy */ false));
+                        data->variants.append(PutByVariant::replace(nullptr, currentSet, currentOffset));
                         currentOffset = offset;
                         currentSet.clear();
                     }
                     currentSet.add(structure.get());
                 }
-                // Now, this data is used directly for the base, so viaGlobalProxy or not does not matter.
-                data->variants.append(PutByVariant::replace(nullptr, currentSet, currentOffset, /* viaGlobalProxy */ false));
+                data->variants.append(PutByVariant::replace(nullptr, currentSet, currentOffset));
             }
 
             return m_graph.addNode(

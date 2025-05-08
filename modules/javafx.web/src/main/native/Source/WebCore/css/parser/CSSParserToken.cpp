@@ -31,7 +31,9 @@
 #include "CSSParserToken.h"
 
 #include "CSSMarkup.h"
+#include "CSSPrimitiveValue.h"
 #include "CSSPropertyParser.h"
+#include <limits.h>
 #include <wtf/HexNumber.h>
 #include <wtf/text/StringBuilder.h>
 
@@ -39,10 +41,10 @@ namespace WebCore {
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSParserToken);
 
 template<typename CharacterType>
-CSSUnitType cssPrimitiveValueUnitFromTrie(std::span<const CharacterType> data)
+CSSUnitType cssPrimitiveValueUnitFromTrie(const CharacterType* data, unsigned length)
 {
-    ASSERT(data.data());
-    switch (data.size()) {
+    ASSERT(data);
+    switch (length) {
     case 1:
         switch (toASCIILower(data[0])) {
         case 'q':
@@ -346,20 +348,13 @@ CSSUnitType cssPrimitiveValueUnitFromTrie(std::span<const CharacterType> data)
 CSSUnitType CSSParserToken::stringToUnitType(StringView stringView)
 {
     if (stringView.is8Bit())
-        return cssPrimitiveValueUnitFromTrie(stringView.span8());
-    return cssPrimitiveValueUnitFromTrie(stringView.span16());
+        return cssPrimitiveValueUnitFromTrie(stringView.characters8(), stringView.length());
+    return cssPrimitiveValueUnitFromTrie(stringView.characters16(), stringView.length());
 }
 
 CSSParserToken::CSSParserToken(CSSParserTokenType type, BlockType blockType)
     : m_type(type)
     , m_blockType(blockType)
-{
-}
-
-CSSParserToken::CSSParserToken(unsigned nonNewlineWhitespaceCount)
-    : m_type(NonNewlineWhitespaceToken)
-    , m_blockType(NotBlock)
-    , m_whitespaceCount(nonNewlineWhitespaceCount)
 {
 }
 
@@ -402,13 +397,13 @@ CSSParserToken::CSSParserToken(HashTokenType type, StringView value)
 static StringView mergeIfAdjacent(StringView a, StringView b)
 {
     if (a.is8Bit() && b.is8Bit()) {
-        auto characters = a.span8();
-        if (characters.end() == b.span8().begin())
-            return std::span { characters.data(), a.length() + b.length() };
+        auto characters = a.characters8();
+        if (characters + a.length() == b.characters8())
+            return { characters, a.length() + b.length() };
     } else if (!a.is8Bit() && !b.is8Bit()) {
-        auto characters = a.span16();
-        if (characters.end() == b.span16().begin())
-            return std::span { characters.data(), a.length() + b.length() };
+        auto characters = a.characters16();
+        if (characters + a.length() == b.characters16())
+            return { characters, a.length() + b.length() };
     }
     return { };
 }
@@ -438,7 +433,7 @@ void CSSParserToken::convertToPercentage()
 
 StringView CSSParserToken::originalText() const
 {
-    ASSERT(m_type == NumberToken || m_type == DimensionToken || m_type == PercentageToken);
+    ASSERT(m_type == NumberToken || m_type == DimensionToken);
     return value();
 }
 
@@ -484,19 +479,15 @@ CSSValueID CSSParserToken::id() const
 {
     if (m_type != IdentToken)
         return CSSValueInvalid;
-    return identOrFunctionId();
+    if (m_id < 0)
+        m_id = cssValueKeywordID(value());
+    return static_cast<CSSValueID>(m_id);
 }
 
 CSSValueID CSSParserToken::functionId() const
 {
     if (m_type != FunctionToken)
         return CSSValueInvalid;
-    return identOrFunctionId();
-}
-
-CSSValueID CSSParserToken::identOrFunctionId() const
-{
-    ASSERT(m_type == IdentToken || m_type == FunctionToken);
     if (m_id < 0)
         m_id = cssValueKeywordID(value());
     return static_cast<CSSValueID>(m_id);
@@ -530,8 +521,6 @@ bool CSSParserToken::hasStringBacking() const
     case LeftBraceToken:
     case LeftBracketToken:
     case LeftParenthesisToken:
-    case NewlineToken:
-    case NonNewlineWhitespaceToken:
     case PrefixMatchToken:
     case RightBraceToken:
     case RightBracketToken:
@@ -539,33 +528,19 @@ bool CSSParserToken::hasStringBacking() const
     case SemicolonToken:
     case SubstringMatchToken:
     case SuffixMatchToken:
+    case WhitespaceToken:
         return false;
     }
     ASSERT_NOT_REACHED();
     return false;
 }
 
-bool CSSParserToken::tryUseStringLiteralBacking()
+CSSParserToken CSSParserToken::copyWithUpdatedString(StringView string) const
 {
-    if (m_type != IdentToken && m_type != FunctionToken)
-        return false;
-
-    if (!m_isBackedByStringLiteral) {
-        auto valueId = identOrFunctionId();
-        if (valueId == CSSValueInvalid)
-            return false;
-
-        auto literal = nameLiteral(valueId);
-
-        // Typically all lowercase but we need to keep the original for correct serialization if they differ.
-        if (value() != literal)
-            return false;
-
-        updateCharacters(literal.span8());
-
-        m_isBackedByStringLiteral = true;
-    }
-    return true;
+    ASSERT(value() == string);
+    CSSParserToken copy(*this);
+    copy.initValueFromStringView(string);
+    return copy;
 }
 
 bool CSSParserToken::operator==(const CSSParserToken& other) const
@@ -585,18 +560,12 @@ bool CSSParserToken::operator==(const CSSParserToken& other) const
     case UrlToken:
         return value() == other.value();
     case DimensionToken:
-        if (!m_nonUnitPrefixLength) {
-            // The spec wants equality comparison of the original text but in some rare dimension cases we don't have it. Fall back to parsed values.
         if (unitString() != other.unitString())
             return false;
-            return m_numericSign == other.m_numericSign && m_numericValue == other.m_numericValue && m_numericValueType == other.m_numericValueType;
-        }
         FALLTHROUGH;
     case NumberToken:
     case PercentageToken:
-        return originalText() == other.originalText();
-    case NonNewlineWhitespaceToken:
-        return m_whitespaceCount == other.m_whitespaceCount;
+        return m_numericSign == other.m_numericSign && m_numericValue == other.m_numericValue && m_numericValueType == other.m_numericValueType;
     default:
         return true;
     }
@@ -612,7 +581,7 @@ struct NextTokenNeedsCommentBuilder {
     std::array<bool, numberOfCSSParserTokenTypes> buffer { false };
 };
 
-void CSSParserToken::serialize(StringBuilder& builder, const CSSParserToken* nextToken, SerializationMode mode) const
+void CSSParserToken::serialize(StringBuilder& builder, const CSSParserToken* nextToken) const
 {
     // This is currently only used for @supports CSSOM. To keep our implementation
     // simple we handle some of the edge cases incorrectly (see comments below).
@@ -622,12 +591,12 @@ void CSSParserToken::serialize(StringBuilder& builder, const CSSParserToken* nex
 
         CSSParserTokenType nextType = nextToken->type();
         if (tokensNeedingComment.buffer[nextType]) {
-            builder.append("/**/"_s);
+            builder.append("/**/");
             return;
         }
 
         if (nextType == DelimiterToken && ((delimitersNeedingComment == nextToken->delimiter()) || ... || false)) {
-            builder.append("/**/"_s);
+            builder.append("/**/");
             return;
         }
     };
@@ -652,14 +621,14 @@ void CSSParserToken::serialize(StringBuilder& builder, const CSSParserToken* nex
         appendCommentIfNeeded({ IdentToken, FunctionToken, UrlToken, BadUrlToken, NumberToken, PercentageToken, DimensionToken, CDCToken }, '-');
         break;
     case UrlToken:
-        builder.append("url("_s);
+        builder.append("url(");
         serializeIdentifier(value().toString(), builder);
         builder.append(')');
         break;
     case DelimiterToken:
         switch (delimiter()) {
         case '\\':
-            builder.append("\\\n"_s);
+            builder.append("\\\n");
             break;
 
         case '#':
@@ -692,28 +661,19 @@ void CSSParserToken::serialize(StringBuilder& builder, const CSSParserToken* nex
         }
         break;
     case NumberToken:
-        if (mode == SerializationMode::CustomProperty)
-            builder.append(originalText());
-        else {
+        // These won't properly preserve the NumericValueType flag.
         if (m_numericSign == PlusSign)
             builder.append('+');
         builder.append(numericValue());
-        }
         appendCommentIfNeeded({ IdentToken, FunctionToken, UrlToken, BadUrlToken, NumberToken, PercentageToken, DimensionToken }, '%');
         break;
     case PercentageToken:
-        if (mode == SerializationMode::CustomProperty)
-            builder.append(originalText(), '%');
-        else
         builder.append(numericValue(), '%');
         break;
     case DimensionToken:
-        if (mode == SerializationMode::CustomProperty && m_nonUnitPrefixLength)
-            builder.append(originalText());
-        else {
+        // This will incorrectly serialize e.g. 4e3e2 as 4000e2.
         builder.append(numericValue());
         serializeIdentifier(unitString().toString(), builder);
-        }
         appendCommentIfNeeded({ IdentToken, FunctionToken, UrlToken, BadUrlToken, NumberToken, PercentageToken, DimensionToken, CDCToken }, '-');
         break;
     case StringToken:
@@ -721,43 +681,37 @@ void CSSParserToken::serialize(StringBuilder& builder, const CSSParserToken* nex
         break;
 
     case IncludeMatchToken:
-        builder.append("~="_s);
+        builder.append("~=");
         break;
     case DashMatchToken:
-        builder.append("|="_s);
+        builder.append("|=");
         break;
     case PrefixMatchToken:
-        builder.append("^="_s);
+        builder.append("^=");
         break;
     case SuffixMatchToken:
-        builder.append("$="_s);
+        builder.append("$=");
         break;
     case SubstringMatchToken:
-        builder.append("*="_s);
+        builder.append("*=");
         break;
     case ColumnToken:
-        builder.append("||"_s);
+        builder.append("||");
         break;
     case CDOToken:
-        builder.append("<!--"_s);
+        builder.append("<!--");
         break;
     case CDCToken:
-        builder.append("-->"_s);
+        builder.append("-->");
         break;
     case BadStringToken:
-        builder.append("'\n"_s);
+        builder.append("'\n");
         break;
     case BadUrlToken:
-        builder.append("url(()"_s);
+        builder.append("url(()");
         break;
-    case NonNewlineWhitespaceToken: {
-        auto count = mode == SerializationMode::CustomProperty ? m_whitespaceCount : 1;
-        for (auto i = 0u; i < count; ++i)
+    case WhitespaceToken:
         builder.append(' ');
-        break;
-    }
-    case NewlineToken:
-        builder.append(mode == SerializationMode::CustomProperty ? '\n' : ' ');
         break;
     case ColonToken:
         builder.append(':');

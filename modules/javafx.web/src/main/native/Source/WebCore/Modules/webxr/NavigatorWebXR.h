@@ -40,7 +40,6 @@ class NavigatorWebXR final : public Supplement<Navigator> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     WEBCORE_EXPORT static WebXRSystem& xr(Navigator&);
-    WEBCORE_EXPORT static WebXRSystem* xrIfExists(Navigator&);
 
     WEBCORE_EXPORT static NavigatorWebXR& from(Navigator&);
 

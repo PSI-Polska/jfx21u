@@ -64,7 +64,7 @@ ExceptionOr<void> Crypto::getRandomValues(ArrayBufferView& array)
     auto rc = CCRandomGenerateBytes(array.baseAddress(), array.byteLength());
     RELEASE_ASSERT(rc == kCCSuccess);
 #else
-    cryptographicallyRandomValues(array.mutableSpan());
+    cryptographicallyRandomValues(array.baseAddress(), array.byteLength());
 #endif
     return { };
 }

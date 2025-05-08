@@ -37,15 +37,6 @@
 #endif
 
 namespace WebCore {
-class UserContentProviderInvalidationClient;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::UserContentProviderInvalidationClient> : std::true_type { };
-}
-
-namespace WebCore {
 
 class DOMWrapperWorld;
 class DocumentLoader;

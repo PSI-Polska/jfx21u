@@ -150,7 +150,7 @@ public:
     void dump(PrintStream& out) const
     {
         CommaPrinter comma;
-        out.print("["_s);
+        out.print("[");
         for (Reg reg = Reg::first(); reg <= Reg::last(); reg = reg.next()) {
             if (!m_bits.get(reg.index()) && !m_upperBits.get(reg.index()))
                 continue;
@@ -163,7 +163,7 @@ public:
             else
                 out.print("↑");
         }
-        out.print("]"_s);
+        out.print("]");
     }
 
     friend constexpr bool operator==(const RegisterSetBuilder&, const RegisterSetBuilder&) = default;
@@ -332,14 +332,7 @@ public:
         {
         }
 
-        inline constexpr Reg reg() const { return Reg::fromIndex(*m_iter); }
-        inline constexpr Reg operator*() const { return reg(); }
-
-        inline constexpr bool isGPR() const { return reg().isGPR(); }
-        inline constexpr bool isFPR() const { return reg().isFPR(); }
-
-        inline constexpr GPRReg gpr() const { return reg().gpr(); }
-        inline constexpr FPRReg fpr() const { return reg().fpr(); }
+        inline constexpr Reg operator*() const { return Reg::fromIndex(*m_iter); }
 
         iterator& operator++()
         {
@@ -408,7 +401,7 @@ public:
     void dump(PrintStream& out) const
     {
         CommaPrinter comma;
-        out.print("["_s);
+        out.print("[");
         for (Reg reg = Reg::first(); reg <= Reg::last(); reg = reg.next()) {
             if (!m_bits.get(reg.index()) && !m_upperBits.get(reg.index()))
                 continue;
@@ -421,7 +414,7 @@ public:
             else
                 out.print("↑");
         }
-        out.print("]"_s);
+        out.print("]");
     }
 
     friend constexpr bool operator==(const RegisterSet&, const RegisterSet&) = default;

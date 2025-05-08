@@ -41,7 +41,9 @@ PrintSpecial::PrintSpecial(Printer::PrintRecordList* list)
 {
 }
 
-PrintSpecial::~PrintSpecial() = default;
+PrintSpecial::~PrintSpecial()
+{
+}
 
 void PrintSpecial::forEachArg(Inst&, const ScopedLambda<Inst::EachArgCallback>&)
 {

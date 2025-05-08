@@ -58,7 +58,6 @@ private:
     void load(Model&, LayoutSize) override;
     void sizeDidChange(LayoutSize) override;
     CALayer *layer() override;
-    std::optional<LayerHostingContextIdentifier> layerHostingContextIdentifier() override;
     void enterFullscreen() override;
     void handleMouseDown(const LayoutPoint&, MonotonicTime) override;
     void handleMouseMove(const LayoutPoint&, MonotonicTime) override;

@@ -37,10 +37,11 @@ public:
     ~KeepaliveRequestTracker();
     bool tryRegisterRequest(CachedResource&);
 
-private:
     // CachedRawResourceClient.
-    void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) final;
+    void responseReceived(CachedResource&, const ResourceResponse&, CompletionHandler<void()>&&) final;
+    void notifyFinished(CachedResource&, const NetworkLoadMetrics&) final;
 
+private:
     void registerRequest(CachedResource&);
     void unregisterRequest(CachedResource&);
 

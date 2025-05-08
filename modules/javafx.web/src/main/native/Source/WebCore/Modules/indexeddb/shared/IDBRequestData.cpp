@@ -32,6 +32,15 @@
 
 namespace WebCore {
 
+IDBRequestData::IDBRequestData(const IDBClient::IDBConnectionProxy& connectionProxy, const IDBOpenDBRequest& request)
+    : m_serverConnectionIdentifier(connectionProxy.serverConnectionIdentifier())
+    , m_requestIdentifier(IDBResourceIdentifier { connectionProxy, request })
+    , m_databaseIdentifier(request.databaseIdentifier())
+    , m_requestedVersion(request.version())
+    , m_requestType(request.requestType())
+{
+}
+
 IDBRequestData::IDBRequestData(IDBClient::TransactionOperation& operation)
     : m_serverConnectionIdentifier(operation.transaction().database().connectionProxy().serverConnectionIdentifier())
     , m_requestIdentifier(operation.identifier())
@@ -46,14 +55,15 @@ IDBRequestData::IDBRequestData(IDBClient::TransactionOperation& operation)
         m_cursorIdentifier = *operation.cursorIdentifier();
 }
 
-IDBRequestData::IDBRequestData(IDBConnectionIdentifier serverConnectionIdentifier, IDBResourceIdentifier requestIdentifier, IDBResourceIdentifier transactionIdentifier, std::optional<IDBResourceIdentifier>&& cursorIdentifier, std::optional<IDBObjectStoreIdentifier> objectStoreIdentifier, uint64_t indexIdentifier, IndexedDB::IndexRecordType indexRecordType, uint64_t requestedVersion, IndexedDB::RequestType requestType)
+IDBRequestData::IDBRequestData(IDBConnectionIdentifier serverConnectionIdentifier, IDBResourceIdentifier requestIdentifier, std::optional<IDBResourceIdentifier>&& transactionIdentifier, std::optional<IDBResourceIdentifier>&& cursorIdentifier, uint64_t objectStoreIdentifier, uint64_t indexIdentifier, IndexedDB::IndexRecordType indexRecordType, std::optional<IDBDatabaseIdentifier>&& databaseIdentifier, uint64_t requestedVersion, IndexedDB::RequestType requestType)
     : m_serverConnectionIdentifier(serverConnectionIdentifier)
     , m_requestIdentifier(requestIdentifier)
-    , m_transactionIdentifier(transactionIdentifier)
+    , m_transactionIdentifier(WTFMove(transactionIdentifier))
     , m_cursorIdentifier(WTFMove(cursorIdentifier))
     , m_objectStoreIdentifier(objectStoreIdentifier)
     , m_indexIdentifier(indexIdentifier)
     , m_indexRecordType(WTFMove(indexRecordType))
+    , m_databaseIdentifier(WTFMove(databaseIdentifier))
     , m_requestedVersion(requestedVersion)
     , m_requestType(requestType)
 {
@@ -67,6 +77,7 @@ IDBRequestData::IDBRequestData(const IDBRequestData& other)
     , m_objectStoreIdentifier(other.m_objectStoreIdentifier)
     , m_indexIdentifier(other.m_indexIdentifier)
     , m_indexRecordType(other.m_indexRecordType)
+    , m_databaseIdentifier(other.m_databaseIdentifier)
     , m_requestedVersion(other.m_requestedVersion)
     , m_requestType(other.m_requestType)
 {
@@ -94,6 +105,9 @@ void IDBRequestData::isolatedCopy(const IDBRequestData& source, IDBRequestData& 
     destination.m_indexRecordType = source.m_indexRecordType;
     destination.m_requestedVersion = source.m_requestedVersion;
     destination.m_requestType = source.m_requestType;
+
+    if (source.m_databaseIdentifier)
+        destination.m_databaseIdentifier = source.m_databaseIdentifier->isolatedCopy();
 }
 
 IDBConnectionIdentifier IDBRequestData::serverConnectionIdentifier() const
@@ -109,7 +123,8 @@ IDBResourceIdentifier IDBRequestData::requestIdentifier() const
 
 IDBResourceIdentifier IDBRequestData::transactionIdentifier() const
 {
-    return m_transactionIdentifier;
+    ASSERT(m_transactionIdentifier);
+    return *m_transactionIdentifier;
 }
 
 IDBResourceIdentifier IDBRequestData::cursorIdentifier() const
@@ -118,10 +133,10 @@ IDBResourceIdentifier IDBRequestData::cursorIdentifier() const
     return *m_cursorIdentifier;
 }
 
-IDBObjectStoreIdentifier IDBRequestData::objectStoreIdentifier() const
+uint64_t IDBRequestData::objectStoreIdentifier() const
 {
     ASSERT(m_objectStoreIdentifier);
-    return *m_objectStoreIdentifier;
+    return m_objectStoreIdentifier;
 }
 
 uint64_t IDBRequestData::indexIdentifier() const
@@ -134,6 +149,12 @@ IndexedDB::IndexRecordType IDBRequestData::indexRecordType() const
 {
     ASSERT(m_indexIdentifier);
     return m_indexRecordType;
+}
+
+IDBDatabaseIdentifier IDBRequestData::databaseIdentifier() const
+{
+    ASSERT(m_databaseIdentifier);
+    return m_databaseIdentifier.value_or(IDBDatabaseIdentifier { });
 }
 
 uint64_t IDBRequestData::requestedVersion() const

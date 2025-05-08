@@ -32,11 +32,11 @@
 #include "ElementInlines.h"
 #include "MathMLNames.h"
 #include "RenderMathMLMenclose.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MathMLMencloseElement);
+WTF_MAKE_ISO_ALLOCATED_IMPL(MathMLMencloseElement);
 
 using namespace MathMLNames;
 

@@ -44,10 +44,10 @@ class TextTrackCueList;
 class VTTRegionList;
 
 class TextTrack : public TrackBase, public EventTarget, public ActiveDOMObject {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(TextTrack);
+    WTF_MAKE_ISO_ALLOCATED(TextTrack);
 public:
-    static Ref<TextTrack> create(ScriptExecutionContext*, const AtomString& kind, TrackID, const AtomString& label, const AtomString& language);
-    static Ref<TextTrack> create(ScriptExecutionContext*, const AtomString& kind, const AtomString& id, const AtomString& label, const AtomString& language);
+    static Ref<TextTrack> create(Document*, const AtomString& kind, TrackID, const AtomString& label, const AtomString& language);
+    static Ref<TextTrack> create(Document*, const AtomString& kind, const AtomString& id, const AtomString& label, const AtomString& language);
     virtual ~TextTrack();
 
     void didMoveToNewDocument(Document& newDocument) final;
@@ -79,7 +79,6 @@ public:
     void setReadinessState(ReadinessState state) { m_readinessState = state; }
 
     TextTrackCueList* cues();
-    RefPtr<TextTrackCueList> protectedCues();
     TextTrackCueList* activeCues() const;
 
     TextTrackCueList* cuesInternal() const { return m_cues.get(); }
@@ -128,16 +127,15 @@ public:
 
     virtual MediaTime startTimeVariance() const { return MediaTime::zeroTime(); }
 
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
+    using RefCounted::ref;
+    using RefCounted::deref;
 
     const std::optional<Vector<String>>& styleSheets() const { return m_styleSheets; }
 
     virtual bool shouldPurgeCuesFromUnbufferedRanges() const { return false; }
     virtual void removeCuesNotInTimeRanges(const PlatformTimeRanges&);
 
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    Document& document() const;
 
 protected:
     TextTrack(ScriptExecutionContext*, const AtomString& kind, TrackID, const AtomString& label, const AtomString& language, TextTrackType);
@@ -154,15 +152,19 @@ protected:
     WeakHashSet<TextTrackClient> m_clients;
 
 private:
-    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::TextTrack; }
+    EventTargetInterface eventTargetInterface() const final { return TextTrackEventTargetInterfaceType; }
+    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
 
     bool enabled() const override;
 
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
+    // ActiveDOMObject
+    const char* activeDOMObjectName() const final;
+
 #if !RELEASE_LOG_DISABLED
-    ASCIILiteral logClassName() const override { return "TextTrack"_s; }
+    const char* logClassName() const override { return "TextTrack"; }
 #endif
 
     VTTRegionList& ensureVTTRegionList();

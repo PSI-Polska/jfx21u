@@ -29,7 +29,6 @@
 #include "CommonVM.h"
 #include "JSHTMLDocument.h"
 #include "Location.h"
-#include "WorkerGlobalScope.h"
 #include <JavaScriptCore/Heap.h>
 #include <JavaScriptCore/HeapSnapshotBuilder.h>
 #include <JavaScriptCore/JSLock.h>
@@ -112,7 +111,7 @@ void GCController::garbageCollectNowIfNotDoneRecently()
 
 void GCController::garbageCollectOnAlternateThreadForDebugging(bool waitUntilDone)
 {
-    auto thread = Thread::create("WebCore: GCController"_s, &collect, ThreadType::GarbageCollection);
+    auto thread = Thread::create("WebCore: GCController", &collect, ThreadType::GarbageCollection);
 
     if (waitUntilDone) {
         thread->waitForCompletion();
@@ -139,15 +138,18 @@ void GCController::deleteAllLinkedCode(DeleteAllCodeEffort effort)
     commonVM().deleteAllLinkedCode(effort);
 }
 
-void GCController::dumpHeapForVM(VM& vm)
+void GCController::dumpHeap()
 {
-    auto [tempFilePath, fileHandle] = FileSystem::openTemporaryFile("GCHeap"_s);
+    FileSystem::PlatformFileHandle fileHandle;
+    String tempFilePath = FileSystem::openTemporaryFile("GCHeap"_s, fileHandle);
     if (!FileSystem::isHandleValid(fileHandle)) {
         WTFLogAlways("Dumping GC heap failed to open temporary file");
         return;
     }
 
+    VM& vm = commonVM();
     JSLockHolder lock(vm);
+
     sanitizeStackForVM(vm);
 
     String jsonData;
@@ -162,15 +164,10 @@ void GCController::dumpHeapForVM(VM& vm)
 
     CString utf8String = jsonData.utf8();
 
-    FileSystem::writeToFile(fileHandle, utf8String.span());
+    FileSystem::writeToFile(fileHandle, utf8String.data(), utf8String.length());
     FileSystem::closeFile(fileHandle);
-    WTFLogAlways("Dumped GC heap to %s%s", tempFilePath.utf8().data(), isMainThread() ? ""_s : " for Worker");
-}
 
-void GCController::dumpHeap()
-{
-    dumpHeapForVM(commonVM());
-    WorkerGlobalScope::dumpGCHeapForWorkers();
+    WTFLogAlways("Dumped GC heap to %s", tempFilePath.utf8().data());
 }
 
 } // namespace WebCore

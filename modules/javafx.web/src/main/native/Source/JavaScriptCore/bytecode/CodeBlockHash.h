@@ -54,7 +54,7 @@ public:
 
     CodeBlockHash(const SourceCode&, CodeSpecializationKind);
 
-    explicit CodeBlockHash(std::span<const char, 6>);
+    explicit CodeBlockHash(const char*);
 
     bool isSet() const { return !!m_hash; }
     bool operator!() const { return !isSet(); }

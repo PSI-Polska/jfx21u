@@ -30,9 +30,7 @@
 #import <wtf/HashMap.h>
 #import <wtf/Ref.h>
 #import <wtf/RefCounted.h>
-#import <wtf/TZoneMalloc.h>
 #import <wtf/Vector.h>
-#import <wtf/WeakPtr.h>
 
 struct WGPUComputePassEncoderImpl {
 };
@@ -50,7 +48,7 @@ struct BindableResources;
 
 // https://gpuweb.github.io/gpuweb/#gpucomputepassencoder
 class ComputePassEncoder : public WGPUComputePassEncoderImpl, public RefCounted<ComputePassEncoder>, public CommandsMixin {
-    WTF_MAKE_TZONE_ALLOCATED(ComputePassEncoder);
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     static Ref<ComputePassEncoder> create(id<MTLComputeCommandEncoder> computeCommandEncoder, const WGPUComputePassDescriptor& descriptor, CommandEncoder& parentEncoder, Device& device)
     {
@@ -76,8 +74,7 @@ public:
 
     Device& device() const { return m_device; }
 
-    bool isValid() const;
-    id<MTLComputeCommandEncoder> computeCommandEncoder() const;
+    bool isValid() const { return m_computeCommandEncoder; }
 
 private:
     ComputePassEncoder(id<MTLComputeCommandEncoder>, const WGPUComputePassDescriptor&, CommandEncoder&, Device&);
@@ -86,7 +83,7 @@ private:
     bool validatePopDebugGroup() const;
 
     void makeInvalid(NSString* = nil);
-    void executePreDispatchCommands(const Buffer* = nullptr);
+    void executePreDispatchCommands(id<MTLBuffer> = nil);
     id<MTLBuffer> runPredispatchIndirectCallValidation(const Buffer&, uint64_t);
 
     id<MTLComputeCommandEncoder> m_computeCommandEncoder { nil };
@@ -95,16 +92,17 @@ private:
         Ref<QuerySet> querySet;
         uint32_t queryIndex;
     };
+    Vector<PendingTimestampWrites> m_pendingTimestampWrites;
     uint64_t m_debugGroupStackSize { 0 };
 
     const Ref<Device> m_device;
     MTLSize m_threadsPerThreadgroup;
     Vector<uint32_t> m_computeDynamicOffsets;
-    RefPtr<const ComputePipeline> m_pipeline;
+    const ComputePipeline* m_pipeline { nullptr };
     Ref<CommandEncoder> m_parentEncoder;
     HashMap<uint32_t, Vector<uint32_t>, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_bindGroupDynamicOffsets;
     HashMap<uint32_t, Vector<const BindableResources*>, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_bindGroupResources;
-    HashMap<uint32_t, RefPtr<const BindGroup>, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_bindGroups;
+    HashMap<uint32_t, WeakPtr<BindGroup>, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_bindGroups;
     NSString *m_lastErrorString { nil };
     bool m_passEnded { false };
 };

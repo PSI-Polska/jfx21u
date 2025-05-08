@@ -29,7 +29,6 @@
 #include "config.h"
 #include "AccessibilityTableRow.h"
 
-#include "AXObjectCache.h"
 #include "AccessibilityTable.h"
 #include "AccessibilityTableCell.h"
 #include "HTMLNames.h"
@@ -39,7 +38,7 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-AccessibilityTableRow::AccessibilityTableRow(RenderObject& renderer)
+AccessibilityTableRow::AccessibilityTableRow(RenderObject* renderer)
     : AccessibilityRenderObject(renderer)
 {
 }
@@ -51,7 +50,7 @@ AccessibilityTableRow::AccessibilityTableRow(Node& node)
 
 AccessibilityTableRow::~AccessibilityTableRow() = default;
 
-Ref<AccessibilityTableRow> AccessibilityTableRow::create(RenderObject& renderer)
+Ref<AccessibilityTableRow> AccessibilityTableRow::create(RenderObject* renderer)
 {
     return adoptRef(*new AccessibilityTableRow(renderer));
 }
@@ -74,8 +73,8 @@ AccessibilityRole AccessibilityTableRow::determineAccessibilityRole()
 
 bool AccessibilityTableRow::isTableRow() const
 {
-    auto* table = parentTable();
-    return table && table->isExposable();
+    AccessibilityObject* table = parentTable();
+    return is<AccessibilityTable>(table) && downcast<AccessibilityTable>(*table).isExposable();
 }
 
 AccessibilityObject* AccessibilityTableRow::observableObject() const
@@ -95,36 +94,29 @@ bool AccessibilityTableRow::computeAccessibilityIsIgnored() const
     if (!isTableRow())
         return AccessibilityRenderObject::computeAccessibilityIsIgnored();
 
-    return isDOMHidden() || ignoredFromPresentationalRole();
+    if (ignoredFromPresentationalRole())
+        return true;
+
+    return false;
 }
 
 AccessibilityTable* AccessibilityTableRow::parentTable() const
 {
     // The parent table might not be the direct ancestor of the row unfortunately. ARIA states that role="grid" should
     // only have "row" elements, but if not, we still should handle it gracefully by finding the right table.
-    for (RefPtr parent = parentObject(); parent; parent = parent->parentObject()) {
+    for (AccessibilityObject* parent = parentObject(); parent; parent = parent->parentObject()) {
         // If this is a non-anonymous table object, but not an accessibility table, we should stop because we don't want to
         // choose another ancestor table as this row's table.
-        if (auto* parentTable = dynamicDowncast<AccessibilityTable>(*parent)) {
-            if (parentTable->isExposable())
-                return parentTable;
-            if (parentTable->node())
+        if (is<AccessibilityTable>(*parent)) {
+            auto& parentTable = downcast<AccessibilityTable>(*parent);
+            if (parentTable.isExposable())
+                return &parentTable;
+            if (parentTable.node())
                 break;
         }
     }
+
     return nullptr;
-}
-
-void AccessibilityTableRow::setRowIndex(unsigned rowIndex)
-{
-    if (m_rowIndex == rowIndex)
-        return;
-    m_rowIndex = rowIndex;
-
-#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-    if (auto* cache = axObjectCache())
-        cache->rowIndexChanged(*this);
-#endif
 }
 
 AXCoreObject* AccessibilityTableRow::rowHeader()
@@ -133,7 +125,7 @@ AXCoreObject* AccessibilityTableRow::rowHeader()
     if (rowChildren.isEmpty())
         return nullptr;
 
-    RefPtr firstCell = rowChildren[0].get();
+    auto* firstCell = rowChildren[0].get();
     if (!firstCell || !firstCell->node() || !firstCell->node()->hasTagName(thTag))
         return nullptr;
 
@@ -142,7 +134,7 @@ AXCoreObject* AccessibilityTableRow::rowHeader()
     for (const auto& child : rowChildren) {
         // We found a non-header cell, so this is not an entire row of headers -- return the original header cell.
         if (child->node() && !child->node()->hasTagName(thTag))
-            return firstCell.get();
+            return firstCell;
     }
         return nullptr;
 }

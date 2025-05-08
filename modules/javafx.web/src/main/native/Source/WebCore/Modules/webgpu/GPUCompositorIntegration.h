@@ -33,13 +33,7 @@
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
-namespace WebGPU {
-class Device;
 
-enum class TextureFormat : uint8_t;
-}
-
-class DestinationColorSpace;
 class ImageBuffer;
 
 class GPUCompositorIntegration : public RefCounted<GPUCompositorIntegration> {
@@ -50,7 +44,7 @@ public:
     }
 
 #if PLATFORM(COCOA)
-    Vector<MachSendRight> recreateRenderBuffers(int width, int height, WebCore::DestinationColorSpace&&, WebCore::AlphaPremultiplication, WebCore::WebGPU::TextureFormat, WebCore::WebGPU::Device&) const;
+    Vector<MachSendRight> recreateRenderBuffers(int width, int height) const;
 #endif
 
     void prepareForDisplay(CompletionHandler<void()>&&);

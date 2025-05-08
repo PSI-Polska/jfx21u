@@ -34,15 +34,6 @@
 #include <wtf/WeakRef.h>
 
 namespace WebCore {
-class CachedImage;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::CachedImage> : std::true_type { };
-}
-
-namespace WebCore {
 
 class CachedImageClient;
 class CachedResourceLoader;
@@ -69,15 +60,13 @@ public:
     WEBCORE_EXPORT RefPtr<Image> protectedImage() const;
     WEBCORE_EXPORT Image* imageForRenderer(const RenderObject*); // Returns the nullImage() if the image is not available yet.
     bool hasImage() const { return m_image.get(); }
+    bool hasSVGImage() const;
     bool currentFrameKnownToBeOpaque(const RenderElement*);
 
     std::pair<WeakPtr<Image>, float> brokenImage(float deviceScaleFactor) const; // Returns an image and the image's resolution scale factor.
     bool willPaintBrokenImage() const;
 
     bool canRender(const RenderElement* renderer, float multiplier) { return !errorOccurred() && !imageSizeForRenderer(renderer, multiplier).isEmpty(); }
-
-    void setAllowsOrientationOverride(bool b) { m_allowsOrientationOverride = b; }
-    bool allowsOrientationOverride() const { return m_allowsOrientationOverride; }
 
     void setContainerContextForClient(const CachedImageClient&, const LayoutSize&, float, const URL&);
     bool usesImageContainerSize() const { return m_image && m_image->usesContainerSize(); }
@@ -125,6 +114,7 @@ private:
     void setBodyDataFrom(const CachedResource&) final;
 
     bool isPDFResource() const;
+    bool isPostScriptResource() const;
 
     void createImage();
     void clearImage();
@@ -164,14 +154,13 @@ private:
         // ImageObserver API
         URL sourceUrl() const override { return !m_cachedImages.isEmptyIgnoringNullReferences() ? (*m_cachedImages.begin()).url() : URL(); }
         String mimeType() const override { return !m_cachedImages.isEmptyIgnoringNullReferences() ? (*m_cachedImages.begin()).mimeType() : emptyString(); }
-        unsigned numberOfClients() const override { return !m_cachedImages.isEmptyIgnoringNullReferences() ? (*m_cachedImages.begin()).numberOfClients() : 0; }
         long long expectedContentLength() const override { return !m_cachedImages.isEmptyIgnoringNullReferences() ? (*m_cachedImages.begin()).expectedContentLength() : 0; }
 
         void encodedDataStatusChanged(const Image&, EncodedDataStatus) final;
         void decodedSizeChanged(const Image&, long long delta) final;
         void didDraw(const Image&) final;
 
-        bool canDestroyDecodedData(const Image&) const final;
+        bool canDestroyDecodedData(const Image&) final;
         void imageFrameAvailable(const Image&, ImageAnimatingState, const IntRect* changeRect = nullptr, DecodingStatus = DecodingStatus::Invalid) final;
         void changedInRect(const Image&, const IntRect*) final;
         void scheduleRenderingUpdate(const Image&) final;
@@ -185,7 +174,7 @@ private:
     void encodedDataStatusChanged(const Image&, EncodedDataStatus);
     void decodedSizeChanged(const Image&, long long delta);
     void didDraw(const Image&);
-    bool canDestroyDecodedData(const Image&) const;
+    bool canDestroyDecodedData(const Image&);
     void imageFrameAvailable(const Image&, ImageAnimatingState, const IntRect* changeRect = nullptr, DecodingStatus = DecodingStatus::Invalid);
     void changedInRect(const Image&, const IntRect*);
     void scheduleRenderingUpdate(const Image&);
@@ -219,7 +208,6 @@ private:
     bool m_shouldPaintBrokenImage : 1;
     bool m_forceUpdateImageDataEnabledForTesting : 1;
     bool m_layerBasedSVGEngineEnabled : 1 { false };
-    bool m_allowsOrientationOverride : 1;
 };
 
 } // namespace WebCore

@@ -30,6 +30,7 @@
 #include "config.h"
 #include "RenderSVGShape.h"
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "FloatPoint.h"
 #include "FloatQuad.h"
 #include "GraphicsContext.h"
@@ -44,13 +45,12 @@
 #include "SVGPaintServerHandling.h"
 #include "SVGPathData.h"
 #include "SVGURIReference.h"
-#include "SVGVisitedRendererTracking.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
-#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderSVGShape);
+WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGShape);
 
 RenderSVGShape::RenderSVGShape(Type type, SVGGraphicsElement& element, RenderStyle&& style)
     : RenderSVGModelObject(type, element, WTFMove(style), SVGModelObjectFlag::IsShape)
@@ -139,7 +139,7 @@ void RenderSVGShape::layout()
 {
     StackStats::LayoutCheckPoint layoutCheckPoint;
 
-    LayoutRepainter repainter(*this);
+    LayoutRepainter repainter(*this, checkForRepaintDuringLayout(), RepaintOutlineBounds::No);
     if (m_needsShapeUpdate) {
         updateShapeFromElement();
 
@@ -176,7 +176,7 @@ bool RenderSVGShape::setupNonScalingStrokeContext(AffineTransform& strokeTransfo
 
 AffineTransform RenderSVGShape::nonScalingStrokeTransform() const
 {
-    return protectedGraphicsElement()->getScreenCTM(SVGLocatable::DisallowStyleUpdate);
+    return graphicsElement().getScreenCTM(SVGLocatable::DisallowStyleUpdate);
 }
 
 void RenderSVGShape::fillShape(const RenderStyle& style, GraphicsContext& context)
@@ -243,7 +243,8 @@ void RenderSVGShape::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
         return;
 
     if (paintInfo.phase == PaintPhase::Outline || paintInfo.phase == PaintPhase::SelfOutline) {
-        paintSVGOutline(paintInfo, adjustedPaintOffset);
+        // FIXME: [LBSE] Upstream outline painting
+        // paintSVGOutline(paintInfo, adjustedPaintOffset);
         return;
     }
 
@@ -287,24 +288,20 @@ bool RenderSVGShape::nodeAtPoint(const HitTestRequest& request, HitTestResult& r
     if (hitTestAction != HitTestForeground)
         return false;
 
-    static NeverDestroyed<SVGVisitedRendererTracking::VisitedSet> s_visitedSet;
-
-    SVGVisitedRendererTracking recursionTracking(s_visitedSet);
-    if (recursionTracking.isVisiting(*this))
-        return false;
-
-    SVGVisitedRendererTracking::Scope recursionScope(recursionTracking, *this);
-
     auto adjustedLocation = accumulatedOffset + currentSVGLayoutLocation();
+
     auto localPoint = locationInContainer.point();
     auto coordinateSystemOriginTranslation = nominalSVGLayoutLocation() - adjustedLocation;
     localPoint.move(coordinateSystemOriginTranslation);
 
-    if (!pointInSVGClippingArea(localPoint))
+    if (!SVGRenderSupport::pointInClippingArea(*this, localPoint))
         return false;
 
-    PointerEventsHitRules hitRules(PointerEventsHitRules::HitTestingTargetType::SVGPath, request, usedPointerEvents());
-    if (isVisibleToHitTesting(style(), request) || !hitRules.requireVisible) {
+    SVGHitTestCycleDetectionScope hitTestScope(*this);
+
+    PointerEventsHitRules hitRules(PointerEventsHitRules::HitTestingTargetType::SVGPath, request, style().effectivePointerEvents());
+    bool isVisible = (style().visibility() == Visibility::Visible);
+    if (isVisible || !hitRules.requireVisible) {
         const SVGRenderStyle& svgStyle = style().svgStyle();
         WindRule fillRule = svgStyle.fillRule();
         if (request.svgClipContent())
@@ -312,7 +309,7 @@ bool RenderSVGShape::nodeAtPoint(const HitTestRequest& request, HitTestResult& r
 
         if (hitRules.canHitStroke && (svgStyle.hasStroke() || !hitRules.requireStroke) && strokeContains(localPoint, hitRules.requireStroke)) {
             updateHitTestResult(result, locationInContainer.point() - toLayoutSize(adjustedLocation));
-            if (result.addNodeToListBasedTestResult(protectedNodeForHitTest().get(), request, locationInContainer, strokeBoundingBox()) == HitTestProgress::Stop)
+            if (result.addNodeToListBasedTestResult(nodeForHitTest(), request, locationInContainer, strokeBoundingBox()) == HitTestProgress::Stop)
                 return true;
             return false;
         }
@@ -320,7 +317,7 @@ bool RenderSVGShape::nodeAtPoint(const HitTestRequest& request, HitTestResult& r
         if ((hitRules.canHitFill && (svgStyle.hasFill() || !hitRules.requireFill) && fillContains(localPoint, hitRules.requireFill, fillRule))
             || (hitRules.canHitBoundingBox && m_fillBoundingBox.contains(localPoint))) {
             updateHitTestResult(result, locationInContainer.point() - toLayoutSize(adjustedLocation));
-            if (result.addNodeToListBasedTestResult(protectedNodeForHitTest().get(), request, locationInContainer, m_fillBoundingBox) == HitTestProgress::Stop)
+            if (result.addNodeToListBasedTestResult(nodeForHitTest(), request, locationInContainer, m_fillBoundingBox) == HitTestProgress::Stop)
                 return true;
             return false;
         }
@@ -389,9 +386,8 @@ FloatRect RenderSVGShape::calculateApproximateStrokeBoundingBox() const
 
 float RenderSVGShape::strokeWidth() const
 {
-    SVGLengthContext lengthContext(protectedGraphicsElement().ptr());
-    auto strokeWidth = lengthContext.valueForLength(style().strokeWidth());
-    return std::isnan(strokeWidth) ? 0 : strokeWidth;
+    SVGLengthContext lengthContext(&graphicsElement());
+    return lengthContext.valueForLength(style().strokeWidth());
 }
 
 Path& RenderSVGShape::ensurePath()
@@ -403,7 +399,7 @@ Path& RenderSVGShape::ensurePath()
 
 std::unique_ptr<Path> RenderSVGShape::createPath() const
 {
-    return makeUnique<Path>(pathFromGraphicsElement(protectedGraphicsElement()));
+    return makeUnique<Path>(pathFromGraphicsElement(graphicsElement()));
 }
 
 void RenderSVGShape::styleWillChange(StyleDifference diff, const RenderStyle& newStyle)
@@ -419,12 +415,14 @@ void RenderSVGShape::styleWillChange(StyleDifference diff, const RenderStyle& ne
 
 bool RenderSVGShape::needsHasSVGTransformFlags() const
 {
-    return protectedGraphicsElement()->hasTransformRelatedAttributes();
+    return graphicsElement().hasTransformRelatedAttributes();
 }
 
 void RenderSVGShape::applyTransform(TransformationMatrix& transform, const RenderStyle& style, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption> options) const
 {
-    applySVGTransform(transform, protectedGraphicsElement(), style, boundingBox, std::nullopt, std::nullopt, options);
+    applySVGTransform(transform, graphicsElement(), style, boundingBox, std::nullopt, std::nullopt, options);
 }
 
 }
+
+#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

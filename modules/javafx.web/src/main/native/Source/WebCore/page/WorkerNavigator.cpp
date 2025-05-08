@@ -68,17 +68,17 @@ GPU* WorkerNavigator::gpu()
             if (!workerGlobalScope.graphicsClient())
     return nullptr;
 
-            RefPtr gpu = workerGlobalScope.graphicsClient()->createGPUForWebGPU();
+            auto gpu = workerGlobalScope.graphicsClient()->createGPUForWebGPU();
             if (!gpu)
                 return nullptr;
 
             m_gpuForWebGPU = GPU::create(*gpu);
         } else if (scriptExecutionContext->isDocument()) {
-            Ref document = downcast<Document>(*scriptExecutionContext);
-            RefPtr page = document->page();
+            auto& document = downcast<Document>(*scriptExecutionContext);
+            auto* page = document.page();
             if (!page)
                 return nullptr;
-            RefPtr gpu = page->chrome().createGPUForWebGPU();
+            auto gpu = page->chrome().createGPUForWebGPU();
             if (!gpu)
                 return nullptr;
 

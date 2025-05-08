@@ -207,7 +207,7 @@ String DebuggerScope::name() const
     if (!codeBlock)
         return String();
 
-    return String::fromUTF8(codeBlock->inferredName().span());
+    return String::fromUTF8(codeBlock->inferredName());
 }
 
 DebuggerLocation DebuggerScope::location() const

@@ -53,11 +53,6 @@ inline CacheableIdentifier CacheableIdentifier::createFromImmortalIdentifier(Uni
     return CacheableIdentifier(uid);
 }
 
-inline CacheableIdentifier CacheableIdentifier::createFromSharedStub(UniquedStringImpl* uid)
-{
-    return CacheableIdentifier(uid);
-}
-
 inline CacheableIdentifier CacheableIdentifier::createFromCell(JSCell* i)
 {
     return CacheableIdentifier(i);

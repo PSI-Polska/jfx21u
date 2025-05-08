@@ -27,7 +27,6 @@
 [
  Conditional=WEB_CODECS,
  JSGenerateToJSObject,
-    JSGenerateToNativeObject
-] dictionary AacEncoderConfig {
+ ] dictionary AacEncoderConfig {
     AacBitstreamFormat format = "aac";
 };

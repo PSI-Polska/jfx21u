@@ -47,7 +47,7 @@ namespace WebCore {
 class GPUDisplayBufferDisplayDelegate;
 
 class GPUCanvasContextCocoa final : public GPUCanvasContext {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(GPUCanvasContextCocoa);
+    WTF_MAKE_ISO_ALLOCATED(GPUCanvasContextCocoa);
 public:
 #if ENABLE(OFFSCREEN_CANVAS)
     using CanvasType = std::variant<RefPtr<HTMLCanvasElement>, RefPtr<OffscreenCanvas>>;
@@ -62,19 +62,21 @@ public:
     RefPtr<GraphicsLayerContentsDisplayDelegate> layerContentsDisplayDelegate() override;
     bool needsPreparationForDisplay() const override { return true; }
     void prepareForDisplay() override;
-    ImageBufferPixelFormat pixelFormat() const override;
-    void reshape() override;
+    PixelFormat pixelFormat() const override;
+    void reshape(int width, int height) override;
 
-
-    RefPtr<ImageBuffer> surfaceBufferToImageBuffer(SurfaceBuffer) override;
+    void drawBufferToCanvas(SurfaceBuffer) override;
     // GPUCanvasContext methods:
     CanvasType canvas() override;
     ExceptionOr<void> configure(GPUCanvasConfiguration&&) override;
     void unconfigure() override;
-    ExceptionOr<RefPtr<GPUTexture>> getCurrentTexture() override;
-    RefPtr<ImageBuffer> transferToImageBuffer() override;
+    RefPtr<GPUTexture> getCurrentTexture() override;
 
     bool isWebGPU() const override { return true; }
+    const char* activeDOMObjectName() const override
+    {
+        return "GPUCanvasElement";
+    }
 
 private:
     explicit GPUCanvasContextCocoa(CanvasBase&, GPU&);
@@ -87,8 +89,6 @@ private:
     }
 
     CanvasType htmlOrOffscreenCanvas() const;
-    ExceptionOr<void> configure(GPUCanvasConfiguration&&, bool);
-    void present();
 
     struct Configuration {
         Ref<GPUDevice> device;
@@ -103,12 +103,12 @@ private:
     std::optional<Configuration> m_configuration;
 
     Ref<GPUDisplayBufferDisplayDelegate> m_layerContentsDisplayDelegate;
-    RefPtr<GPUCompositorIntegration> m_compositorIntegration;
-    RefPtr<GPUPresentationContext> m_presentationContext;
+    Ref<GPUCompositorIntegration> m_compositorIntegration;
+    Ref<GPUPresentationContext> m_presentationContext;
     RefPtr<GPUTexture> m_currentTexture;
 
-    GPUIntegerCoordinate m_width { 0 };
-    GPUIntegerCoordinate m_height { 0 };
+    int m_width { 0 };
+    int m_height { 0 };
     bool m_compositingResultsNeedsUpdating { false };
 };
 

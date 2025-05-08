@@ -147,7 +147,7 @@ Ref<MediaPromise> MockSourceBufferPrivate::appendInternal(Ref<SharedBuffer>&& da
     m_inputBuffer.appendVector(data->extractData());
 
     while (m_inputBuffer.size()) {
-        auto buffer = ArrayBuffer::create(m_inputBuffer);
+        auto buffer = ArrayBuffer::create(m_inputBuffer.data(), m_inputBuffer.size());
         uint64_t boxLength = MockBox::peekLength(buffer.ptr());
         if (boxLength > buffer->byteLength())
             break;

@@ -28,21 +28,23 @@
 
 #if ENABLE(VIDEO)
 
-#include "HTMLTrackElement.h"
 #include "TextTrack.h"
 #include "TextTrackLoader.h"
 
 namespace WebCore {
 
+class HTMLTrackElement;
+
 class LoadableTextTrack final : public TextTrack, private TextTrackLoaderClient {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(LoadableTextTrack);
+    WTF_MAKE_ISO_ALLOCATED(LoadableTextTrack);
 public:
     static Ref<LoadableTextTrack> create(HTMLTrackElement&, const AtomString& kind, const AtomString& label, const AtomString& language);
 
     void scheduleLoad(const URL&);
 
     size_t trackElementIndex();
-    HTMLTrackElement* trackElement() const { return m_trackElement.get(); }
+    HTMLTrackElement* trackElement() const { return m_trackElement; }
+    void clearElement() { m_trackElement = nullptr; }
 
 private:
     LoadableTextTrack(HTMLTrackElement&, const AtomString& kind, const AtomString& label, const AtomString& language);
@@ -58,10 +60,10 @@ private:
     void loadTimerFired();
 
 #if !RELEASE_LOG_DISABLED
-    ASCIILiteral logClassName() const override { return "LoadableTextTrack"_s; }
+    const char* logClassName() const override { return "LoadableTextTrack"; }
 #endif
 
-    WeakPtr<HTMLTrackElement, WeakPtrImplWithEventTargetData> m_trackElement;
+    HTMLTrackElement* m_trackElement;
     std::unique_ptr<TextTrackLoader> m_loader;
     URL m_url;
     bool m_loadPending { false };

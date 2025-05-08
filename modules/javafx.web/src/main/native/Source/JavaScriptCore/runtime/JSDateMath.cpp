@@ -451,11 +451,11 @@ double DateCache::parseDate(JSGlobalObject* globalObject, VM& vm, const String& 
         return std::numeric_limits<double>::quiet_NaN();
     }
 
-    auto parseDateImpl = [this] (auto dateString) {
+    auto parseDateImpl = [this] (const char* dateString) {
         bool isLocalTime;
-        double value = WTF::parseES5Date(dateString, isLocalTime);
+        double value = WTF::parseES5DateFromNullTerminatedCharacters(dateString, isLocalTime);
         if (std::isnan(value))
-            value = WTF::parseDate(dateString, isLocalTime);
+            value = WTF::parseDateFromNullTerminatedCharacters(dateString, isLocalTime);
 
         if (isLocalTime && std::isfinite(value))
             value -= localTimeOffset(static_cast<int64_t>(value), WTF::LocalTime).offset;
@@ -463,7 +463,8 @@ double DateCache::parseDate(JSGlobalObject* globalObject, VM& vm, const String& 
         return value;
     };
 
-    double value = parseDateImpl(expectedString.value().span());
+    auto dateUTF8 = expectedString.value();
+    double value = parseDateImpl(dateUTF8.data());
     m_cachedDateString = date;
     m_cachedDateStringValue = value;
     return value;
@@ -486,7 +487,7 @@ String DateCache::defaultTimeZone()
     if (U_FAILURE(status))
         return "UTC"_s;
 
-    String canonical = String({ canonicalTimeZoneID.getBuffer(), static_cast<size_t>(canonicalTimeZoneID.length()) });
+    String canonical = String(canonicalTimeZoneID.getBuffer(), canonicalTimeZoneID.length());
     if (isUTCEquivalent(canonical))
         return "UTC"_s;
 
@@ -519,12 +520,12 @@ String DateCache::timeZoneDisplayName(bool isDST)
         {
             icu::UnicodeString standardDisplayName;
             timeZoneCache.getDisplayName(false /* inDaylight */, icu::TimeZone::LONG, locale, standardDisplayName);
-            m_timeZoneStandardDisplayNameCache = String({ standardDisplayName.getBuffer(), static_cast<size_t>(standardDisplayName.length()) });
+            m_timeZoneStandardDisplayNameCache = String(standardDisplayName.getBuffer(), standardDisplayName.length());
         }
         {
             icu::UnicodeString dstDisplayName;
             timeZoneCache.getDisplayName(true /* inDaylight */, icu::TimeZone::LONG, locale, dstDisplayName);
-            m_timeZoneDSTDisplayNameCache = String({ dstDisplayName.getBuffer(), static_cast<size_t>(dstDisplayName.length()) });
+            m_timeZoneDSTDisplayNameCache = String(dstDisplayName.getBuffer(), dstDisplayName.length());
         }
 #endif
     }

@@ -49,7 +49,6 @@ private:
     InlineLayoutUnit inlineItemWidth(size_t inlineItemIndex, bool useFirstLineStyle) const;
     bool shouldTrimLeading(size_t inlineItemIndex, bool useFirstLineStyle, bool isFirstLineInChunk) const;
     bool shouldTrimTrailing(size_t inlineItemIndex, bool useFirstLineStyle) const;
-    Vector<size_t> computeBreakOpportunities(InlineItemRange) const;
 
     InlineFormattingContext& m_inlineFormattingContext;
     const InlineItemList& m_inlineItemList;

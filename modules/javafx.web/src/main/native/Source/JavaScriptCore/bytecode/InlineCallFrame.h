@@ -59,7 +59,6 @@ struct InlineCallFrame {
         SetterCall,
         ProxyObjectLoadCall,
         ProxyObjectStoreCall,
-        ProxyObjectInCall,
         BoundFunctionCall,
         BoundFunctionTailCall,
     };
@@ -74,7 +73,6 @@ struct InlineCallFrame {
         case SetterCall:
         case ProxyObjectLoadCall:
         case ProxyObjectStoreCall:
-        case ProxyObjectInCall:
         case BoundFunctionCall:
             return CallMode::Regular;
         case TailCall:
@@ -125,7 +123,6 @@ struct InlineCallFrame {
         case SetterCall:
         case ProxyObjectLoadCall:
         case ProxyObjectStoreCall:
-        case ProxyObjectInCall:
         case BoundFunctionCall:
         case BoundFunctionTailCall:
             return CodeForCall;
@@ -316,6 +313,20 @@ ALWAYS_INLINE Operand unmapOperand(InlineCallFrame* inlineCallFrame, Operand ope
 ALWAYS_INLINE Operand unmapOperand(InlineCallFrame* inlineCallFrame, VirtualRegister reg)
 {
     return unmapOperand(inlineCallFrame, Operand(reg));
+}
+
+inline bool isSameStyledCodeOrigin(CodeOrigin lhs, CodeOrigin rhs)
+{
+    while (true) {
+        if (lhs.bytecodeIndex() != rhs.bytecodeIndex())
+            return false;
+        if (!!lhs.inlineCallFrame() != !!rhs.inlineCallFrame())
+            return false;
+        if (!lhs.inlineCallFrame())
+            return true;
+        lhs = lhs.inlineCallFrame()->directCaller;
+        rhs = rhs.inlineCallFrame()->directCaller;
+    }
 }
 
 } // namespace JSC

@@ -45,11 +45,6 @@ public:
     String customCSSText() const;
     bool equals(const CSSCursorImageValue&) const;
 
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
-    {
-        return func(m_imageValue.get());
-    }
-
     RefPtr<StyleImage> createStyleImage(Style::BuilderState&) const;
 
 private:

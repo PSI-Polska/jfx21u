@@ -39,15 +39,14 @@ class RTCIceTransport;
 class RTCPeerConnection;
 class ScriptExecutionContext;
 
-class RTCDtlsTransport final : public RefCounted<RTCDtlsTransport>, public ActiveDOMObject, public EventTarget, public RTCDtlsTransportBackendClient {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RTCDtlsTransport);
+class RTCDtlsTransport final : public RefCounted<RTCDtlsTransport>, public ActiveDOMObject, public EventTarget, public RTCDtlsTransportBackend::Client {
+    WTF_MAKE_ISO_ALLOCATED(RTCDtlsTransport);
 public:
     static Ref<RTCDtlsTransport> create(ScriptExecutionContext&, UniqueRef<RTCDtlsTransportBackend>&&, Ref<RTCIceTransport>&&);
     ~RTCDtlsTransport();
 
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
+    using RefCounted<RTCDtlsTransport>::ref;
+    using RefCounted<RTCDtlsTransport>::deref;
 
     RTCIceTransport& iceTransport() { return m_iceTransport.get(); }
     RTCDtlsTransportState state() { return m_state; }
@@ -61,16 +60,17 @@ private:
     RTCDtlsTransport(ScriptExecutionContext&, UniqueRef<RTCDtlsTransportBackend>&&, Ref<RTCIceTransport>&&);
 
     // EventTarget
-    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::RTCDtlsTransport; }
+    EventTargetInterface eventTargetInterface() const final { return RTCDtlsTransportEventTargetInterfaceType; }
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
     // ActiveDOMObject
     void stop() final;
+    const char* activeDOMObjectName() const final { return "RTCDtlsTransport"; }
     bool virtualHasPendingActivity() const final;
 
-    // RTCDtlsTransportBackendClient
+    // RTCDtlsTransportBackend::Client
     void onStateChanged(RTCDtlsTransportState, Vector<Ref<JSC::ArrayBuffer>>&&) final;
     void onError() final;
 

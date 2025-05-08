@@ -38,14 +38,9 @@ namespace WebCore {
 
 class ApplePayError final : public RefCounted<ApplePayError> {
 public:
-
-    enum class Domain : uint8_t {
-        Disbursement
-    };
-
-    static Ref<ApplePayError> create(ApplePayErrorCode code, std::optional<ApplePayErrorContactField> contactField, const String& message, std::optional<ApplePayError::Domain> domain = { })
+    static Ref<ApplePayError> create(ApplePayErrorCode code, std::optional<ApplePayErrorContactField> contactField, const String& message)
     {
-        return adoptRef(*new ApplePayError(code, contactField, message, domain));
+        return adoptRef(*new ApplePayError(code, contactField, message));
     }
 
     virtual ~ApplePayError() = default;
@@ -59,24 +54,17 @@ public:
     String message() const { return m_message; }
     void setMessage(String&& message) { m_message = WTFMove(message); }
 
-    std::optional<Domain> domain() const { return m_domain; }
-    void setDomain(std::optional<Domain> domain) { m_domain = domain; }
-
-
 private:
-    ApplePayError(ApplePayErrorCode code, std::optional<ApplePayErrorContactField> contactField, const String& message, std::optional<ApplePayError::Domain> domain)
+    ApplePayError(ApplePayErrorCode code, std::optional<ApplePayErrorContactField> contactField, const String& message)
         : m_code(code)
         , m_contactField(contactField)
         , m_message(message)
-        , m_domain(domain)
     {
     }
 
     ApplePayErrorCode m_code;
     std::optional<ApplePayErrorContactField> m_contactField;
     String m_message;
-
-    std::optional<ApplePayError::Domain> m_domain;
 };
 
 } // namespace WebCore

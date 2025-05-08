@@ -46,7 +46,6 @@ struct ElementUpdate {
     std::unique_ptr<RenderStyle> style;
     Change change { Change::None };
     bool recompositeLayer { false };
-    bool mayNeedRebuildRoot { false };
 };
 
 struct TextUpdate {
@@ -55,12 +54,10 @@ struct TextUpdate {
     std::optional<std::unique_ptr<RenderStyle>> inheritedDisplayContentsStyle;
 };
 
-class Update final : public CanMakeCheckedPtr<Update> {
+class Update {
     WTF_MAKE_FAST_ALLOCATED;
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(Update);
 public:
     Update(Document&);
-    ~Update();
 
     const ListHashSet<RefPtr<ContainerNode>>& roots() const { return m_roots; }
     ListHashSet<RefPtr<Element>> takeRebuildRoots() { return WTFMove(m_rebuildRoots); }
@@ -84,7 +81,7 @@ public:
     void addText(Text&, Element* parent, TextUpdate&&);
     void addText(Text&, TextUpdate&&);
     void addSVGRendererUpdate(SVGElement&);
-    void addInitialContainingBlockUpdate(std::unique_ptr<RenderStyle>);
+    void addInitialContainingBlockUpdate(std::unique_ptr<RenderStyle> style) { m_initialContainingBlockUpdate = WTFMove(style); }
 
 private:
     void addPossibleRoot(Element*);

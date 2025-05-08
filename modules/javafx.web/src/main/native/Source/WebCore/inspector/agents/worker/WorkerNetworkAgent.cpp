@@ -44,12 +44,12 @@ WorkerNetworkAgent::WorkerNetworkAgent(WorkerAgentContext& context)
 
 WorkerNetworkAgent::~WorkerNetworkAgent() = default;
 
-Inspector::Protocol::Network::LoaderId WorkerNetworkAgent::loaderIdentifier(DocumentLoader*)
+Protocol::Network::LoaderId WorkerNetworkAgent::loaderIdentifier(DocumentLoader*)
 {
     return { };
 }
 
-Inspector::Protocol::Network::FrameId WorkerNetworkAgent::frameIdentifier(DocumentLoader*)
+Protocol::Network::FrameId WorkerNetworkAgent::frameIdentifier(DocumentLoader*)
 {
     return { };
 }
@@ -75,7 +75,7 @@ bool WorkerNetworkAgent::setEmulatedConditionsInternal(std::optional<int>&& /* b
 
 #endif // ENABLE(INSPECTOR_NETWORK_THROTTLING)
 
-ScriptExecutionContext* WorkerNetworkAgent::scriptExecutionContext(Inspector::Protocol::ErrorString&, const Inspector::Protocol::Network::FrameId&)
+ScriptExecutionContext* WorkerNetworkAgent::scriptExecutionContext(Protocol::ErrorString&, const Protocol::Network::FrameId&)
 {
     return &m_globalScope;
 }

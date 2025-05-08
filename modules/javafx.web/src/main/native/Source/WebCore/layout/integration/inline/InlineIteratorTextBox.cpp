@@ -42,10 +42,16 @@ TextBoxIterator TextBox::nextTextBox() const
     return TextBoxIterator(*this).traverseNextTextBox();
 }
 
+bool TextBox::isCombinedText() const
+{
+    auto& renderer = this->renderer();
+    return is<RenderCombineText>(renderer) && downcast<RenderCombineText>(renderer).isCombined();
+}
+
 const FontCascade& TextBox::fontCascade() const
 {
-    if (auto* renderer = dynamicDowncast<RenderCombineText>(this->renderer()); renderer && renderer->isCombined())
-        return renderer->textCombineFont();
+    if (isCombinedText())
+        return downcast<RenderCombineText>(renderer()).textCombineFont();
 
     return style().fontCascade();
 }

@@ -69,17 +69,9 @@ enum class DelegatedScrollingMode : uint8_t {
     DelegatedToWebKit,
 };
 
-class ScrollView : public Widget, public ScrollableArea, public CanMakeCheckedPtr<ScrollView> {
-    WTF_MAKE_FAST_ALLOCATED;
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ScrollView);
+class ScrollView : public Widget, public ScrollableArea {
 public:
     virtual ~ScrollView();
-
-    // CheckedPtr interface
-    uint32_t ptrCount() const final { return CanMakeCheckedPtr::ptrCount(); }
-    uint32_t ptrCountWithoutThreadCheck() const final { return CanMakeCheckedPtr::ptrCountWithoutThreadCheck(); }
-    void incrementPtrCount() const final { CanMakeCheckedPtr::incrementPtrCount(); }
-    void decrementPtrCount() const final { CanMakeCheckedPtr::decrementPtrCount(); }
 
     using Widget::weakPtrFactory;
     using Widget::WeakValueType;
@@ -122,7 +114,7 @@ public:
     // widget may choose not to honor the requested modes.
     WEBCORE_EXPORT void setScrollbarModes(ScrollbarMode horizontalMode, ScrollbarMode verticalMode, bool horizontalLock = false, bool verticalLock = false);
     void setHorizontalScrollbarMode(ScrollbarMode mode, bool lock = false) { setScrollbarModes(mode, verticalScrollbarMode(), lock, verticalScrollbarLock()); }
-    void setVerticalScrollbarMode(ScrollbarMode mode, bool lock = false) { setScrollbarModes(horizontalScrollbarMode(), mode, horizontalScrollbarLock(), lock); }
+    void setVerticalScrollbarMode(ScrollbarMode mode, bool lock = false) { setScrollbarModes(horizontalScrollbarMode(), mode, horizontalScrollbarLock(), lock); };
     WEBCORE_EXPORT void scrollbarModes(ScrollbarMode& horizontalMode, ScrollbarMode& verticalMode) const;
     ScrollbarMode horizontalScrollbarMode() const final { ScrollbarMode horizontal, vertical; scrollbarModes(horizontal, vertical); return horizontal; }
     ScrollbarMode verticalScrollbarMode() const final { ScrollbarMode horizontal, vertical; scrollbarModes(horizontal, vertical); return vertical; }
@@ -203,10 +195,10 @@ public:
     // Parts of the document can be visible through transparent or blured UI widgets of the chrome. Those parts
     // contribute to painting but not to the scrollable area.
     // The unobscuredContentRect is the area that is not covered by UI elements.
-    WEBCORE_EXPORT IntRect unobscuredContentRect(VisibleContentRectIncludesScrollbars = VisibleContentRectIncludesScrollbars::No) const;
+    WEBCORE_EXPORT IntRect unobscuredContentRect(VisibleContentRectIncludesScrollbars = ExcludeScrollbars) const;
 
 #if PLATFORM(IOS_FAMILY)
-    IntRect unobscuredContentRectIncludingScrollbars() const { return unobscuredContentRect(VisibleContentRectIncludesScrollbars::Yes); }
+    IntRect unobscuredContentRectIncludingScrollbars() const { return unobscuredContentRect(IncludeScrollbars); }
 #else
     IntRect unobscuredContentRectIncludingScrollbars() const { return visibleContentRectIncludingScrollbars(); }
 #endif
@@ -226,7 +218,7 @@ public:
 #endif
 
     // Size available for view contents, including content inset areas. Not affected by zooming.
-    IntSize sizeForVisibleContent(VisibleContentRectIncludesScrollbars = VisibleContentRectIncludesScrollbars::No) const;
+    IntSize sizeForVisibleContent(VisibleContentRectIncludesScrollbars = ExcludeScrollbars) const;
     // FIXME: remove this. It's only used for the incorrectly behaving ScrollView::unobscuredContentRectInternal().
     virtual float visibleContentScaleFactor() const { return 1; }
 
@@ -464,10 +456,10 @@ private:
 
 private:
     // Size available for view contents, excluding content insets. Not affected by zooming.
-    IntSize sizeForUnobscuredContent(VisibleContentRectIncludesScrollbars = VisibleContentRectIncludesScrollbars::No) const;
+    IntSize sizeForUnobscuredContent(VisibleContentRectIncludesScrollbars = ExcludeScrollbars) const;
 
     IntRect visibleContentRectInternal(VisibleContentRectIncludesScrollbars, VisibleContentRectBehavior) const final;
-    WEBCORE_EXPORT IntRect unobscuredContentRectInternal(VisibleContentRectIncludesScrollbars = VisibleContentRectIncludesScrollbars::No) const;
+    WEBCORE_EXPORT IntRect unobscuredContentRectInternal(VisibleContentRectIncludesScrollbars = ExcludeScrollbars) const;
 
     void completeUpdatesAfterScrollTo(const IntSize& scrollDelta);
 

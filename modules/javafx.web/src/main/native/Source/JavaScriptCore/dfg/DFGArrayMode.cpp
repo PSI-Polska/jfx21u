@@ -141,8 +141,6 @@ ArrayMode ArrayMode::fromObserved(const ConcurrentJSLocker& locker, ArrayProfile
         return ArrayMode(Array::Uint16Array, nonArray, Array::AsIs, action).withProfile(locker, profile, makeSafe);
     case Uint32ArrayMode:
         return ArrayMode(Array::Uint32Array, nonArray, Array::AsIs, action).withProfile(locker, profile, makeSafe);
-    case Float16ArrayMode:
-        return ArrayMode(Array::Float16Array, nonArray, Array::AsIs, action).withProfile(locker, profile, makeSafe);
     case Float32ArrayMode:
         return ArrayMode(Array::Float32Array, nonArray, Array::AsIs, action).withProfile(locker, profile, makeSafe);
     case Float64ArrayMode:
@@ -287,12 +285,13 @@ ArrayMode ArrayMode::refine(
     case Array::Uint8ClampedArray:
     case Array::Uint16Array:
     case Array::Uint32Array:
-    case Array::Float16Array:
     case Array::Float32Array:
     case Array::Float64Array:
     case Array::BigInt64Array:
     case Array::BigUint64Array:
-        if (node->op() == PutByVal || node->op() == GetByVal) {
+        // FIXME: no idea why we only preserve this out-of-bounds information for PutByVal and not GetByVal as well.
+        // https://bugs.webkit.org/show_bug.cgi?id=231276
+        if (node->op() == PutByVal) {
             if (graph.hasExitSite(node->origin.semantic, OutOfBounds) || !isInBounds())
                 return typedArrayResult(withSpeculation(Array::OutOfBounds));
         }
@@ -318,10 +317,18 @@ ArrayMode ArrayMode::refine(
             return withType(type);
         }
 
-        ArrayMode result = withSpeculation(Array::InBounds);
-        if (node->op() == PutByVal || node->op() == GetByVal) {
+        ArrayMode result;
+        switch (node->op()) {
+        case PutByVal:
             if (graph.hasExitSite(node->origin.semantic, OutOfBounds) || !isInBounds())
                 result = withSpeculation(Array::OutOfBounds);
+            else
+                result = withSpeculation(Array::InBounds);
+            break;
+
+        default:
+            result = withSpeculation(Array::InBounds);
+            break;
         }
 
         if (isInt8ArraySpeculation(base))
@@ -345,9 +352,6 @@ ArrayMode ArrayMode::refine(
         if (isUint32ArraySpeculation(base))
             return typedArrayResult(result.withType(Array::Uint32Array));
 
-        if (isFloat16ArraySpeculation(base))
-            return typedArrayResult(result.withType(Array::Float16Array));
-
         if (isFloat32ArraySpeculation(base))
             return typedArrayResult(result.withType(Array::Float32Array));
 
@@ -370,94 +374,63 @@ ArrayMode ArrayMode::refine(
     }
 }
 
-StructureSet ArrayMode::originalArrayStructures(Graph& graph, const CodeOrigin& codeOrigin) const
+Structure* ArrayMode::originalArrayStructure(Graph& graph, const CodeOrigin& codeOrigin) const
 {
     JSGlobalObject* globalObject = graph.globalObjectFor(codeOrigin);
 
-    auto addNonCopyOnWriteStructures = [&](StructureSet& set) {
+    switch (arrayClass()) {
+    case Array::OriginalCopyOnWriteArray: {
+        if (conversion() == Array::AsIs) {
             switch (type()) {
             case Array::Int32:
-            set.add(globalObject->originalArrayStructureForIndexingType(ArrayWithInt32));
-            return;
+                return globalObject->originalArrayStructureForIndexingType(CopyOnWriteArrayWithInt32);
             case Array::Double:
-            set.add(globalObject->originalArrayStructureForIndexingType(ArrayWithDouble));
-            return;
+                return globalObject->originalArrayStructureForIndexingType(CopyOnWriteArrayWithDouble);
             case Array::Contiguous:
-            set.add(globalObject->originalArrayStructureForIndexingType(ArrayWithContiguous));
-            return;
-        case Array::Undecided:
-            set.add(globalObject->originalArrayStructureForIndexingType(ArrayWithUndecided));
-            return;
-        case Array::ArrayStorage:
-            set.add(globalObject->originalArrayStructureForIndexingType(ArrayWithArrayStorage));
-            return;
+                return globalObject->originalArrayStructureForIndexingType(CopyOnWriteArrayWithContiguous);
             default:
                 CRASH();
-            return;
+                return nullptr;
+            }
+        }
+        FALLTHROUGH;
     }
-    };
 
-    auto addCopyOnWriteStructures = [&](StructureSet& set) {
+    case Array::OriginalArray: {
         switch (type()) {
         case Array::Int32:
-            set.add(globalObject->originalArrayStructureForIndexingType(CopyOnWriteArrayWithInt32));
-            return;
+            return globalObject->originalArrayStructureForIndexingType(ArrayWithInt32);
         case Array::Double:
-            set.add(globalObject->originalArrayStructureForIndexingType(CopyOnWriteArrayWithDouble));
-            return;
+            return globalObject->originalArrayStructureForIndexingType(ArrayWithDouble);
         case Array::Contiguous:
-            set.add(globalObject->originalArrayStructureForIndexingType(CopyOnWriteArrayWithContiguous));
-            return;
+            return globalObject->originalArrayStructureForIndexingType(ArrayWithContiguous);
+        case Array::Undecided:
+            return globalObject->originalArrayStructureForIndexingType(ArrayWithUndecided);
+        case Array::ArrayStorage:
+            return globalObject->originalArrayStructureForIndexingType(ArrayWithArrayStorage);
         default:
-            return;
+            CRASH();
+            return nullptr;
         }
-    };
-
-    switch (arrayClass()) {
-    case Array::OriginalArray: {
-        StructureSet set;
-        if (conversion() == Array::AsIs) {
-            addCopyOnWriteStructures(set);
-            addNonCopyOnWriteStructures(set);
-            return set;
-        }
-        addNonCopyOnWriteStructures(set);
-        return set;
-    }
-
-    case Array::OriginalCopyOnWriteArray: {
-        StructureSet set;
-        if (conversion() == Array::AsIs) {
-            addCopyOnWriteStructures(set);
-            return set;
-        }
-        addNonCopyOnWriteStructures(set);
-        return set;
-    }
-
-    case Array::OriginalNonCopyOnWriteArray: {
-        StructureSet set;
-        addNonCopyOnWriteStructures(set);
-        return set;
     }
 
     case Array::OriginalNonArray: {
         TypedArrayType type = typedArrayType();
         if (type == NotTypedArray)
-            return { };
+            return nullptr;
 
         bool isResizableOrGrowableShared = false;
-        return { globalObject->typedArrayStructureConcurrently(type, isResizableOrGrowableShared) };
+        return globalObject->typedArrayStructureConcurrently(type, isResizableOrGrowableShared);
     }
 
     default:
-        return { };
+        return nullptr;
     }
 }
 
-StructureSet ArrayMode::originalArrayStructures(Graph& graph, Node* node) const
+Structure* ArrayMode::originalArrayStructure(Graph& graph, Node* node) const
 {
-    return originalArrayStructures(graph, node->origin.semantic);
+    return originalArrayStructure(graph, node->origin.semantic);
 }
 
 bool ArrayMode::alreadyChecked(Graph& graph, Node* node, const AbstractValue& value, IndexingType shape) const
@@ -511,21 +484,16 @@ bool ArrayMode::alreadyChecked(Graph& graph, Node* node, const AbstractValue& va
         return true;
     }
 
-    // If ArrayMode is Array::OriginalArray, Array::OriginalCopyOnWriteArray, or Array::OriginalNonCopyOnWriteArray, CheckArray is never emitted. Instead, we always emit CheckStructure.
+    // If ArrayMode is Array::OriginalCopyOnWriteArray or Array::OriginalArray, CheckArray is never emitted. Instead, we always emit CheckStructure.
     // So, we should perform the same check to the CheckStructure here.
     case Array::OriginalArray:
-    case Array::OriginalNonCopyOnWriteArray:
     case Array::OriginalCopyOnWriteArray: {
         if (!value.m_structure.isFinite())
             return false;
-        if (!value.m_structure.size())
+        Structure* originalStructure = originalArrayStructure(graph, node);
+        if (value.m_structure.size() != 1)
             return false;
-        auto originalStructures = originalArrayStructures(graph, node);
-        bool pass = true;
-        value.m_structure.forEach([&](auto structure) {
-            pass &= originalStructures.contains(structure.get());
-        });
-        return pass;
+        return value.m_structure.onlyStructure().get() == originalStructure;
     }
     }
     return false;
@@ -561,7 +529,6 @@ bool ArrayMode::alreadyChecked(Graph& graph, Node* node, const AbstractValue& va
     case Array::SlowPutArrayStorage:
         switch (arrayClass()) {
         case Array::OriginalArray:
-        case Array::OriginalNonCopyOnWriteArray:
         case Array::OriginalCopyOnWriteArray: {
             CRASH();
             return false;
@@ -643,9 +610,6 @@ bool ArrayMode::alreadyChecked(Graph& graph, Node* node, const AbstractValue& va
     case Array::Uint32Array:
         return speculationChecked(value.m_type, SpecUint32Array);
 
-    case Array::Float16Array:
-        return speculationChecked(value.m_type, SpecFloat16Array);
-
     case Array::Float32Array:
         return speculationChecked(value.m_type, SpecFloat32Array);
 
@@ -669,6 +633,132 @@ bool ArrayMode::alreadyChecked(Graph& graph, Node* node, const AbstractValue& va
 
     CRASH();
     return false;
+}
+
+const char* arrayActionToString(Array::Action action)
+{
+    switch (action) {
+    case Array::Read:
+        return "Read";
+    case Array::Write:
+        return "Write";
+    default:
+        return "Unknown!";
+    }
+}
+
+const char* arrayTypeToString(Array::Type type)
+{
+    switch (type) {
+    case Array::SelectUsingPredictions:
+        return "SelectUsingPredictions";
+    case Array::SelectUsingArguments:
+        return "SelectUsingArguments";
+    case Array::Unprofiled:
+        return "Unprofiled";
+    case Array::Generic:
+        return "Generic";
+    case Array::ForceExit:
+        return "ForceExit";
+    case Array::String:
+        return "String";
+    case Array::Undecided:
+        return "Undecided";
+    case Array::Int32:
+        return "Int32";
+    case Array::Double:
+        return "Double";
+    case Array::Contiguous:
+        return "Contiguous";
+    case Array::ArrayStorage:
+        return "ArrayStorage";
+    case Array::SlowPutArrayStorage:
+        return "SlowPutArrayStorage";
+    case Array::DirectArguments:
+        return "DirectArguments";
+    case Array::ScopedArguments:
+        return "ScopedArguments";
+    case Array::Int8Array:
+        return "Int8Array";
+    case Array::Int16Array:
+        return "Int16Array";
+    case Array::Int32Array:
+        return "Int32Array";
+    case Array::Uint8Array:
+        return "Uint8Array";
+    case Array::Uint8ClampedArray:
+        return "Uint8ClampedArray";
+    case Array::Uint16Array:
+        return "Uint16Array";
+    case Array::Uint32Array:
+        return "Uint32Array";
+    case Array::Float32Array:
+        return "Float32Array";
+    case Array::Float64Array:
+        return "Float64Array";
+    case Array::BigInt64Array:
+        return "BigInt64Array";
+    case Array::BigUint64Array:
+        return "BigUint64Array";
+    case Array::AnyTypedArray:
+        return "AnyTypedArray";
+    default:
+        // Better to return something then it is to crash. Remember, this method
+        // is being called from our main diagnostic tool, the IR dumper. It's like
+        // a stack trace. So if we get here then probably something has already
+        // gone wrong.
+        return "Unknown!";
+    }
+}
+
+const char* arrayClassToString(Array::Class arrayClass)
+{
+    switch (arrayClass) {
+    case Array::Array:
+        return "Array";
+    case Array::OriginalArray:
+        return "OriginalArray";
+    case Array::OriginalCopyOnWriteArray:
+        return "OriginalCopyOnWriteArray";
+    case Array::NonArray:
+        return "NonArray";
+    case Array::OriginalNonArray:
+        return "OriginalNonArray";
+    case Array::PossiblyArray:
+        return "PossiblyArray";
+    default:
+        return "Unknown!";
+    }
+}
+
+const char* arraySpeculationToString(Array::Speculation speculation)
+{
+    switch (speculation) {
+    case Array::InBoundsSaneChain:
+        return "InBoundsSaneChain";
+    case Array::InBounds:
+        return "InBounds";
+    case Array::ToHole:
+        return "ToHole";
+    case Array::OutOfBounds:
+        return "OutOfBounds";
+    case Array::OutOfBoundsSaneChain:
+        return "OutOfBoundsSaneChain";
+    default:
+        return "Unknown!";
+    }
+}
+
+const char* arrayConversionToString(Array::Conversion conversion)
+{
+    switch (conversion) {
+    case Array::AsIs:
+        return "AsIs";
+    case Array::Convert:
+        return "Convert";
+    default:
+        return "Unknown!";
+    }
 }
 
 IndexingType toIndexingShape(Array::Type type)
@@ -709,8 +799,6 @@ TypedArrayType toTypedArrayType(Array::Type type)
         return TypeUint16;
     case Array::Uint32Array:
         return TypeUint32;
-    case Array::Float16Array:
-        return TypeFloat16;
     case Array::Float32Array:
         return TypeFloat32;
     case Array::Float64Array:
@@ -744,8 +832,6 @@ Array::Type toArrayType(TypedArrayType type)
         return Array::Uint16Array;
     case TypeUint32:
         return Array::Uint32Array;
-    case TypeFloat16:
-        return Array::Float16Array;
     case TypeFloat32:
         return Array::Float32Array;
     case TypeFloat64:
@@ -787,7 +873,6 @@ bool permitsBoundsCheckLowering(Array::Type type)
     case Array::Uint8ClampedArray:
     case Array::Uint16Array:
     case Array::Uint32Array:
-    case Array::Float16Array:
     case Array::Float32Array:
     case Array::Float64Array:
     case Array::BigInt64Array:
@@ -819,34 +904,29 @@ void ArrayMode::dump(PrintStream& out) const
 
 namespace WTF {
 
-// Better to return something then it is to crash. Remember, these methods
-// are being called from our main diagnostic tool, the IR dumper. It's like
-// a stack trace. So if we get here then probably something has already
-// gone wrong.
-
 void printInternal(PrintStream& out, JSC::DFG::Array::Action action)
 {
-    out.print(EnumDumpWithDefault(action, "Unknown!"));
+    out.print(JSC::DFG::arrayActionToString(action));
 }
 
 void printInternal(PrintStream& out, JSC::DFG::Array::Type type)
 {
-    out.print(EnumDumpWithDefault(type, "Unknown!"));
+    out.print(JSC::DFG::arrayTypeToString(type));
 }
 
 void printInternal(PrintStream& out, JSC::DFG::Array::Class arrayClass)
 {
-    out.print(EnumDumpWithDefault(arrayClass, "Unknown!"));
+    out.print(JSC::DFG::arrayClassToString(arrayClass));
 }
 
 void printInternal(PrintStream& out, JSC::DFG::Array::Speculation speculation)
 {
-    out.print(EnumDumpWithDefault(speculation, "Unknown!"));
+    out.print(JSC::DFG::arraySpeculationToString(speculation));
 }
 
 void printInternal(PrintStream& out, JSC::DFG::Array::Conversion conversion)
 {
-    out.print(EnumDumpWithDefault(conversion, "Unknown!"));
+    out.print(JSC::DFG::arrayConversionToString(conversion));
 }
 
 } // namespace WTF

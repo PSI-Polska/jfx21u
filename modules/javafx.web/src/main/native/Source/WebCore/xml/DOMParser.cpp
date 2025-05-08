@@ -23,7 +23,6 @@
 #include "HTMLDocument.h"
 #include "SVGDocument.h"
 #include "SecurityOriginPolicy.h"
-#include "TrustedType.h"
 #include "XMLDocument.h"
 
 namespace WebCore {
@@ -41,13 +40,8 @@ Ref<DOMParser> DOMParser::create(Document& contextDocument)
     return adoptRef(*new DOMParser(contextDocument));
 }
 
-ExceptionOr<Ref<Document>> DOMParser::parseFromString(std::variant<RefPtr<TrustedHTML>, String>&& string, const AtomString& contentType)
+ExceptionOr<Ref<Document>> DOMParser::parseFromString(const String& string, const AtomString& contentType)
 {
-    auto stringValueHolder = trustedTypeCompliantString(*m_contextDocument->scriptExecutionContext(), WTFMove(string), "DOMParser parseFromString"_s);
-
-    if (stringValueHolder.hasException())
-        return stringValueHolder.releaseException();
-
     RefPtr<Document> document;
     if (contentType == textHTMLContentTypeAtom())
         document = HTMLDocument::create(nullptr, m_settings, URL { });
@@ -63,7 +57,7 @@ ExceptionOr<Ref<Document>> DOMParser::parseFromString(std::variant<RefPtr<Truste
 
     if (m_contextDocument)
         document->setContextDocument(*m_contextDocument.get());
-    document->setMarkupUnsafe(stringValueHolder.releaseReturnValue(), { });
+    document->setMarkupUnsafe(string, { });
     if (m_contextDocument) {
         document->setURL(m_contextDocument->url());
         document->setSecurityOriginPolicy(m_contextDocument->securityOriginPolicy());

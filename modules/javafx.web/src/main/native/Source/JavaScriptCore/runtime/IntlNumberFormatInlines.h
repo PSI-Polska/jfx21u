@@ -186,68 +186,70 @@ void appendNumberFormatDigitOptionsToSkeleton(IntlType* intlInstance, StringBuil
 {
     switch (intlInstance->m_roundingMode) {
     case RoundingMode::Ceil:
-        skeletonBuilder.append(" rounding-mode-ceiling"_s);
+        skeletonBuilder.append(" rounding-mode-ceiling");
         break;
     case RoundingMode::Floor:
-        skeletonBuilder.append(" rounding-mode-floor"_s);
+        skeletonBuilder.append(" rounding-mode-floor");
         break;
     case RoundingMode::Expand:
-        skeletonBuilder.append(" rounding-mode-up"_s);
+        skeletonBuilder.append(" rounding-mode-up");
         break;
     case RoundingMode::Trunc:
-        skeletonBuilder.append(" rounding-mode-down"_s);
+        skeletonBuilder.append(" rounding-mode-down");
         break;
     case RoundingMode::HalfCeil: {
         // Only ICU69~ supports half-ceiling. Ignore this option if linked ICU does not support it.
         // https://github.com/unicode-org/icu/commit/e8dfea9bb6bb27596731173b352759e44ad06b21
         if (WTF::ICU::majorVersion() >= 69)
-            skeletonBuilder.append(" rounding-mode-half-ceiling"_s);
+            skeletonBuilder.append(" rounding-mode-half-ceiling");
         else
-            skeletonBuilder.append(" rounding-mode-half-up"_s); // Default option.
+            skeletonBuilder.append(" rounding-mode-half-up"); // Default option.
         break;
     }
     case RoundingMode::HalfFloor: {
         // Only ICU69~ supports half-flooring. Ignore this option if linked ICU does not support it.
         // https://github.com/unicode-org/icu/commit/e8dfea9bb6bb27596731173b352759e44ad06b21
         if (WTF::ICU::majorVersion() >= 69)
-            skeletonBuilder.append(" rounding-mode-half-floor"_s);
+            skeletonBuilder.append(" rounding-mode-half-floor");
         else
-            skeletonBuilder.append(" rounding-mode-half-up"_s); // Default option.
+            skeletonBuilder.append(" rounding-mode-half-up"); // Default option.
         break;
     }
     case RoundingMode::HalfExpand:
-        skeletonBuilder.append(" rounding-mode-half-up"_s);
+        skeletonBuilder.append(" rounding-mode-half-up");
         break;
     case RoundingMode::HalfTrunc:
-        skeletonBuilder.append(" rounding-mode-half-down"_s);
+        skeletonBuilder.append(" rounding-mode-half-down");
         break;
     case RoundingMode::HalfEven:
-        skeletonBuilder.append(" rounding-mode-half-even"_s);
+        skeletonBuilder.append(" rounding-mode-half-even");
         break;
     }
 
     // https://github.com/unicode-org/icu/blob/master/docs/userguide/format_parse/numbers/skeletons.md#integer-width
-    skeletonBuilder.append(" integer-width/"_s, WTF::ICU::majorVersion() >= 67 ? '*' : '+'); // Prior to ICU 67, use the symbol + instead of *.
+    skeletonBuilder.append(" integer-width/", WTF::ICU::majorVersion() >= 67 ? '*' : '+'); // Prior to ICU 67, use the symbol + instead of *.
     for (unsigned i = 0; i < intlInstance->m_minimumIntegerDigits; ++i)
         skeletonBuilder.append('0');
 
     if (intlInstance->m_roundingIncrement != 1) {
-        skeletonBuilder.append(" precision-increment/"_s);
+        skeletonBuilder.append(" precision-increment/");
         auto string = numberToStringUnsigned<Vector<LChar, 10>>(intlInstance->m_roundingIncrement);
         if (intlInstance->m_maximumFractionDigits >= string.size()) {
-            skeletonBuilder.append("0."_s);
+            skeletonBuilder.append("0.");
             for (unsigned i = 0; i < (intlInstance->m_maximumFractionDigits - string.size()); ++i)
                 skeletonBuilder.append('0');
-            skeletonBuilder.append(string);
+            skeletonBuilder.appendCharacters(string.data(), string.size());
         } else {
             unsigned nonFraction = string.size() - intlInstance->m_maximumFractionDigits;
-            skeletonBuilder.append(std::span(string.data(), nonFraction), '.', std::span(string.data() + nonFraction, intlInstance->m_maximumFractionDigits));
+            skeletonBuilder.appendCharacters(string.data(), nonFraction);
+            skeletonBuilder.append('.');
+            skeletonBuilder.appendCharacters(string.data() + nonFraction, intlInstance->m_maximumFractionDigits);
         }
     } else {
         switch (intlInstance->m_roundingType) {
         case IntlRoundingType::FractionDigits: {
             // https://github.com/unicode-org/icu/blob/master/docs/userguide/format_parse/numbers/skeletons.md#fraction-precision
-            skeletonBuilder.append(" ."_s);
+            skeletonBuilder.append(" .");
             for (unsigned i = 0; i < intlInstance->m_minimumFractionDigits; ++i)
                 skeletonBuilder.append('0');
             for (unsigned i = 0; i < intlInstance->m_maximumFractionDigits - intlInstance->m_minimumFractionDigits; ++i)
@@ -270,7 +272,7 @@ void appendNumberFormatDigitOptionsToSkeleton(IntlType* intlInstance, StringBuil
             if (WTF::ICU::majorVersion() >= 69) {
                 // https://github.com/unicode-org/icu/commit/d7db6c1f8655bb53153695b09a50029fd04a8364
                 // https://github.com/unicode-org/icu/blob/main/docs/userguide/format_parse/numbers/skeletons.md#precision
-                skeletonBuilder.append(" ."_s);
+                skeletonBuilder.append(" .");
                 for (unsigned i = 0; i < intlInstance->m_minimumFractionDigits; ++i)
                     skeletonBuilder.append('0');
                 for (unsigned i = 0; i < intlInstance->m_maximumFractionDigits - intlInstance->m_minimumFractionDigits; ++i)
@@ -295,7 +297,7 @@ void appendNumberFormatDigitOptionsToSkeleton(IntlType* intlInstance, StringBuil
         // Only ICU69~ supports trailing zero display. Ignore this option if linked ICU does not support it.
         // https://github.com/unicode-org/icu/commit/b79c299f90d4023ac237db3d0335d568bf21cd36
         if (WTF::ICU::majorVersion() >= 69)
-            skeletonBuilder.append("/w"_s);
+            skeletonBuilder.append("/w");
         break;
     }
 }
@@ -359,7 +361,7 @@ inline IntlMathematicalValue toIntlMathematicalValue(JSGlobalObject* globalObjec
     if (!primitive.isString())
         RELEASE_AND_RETURN(scope, IntlMathematicalValue { primitive.toNumber(globalObject) });
 
-    auto string = asString(primitive)->value(globalObject);
+    String string = asString(primitive)->value(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
     RELEASE_AND_RETURN(scope, IntlMathematicalValue::parseString(globalObject, WTFMove(string)));

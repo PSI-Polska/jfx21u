@@ -58,11 +58,10 @@ void ThreadedScrollingTreeScrollingNodeDelegate::updateFromStateNode(const Scrol
 
 void ThreadedScrollingTreeScrollingNodeDelegate::updateSnapScrollState()
 {
-    Ref scrollingNode = this->scrollingNode();
-    scrollingNode->setScrollSnapInProgress(m_scrollController.isScrollSnapInProgress());
+    scrollingNode().setScrollSnapInProgress(m_scrollController.isScrollSnapInProgress());
 
     if (m_scrollController.activeScrollSnapIndexDidChange())
-        scrollingTree().setActiveScrollSnapIndices(scrollingNode->scrollingNodeID(), m_scrollController.activeScrollSnapIndexForAxis(ScrollEventAxis::Horizontal), m_scrollController.activeScrollSnapIndexForAxis(ScrollEventAxis::Vertical));
+        scrollingTree().setActiveScrollSnapIndices(scrollingNode().scrollingNodeID(), m_scrollController.activeScrollSnapIndexForAxis(ScrollEventAxis::Horizontal), m_scrollController.activeScrollSnapIndexForAxis(ScrollEventAxis::Vertical));
 }
 
 void ThreadedScrollingTreeScrollingNodeDelegate::updateUserScrollInProgressForEvent(const PlatformWheelEvent& wheelEvent)
@@ -71,7 +70,7 @@ void ThreadedScrollingTreeScrollingNodeDelegate::updateUserScrollInProgressForEv
     m_scrollController.updateGestureInProgressState(wheelEvent);
     bool isInUserScroll = m_scrollController.isUserScrollInProgress();
     if (isInUserScroll != wasInUserScroll)
-        protectedScrollingNode()->setUserScrollInProgress(isInUserScroll);
+        scrollingNode().setUserScrollInProgress(isInUserScroll);
 }
 
 bool ThreadedScrollingTreeScrollingNodeDelegate::startAnimatedScrollToPosition(FloatPoint destinationPosition)
@@ -94,7 +93,7 @@ void ThreadedScrollingTreeScrollingNodeDelegate::serviceScrollAnimation(Monotoni
 std::unique_ptr<ScrollingEffectsControllerTimer> ThreadedScrollingTreeScrollingNodeDelegate::createTimer(Function<void()>&& function)
 {
     // This is only used for a scroll snap timer.
-    return WTF::makeUnique<ScrollingEffectsControllerTimer>(RunLoop::protectedCurrent(), [function = WTFMove(function), protectedNode = Ref { scrollingNode() }] {
+    return WTF::makeUnique<ScrollingEffectsControllerTimer>(RunLoop::current(), [function = WTFMove(function), protectedNode = Ref { scrollingNode() }] {
         Locker locker { protectedNode->scrollingTree().treeLock() };
         function();
     });
@@ -102,12 +101,12 @@ std::unique_ptr<ScrollingEffectsControllerTimer> ThreadedScrollingTreeScrollingN
 
 void ThreadedScrollingTreeScrollingNodeDelegate::startAnimationCallback(ScrollingEffectsController&)
 {
-    protectedScrollingNode()->setScrollAnimationInProgress(true);
+    scrollingNode().setScrollAnimationInProgress(true);
 }
 
 void ThreadedScrollingTreeScrollingNodeDelegate::stopAnimationCallback(ScrollingEffectsController&)
 {
-    protectedScrollingNode()->setScrollAnimationInProgress(false);
+    scrollingNode().setScrollAnimationInProgress(false);
 }
 
 bool ThreadedScrollingTreeScrollingNodeDelegate::allowsHorizontalScrolling() const
@@ -122,7 +121,7 @@ bool ThreadedScrollingTreeScrollingNodeDelegate::allowsVerticalScrolling() const
 
 void ThreadedScrollingTreeScrollingNodeDelegate::immediateScrollBy(const FloatSize& delta, ScrollClamping clamping)
 {
-    protectedScrollingNode()->scrollBy(delta, clamping);
+    scrollingNode().scrollBy(delta, clamping);
 }
 
 void ThreadedScrollingTreeScrollingNodeDelegate::adjustScrollPositionToBoundsIfNecessary()
@@ -141,52 +140,51 @@ float ThreadedScrollingTreeScrollingNodeDelegate::pageScaleFactor() const
 {
     // FIXME: What should this return for non-root frames, and overflow?
     // Also, this should not have to access ScrollingTreeFrameScrollingNode.
-    if (RefPtr node = dynamicDowncast<ScrollingTreeFrameScrollingNode>(scrollingNode()))
-        return node->frameScaleFactor();
+    if (is<ScrollingTreeFrameScrollingNode>(scrollingNode()))
+        return downcast<ScrollingTreeFrameScrollingNode>(scrollingNode()).frameScaleFactor();
 
     return 1;
 }
 
 void ThreadedScrollingTreeScrollingNodeDelegate::willStartAnimatedScroll()
 {
-    protectedScrollingNode()->willStartAnimatedScroll();
+    scrollingNode().willStartAnimatedScroll();
 }
 
 void ThreadedScrollingTreeScrollingNodeDelegate::didStopAnimatedScroll()
 {
-    protectedScrollingNode()->didStopAnimatedScroll();
+    scrollingNode().didStopAnimatedScroll();
 }
 
 void ThreadedScrollingTreeScrollingNodeDelegate::willStartWheelEventScroll()
 {
-    protectedScrollingNode()->willStartWheelEventScroll();
+    scrollingNode().willStartWheelEventScroll();
 }
 
 void ThreadedScrollingTreeScrollingNodeDelegate::didStopWheelEventScroll()
 {
-    protectedScrollingNode()->didStopWheelEventScroll();
+    scrollingNode().didStopWheelEventScroll();
 }
 
 void ThreadedScrollingTreeScrollingNodeDelegate::willStartScrollSnapAnimation()
 {
-    protectedScrollingNode()->setScrollSnapInProgress(true);
+    scrollingNode().setScrollSnapInProgress(true);
 }
 
 void ThreadedScrollingTreeScrollingNodeDelegate::didStopScrollSnapAnimation()
 {
-    protectedScrollingNode()->setScrollSnapInProgress(false);
+    scrollingNode().setScrollSnapInProgress(false);
 }
 
 ScrollExtents ThreadedScrollingTreeScrollingNodeDelegate::scrollExtents() const
 {
-    Ref scrollingNode = this->scrollingNode();
     return {
-        scrollingNode->totalContentsSize(),
-        scrollingNode->scrollableAreaSize()
+        scrollingNode().totalContentsSize(),
+        scrollingNode().scrollableAreaSize()
     };
 }
 
-void ThreadedScrollingTreeScrollingNodeDelegate::deferWheelEventTestCompletionForReason(ScrollingNodeID, WheelEventTestMonitor::DeferReason reason) const
+void ThreadedScrollingTreeScrollingNodeDelegate::deferWheelEventTestCompletionForReason(WheelEventTestMonitor::ScrollableAreaIdentifier, WheelEventTestMonitor::DeferReason reason) const
 {
     if (!scrollingTree().isMonitoringWheelEvents())
         return;
@@ -195,7 +193,7 @@ void ThreadedScrollingTreeScrollingNodeDelegate::deferWheelEventTestCompletionFo
     scrollingTree().deferWheelEventTestCompletionForReason(scrollingNode().scrollingNodeID(), reason);
 }
 
-void ThreadedScrollingTreeScrollingNodeDelegate::removeWheelEventTestCompletionDeferralForReason(ScrollingNodeID, WheelEventTestMonitor::DeferReason reason) const
+void ThreadedScrollingTreeScrollingNodeDelegate::removeWheelEventTestCompletionDeferralForReason(WheelEventTestMonitor::ScrollableAreaIdentifier, WheelEventTestMonitor::DeferReason reason) const
 {
     if (!scrollingTree().isMonitoringWheelEvents())
         return;
@@ -223,12 +221,6 @@ void ThreadedScrollingTreeScrollingNodeDelegate::handleKeyboardScrollRequest(con
         break;
     }
 }
-
-ScrollingNodeID ThreadedScrollingTreeScrollingNodeDelegate::scrollingNodeIDForTesting() const
-{
-    return scrollingNode().scrollingNodeID();
-}
-
 
 } // namespace WebCore
 

@@ -112,10 +112,9 @@ private:
     VisiblePosition m_position;
 };
 
-class FrameSelection final : private CaretBase, public CaretAnimationClient, public CanMakeCheckedPtr<FrameSelection> {
+class FrameSelection final : private CaretBase, public CaretAnimationClient, public CanMakeCheckedPtr {
     WTF_MAKE_NONCOPYABLE(FrameSelection);
     WTF_MAKE_FAST_ALLOCATED;
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FrameSelection);
 public:
     enum class Alteration : bool { Move, Extend };
     enum class CursorAlignOnScroll : bool { IfNeeded, Always };
@@ -134,7 +133,6 @@ public:
         RevealSelectionBounds = 1 << 11,
         ForceCenterScroll = 1 << 12,
         ForBindings = 1 << 13,
-        DoNotNotifyEditorClients = 1 << 14,
     };
     static constexpr OptionSet<SetSelectionOption> defaultSetSelectionOptions(UserTriggered = UserTriggered::No);
 
@@ -205,10 +203,6 @@ public:
     // Used to suspend caret blinking while the mouse is down.
     WEBCORE_EXPORT void setCaretBlinkingSuspended(bool);
     WEBCORE_EXPORT bool isCaretBlinkingSuspended() const;
-
-#if ENABLE(ACCESSIBILITY_NON_BLINKING_CURSOR)
-    WEBCORE_EXPORT void setPrefersNonBlinkingCursor(bool);
-#endif
 
     WEBCORE_EXPORT void setFocused(bool);
     bool isFocused() const { return m_focused; }
@@ -289,7 +283,6 @@ private:
     void updateDataDetectorsForSelection();
 
     bool setSelectionWithoutUpdatingAppearance(const VisibleSelection&, OptionSet<SetSelectionOption>, CursorAlignOnScroll, TextGranularity);
-    void setNodeFlags(VisibleSelection&, bool value);
 
     void respondToNodeModification(Node&, bool anchorRemoved, bool focusRemoved, bool baseRemoved, bool extentRemoved, bool startRemoved, bool endRemoved);
     TextDirection directionOfEnclosingBlock();
@@ -369,7 +362,6 @@ private:
     bool m_shouldShowBlockCursor : 1;
     bool m_pendingSelectionUpdate : 1;
     bool m_alwaysAlignCursorOnScrollWhenRevealingSelection : 1;
-    bool m_hasScheduledSelectionChangeEventOnDocument : 1 { false };
 
 #if PLATFORM(IOS_FAMILY)
     bool m_updateAppearanceEnabled : 1;

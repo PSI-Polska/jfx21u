@@ -47,6 +47,8 @@ public:
 private:
     IntrinsicGetterAccessCase(VM&, JSCell*, CacheableIdentifier, PropertyOffset, Structure*, const ObjectPropertyConditionSet&, JSFunction* intrinsicFunction, RefPtr<PolyProtoAccessChain>&&);
 
+    Ref<AccessCase> cloneImpl() const;
+
     WriteBarrier<JSFunction> m_intrinsicFunction;
 };
 

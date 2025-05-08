@@ -33,7 +33,7 @@ DumpContext::DumpContext()
 {
 }
 
-DumpContext::~DumpContext() = default;
+DumpContext::~DumpContext() { }
 
 bool DumpContext::isEmpty() const
 {

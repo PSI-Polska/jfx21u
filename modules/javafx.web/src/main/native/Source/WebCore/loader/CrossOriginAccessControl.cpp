@@ -30,7 +30,6 @@
 #include "CachedResourceRequest.h"
 #include "CrossOriginEmbedderPolicy.h"
 #include "CrossOriginPreflightResultCache.h"
-#include "DocumentInlines.h"
 #include "DocumentLoader.h"
 #include "HTTPHeaderNames.h"
 #include "HTTPParsers.h"
@@ -44,7 +43,6 @@
 #include <mutex>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/AtomString.h>
-#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -67,9 +65,9 @@ bool isSimpleCrossOriginAccessRequest(const String& method, const HTTPHeaderMap&
     return true;
 }
 
-void updateRequestReferrer(ResourceRequest& request, ReferrerPolicy referrerPolicy, const URL& outgoingReferrerURL, const OriginAccessPatterns& patterns)
+void updateRequestReferrer(ResourceRequest& request, ReferrerPolicy referrerPolicy, const String& outgoingReferrer, const OriginAccessPatterns& patterns)
 {
-    String newOutgoingReferrer = SecurityPolicy::generateReferrerHeader(referrerPolicy, request.url(), outgoingReferrerURL, patterns);
+    String newOutgoingReferrer = SecurityPolicy::generateReferrerHeader(referrerPolicy, request.url(), outgoingReferrer, patterns);
     if (newOutgoingReferrer.isEmpty())
         request.clearHTTPReferrer();
     else
@@ -176,7 +174,7 @@ CachedResourceRequest createPotentialAccessControlRequest(ResourceRequest&& requ
         options.storedCredentialsPolicy = StoredCredentialsPolicy::Use;
         break;
     case FetchOptions::Credentials::SameOrigin:
-        options.storedCredentialsPolicy = document.protectedSecurityOrigin()->canRequest(request.url(), OriginAccessPatternsForWebProcess::singleton()) ? StoredCredentialsPolicy::Use : StoredCredentialsPolicy::DoNotUse;
+        options.storedCredentialsPolicy = document.securityOrigin().canRequest(request.url(), OriginAccessPatternsForWebProcess::singleton()) ? StoredCredentialsPolicy::Use : StoredCredentialsPolicy::DoNotUse;
         break;
     case FetchOptions::Credentials::Omit:
         options.storedCredentialsPolicy = StoredCredentialsPolicy::DoNotUse;
@@ -190,10 +188,10 @@ CachedResourceRequest createPotentialAccessControlRequest(ResourceRequest&& requ
 String validateCrossOriginRedirectionURL(const URL& redirectURL)
 {
     if (!LegacySchemeRegistry::shouldTreatURLSchemeAsCORSEnabled(redirectURL.protocol()))
-        return "not allowed to follow a cross-origin CORS redirection with non CORS scheme"_s;
+        return makeString("not allowed to follow a cross-origin CORS redirection with non CORS scheme");
 
     if (redirectURL.hasCredentials())
-        return makeString("redirection URL "_s, redirectURL.string(), " has credentials"_s);
+        return makeString("redirection URL ", redirectURL.string(), " has credentials");
 
     return { };
 }
@@ -281,7 +279,7 @@ Expected<void, String> passesAccessControlCheck(const ResourceResponse& response
             return makeUnexpected("Cannot use wildcard in Access-Control-Allow-Origin when credentials flag is true."_s);
         if (accessControlOriginString.find(',') != notFound)
             return makeUnexpected("Access-Control-Allow-Origin cannot contain more than one origin."_s);
-        return makeUnexpected(makeString("Origin "_s, securityOriginString, " is not allowed by Access-Control-Allow-Origin."_s, " Status code: "_s, response.httpStatusCode()));
+        return makeUnexpected(makeString("Origin ", securityOriginString, " is not allowed by Access-Control-Allow-Origin.", " Status code: ", response.httpStatusCode()));
     }
 
     if (storedCredentialsPolicy == StoredCredentialsPolicy::Use) {
@@ -293,10 +291,10 @@ Expected<void, String> passesAccessControlCheck(const ResourceResponse& response
     return { };
 }
 
-Expected<void, String> validatePreflightResponse(PAL::SessionID sessionID, const ResourceRequest& request, const ResourceResponse& response, StoredCredentialsPolicy storedCredentialsPolicy, const SecurityOrigin& topOrigin, const SecurityOrigin& securityOrigin, const CrossOriginAccessControlCheckDisabler* checkDisabler)
+Expected<void, String> validatePreflightResponse(PAL::SessionID sessionID, const ResourceRequest& request, const ResourceResponse& response, StoredCredentialsPolicy storedCredentialsPolicy, const SecurityOrigin& securityOrigin, const CrossOriginAccessControlCheckDisabler* checkDisabler)
 {
     if (!response.isSuccessful())
-        return makeUnexpected(makeString("Preflight response is not successful. Status code: "_s, response.httpStatusCode()));
+        return makeUnexpected(makeString("Preflight response is not successful. Status code: ", response.httpStatusCode()));
 
     auto accessControlCheckResult = passesAccessControlCheck(response, storedCredentialsPolicy, securityOrigin, checkDisabler);
     if (!accessControlCheckResult)
@@ -308,7 +306,7 @@ Expected<void, String> validatePreflightResponse(PAL::SessionID sessionID, const
 
     auto entry = WTFMove(result.value());
     auto errorDescription = entry->validateMethodAndHeaders(request.httpMethod(), request.httpHeaderFields());
-    CrossOriginPreflightResultCache::singleton().appendEntry(sessionID, { topOrigin.data(), securityOrigin.data(), }, request.url(), entry.moveToUniquePtr());
+    CrossOriginPreflightResultCache::singleton().appendEntry(sessionID, securityOrigin.toString(), request.url(), entry.moveToUniquePtr());
 
     if (errorDescription)
         return makeUnexpected(WTFMove(*errorDescription));
@@ -337,8 +335,10 @@ static inline bool shouldCrossOriginResourcePolicyCancelLoad(CrossOriginEmbedder
     if (policy == CrossOriginResourcePolicy::SameSite) {
         if (origin.isOpaque())
             return true;
+#if ENABLE(PUBLIC_SUFFIX_LIST)
         if (!RegistrableDomain::uncheckedCreateFromHost(origin.host()).matches(responseURL))
             return true;
+#endif
         if (origin.protocol() == "http"_s && responseURL.protocol() == "https"_s)
             return true;
     }
@@ -349,7 +349,7 @@ static inline bool shouldCrossOriginResourcePolicyCancelLoad(CrossOriginEmbedder
 std::optional<ResourceError> validateCrossOriginResourcePolicy(CrossOriginEmbedderPolicyValue coep, const SecurityOrigin& origin, const URL& requestURL, bool isResponseNull, const URL& responseURL, const String& crossOriginResourcePolicyHeaderValue, ForNavigation forNavigation, const OriginAccessPatterns& patterns)
 {
     if (shouldCrossOriginResourcePolicyCancelLoad(coep, origin, isResponseNull, responseURL, crossOriginResourcePolicyHeaderValue, forNavigation, patterns))
-        return ResourceError { errorDomainWebKitInternal, 0, requestURL, makeString("Cancelled load to "_s, responseURL.stringCenterEllipsizedToLength(), " because it violates the resource's Cross-Origin-Resource-Policy response header."_s), ResourceError::Type::AccessControl };
+        return ResourceError { errorDomainWebKitInternal, 0, requestURL, makeString("Cancelled load to ", responseURL.stringCenterEllipsizedToLength(), " because it violates the resource's Cross-Origin-Resource-Policy response header."), ResourceError::Type::AccessControl };
     return std::nullopt;
 }
 

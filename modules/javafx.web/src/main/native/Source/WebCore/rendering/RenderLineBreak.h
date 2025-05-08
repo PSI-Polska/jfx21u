@@ -25,18 +25,25 @@
 
 namespace WebCore {
 
+class LegacyInlineElementBox;
 class HTMLElement;
 class Position;
 
 class RenderLineBreak final : public RenderBoxModelObject {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderLineBreak);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderLineBreak);
+    WTF_MAKE_ISO_ALLOCATED(RenderLineBreak);
 public:
     RenderLineBreak(HTMLElement&, RenderStyle&&);
     virtual ~RenderLineBreak();
 
     // FIXME: The lies here keep render tree dump based test results unchanged.
     ASCIILiteral renderName() const final { return isWBR() ? "RenderWordBreak"_s : "RenderBR"_s; }
+
+    std::unique_ptr<LegacyInlineElementBox> createInlineBox();
+    LegacyInlineElementBox* inlineBoxWrapper() const { return m_inlineBoxWrapper; }
+    void setInlineBoxWrapper(LegacyInlineElementBox*);
+    void deleteInlineBoxWrapper();
+    void replaceInlineBoxWrapper(LegacyInlineElementBox&);
+    void dirtyLineBoxes(bool fullLayout);
 
     IntRect linesBoundingBox() const;
 
@@ -46,17 +53,13 @@ public:
     void collectSelectionGeometries(Vector<SelectionGeometry>&, unsigned startOffset = 0, unsigned endOffset = std::numeric_limits<unsigned>::max()) final;
 #endif
 
-    bool isBR() const { return !hasWBRLineBreakFlag(); }
-    bool isWBR() const { return hasWBRLineBreakFlag(); }
-    bool isLineBreakOpportunity() const { return isWBR(); }
-
 private:
     void node() const = delete;
 
     bool canHaveChildren() const final { return false; }
     void paint(PaintInfo&, const LayoutPoint&) final { }
 
-    VisiblePosition positionForPoint(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*) final;
+    VisiblePosition positionForPoint(const LayoutPoint&, const RenderFragmentContainer*) final;
     int caretMinOffset() const final;
     int caretMaxOffset() const final;
     bool canBeSelectionLeaf() const final;
@@ -81,7 +84,8 @@ private:
     void updateFromStyle() final;
     bool requiresLayer() const final { return false; }
 
-    mutable std::optional<LayoutUnit> m_cachedLineHeight { };
+    LegacyInlineElementBox* m_inlineBoxWrapper;
+    mutable int m_cachedLineHeight;
 };
 
 } // namespace WebCore

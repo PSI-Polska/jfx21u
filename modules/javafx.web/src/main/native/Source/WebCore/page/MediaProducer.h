@@ -25,17 +25,9 @@
 
 #pragma once
 
+#include <wtf/EnumTraits.h>
 #include <wtf/OptionSet.h>
 #include <wtf/WeakPtr.h>
-
-namespace WebCore {
-class MediaProducer;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::MediaProducer> : std::true_type { };
-}
 
 namespace WebCore {
 
@@ -138,7 +130,6 @@ public:
     static constexpr MutedStateFlags AudioAndVideoCaptureIsMuted = { MutedState::AudioCaptureIsMuted, MutedState::VideoCaptureIsMuted };
     static constexpr MutedStateFlags MediaStreamCaptureIsMuted = { MutedState::AudioCaptureIsMuted, MutedState::VideoCaptureIsMuted, MutedState::ScreenCaptureIsMuted, MutedState::WindowCaptureIsMuted, MutedState::SystemAudioCaptureIsMuted };
 
-    virtual void visibilityAdjustmentStateDidChange() { }
     virtual void pageMutedStateDidChange() = 0;
 
 protected:

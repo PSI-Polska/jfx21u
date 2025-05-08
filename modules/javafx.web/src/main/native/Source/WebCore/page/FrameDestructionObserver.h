@@ -29,15 +29,6 @@
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
-class FrameDestructionObserver;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::FrameDestructionObserver> : std::true_type { };
-}
-
-namespace WebCore {
 
 class LocalFrame;
 

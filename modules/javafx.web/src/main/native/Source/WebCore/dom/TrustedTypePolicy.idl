@@ -25,9 +25,7 @@
 
 [
     EnabledBySetting=TrustedTypesEnabled,
-    Exposed=(Window,Worker),
-    JSCustomMarkFunction,
-    GenerateIsReachable=Impl,
+    Exposed=(Window,Worker)
 ]
 interface TrustedTypePolicy {
     readonly attribute DOMString name;

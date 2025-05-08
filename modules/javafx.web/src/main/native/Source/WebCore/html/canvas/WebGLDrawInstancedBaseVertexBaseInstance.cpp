@@ -30,11 +30,11 @@
 
 #include "InspectorInstrumentation.h"
 #include "WebGLUtilities.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WebGLDrawInstancedBaseVertexBaseInstance);
+WTF_MAKE_ISO_ALLOCATED_IMPL(WebGLDrawInstancedBaseVertexBaseInstance);
 
 WebGLDrawInstancedBaseVertexBaseInstance::WebGLDrawInstancedBaseVertexBaseInstance(WebGLRenderingContextBase& context)
     : WebGLExtension(context, WebGLExtensionName::WebGLDrawInstancedBaseVertexBaseInstance)
@@ -55,7 +55,7 @@ void WebGLDrawInstancedBaseVertexBaseInstance::drawArraysInstancedBaseInstanceWE
         return;
     auto& context = this->context();
 
-    if (!context.validateVertexArrayObject("drawArraysInstancedBaseInstanceWEBGL"_s))
+    if (!context.validateVertexArrayObject("drawArraysInstancedBaseInstanceWEBGL"))
         return;
 
     if (context.m_currentProgram && InspectorInstrumentation::isWebGLProgramDisabled(context, *context.m_currentProgram))
@@ -78,7 +78,7 @@ void WebGLDrawInstancedBaseVertexBaseInstance::drawElementsInstancedBaseVertexBa
         return;
     auto& context = this->context();
 
-    if (!context.validateVertexArrayObject("drawElementsInstancedBaseVertexBaseInstanceWEBGL"_s))
+    if (!context.validateVertexArrayObject("drawElementsInstancedBaseVertexBaseInstanceWEBGL"))
         return;
 
     if (context.m_currentProgram && InspectorInstrumentation::isWebGLProgramDisabled(context, *context.m_currentProgram))

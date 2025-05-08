@@ -34,7 +34,6 @@
 #include "WebMediaSessionManagerClient.h"
 #include <wtf/Algorithms.h>
 #include <wtf/Logger.h>
-#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -74,28 +73,28 @@ static bool flagsAreSet(MediaProducerMediaStateFlags value, MediaProducerMediaSt
 String mediaProducerStateString(MediaProducerMediaStateFlags flags)
 {
     StringBuilder string;
-    string.append(" { "_s);
+    string.append(" { ");
     if (flags & MediaProducerMediaState::IsPlayingAudio)
-        string.append("IsPlayingAudio+"_s);
+        string.append("IsPlayingAudio+");
     if (flags & MediaProducerMediaState::IsPlayingVideo)
-        string.append("IsPlayingVideo+"_s);
+        string.append("IsPlayingVideo+");
     if (flags & MediaProducerMediaState::IsPlayingToExternalDevice)
-        string.append("IsPlayingToExternalDevice+"_s);
+        string.append("IsPlayingToExternalDevice+");
     if (flags & MediaProducerMediaState::HasPlaybackTargetAvailabilityListener)
-        string.append("HasTargetAvailabilityListener+"_s);
+        string.append("HasTargetAvailabilityListener+");
     if (flags & MediaProducerMediaState::RequiresPlaybackTargetMonitoring)
-        string.append("RequiresTargetMonitoring+"_s);
+        string.append("RequiresTargetMonitoring+");
     if (flags & MediaProducerMediaState::ExternalDeviceAutoPlayCandidate)
-        string.append("ExternalDeviceAutoPlayCandidate+"_s);
+        string.append("ExternalDeviceAutoPlayCandidate+");
     if (flags & MediaProducerMediaState::DidPlayToEnd)
-        string.append("DidPlayToEnd+"_s);
+        string.append("DidPlayToEnd+");
     if (flags & MediaProducerMediaState::HasAudioOrVideo)
-        string.append("HasAudioOrVideo+"_s);
+        string.append("HasAudioOrVideo+");
     if (string.isEmpty())
-        string.append("IsNotPlaying"_s);
+        string.append("IsNotPlaying");
     else
         string.shrink(string.length() - 1);
-    string.append(" }"_s);
+    string.append(" }");
     return string.toString();
 }
 
@@ -115,7 +114,7 @@ public:
         if (!state->client.alwaysOnLoggingAllowed())
             return;
 
-        m_logger->logAlways(LogMedia, makeString("WebMediaSessionManager::"_s, span(methodName), ' '), state->contextId.toUInt64(), state->flags, arguments...);
+        m_logger->logAlways(LogMedia, makeString("WebMediaSessionManager::", methodName, ' '), state->contextId.toUInt64(), state->flags, arguments...);
     }
 
     template<typename... Arguments>
@@ -124,7 +123,7 @@ public:
         if (!m_manager.alwaysOnLoggingAllowed())
             return;
 
-        m_logger->logAlways(LogMedia, makeString("WebMediaSessionManager::"_s, span(methodName), ' '), arguments...);
+        m_logger->logAlways(LogMedia, makeString("WebMediaSessionManager::", methodName, ' '), arguments...);
     }
 
 private:

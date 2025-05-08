@@ -32,18 +32,20 @@
 #include "ImageLoader.h"
 #include "Logging.h"
 #include "Settings.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLPictureElement);
+WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLPictureElement);
 
 HTMLPictureElement::HTMLPictureElement(const QualifiedName& tagName, Document& document)
     : HTMLElement(tagName, document)
 {
 }
 
-HTMLPictureElement::~HTMLPictureElement() = default;
+HTMLPictureElement::~HTMLPictureElement()
+{
+}
 
 Ref<HTMLPictureElement> HTMLPictureElement::create(const QualifiedName& tagName, Document& document)
 {

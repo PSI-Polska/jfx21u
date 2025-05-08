@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include "AllowedFonts.h"
 #include "ClipboardAccessPolicy.h"
 #include "ContentType.h"
 #include "EditableLinkBehavior.h"
@@ -41,7 +42,6 @@
 #include "TextDirection.h"
 #include "TextDirectionSubmenuInclusionBehavior.h"
 #include "Timer.h"
-#include "TrustedFonts.h"
 #include "UserInterfaceDirectionPolicy.h"
 #include <JavaScriptCore/RuntimeFlags.h>
 #include <unicode/uscript.h>
@@ -142,6 +142,7 @@ protected:
     void setNeedsRelayoutAllFrames();
     void mediaTypeOverrideChanged();
     void imagesEnabledChanged();
+    void pluginsEnabledChanged();
     void userStyleSheetLocationChanged();
     void usesBackForwardCacheChanged();
     void dnsPrefetchingEnabledChanged();
@@ -159,7 +160,9 @@ protected:
 #if ENABLE(MEDIA_STREAM)
     void mockCaptureDevicesEnabledChanged();
 #endif
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
     void layerBasedSVGEngineEnabledChanged();
+#endif
 #if HAVE(AVCONTENTKEYSPECIFIER)
     void sampleBufferContentKeySessionSupportEnabledChanged();
 #endif

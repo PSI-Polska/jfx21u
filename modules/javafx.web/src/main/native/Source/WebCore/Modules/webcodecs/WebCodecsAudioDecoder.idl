@@ -31,7 +31,6 @@
     EnabledBySetting=WebCodecsAudioEnabled,
     Exposed=(Window,DedicatedWorker),
     InterfaceName=AudioDecoder,
-    JSCustomMarkFunction
 ] interface WebCodecsAudioDecoder : EventTarget {
     [CallWith=CurrentScriptExecutionContext] constructor(WebCodecsAudioDecoderInit init);
 

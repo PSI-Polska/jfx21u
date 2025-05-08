@@ -188,6 +188,7 @@ static bool isValidContextMenuAction(WebCore::ContextMenuAction action)
     case ContextMenuAction::ContextMenuItemTagIgnoreSpelling:
     case ContextMenuAction::ContextMenuItemTagLearnSpelling:
     case ContextMenuAction::ContextMenuItemTagOther:
+    case ContextMenuAction::ContextMenuItemTagSearchInSpotlight:
     case ContextMenuAction::ContextMenuItemTagSearchWeb:
     case ContextMenuAction::ContextMenuItemTagLookUpInDictionary:
     case ContextMenuAction::ContextMenuItemTagOpenWithDefaultApplication:
@@ -234,7 +235,6 @@ static bool isValidContextMenuAction(WebCore::ContextMenuAction action)
     case ContextMenuAction::ContextMenuItemTagTextDirectionRightToLeft:
     case ContextMenuAction::ContextMenuItemTagAddHighlightToCurrentQuickNote:
     case ContextMenuAction::ContextMenuItemTagAddHighlightToNewQuickNote:
-    case ContextMenuAction::ContextMenuItemTagCopyLinkToHighlight:
 #if PLATFORM(COCOA)
     case ContextMenuAction::ContextMenuItemTagCorrectSpellingAutomatically:
     case ContextMenuAction::ContextMenuItemTagSubstitutionsMenu:
@@ -262,11 +262,9 @@ static bool isValidContextMenuAction(WebCore::ContextMenuAction action)
     case ContextMenuAction::ContextMenuItemTagDictationAlternative:
     case ContextMenuAction::ContextMenuItemTagToggleVideoFullscreen:
     case ContextMenuAction::ContextMenuItemTagShareMenu:
-    case ContextMenuAction::ContextMenuItemTagToggleVideoViewer:
     case ContextMenuAction::ContextMenuItemTagToggleVideoEnhancedFullscreen:
     case ContextMenuAction::ContextMenuItemTagLookUpImage:
     case ContextMenuAction::ContextMenuItemTagTranslate:
-    case ContextMenuAction::ContextMenuItemTagWritingTools:
     case ContextMenuAction::ContextMenuItemBaseCustomTag:
     case ContextMenuAction::ContextMenuItemLastCustomTag:
     case ContextMenuAction::ContextMenuItemBaseApplicationTag:

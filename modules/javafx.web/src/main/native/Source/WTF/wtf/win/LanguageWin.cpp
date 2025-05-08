@@ -30,7 +30,6 @@
 #include <windows.h>
 #include <wtf/Lock.h>
 #include <wtf/Vector.h>
-#include <wtf/text/MakeString.h>
 #include <wtf/text/WTFString.h>
 #include <wtf/text/win/WCharStringExtras.h>
 
@@ -69,7 +68,7 @@ static String platformLanguage()
     if (countryName.isEmpty())
         computedDefaultLanguage = languageName;
     else
-        computedDefaultLanguage = makeString(languageName, '-', countryName);
+        computedDefaultLanguage = languageName + '-' + countryName;
 
     return computedDefaultLanguage;
 }

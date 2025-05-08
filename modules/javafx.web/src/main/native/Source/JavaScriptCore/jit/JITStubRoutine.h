@@ -25,12 +25,16 @@
 
 #pragma once
 
+#if ENABLE(JIT)
+
 #include "ExecutableAllocator.h"
 #include "MacroAssemblerCodeRef.h"
 #include "StructureID.h"
 
 namespace JSC {
 
+class CallLinkInfo;
+class ConcurrentJSLocker;
 class JITStubRoutineSet;
 class Structure;
 class VM;
@@ -39,8 +43,7 @@ class GCAwareJITStubRoutineWithExceptionHandler;
 class PolymorphicAccessJITStubRoutine;
 class PolymorphicCallStubRoutine;
 class MarkingGCAwareJITStubRoutine;
-class CallLinkInfo;
-class ConcurrentJSLocker;
+
 class AccessCase;
 
 // This is a base-class for JIT stub routines, and also the class you want
@@ -60,12 +63,10 @@ public:
     enum class Type : uint8_t {
         JITStubRoutineType,
         GCAwareJITStubRoutineType,
-        PolymorphicCallStubRoutineType,
-#if ENABLE(JIT)
         PolymorphicAccessJITStubRoutineType,
+        PolymorphicCallStubRoutineType,
         MarkingGCAwareJITStubRoutineType,
         GCAwareJITStubRoutineWithExceptionHandlerType,
-#endif
     };
 
     friend class GCAwareJITStubRoutine;
@@ -162,7 +163,9 @@ protected:
 };
 
 // Helper for the creation of simple stub routines that need no help from the GC.
-#define FINALIZE_CODE_FOR_STUB(codeBlock, patchBuffer, resultPtrTag, simpleName, ...) \
-    (adoptRef(new JITStubRoutine(FINALIZE_CODE_FOR((codeBlock), (patchBuffer), (resultPtrTag), (simpleName), __VA_ARGS__))))
+#define FINALIZE_CODE_FOR_STUB(codeBlock, patchBuffer, resultPtrTag, ...) \
+    (adoptRef(new JITStubRoutine(FINALIZE_CODE_FOR((codeBlock), (patchBuffer), (resultPtrTag), __VA_ARGS__))))
 
 } // namespace JSC
+
+#endif // ENABLE(JIT)

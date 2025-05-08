@@ -21,20 +21,11 @@
 
 #include "FloatPoint.h"
 #include "SVGPathSeg.h"
-#include <wtf/WeakPtr.h>
-
-namespace WebCore {
-class SVGPathSource;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::SVGPathSource> : std::true_type { };
-}
 
 namespace WebCore {
 
-class SVGPathSource : public CanMakeSingleThreadWeakPtr<SVGPathSource> {
+
+class SVGPathSource {
     WTF_MAKE_NONCOPYABLE(SVGPathSource); WTF_MAKE_FAST_ALLOCATED;
 public:
     SVGPathSource() = default;

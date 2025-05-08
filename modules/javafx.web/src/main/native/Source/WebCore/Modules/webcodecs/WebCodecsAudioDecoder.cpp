@@ -40,11 +40,11 @@
 #include "WebCodecsAudioDataOutputCallback.h"
 #include "WebCodecsEncodedAudioChunk.h"
 #include "WebCodecsErrorCallback.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WebCodecsAudioDecoder);
+WTF_MAKE_ISO_ALLOCATED_IMPL(WebCodecsAudioDecoder);
 
 Ref<WebCodecsAudioDecoder> WebCodecsAudioDecoder::create(ScriptExecutionContext& context, Init&& init)
 {
@@ -60,7 +60,9 @@ WebCodecsAudioDecoder::WebCodecsAudioDecoder(ScriptExecutionContext& context, In
 {
 }
 
-WebCodecsAudioDecoder::~WebCodecsAudioDecoder() = default;
+WebCodecsAudioDecoder::~WebCodecsAudioDecoder()
+{
+}
 
 static bool isValidDecoderConfig(const WebCodecsAudioDecoderConfig& config)
 {
@@ -102,7 +104,7 @@ ExceptionOr<void> WebCodecsAudioDecoder::configure(ScriptExecutionContext&, WebC
     m_isKeyChunkRequired = true;
 
     bool isSupportedCodec = AudioDecoder::isCodecSupported(config.codec);
-    queueControlMessageAndProcess({ *this, [this, config = WTFMove(config), isSupportedCodec, identifier = scriptExecutionContext()->identifier()]() mutable {
+    queueControlMessageAndProcess([this, config = WTFMove(config), isSupportedCodec, identifier = scriptExecutionContext()->identifier()]() mutable {
         m_isMessageQueueBlocked = true;
         AudioDecoder::PostTaskCallback postTaskCallback = [identifier, weakThis = ThreadSafeWeakPtr { *this }](Function<void()>&& task) {
             ScriptExecutionContext::postTaskTo(identifier, [weakThis, task = WTFMove(task)](auto&) mutable {
@@ -141,7 +143,7 @@ ExceptionOr<void> WebCodecsAudioDecoder::configure(ScriptExecutionContext&, WebC
             auto audioData = WebCodecsAudioData::create(*scriptExecutionContext(), WTFMove(decodedResult.data));
             m_output->handleEvent(WTFMove(audioData));
         }, WTFMove(postTaskCallback));
-    } });
+    });
     return { };
 }
 
@@ -157,15 +159,17 @@ ExceptionOr<void> WebCodecsAudioDecoder::decode(Ref<WebCodecsEncodedAudioChunk>&
     }
 
     ++m_decodeQueueSize;
-    queueControlMessageAndProcess({ *this, [this, chunk = WTFMove(chunk)]() mutable {
+    queueControlMessageAndProcess([this, chunk = WTFMove(chunk)]() mutable {
+        ++m_beingDecodedQueueSize;
         --m_decodeQueueSize;
         scheduleDequeueEvent();
 
-        m_internalDecoder->decode({ chunk->span(), chunk->type() == WebCodecsEncodedAudioChunkType::Key, chunk->timestamp(), chunk->duration() }, [this, pendingActivity = makePendingActivity(*this)](String&& result) {
+        m_internalDecoder->decode({ { chunk->data(), chunk->byteLength() }, chunk->type() == WebCodecsEncodedAudioChunkType::Key, chunk->timestamp(), chunk->duration() }, [this](String&& result) {
+            --m_beingDecodedQueueSize;
             if (!result.isNull())
                 closeDecoder(Exception { ExceptionCode::EncodingError, WTFMove(result) });
         });
-    } });
+    });
     return { };
 }
 
@@ -175,15 +179,17 @@ ExceptionOr<void> WebCodecsAudioDecoder::flush(Ref<DeferredPromise>&& promise)
         return Exception { ExceptionCode::InvalidStateError, "AudioDecoder is not configured"_s };
 
     m_isKeyChunkRequired = true;
-    m_pendingFlushPromises.append(WTFMove(promise));
-    queueControlMessageAndProcess({ *this, [this, clearFlushPromiseCount = m_clearFlushPromiseCount] {
-        m_internalDecoder->flush([this, clearFlushPromiseCount, pendingActivity = makePendingActivity(*this)] {
+    m_pendingFlushPromises.append(promise.copyRef());
+    m_isFlushing = true;
+    queueControlMessageAndProcess([this, clearFlushPromiseCount = m_clearFlushPromiseCount] {
+        m_internalDecoder->flush([this, clearFlushPromiseCount] {
             if (clearFlushPromiseCount != m_clearFlushPromiseCount)
                 return;
 
             m_pendingFlushPromises.takeFirst()->resolve();
+            m_isFlushing = !m_pendingFlushPromises.isEmpty();
+        });
     });
-    } });
     return { };
 }
 
@@ -218,7 +224,7 @@ void WebCodecsAudioDecoder::isConfigSupported(ScriptExecutionContext& context, W
         ScriptExecutionContext::postTaskTo(identifier, [success = result.has_value(), config = WTFMove(config).isolatedCopyWithoutDescription(), description = WTFMove(description), promisePtr](auto& context) mutable {
             if (auto promise = context.takeDeferredPromise(promisePtr)) {
                 if (description.size())
-                    config.description = RefPtr { JSC::ArrayBuffer::create(description) };
+                    config.description = RefPtr { JSC::ArrayBuffer::create(description.data(), description.size()) };
                 promise->template resolve<IDLDictionary<WebCodecsAudioDecoderSupport>>(WebCodecsAudioDecoderSupport { success, WTFMove(config) });
             }
         });
@@ -279,7 +285,7 @@ void WebCodecsAudioDecoder::setInternalDecoder(UniqueRef<AudioDecoder>&& interna
     m_internalDecoder = internalDecoder.moveToUniquePtr();
 }
 
-void WebCodecsAudioDecoder::queueControlMessageAndProcess(WebCodecsControlMessage<WebCodecsAudioDecoder>&& message)
+void WebCodecsAudioDecoder::queueControlMessageAndProcess(Function<void()>&& message)
 {
     if (m_isMessageQueueBlocked) {
         m_controlMessageQueue.append(WTFMove(message));
@@ -311,9 +317,14 @@ void WebCodecsAudioDecoder::stop()
     m_internalDecoder = nullptr;
 }
 
+const char* WebCodecsAudioDecoder::activeDOMObjectName() const
+{
+    return "AudioDecoder";
+}
+
 bool WebCodecsAudioDecoder::virtualHasPendingActivity() const
 {
-    return m_state == WebCodecsCodecState::Configured && (m_decodeQueueSize || m_isMessageQueueBlocked);
+    return m_state == WebCodecsCodecState::Configured && (m_decodeQueueSize || m_beingDecodedQueueSize || m_isFlushing);
 }
 
 } // namespace WebCore

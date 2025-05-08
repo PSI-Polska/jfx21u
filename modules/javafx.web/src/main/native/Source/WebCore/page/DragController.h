@@ -32,7 +32,6 @@
 #include "SimpleRange.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/URL.h>
-#include <wtf/WeakRef.h>
 
 namespace WebCore {
 
@@ -120,7 +119,7 @@ private:
     bool dragIsMove(FrameSelection&, const DragData&);
     bool isCopyKeyDown(const DragData&);
 
-    void mouseMovedIntoDocument(RefPtr<Document>&&);
+    void mouseMovedIntoDocument(Document*);
     bool shouldUseCachedImageForDragImage(const Image&) const;
     void disallowFileAccessIfNeeded(DragData&);
 
@@ -147,9 +146,8 @@ private:
 
     void cleanupAfterSystemDrag();
     void declareAndWriteDragImage(DataTransfer&, Element&, const URL&, const String& label);
-    Ref<Page> protectedPage() const;
 
-    WeakRef<Page> m_page;
+    Page& m_page;
     std::unique_ptr<DragClient> m_client;
 
     RefPtr<Document> m_documentUnderMouse; // The document the mouse was last dragged over.

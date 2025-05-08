@@ -33,9 +33,13 @@ namespace JSC {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(MutatorScheduler);
 
-MutatorScheduler::MutatorScheduler() = default;
+MutatorScheduler::MutatorScheduler()
+{
+}
 
-MutatorScheduler::~MutatorScheduler() = default;
+MutatorScheduler::~MutatorScheduler()
+{
+}
 
 void MutatorScheduler::didStop()
 {

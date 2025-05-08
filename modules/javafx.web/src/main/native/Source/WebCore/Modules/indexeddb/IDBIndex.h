@@ -28,7 +28,7 @@
 #include "IDBCursor.h"
 #include "IDBIndexInfo.h"
 #include "IDBRequest.h"
-#include <wtf/TZoneMalloc.h>
+#include <wtf/IsoMalloc.h>
 #include <wtf/UniqueRef.h>
 
 namespace JSC {
@@ -43,7 +43,7 @@ class WebCoreOpaqueRoot;
 struct IDBKeyRangeData;
 
 class IDBIndex final : public ActiveDOMObject {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(IDBIndex);
+    WTF_MAKE_ISO_ALLOCATED(IDBIndex);
 public:
     static UniqueRef<IDBIndex> create(ScriptExecutionContext&, const IDBIndexInfo&, IDBObjectStore&);
 
@@ -81,9 +81,8 @@ public:
     void markAsDeleted();
     bool isDeleted() const { return m_deleted; }
 
-    // ActiveDOMObject.
-    void ref() const final;
-    void deref() const final;
+    void ref();
+    void deref();
 
     WebCoreOpaqueRoot opaqueRoot();
 
@@ -99,6 +98,7 @@ private:
     ExceptionOr<Ref<IDBRequest>> doGetAllKeys(std::optional<uint32_t> count, Function<ExceptionOr<RefPtr<IDBKeyRange>>()> &&);
 
     // ActiveDOMObject.
+    const char* activeDOMObjectName() const final;
     bool virtualHasPendingActivity() const final;
 
     IDBIndexInfo m_info;

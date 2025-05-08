@@ -102,7 +102,8 @@ bool DeclaredStylePropertyMap::setShorthandProperty(CSSPropertyID propertyID, co
 
     CSSStyleSheet::RuleMutationScope mutationScope(m_ownerRule.get());
     bool didFailParsing = false;
-    styleRule->mutableProperties().setProperty(propertyID, value, IsImportant::No, &didFailParsing);
+    bool important = false;
+    styleRule->mutableProperties().setProperty(propertyID, value, important, &didFailParsing);
     return !didFailParsing;
 }
 
@@ -114,7 +115,8 @@ bool DeclaredStylePropertyMap::setProperty(CSSPropertyID propertyID, Ref<CSSValu
 
     CSSStyleSheet::RuleMutationScope mutationScope(m_ownerRule.get());
     bool didFailParsing = false;
-    styleRule->mutableProperties().setProperty(propertyID, value->cssText(), IsImportant::No, &didFailParsing);
+    bool important = false;
+    styleRule->mutableProperties().setProperty(propertyID, value->cssText(), important, &didFailParsing);
     return !didFailParsing;
 }
 
@@ -125,8 +127,9 @@ bool DeclaredStylePropertyMap::setCustomProperty(Document&, const AtomString& pr
         return false;
 
     CSSStyleSheet::RuleMutationScope mutationScope(m_ownerRule.get());
+    bool important = false;
     auto customPropertyValue = CSSCustomPropertyValue::createUnresolved(property, WTFMove(value));
-    styleRule->mutableProperties().addParsedProperty(CSSProperty(CSSPropertyCustom, WTFMove(customPropertyValue)));
+    styleRule->mutableProperties().addParsedProperty(CSSProperty(CSSPropertyCustom, WTFMove(customPropertyValue), important));
     return true;
 }
 

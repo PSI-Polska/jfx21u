@@ -160,7 +160,9 @@ ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLe
         m_message = m_jsonLogValues[0].value;
 }
 
-ConsoleMessage::~ConsoleMessage() = default;
+ConsoleMessage::~ConsoleMessage()
+{
+}
 
 void ConsoleMessage::autogenerateMetadata(JSC::JSGlobalObject* globalObject)
 {
@@ -338,24 +340,8 @@ void ConsoleMessage::updateRepeatCountInConsole(ConsoleFrontendDispatcher& conso
     consoleFrontendDispatcher.messageRepeatCountUpdated(m_repeatCount, timestamp.secondsSinceEpoch().value());
 }
 
-static bool isGroupMessage(MessageType type)
-{
-    return type == MessageType::StartGroup
-        || type == MessageType::StartGroupCollapsed
-        || type == MessageType::EndGroup;
-}
-
 bool ConsoleMessage::isEqual(ConsoleMessage* msg) const
 {
-    // `console.clear()` might not always clear the console if the frontend doesn't allow it to, so
-    // ensure that the repeat count is never updated by treating each `console.clear()` as unique.
-    if (m_type == MessageType::Clear || msg->m_type == MessageType::Clear)
-        return false;
-
-    // Groups should always be considered unique.
-    if (isGroupMessage(m_type) || isGroupMessage(msg->m_type))
-        return false;
-
     if (m_arguments) {
         if (!msg->m_arguments || !m_arguments->isEqual(*msg->m_arguments))
             return false;

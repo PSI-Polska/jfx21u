@@ -132,6 +132,9 @@
         "CustomPreventExtensions": {
             "contextsAllowed": ["interface"]
         },
+        "CustomPushEventHandlerScope": {
+            "contextsAllowed": ["interface"]
+        },
         "CustomPut": {
             "contextsAllowed": ["interface"]
         },
@@ -231,7 +234,7 @@
             "values": ["*"]
         },
         "GenerateIsReachable": {
-            "contextsAllowed": ["interface", "callback-function"],
+            "contextsAllowed": ["interface"],
             "values": ["", "Impl", "ImplWebGLRenderingContext", "ImplCanvasBase", "ImplDocument", "ImplElementRoot", "ImplOwnerNodeRoot", "ImplScriptExecutionContext", "ReachableFromDOMWindow", "ReachableFromNavigator"]
         },
         "Global": {
@@ -266,6 +269,9 @@
         "IsImmutablePrototypeExoticObjectOnPrototype": {
             "contextsAllowed": ["interface"]
         },
+        "IsWeakCallback": {
+            "contextsAllowed": ["callback-function", "interface"]
+        },
         "JSBuiltin": {
             "contextsAllowed": ["interface", "attribute", "operation"]
         },
@@ -285,7 +291,7 @@
             "contextsAllowed": ["interface", "dictionary", "callback-function"]
         },
         "JSGenerateToNativeObject": {
-            "contextsAllowed": ["interface", "dictionary"]
+            "contextsAllowed": ["interface"]
         },
         "JSLegacyParent": {
             "contextsAllowed": ["interface"],
@@ -390,8 +396,9 @@
             "contextsAllowed": ["type"],
             "values": ["*"]
         },
-        "BypassDocumentFullyActiveCheck": {
-            "contextsAllowed": ["type"]
+        "PassContext": {
+            "contextsAllowed": ["operation"],
+            "notes" : "Only used by WebKitTestRunner and DumpRenderTree"
         },
         "Plugin": {
             "contextsAllowed": ["interface"],

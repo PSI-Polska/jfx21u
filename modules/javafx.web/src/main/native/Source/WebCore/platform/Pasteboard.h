@@ -91,7 +91,8 @@ struct PasteboardWebContent {
     RefPtr<SharedBuffer> dataInAttributedStringFormat;
     String dataInHTMLFormat;
     String dataInStringFormat;
-    Vector<std::pair<String, RefPtr<WebCore::SharedBuffer>>> clientTypesAndData;
+    Vector<String> clientTypes;
+    Vector<RefPtr<SharedBuffer>> clientData;
 #endif
 #if PLATFORM(GTK)
     String contentOrigin;
@@ -128,7 +129,8 @@ struct PasteboardImage {
 #if !(PLATFORM(GTK) || PLATFORM(WIN) || PLATFORM(JAVA))
     RefPtr<SharedBuffer> resourceData;
     String resourceMIMEType;
-    Vector<std::pair<String, RefPtr<WebCore::SharedBuffer>>> clientTypesAndData;
+    Vector<String> clientTypes;
+    Vector<RefPtr<SharedBuffer>> clientData;
 #endif
     String suggestedName;
     FloatSize imageSize;

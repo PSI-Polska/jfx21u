@@ -66,16 +66,12 @@
 #include "SVGImage.h"
 #include "Settings.h"
 #include "TextPainter.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
-#include <wtf/TZoneMallocInlines.h>
 
 #if PLATFORM(IOS_FAMILY)
 #include "LogicalSelectionOffsetCaches.h"
 #include "SelectionGeometry.h"
-#endif
-
-#if ENABLE(MULTI_REPRESENTATION_HEIC)
-#include "MultiRepresentationHEICMetrics.h"
 #endif
 
 #if USE(CG)
@@ -85,7 +81,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderImage);
+WTF_MAKE_ISO_ALLOCATED_IMPL(RenderImage);
 
 #if PLATFORM(IOS_FAMILY)
 // FIXME: This doesn't behave correctly for floating or positioned images, but WebCore doesn't handle those well
@@ -143,7 +139,7 @@ void RenderImage::collectSelectionGeometries(Vector<SelectionGeometry>& geometri
 
     // FIXME: We should consider either making SelectionGeometry a struct or better organize its optional fields into
     // an auxiliary struct to simplify its initialization.
-    geometries.append(SelectionGeometry(absoluteQuad, SelectionRenderingBehavior::CoalesceBoundingRects, containingBlock->style().direction(), lineExtentBounds.x(), lineExtentBounds.maxX(), lineExtentBounds.maxY(), 0, false /* line break */, isFirstOnLine, isLastOnLine, false /* contains start */, false /* contains end */, containingBlock->style().isHorizontalWritingMode(), isFixed, view().pageNumberForBlockProgressionOffset(absoluteQuad.enclosingBoundingBox().x())));
+    geometries.append(SelectionGeometry(absoluteQuad, SelectionRenderingBehavior::CoalesceBoundingRects, containingBlock->style().direction(), lineExtentBounds.x(), lineExtentBounds.maxX(), lineExtentBounds.maxY(), 0, false /* line break */, isFirstOnLine, isLastOnLine, false /* contains start */, false /* contains end */, containingBlock->style().isHorizontalWritingMode(), isFixed, false /* ruby text */, view().pageNumberForBlockProgressionOffset(absoluteQuad.enclosingBoundingBox().x())));
 }
 #endif
 
@@ -152,10 +148,7 @@ using namespace HTMLNames;
 RenderImage::RenderImage(Type type, Element& element, RenderStyle&& style, OptionSet<ReplacedFlag> flags, StyleImage* styleImage, const float imageDevicePixelRatio)
     : RenderReplaced(type, element, WTFMove(style), IntSize(), flags | ReplacedFlag::IsImage)
     , m_imageResource(styleImage ? makeUnique<RenderImageResourceStyleImage>(*styleImage) : makeUnique<RenderImageResource>())
-    , m_hasImageOverlay([&] {
-        auto* htmlElement = dynamicDowncast<HTMLElement>(element);
-        return htmlElement && ImageOverlay::hasOverlay(*htmlElement);
-    }())
+    , m_hasImageOverlay(is<HTMLElement>(element) && ImageOverlay::hasOverlay(downcast<HTMLElement>(element)))
     , m_imageDevicePixelRatio(imageDevicePixelRatio)
 {
     updateAltText();
@@ -211,7 +204,7 @@ IntSize RenderImage::imageSizeForError(CachedImage* newImage) const
 
     // imageSize() returns 0 for the error image. We need the true size of the
     // error image, so we have to get it by grabbing image() directly.
-    return IntSize(paddingWidth + imageSize.width() * style().usedZoom(), paddingHeight + imageSize.height() * style().usedZoom());
+    return IntSize(paddingWidth + imageSize.width() * style().effectiveZoom(), paddingHeight + imageSize.height() * style().effectiveZoom());
 }
 
 // Sets the image height and width to fit the alt text.  Returns true if the
@@ -229,7 +222,7 @@ ImageSizeChangeType RenderImage::setImageSizeForAltText(CachedImage* newImage /*
     // we have an alt and the user meant it (its not a text we invented)
     if (!m_altText.isEmpty()) {
         const FontCascade& font = style().fontCascade();
-        IntSize paddedTextSize(paddingWidth + std::min(ceilf(font.width(RenderBlock::constructTextRun(m_altText, style()))), maxAltTextWidth), paddingHeight + std::min(font.metricsOfPrimaryFont().intHeight(), maxAltTextHeight));
+        IntSize paddedTextSize(paddingWidth + std::min(ceilf(font.width(RenderBlock::constructTextRun(m_altText, style()))), maxAltTextWidth), paddingHeight + std::min(font.metricsOfPrimaryFont().height(), maxAltTextHeight));
         imageSize = imageSize.expandedTo(paddedTextSize);
     }
 
@@ -255,16 +248,8 @@ void RenderImage::styleDidChange(StyleDifference diff, const RenderStyle* oldSty
             repaintOrMarkForLayout(ImageSizeChangeForAltText);
         m_needsToSetSizeForAltText = false;
     }
-
-    if (oldStyle && diff == StyleDifference::Layout) {
-        if (oldStyle->imageOrientation() != style().imageOrientation())
+    if (diff == StyleDifference::Layout && oldStyle && oldStyle->imageOrientation() != style().imageOrientation())
         return repaintOrMarkForLayout(ImageSizeChangeNone);
-
-#if ENABLE(MULTI_REPRESENTATION_HEIC)
-        if (isMultiRepresentationHEIC() && oldStyle->fontCascade() != style().fontCascade())
-            return repaintOrMarkForLayout(ImageSizeChangeNone);
-#endif
-    }
 }
 
 bool RenderImage::shouldCollapseToEmpty() const
@@ -297,18 +282,6 @@ LayoutUnit RenderImage::computeReplacedLogicalHeight(std::optional<LayoutUnit> e
     if (shouldCollapseToEmpty())
         return { };
     return RenderReplaced::computeReplacedLogicalHeight(estimatedUsedWidth);
-}
-
-LayoutUnit RenderImage::baselinePosition(FontBaseline baselineType, bool firstLine, LineDirectionMode direction, LinePositionMode linePositionMode) const
-{
-    LayoutUnit offset;
-#if ENABLE(MULTI_REPRESENTATION_HEIC)
-    if (isMultiRepresentationHEIC()) {
-        auto metrics = style().fontCascade().primaryFont().metricsForMultiRepresentationHEIC();
-        offset = LayoutUnit::fromFloatRound(metrics.descent);
-    }
-#endif
-    return RenderBox::baselinePosition(baselineType, firstLine, direction, linePositionMode) - offset;
 }
 
 void RenderImage::imageChanged(WrappedImagePtr newImage, const IntRect* rect)
@@ -370,7 +343,7 @@ void RenderImage::updateInnerContentRect()
 
 void RenderImage::repaintOrMarkForLayout(ImageSizeChangeType imageSizeChange, const IntRect* rect)
 {
-    LayoutSize newIntrinsicSize = imageResource().intrinsicSize(style().usedZoom());
+    LayoutSize newIntrinsicSize = imageResource().intrinsicSize(style().effectiveZoom());
     LayoutSize oldIntrinsicSize = intrinsicSize();
 
     updateIntrinsicSizeIfNeeded(newIntrinsicSize);
@@ -398,21 +371,20 @@ void RenderImage::repaintOrMarkForLayout(ImageSizeChangeType imageSizeChange, co
         updateInnerContentRect();
     }
 
-    if (parent()) {
-        auto repaintRect = contentBoxRect();
+    LayoutRect repaintRect = contentBoxRect();
     if (rect) {
         // The image changed rect is in source image coordinates (pre-zooming),
         // so map from the bounds of the image to the contentsBox.
         repaintRect.intersect(enclosingIntRect(mapRect(*rect, FloatRect(FloatPoint(), imageResource().imageSize(1.0f)), repaintRect)));
     }
+
     repaintRectangle(repaintRect);
-    }
 
     // Tell any potential compositing layers that the image needs updating.
     contentChanged(ImageChanged);
 }
 
-void RenderImage::notifyFinished(CachedResource& newImage, const NetworkLoadMetrics& metrics, LoadWillContinueInAnotherProcess loadWillContinueInAnotherProcess)
+void RenderImage::notifyFinished(CachedResource& newImage, const NetworkLoadMetrics& metrics)
 {
     if (renderTreeBeingDestroyed())
         return;
@@ -428,7 +400,7 @@ void RenderImage::notifyFinished(CachedResource& newImage, const NetworkLoadMetr
     if (RefPtr image = dynamicDowncast<HTMLImageElement>(element()))
         page().didFinishLoadingImageForElement(*image);
 
-    RenderReplaced::notifyFinished(newImage, metrics, loadWillContinueInAnotherProcess);
+    RenderReplaced::notifyFinished(newImage, metrics);
 }
 
 void RenderImage::setImageDevicePixelRatio(float factor)
@@ -470,17 +442,6 @@ bool RenderImage::hasAnimatedImage() const
         return image->isAnimated();
     return false;
 }
-
-#if ENABLE(MULTI_REPRESENTATION_HEIC)
-bool RenderImage::isMultiRepresentationHEIC() const
-{
-    RefPtr imageElement = dynamicDowncast<HTMLImageElement>(element());
-    if (!imageElement)
-        return false;
-
-    return imageElement->isMultiRepresentationHEIC();
-}
-#endif
 
 void RenderImage::paintIncompleteImageOutline(PaintInfo& paintInfo, LayoutPoint paintOffset, LayoutUnit borderWidth) const
 {
@@ -589,14 +550,14 @@ void RenderImage::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
                     if (availableLogicalWidth < textWidth)
                         return false;
                     auto availableLogicalHeight = isHorizontal ? (errorPictureDrawn ? imageOffset.height() : usableSize.height()) : usableSize.width();
-                    return availableLogicalHeight >= fontMetrics.intHeight();
+                    return availableLogicalHeight >= fontMetrics.height();
                 };
                 if (hasRoomForAltText()) {
                     context.setFillColor(style.visitedDependentColorWithColorFilter(CSSPropertyColor));
                     if (isHorizontal) {
                     auto altTextLocation = [&]() -> LayoutPoint {
                         auto contentHorizontalOffset = LayoutUnit { leftBorder + leftPadding + (paddingWidth / 2) - missingImageBorderWidth };
-                            auto contentVerticalOffset = LayoutUnit { topBorder + topPadding + fontMetrics.intAscent() + (paddingHeight / 2) - missingImageBorderWidth };
+                        auto contentVerticalOffset = LayoutUnit { topBorder + topPadding + fontMetrics.ascent() + (paddingHeight / 2) - missingImageBorderWidth };
                             if (!style.isLeftToRightDirection())
                             contentHorizontalOffset += contentSize.width() - textWidth;
                         return paintOffset + LayoutPoint { contentHorizontalOffset, contentVerticalOffset };
@@ -604,7 +565,7 @@ void RenderImage::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
                         context.drawBidiText(fontCascade, textRun, altTextLocation());
                     } else {
                         // FIXME: TextBoxPainter has this logic already, maybe we should transition to some painter class.
-                        auto contentLogicalHeight = fontMetrics.intHeight();
+                        auto contentLogicalHeight = fontMetrics.height();
                         auto adjustedPaintOffset = LayoutPoint { paintOffset.x(), paintOffset.y() - contentLogicalHeight };
 
                         auto visualLeft = size().width() / 2 - contentLogicalHeight / 2;
@@ -615,7 +576,7 @@ void RenderImage::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
 
                         auto rotationRect = LayoutRect { visualLeft, adjustedPaintOffset.y(), textWidth, contentLogicalHeight };
                         context.concatCTM(rotation(rotationRect, RotationDirection::Clockwise));
-                        auto textOrigin = LayoutPoint { visualLeft, adjustedPaintOffset.y() + fontCascade.metricsOfPrimaryFont().intAscent() };
+                        auto textOrigin = LayoutPoint { visualLeft, adjustedPaintOffset.y() + fontCascade.metricsOfPrimaryFont().ascent() };
                         context.drawBidiText(fontCascade, textRun, textOrigin);
                         context.concatCTM(rotation(rotationRect, RotationDirection::Counterclockwise));
                     }
@@ -700,7 +661,7 @@ void RenderImage::paintAreaElementFocusRing(PaintInfo& paintInfo, const LayoutPo
         return;
 
     AffineTransform zoomTransform;
-    zoomTransform.scale(style().usedZoom());
+    zoomTransform.scale(style().effectiveZoom());
     path.transform(zoomTransform);
 
     auto adjustedOffset = paintOffset;
@@ -746,21 +707,10 @@ ImageDrawResult RenderImage::paintIntoRect(PaintInfo& paintInfo, const FloatRect
         imageOrientation(),
         image ? chooseInterpolationQuality(paintInfo.context(), *image, image, LayoutSize(rect.size())) : InterpolationQuality::Default,
         settings().imageSubsamplingEnabled() ? AllowImageSubsampling::Yes : AllowImageSubsampling::No,
-        settings().showDebugBorders() ? ShowDebugBackground::Yes : ShowDebugBackground::No,
-#if USE(SKIA)
-        StrictImageClamping::No,
-#endif
+        settings().showDebugBorders() ? ShowDebugBackground::Yes : ShowDebugBackground::No
     };
 
-    auto drawResult = ImageDrawResult::DidNothing;
-#if ENABLE(MULTI_REPRESENTATION_HEIC)
-    if (isMultiRepresentationHEIC())
-        drawResult = paintInfo.context().drawMultiRepresentationHEIC(*img, style().fontCascade().primaryFont(), rect, options);
-#endif
-
-    if (drawResult == ImageDrawResult::DidNothing)
-        drawResult = paintInfo.context().drawImage(*img, rect, options);
-
+    auto drawResult = paintInfo.context().drawImage(*img, rect, options);
     if (drawResult == ImageDrawResult::DidRequestDecoding)
         imageResource().cachedImage()->addClientWaitingForAsyncDecoding(*this);
 
@@ -786,10 +736,10 @@ bool RenderImage::foregroundIsKnownToBeOpaqueInRect(const LayoutRect& localRect,
         return false;
     FillBox backgroundClip = style().backgroundClip();
     // Background paints under borders.
-    if (backgroundClip == FillBox::BorderBox && style().hasBorder() && !borderObscuresBackground())
+    if (backgroundClip == FillBox::Border && style().hasBorder() && !borderObscuresBackground())
         return false;
     // Background shows in padding area.
-    if ((backgroundClip == FillBox::BorderBox || backgroundClip == FillBox::PaddingBox) && style().hasPadding())
+    if ((backgroundClip == FillBox::Border || backgroundClip == FillBox::Padding) && style().hasPadding())
         return false;
     // Object-fit may leave parts of the content box empty.
     ObjectFit objectFit = style().objectFit();
@@ -834,7 +784,7 @@ bool RenderImage::nodeAtPoint(const HitTestRequest& request, HitTestResult& resu
     if (tempResult.innerNode() && element()) {
         if (RefPtr map = imageMap()) {
             LayoutRect contentBox = contentBoxRect();
-            float scaleFactor = 1 / style().usedZoom();
+            float scaleFactor = 1 / style().effectiveZoom();
             LayoutPoint mapLocation = locationInContainer.point() - toLayoutSize(accumulatedOffset) - locationOffset() - toLayoutSize(contentBox.location());
             mapLocation.scale(scaleFactor);
 
@@ -953,11 +903,6 @@ RenderBox* RenderImage::embeddedContentBox() const
             return image->embeddedContentBox();
     }
     return nullptr;
-}
-
-CheckedRef<RenderImageResource> RenderImage::checkedImageResource() const
-{
-    return *m_imageResource;
 }
 
 } // namespace WebCore

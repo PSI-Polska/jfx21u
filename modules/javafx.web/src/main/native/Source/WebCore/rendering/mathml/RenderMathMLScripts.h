@@ -30,18 +30,15 @@
 #if ENABLE(MATHML)
 
 #include "MathMLScriptsElement.h"
-#include "RenderMathMLRow.h"
+#include "RenderMathMLBlock.h"
 
 namespace WebCore {
 
 // Render a base with scripts.
-class RenderMathMLScripts : public RenderMathMLRow {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderMathMLScripts);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderMathMLScripts);
+class RenderMathMLScripts : public RenderMathMLBlock {
+    WTF_MAKE_ISO_ALLOCATED(RenderMathMLScripts);
 public:
     RenderMathMLScripts(Type, MathMLScriptsElement&, RenderStyle&&);
-    virtual ~RenderMathMLScripts();
-
     RenderMathMLOperator* unembellishedOperator() const final;
 
 protected:
@@ -60,7 +57,7 @@ private:
         RenderBox* firstPostScript;
         RenderBox* firstPreScript;
     };
-    std::optional<ReferenceChildren> validateAndGetReferenceChildren() const;
+    std::optional<ReferenceChildren> validateAndGetReferenceChildren();
     LayoutUnit spaceAfterScript();
     LayoutUnit italicCorrection(const ReferenceChildren&);
     struct VerticalParameters {

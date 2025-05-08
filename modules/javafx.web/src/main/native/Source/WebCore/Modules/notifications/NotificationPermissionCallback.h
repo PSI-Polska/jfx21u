@@ -40,9 +40,6 @@ public:
     using ActiveDOMCallback::ActiveDOMCallback;
 
     virtual CallbackResult<void> handleEvent(Notification::Permission) = 0;
-
-private:
-    virtual bool hasCallback() const = 0;
 };
 
 } // namespace WebCore

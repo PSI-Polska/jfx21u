@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ProcessIdentity.h"
 #include <span>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Expected.h>
@@ -48,7 +47,6 @@ public:
         uint64_t height { 0 };
         HardwareAcceleration decoding { HardwareAcceleration::No };
         HardwareBuffer pixelBuffer { HardwareBuffer::No };
-        ProcessIdentity resourceOwner { };
     };
 
     struct EncodedFrame {

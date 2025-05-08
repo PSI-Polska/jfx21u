@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2011-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -82,16 +82,15 @@ void CheckboxInputType::createShadowSubtree()
     ASSERT(element());
     ASSERT(element()->userAgentShadowRoot());
 
-    Ref shadowRoot = *element()->userAgentShadowRoot();
-    ScriptDisallowedScope::EventAllowedScope eventAllowedScope { shadowRoot };
+    ScriptDisallowedScope::EventAllowedScope eventAllowedScope { *element()->userAgentShadowRoot() };
 
     Ref document = element()->document();
-    Ref track = HTMLDivElement::create(document);
+    auto track = HTMLDivElement::create(document);
     track->setUserAgentPart(UserAgentParts::track());
-    shadowRoot->appendChild(ContainerNode::ChildChange::Source::Parser, track);
-    Ref thumb = HTMLDivElement::create(document);
+    element()->userAgentShadowRoot()->appendChild(ContainerNode::ChildChange::Source::Parser, track);
+    auto thumb = HTMLDivElement::create(document);
     thumb->setUserAgentPart(UserAgentParts::thumb());
-    shadowRoot->appendChild(ContainerNode::ChildChange::Source::Parser, thumb);
+    element()->userAgentShadowRoot()->appendChild(ContainerNode::ChildChange::Source::Parser, thumb);
 }
 
 void CheckboxInputType::handleKeyupEvent(KeyboardEvent& event)
@@ -104,27 +103,23 @@ void CheckboxInputType::handleKeyupEvent(KeyboardEvent& event)
 
 void CheckboxInputType::handleMouseDownEvent(MouseEvent& event)
 {
-    if (!event.isTrusted() || !isSwitch())
-        return;
+    ASSERT(element());
 
-    RefPtr element = this->element();
-    ASSERT(element);
-    if (element->isDisabledFormControl() || !element->renderer())
+    if (!event.isTrusted() || !isSwitch() || element()->isDisabledFormControl() || !element()->renderer())
         return;
     startSwitchPointerTracking(event.absoluteLocation());
 }
 
 void CheckboxInputType::handleMouseMoveEvent(MouseEvent& event)
 {
+    ASSERT(element());
+
     if (!isSwitchPointerTracking())
         return;
 
-    RefPtr element = this->element();
-    ASSERT(element);
+    ASSERT(!element()->isDisabledFormControl());
 
-    ASSERT(!element->isDisabledFormControl());
-
-    if (!event.isTrusted() || !isSwitch() || !element->renderer()) {
+    if (!event.isTrusted() || !isSwitch() || !element()->renderer()) {
         stopSwitchPointerTracking();
         return;
     }
@@ -133,36 +128,24 @@ void CheckboxInputType::handleMouseMoveEvent(MouseEvent& event)
 }
 
 #if ENABLE(IOS_TOUCH_EVENTS)
-// FIXME: Share these functions with SliderThumbElement somehow?
+// FIXME: Share this function with SliderThumbElement somehow? Some of the logic in
+// handleTouchEvent() could maybe do with some abstraction as well.
 static Touch* findTouchWithIdentifier(TouchList& list, unsigned identifier)
 {
     unsigned length = list.length();
     for (unsigned i = 0; i < length; ++i) {
-        RefPtr touch = list.item(i);
+        RefPtr<Touch> touch = list.item(i);
         if (touch->identifier() == identifier)
             return touch.get();
     }
     return nullptr;
 }
 
-Touch* CheckboxInputType::subsequentTouchEventTouch(const TouchEvent& event) const
-{
-    if (!m_switchPointerTrackingTouchIdentifier)
-        return nullptr;
-
-    RefPtr targetTouches = event.targetTouches();
-    if (!targetTouches)
-        return nullptr;
-
-    return findTouchWithIdentifier(*targetTouches, *m_switchPointerTrackingTouchIdentifier);
-}
-
 void CheckboxInputType::handleTouchEvent(TouchEvent& event)
 {
-    RefPtr element = this->element();
-    ASSERT(element);
+    ASSERT(element());
 
-    if (!event.isTrusted() || !isSwitch() || element->isDisabledFormControl() || !element->renderer()) {
+    if (!event.isTrusted() || !isSwitch() || element()->isDisabledFormControl() || !element()->renderer()) {
         stopSwitchPointerTracking();
         return;
     }
@@ -170,71 +153,71 @@ void CheckboxInputType::handleTouchEvent(TouchEvent& event)
     const AtomString& eventType = event.type();
     auto& eventNames = WebCore::eventNames();
     if (eventType == eventNames.touchstartEvent) {
-        RefPtr targetTouches = event.targetTouches();
-        if (!targetTouches || targetTouches->length() != 1)
+        RefPtr<TouchList> targetTouches = event.targetTouches();
+        if (!targetTouches)
             return;
-        RefPtr touch = targetTouches->item(0);
+        if (targetTouches->length() != 1)
+            return;
+        RefPtr<Touch> touch = targetTouches->item(0);
 
-        m_switchPointerTrackingTouchIdentifier = touch->identifier();
-        if (!m_switchHeldTimer) {
-            m_switchHeldTimer = makeUnique<Timer>([protectedThis = Ref { *this }, touch] {
-                if (!protectedThis->isSwitch() || !protectedThis->element() || !protectedThis->element()->renderer())
-                    return;
-                protectedThis->startSwitchPointerTracking({ touch->pageX(), touch->pageY() });
-                protectedThis->setIsSwitchHeld(true);
-            });
-        }
-        constexpr Seconds switchHeldDelay = 200_ms;
-        m_switchHeldTimer->startOneShot(switchHeldDelay);
+        startSwitchPointerTracking({ touch->pageX(), touch->pageY() }, touch->identifier());
+        performSwitchAnimation(SwitchAnimationType::Pressed);
         event.setDefaultHandled();
     } else if (eventType == eventNames.touchmoveEvent) {
-        if (!isSwitchPointerTracking())
+        if (!m_switchPointerTrackingTouchIdentifier || !isSwitchPointerTracking())
             return;
-        RefPtr touch = subsequentTouchEventTouch(event);
+
+        RefPtr<TouchList> targetTouches = event.targetTouches();
+        if (!targetTouches)
+            return;
+
+        RefPtr<Touch> touch = findTouchWithIdentifier(*targetTouches, *m_switchPointerTrackingTouchIdentifier);
         if (!touch)
             return;
 
         updateIsSwitchVisuallyOnFromAbsoluteLocation({ touch->pageX(), touch->pageY() });
         event.setDefaultHandled();
     } else if (eventType == eventNames.touchendEvent || eventType == eventNames.touchcancelEvent) {
+        if (!m_switchPointerTrackingTouchIdentifier || !isSwitchPointerTracking())
+            return;
+
+        RefPtr<TouchList> targetTouches = event.targetTouches();
+        if (!targetTouches)
+            return;
+
         // If our touch still exists, this is not our touchend/touchcancel.
-        RefPtr touch = subsequentTouchEventTouch(event);
+        RefPtr<Touch> touch = findTouchWithIdentifier(*targetTouches, *m_switchPointerTrackingTouchIdentifier);
         if (touch)
             return;
 
-        m_switchPointerTrackingTouchIdentifier = { };
-        if (m_switchHeldTimer)
-            m_switchHeldTimer->stop();
-        if (std::exchange(m_isSwitchHeld, false))
-            performSwitchAnimation(SwitchAnimationType::Held);
-        element->dispatchSimulatedClick(&event, SendNoEvents);
+        performSwitchAnimation(SwitchAnimationType::Pressed);
+        element()->dispatchSimulatedClick(&event);
     }
 }
 #endif
 
 void CheckboxInputType::willDispatchClick(InputElementClickState& state)
 {
-    RefPtr element = this->element();
-    ASSERT(element);
+    ASSERT(element());
 
     // An event handler can use preventDefault or "return false" to reverse the checking we do here.
     // The InputElementClickState object contains what we need to undo what we did here in didDispatchClick.
 
-    state.checked = element->checked();
-    state.indeterminate = element->indeterminate();
+    state.checked = element()->checked();
+    state.indeterminate = element()->indeterminate();
 
     if (state.indeterminate)
-        element->setIndeterminate(false);
+        element()->setIndeterminate(false);
 
     if (isSwitchPointerTracking() && m_hasSwitchVisuallyOnChanged && m_isSwitchVisuallyOn == state.checked) {
         stopSwitchPointerTracking();
         return;
     }
 
-    element->setChecked(!state.checked, state.trusted ? WasSetByJavaScript::No : WasSetByJavaScript::Yes);
+    element()->setChecked(!state.checked, state.trusted ? WasSetByJavaScript::No : WasSetByJavaScript::Yes);
 
     if (isSwitch() && state.trusted && !(isSwitchPointerTracking() && m_hasSwitchVisuallyOnChanged && m_isSwitchVisuallyOn == !state.checked))
-        performSwitchVisuallyOnAnimation(SwitchTrigger::Click);
+        performSwitchAnimation(SwitchAnimationType::VisuallyOn);
 
     stopSwitchPointerTracking();
 }
@@ -242,10 +225,9 @@ void CheckboxInputType::willDispatchClick(InputElementClickState& state)
 void CheckboxInputType::didDispatchClick(Event& event, const InputElementClickState& state)
 {
     if (event.defaultPrevented() || event.defaultHandled()) {
-        RefPtr element = this->element();
-        ASSERT(element);
-        element->setIndeterminate(state.indeterminate);
-        element->setChecked(state.checked);
+        ASSERT(element());
+        element()->setIndeterminate(state.indeterminate);
+        element()->setChecked(state.checked);
     } else
         fireInputAndChangeEvents();
 
@@ -260,7 +242,7 @@ static int switchPointerTrackingLogicalLeftPosition(Element& element, LayoutPoin
     return isVertical ? localLocation.y() : localLocation.x();
 }
 
-void CheckboxInputType::startSwitchPointerTracking(LayoutPoint absoluteLocation)
+void CheckboxInputType::startSwitchPointerTracking(LayoutPoint absoluteLocation, std::optional<unsigned> touchIdentifier)
 {
     ASSERT(element());
     ASSERT(element()->renderer());
@@ -268,6 +250,7 @@ void CheckboxInputType::startSwitchPointerTracking(LayoutPoint absoluteLocation)
         frame->eventHandler().setCapturingMouseEventsElement(element());
         m_isSwitchVisuallyOn = element()->checked();
         m_switchPointerTrackingLogicalLeftPositionStart = switchPointerTrackingLogicalLeftPosition(*element(), absoluteLocation);
+        m_switchPointerTrackingTouchIdentifier = touchIdentifier;
     }
 }
 
@@ -280,7 +263,8 @@ void CheckboxInputType::stopSwitchPointerTracking()
     if (RefPtr frame = element()->document().frame())
         frame->eventHandler().setCapturingMouseEventsElement(nullptr);
     m_hasSwitchVisuallyOnChanged = false;
-    m_switchPointerTrackingLogicalLeftPositionStart = { };
+    m_switchPointerTrackingLogicalLeftPositionStart = std::nullopt;
+    m_switchPointerTrackingTouchIdentifier = std::nullopt;
 }
 
 bool CheckboxInputType::isSwitchPointerTracking() const
@@ -296,14 +280,10 @@ bool CheckboxInputType::matchesIndeterminatePseudoClass() const
 
 void CheckboxInputType::disabledStateChanged()
 {
-    if (!isSwitch())
-        return;
-
-    RefPtr element = this->element();
-    ASSERT(element);
-    if (element->isDisabledFormControl()) {
+    ASSERT(element());
+    if (isSwitch() && element()->isDisabledFormControl()) {
         stopSwitchAnimation(SwitchAnimationType::VisuallyOn);
-        stopSwitchAnimation(SwitchAnimationType::Held);
+        stopSwitchAnimation(SwitchAnimationType::Pressed);
         stopSwitchPointerTracking();
     }
 }
@@ -313,7 +293,7 @@ void CheckboxInputType::willUpdateCheckedness(bool, WasSetByJavaScript wasChecke
     ASSERT(element());
     if (isSwitch() && wasCheckedByJavaScript == WasSetByJavaScript::Yes) {
         stopSwitchAnimation(SwitchAnimationType::VisuallyOn);
-        stopSwitchAnimation(SwitchAnimationType::Held);
+        stopSwitchAnimation(SwitchAnimationType::Pressed);
         stopSwitchPointerTracking();
     }
 }
@@ -322,7 +302,7 @@ void CheckboxInputType::willUpdateCheckedness(bool, WasSetByJavaScript wasChecke
 // ask a more knowledgable system for a refresh callback (perhaps passing a desired FPS).
 static Seconds switchAnimationUpdateInterval(HTMLInputElement* element)
 {
-    if (RefPtr page = element->document().page())
+    if (auto* page = element->document().page())
         return page->preferredRenderingUpdateInterval();
     return 0_s;
 }
@@ -331,14 +311,14 @@ static Seconds switchAnimationDuration(SwitchAnimationType type)
 {
     if (type == SwitchAnimationType::VisuallyOn)
         return RenderTheme::singleton().switchAnimationVisuallyOnDuration();
-    return RenderTheme::singleton().switchAnimationHeldDuration();
+    return RenderTheme::singleton().switchAnimationPressedDuration();
 }
 
 Seconds CheckboxInputType::switchAnimationStartTime(SwitchAnimationType type) const
 {
     if (type == SwitchAnimationType::VisuallyOn)
         return m_switchAnimationVisuallyOnStartTime;
-    return m_switchAnimationHeldStartTime;
+    return m_switchAnimationPressedStartTime;
 }
 
 void CheckboxInputType::setSwitchAnimationStartTime(SwitchAnimationType type, Seconds time)
@@ -346,7 +326,7 @@ void CheckboxInputType::setSwitchAnimationStartTime(SwitchAnimationType type, Se
     if (type == SwitchAnimationType::VisuallyOn)
         m_switchAnimationVisuallyOnStartTime = time;
     else
-        m_switchAnimationHeldStartTime = time;
+        m_switchAnimationPressedStartTime = time;
 }
 
 bool CheckboxInputType::isSwitchAnimating(SwitchAnimationType type) const
@@ -358,7 +338,7 @@ void CheckboxInputType::performSwitchAnimation(SwitchAnimationType type)
 {
     ASSERT(isSwitch());
     ASSERT(element());
-    if (!element()->renderer() || !element()->renderer()->style().hasUsedAppearance())
+    if (!element()->renderer() || !element()->renderer()->style().hasEffectiveAppearance())
         return;
 
     auto updateInterval = switchAnimationUpdateInterval(element());
@@ -383,21 +363,6 @@ void CheckboxInputType::performSwitchAnimation(SwitchAnimationType type)
     m_switchAnimationTimer->startOneShot(updateInterval);
 }
 
-void CheckboxInputType::performSwitchVisuallyOnAnimation(SwitchTrigger trigger)
-{
-    performSwitchAnimation(SwitchAnimationType::VisuallyOn);
-    if (!RenderTheme::singleton().hasSwitchHapticFeedback(trigger))
-        return;
-    if (RefPtr page = element()->document().page())
-        page->chrome().client().performSwitchHapticFeedback();
-}
-
-void CheckboxInputType::setIsSwitchHeld(bool isHeld)
-{
-    m_isSwitchHeld = isHeld;
-    performSwitchAnimation(SwitchAnimationType::Held);
-}
-
 void CheckboxInputType::stopSwitchAnimation(SwitchAnimationType type)
 {
     setSwitchAnimationStartTime(type, 0_s);
@@ -419,26 +384,19 @@ float CheckboxInputType::switchAnimationVisuallyOnProgress() const
     return switchAnimationProgress(SwitchAnimationType::VisuallyOn);
 }
 
+float CheckboxInputType::switchAnimationPressedProgress() const
+{
+    ASSERT(isSwitch());
+    ASSERT(switchAnimationDuration(SwitchAnimationType::Pressed) > 0_s);
+
+    return switchAnimationProgress(SwitchAnimationType::Pressed);
+}
+
 bool CheckboxInputType::isSwitchVisuallyOn() const
 {
     ASSERT(element());
     ASSERT(isSwitch());
     return isSwitchPointerTracking() ? m_isSwitchVisuallyOn : element()->checked();
-}
-
-float CheckboxInputType::switchAnimationHeldProgress() const
-{
-    ASSERT(isSwitch());
-    ASSERT(switchAnimationDuration(SwitchAnimationType::Held) > 0_s);
-
-    return switchAnimationProgress(SwitchAnimationType::Held);
-}
-
-bool CheckboxInputType::isSwitchHeld() const
-{
-    ASSERT(element());
-    ASSERT(isSwitch());
-    return m_isSwitchHeld;
 }
 
 void CheckboxInputType::updateIsSwitchVisuallyOnFromAbsoluteLocation(LayoutPoint absoluteLocation)
@@ -465,7 +423,9 @@ void CheckboxInputType::updateIsSwitchVisuallyOnFromAbsoluteLocation(LayoutPoint
     if (switchThumbIsLogicallyLeftNow != switchThumbIsLogicallyLeft) {
         m_hasSwitchVisuallyOnChanged = true;
         m_isSwitchVisuallyOn = !m_isSwitchVisuallyOn;
-        performSwitchVisuallyOnAnimation(SwitchTrigger::PointerTracking);
+        performSwitchAnimation(SwitchAnimationType::VisuallyOn);
+        if (auto* page = element()->document().page())
+            page->chrome().client().performSwitchHapticFeedback();
     }
 }
 
@@ -481,14 +441,14 @@ void CheckboxInputType::switchAnimationTimerFired()
 
     auto currentTime = MonotonicTime::now().secondsSinceEpoch();
     auto isVisuallyOnOngoing = currentTime - switchAnimationStartTime(SwitchAnimationType::VisuallyOn) < switchAnimationDuration(SwitchAnimationType::VisuallyOn);
-    auto isHeldOngoing = currentTime - switchAnimationStartTime(SwitchAnimationType::Held) < switchAnimationDuration(SwitchAnimationType::Held);
-    if (isVisuallyOnOngoing || isHeldOngoing)
+    auto isPressedOngoing = currentTime - switchAnimationStartTime(SwitchAnimationType::Pressed) < switchAnimationDuration(SwitchAnimationType::Pressed);
+    if (isVisuallyOnOngoing || isPressedOngoing)
         m_switchAnimationTimer->startOneShot(updateInterval);
     else {
         if (!isVisuallyOnOngoing)
             stopSwitchAnimation(SwitchAnimationType::VisuallyOn);
-        if (!isHeldOngoing)
-            stopSwitchAnimation(SwitchAnimationType::Held);
+        if (!isPressedOngoing)
+            stopSwitchAnimation(SwitchAnimationType::Pressed);
     }
 
     element()->renderer()->repaint();

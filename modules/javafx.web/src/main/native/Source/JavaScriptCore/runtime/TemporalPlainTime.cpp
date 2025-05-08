@@ -401,9 +401,9 @@ TemporalPlainTime* TemporalPlainTime::from(JSGlobalObject* globalObject, JSValue
         RETURN_IF_EXCEPTION(scope, { });
         JSString* calendarString = calendar->toString(globalObject);
         RETURN_IF_EXCEPTION(scope, { });
-        auto calendarWTFString = calendarString->value(globalObject);
+        String calendarWTFString = calendarString->value(globalObject);
         RETURN_IF_EXCEPTION(scope, { });
-        if (calendarWTFString.data != "iso8601"_s) {
+        if (calendarWTFString != "iso8601"_s) {
             throwRangeError(globalObject, scope, "calendar is not iso8601"_s);
             return { };
         }

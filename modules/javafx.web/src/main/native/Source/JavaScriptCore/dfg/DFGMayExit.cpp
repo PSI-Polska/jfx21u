@@ -225,11 +225,7 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
         return Exits;
 
     case CompareStrictEq:
-        if (node->isBinaryUseKind(BooleanUse) || node->isSymmetricBinaryUseKind(BooleanUse, UntypedUse))
-            break;
-        if (node->isBinaryUseKind(MiscUse) || node->isSymmetricBinaryUseKind(MiscUse, UntypedUse))
-            break;
-        if (node->isBinaryUseKind(OtherUse) || node->isSymmetricBinaryUseKind(OtherUse, UntypedUse))
+        if (node->isBinaryUseKind(MiscUse, UntypedUse) || node->isBinaryUseKind(UntypedUse, MiscUse))
             break;
         FALLTHROUGH;
     case CompareEq:
@@ -242,8 +238,6 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
         if (node->isBinaryUseKind(DoubleRepUse))
             break;
         if (node->isBinaryUseKind(Int52RepUse))
-            break;
-        if (node->isBinaryUseKind(SymbolUse))
             break;
         return Exits;
 
@@ -265,7 +259,6 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
     case ArithSqrt:
     case ArithUnary:
     case ArithFRound:
-    case ArithF16Round:
         if (node->child1().useKind() == DoubleRepUse)
             break;
         return Exits;
@@ -296,8 +289,6 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
         case StringObjectUse:
         case StringOrStringObjectUse:
             result = ExitsForExceptions;
-            break;
-        case StringOrOtherUse:
             break;
         default:
             return Exits;

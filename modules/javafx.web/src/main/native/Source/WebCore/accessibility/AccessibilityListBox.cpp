@@ -42,14 +42,14 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-AccessibilityListBox::AccessibilityListBox(RenderObject& renderer)
+AccessibilityListBox::AccessibilityListBox(RenderObject* renderer)
     : AccessibilityRenderObject(renderer)
 {
 }
 
 AccessibilityListBox::~AccessibilityListBox() = default;
 
-Ref<AccessibilityListBox> AccessibilityListBox::create(RenderObject& renderer)
+Ref<AccessibilityListBox> AccessibilityListBox::create(RenderObject* renderer)
 {
     return adoptRef(*new AccessibilityListBox(renderer));
 }
@@ -80,26 +80,32 @@ void AccessibilityListBox::setSelectedChildren(const AccessibilityChildrenVector
     if (!canSetSelectedChildren())
         return;
 
-    // Unselect any selected option.
+    WeakPtr node = this->node();
+    if (!node)
+        return;
+
+    // disable any selected options
     for (const auto& child : m_children) {
-        if (child->isSelected())
-            child->setSelected(false);
+        auto* listBoxOption = dynamicDowncast<AccessibilityListBoxOption>(child.get());
+        if (listBoxOption->isSelected())
+            listBoxOption->setSelected(false);
     }
 
     for (const auto& object : children) {
-        if (object->isListBoxOption())
-            object->setSelected(true);
+        if (object->roleValue() != AccessibilityRole::ListBoxOption)
+            continue;
+        dynamicDowncast<AccessibilityListBoxOption>(object)->setSelected(true);
     }
 }
 
-std::optional<AXCoreObject::AccessibilityChildrenVector> AccessibilityListBox::selectedChildren()
+AXCoreObject::AccessibilityChildrenVector AccessibilityListBox::selectedChildren()
 {
     if (!childrenInitialized())
         addChildren();
 
     AccessibilityChildrenVector result;
     for (const auto& child : m_children) {
-        if (child->isSelected())
+        if (downcast<AccessibilityListBoxOption>(*child).isSelected())
             result.append(child.get());
     }
     return result;

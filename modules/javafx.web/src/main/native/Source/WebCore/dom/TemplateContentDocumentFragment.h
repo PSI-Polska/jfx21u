@@ -33,8 +33,7 @@
 namespace WebCore {
 
 class TemplateContentDocumentFragment final : public DocumentFragment {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(TemplateContentDocumentFragment);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(TemplateContentDocumentFragment);
+    WTF_MAKE_ISO_ALLOCATED(TemplateContentDocumentFragment);
 public:
     static Ref<TemplateContentDocumentFragment> create(Document& document, const Element& host)
     {

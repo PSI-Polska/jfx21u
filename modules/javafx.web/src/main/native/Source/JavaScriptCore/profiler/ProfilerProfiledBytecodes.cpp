@@ -38,7 +38,9 @@ ProfiledBytecodes::ProfiledBytecodes(Bytecodes* bytecodes, CodeBlock* profiledBl
 {
 }
 
-ProfiledBytecodes::~ProfiledBytecodes() = default;
+ProfiledBytecodes::~ProfiledBytecodes()
+{
+}
 
 Ref<JSON::Value> ProfiledBytecodes::toJSON(Dumper& dumper) const
 {

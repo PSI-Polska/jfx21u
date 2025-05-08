@@ -82,8 +82,7 @@ private:
         const jchar* uc = getUCharactersFromJStringInEnv(e, s);
         {
             //JSLockHolder lock(WebCore::JSDOMWindowBase::commonVM());
-            std::span<const UChar> createSpan(reinterpret_cast<const UChar*>(uc), size);
-            m_impl = StringImpl::create(createSpan);
+            m_impl = StringImpl::create(reinterpret_cast<const UChar*>(uc), size);
         }
         releaseUCharactersForJStringInEnv(e, s, uc);
     }

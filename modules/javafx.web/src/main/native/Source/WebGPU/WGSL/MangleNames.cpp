@@ -33,7 +33,6 @@
 #include "WGSL.h"
 #include "WGSLShaderModule.h"
 #include <wtf/HashSet.h>
-#include <wtf/text/MakeString.h>
 
 namespace WGSL {
 
@@ -71,8 +70,9 @@ class NameManglerVisitor : public AST::ScopedVisitor<MangledName> {
     using Base::visit;
 
 public:
-    NameManglerVisitor(ShaderModule& shaderModule)
-        : m_shaderModule(shaderModule)
+    NameManglerVisitor(const CallGraph& callGraph, HashMap<String, Reflection::EntryPointInformation>& entryPoints)
+        : m_callGraph(callGraph)
+        , m_entryPoints(entryPoints)
     {
     }
 
@@ -96,20 +96,26 @@ private:
 
     void visitVariableDeclaration(AST::Variable&, MangledName::Kind);
 
-    ShaderModule& m_shaderModule;
+    const CallGraph& m_callGraph;
+    HashMap<String, Reflection::EntryPointInformation>& m_entryPoints;
     HashMap<AST::Structure*, NameMap> m_structFieldMapping;
     uint32_t m_indexPerType[MangledName::numberOfKinds] { 0 };
 };
 
 void NameManglerVisitor::run()
 {
-    Base::visit(m_shaderModule);
+    Base::visit(m_callGraph.ast());
 }
 
 void NameManglerVisitor::visit(AST::Function& function)
 {
     String originalName = function.name();
     introduceVariable(function.name(), MangledName::Function);
+    auto it = m_entryPoints.find(originalName);
+    if (it != m_entryPoints.end()) {
+        it->value.originalName = originalName;
+        it->value.mangledName = function.name();
+    }
     Base::visit(function);
 }
 
@@ -124,11 +130,12 @@ void NameManglerVisitor::visit(AST::Structure& structure)
     introduceVariable(structure.name(), MangledName::Type);
 
     NameMap fieldMap;
+    m_indexPerType[WTF::enumToUnderlyingType(MangledName::Field)] = 0;
     for (auto& member : structure.members()) {
         Base::visit(member.type());
         auto mangledName = makeMangledName(member.name(), MangledName::Field);
         fieldMap.add(member.name(), mangledName);
-        m_shaderModule.replace(&member.name(), AST::Identifier::makeWithSpan(member.name().span(), mangledName.toString()));
+        m_callGraph.ast().replace(&member.name(), AST::Identifier::makeWithSpan(member.name().span(), mangledName.toString()));
     }
     auto result = m_structFieldMapping.add(&structure, WTFMove(fieldMap));
     ASSERT_UNUSED(result, result.isNewEntry);
@@ -163,8 +170,6 @@ void NameManglerVisitor::visit(AST::FieldAccessExpression& access)
     auto* baseType = access.base().inferredType();
     if (auto* reference = std::get_if<Types::Reference>(baseType))
         baseType = reference->element;
-    if (auto* pointer = std::get_if<Types::Pointer>(baseType))
-        baseType = pointer->element;
     auto* structType = std::get_if<Types::Struct>(baseType);
     if (!structType)
         return;
@@ -173,14 +178,14 @@ void NameManglerVisitor::visit(AST::FieldAccessExpression& access)
 
     auto fieldIt = structMapIt->value.find(access.fieldName());
     ASSERT(fieldIt != structMapIt->value.end());
-    m_shaderModule.replace(&access.fieldName(), AST::Identifier::makeWithSpan(access.fieldName().span(), fieldIt->value.toString()));
+    m_callGraph.ast().replace(&access.fieldName(), AST::Identifier::makeWithSpan(access.fieldName().span(), fieldIt->value.toString()));
 }
 
 void NameManglerVisitor::introduceVariable(AST::Identifier& name, MangledName::Kind kind)
 {
     const auto* mangledName = ContextProvider::introduceVariable(name, makeMangledName(name, kind));
     ASSERT(mangledName);
-    m_shaderModule.replace(&name, AST::Identifier::makeWithSpan(name.span(), mangledName->toString()));
+    m_callGraph.ast().replace(&name, AST::Identifier::makeWithSpan(name.span(), mangledName->toString()));
 }
 
 MangledName NameManglerVisitor::makeMangledName(const String& name, MangledName::Kind kind)
@@ -195,12 +200,12 @@ MangledName NameManglerVisitor::makeMangledName(const String& name, MangledName:
 void NameManglerVisitor::readVariable(AST::Identifier& name) const
 {
     if (const auto* mangledName = ContextProvider::readVariable(name))
-        m_shaderModule.replace(&name, AST::Identifier::makeWithSpan(name.span(), mangledName->toString()));
+        m_callGraph.ast().replace(&name, AST::Identifier::makeWithSpan(name.span(), mangledName->toString()));
 }
 
-void mangleNames(ShaderModule& shaderModule)
+void mangleNames(CallGraph& callGraph, HashMap<String, Reflection::EntryPointInformation>& entryPoints)
 {
-    NameManglerVisitor(shaderModule).run();
+    NameManglerVisitor(callGraph, entryPoints).run();
 }
 
 } // namespace WGSL

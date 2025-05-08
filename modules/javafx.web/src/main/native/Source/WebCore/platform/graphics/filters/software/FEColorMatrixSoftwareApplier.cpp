@@ -83,7 +83,7 @@ inline void FEColorMatrixSoftwareApplier::luminance(float& red, float& green, fl
 #if USE(ACCELERATE)
 void FEColorMatrixSoftwareApplier::applyPlatformAccelerated(PixelBuffer& pixelBuffer) const
 {
-    auto* pixelBytes = pixelBuffer.bytes().data();
+    auto* pixelBytes = pixelBuffer.bytes();
     auto bufferSize = pixelBuffer.size();
     const int32_t divisor = 256;
 
@@ -188,7 +188,7 @@ void FEColorMatrixSoftwareApplier::applyPlatformAccelerated(PixelBuffer& pixelBu
 
 void FEColorMatrixSoftwareApplier::applyPlatformUnaccelerated(PixelBuffer& pixelBuffer) const
 {
-    auto pixelByteLength = pixelBuffer.bytes().size();
+    auto pixelByteLength = pixelBuffer.sizeInBytes();
 
     switch (m_effect.type()) {
     case ColorMatrixType::FECOLORMATRIX_TYPE_UNKNOWN:

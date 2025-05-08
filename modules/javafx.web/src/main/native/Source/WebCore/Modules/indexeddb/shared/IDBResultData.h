@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "IDBDatabaseConnectionIdentifier.h"
 #include "IDBDatabaseInfo.h"
 #include "IDBError.h"
 #include "IDBGetAllResult.h"
@@ -35,6 +34,7 @@
 #include "IDBTransactionInfo.h"
 #include "ThreadSafeDataBuffer.h"
 #include <wtf/ArgumentCoder.h>
+#include <wtf/EnumTraits.h>
 
 namespace WebCore {
 
@@ -99,7 +99,7 @@ public:
     IDBResourceIdentifier requestIdentifier() const { return m_requestIdentifier; }
 
     const IDBError& error() const { return m_error; }
-    IDBDatabaseConnectionIdentifier databaseConnectionIdentifier() const { return *m_databaseConnectionIdentifier; }
+    uint64_t databaseConnectionIdentifier() const { return m_databaseConnectionIdentifier; }
 
     const IDBDatabaseInfo& databaseInfo() const;
     const IDBTransactionInfo& transactionInfo() const;
@@ -125,7 +125,7 @@ private:
     IDBResourceIdentifier m_requestIdentifier;
 
     IDBError m_error;
-    std::optional<IDBDatabaseConnectionIdentifier> m_databaseConnectionIdentifier;
+    uint64_t m_databaseConnectionIdentifier { 0 };
     std::unique_ptr<IDBDatabaseInfo> m_databaseInfo;
     std::unique_ptr<IDBTransactionInfo> m_transactionInfo;
     std::unique_ptr<IDBKeyData> m_resultKey;

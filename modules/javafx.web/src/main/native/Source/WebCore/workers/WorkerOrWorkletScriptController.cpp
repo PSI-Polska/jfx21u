@@ -203,14 +203,6 @@ void WorkerOrWorkletScriptController::disableWebAssembly(const String& errorMess
     m_globalScopeWrapper->setWebAssemblyEnabled(false, errorMessage);
 }
 
-void WorkerOrWorkletScriptController::setRequiresTrustedTypes(bool required)
-{
-    initScriptIfNeeded();
-    JSLockHolder lock { vm() };
-
-    m_globalScopeWrapper->setRequiresTrustedTypes(required);
-}
-
 void WorkerOrWorkletScriptController::evaluate(const ScriptSourceCode& sourceCode, String* returnedExceptionMessage)
 {
     if (isExecutionForbidden())
@@ -576,6 +568,7 @@ void WorkerOrWorkletScriptController::initScriptWithSubclass()
     contextPrototype->structure()->setPrototypeWithoutTransition(*m_vm, globalScopePrototype);
 
     proxy->setTarget(*m_vm, m_globalScopeWrapper.get());
+    proxy->structure()->setGlobalObject(*m_vm, m_globalScopeWrapper.get());
 
     ASSERT(m_globalScopeWrapper->globalObject() == m_globalScopeWrapper);
     ASSERT(asObject(m_globalScopeWrapper->getPrototypeDirect())->globalObject() == m_globalScopeWrapper);
@@ -604,10 +597,12 @@ void WorkerOrWorkletScriptController::initScript()
         return;
     }
 
+#if ENABLE(CSS_PAINTING_API)
     if (is<PaintWorkletGlobalScope>(m_globalScope)) {
         initScriptWithSubclass<JSPaintWorkletGlobalScopePrototype, JSPaintWorkletGlobalScope, PaintWorkletGlobalScope>();
         return;
     }
+#endif
 
 #if ENABLE(WEB_AUDIO)
     if (is<AudioWorkletGlobalScope>(m_globalScope)) {

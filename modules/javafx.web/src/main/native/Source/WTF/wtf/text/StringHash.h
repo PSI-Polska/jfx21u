@@ -25,7 +25,6 @@
 #include <wtf/HashTraits.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/StringHasher.h>
-#include <wtf/text/StringView.h>
 
 namespace WTF {
 
@@ -118,22 +117,31 @@ namespace WTF {
             }
         };
 
-        template<typename CharacterType>
-        static unsigned hash(std::span<const CharacterType> characters)
+        static unsigned hash(const UChar* data, unsigned length)
         {
-            return StringHasher::computeHashAndMaskTop8Bits<CharacterType, FoldCase>(characters);
+            return StringHasher::computeHashAndMaskTop8Bits<UChar, FoldCase>(data, length);
         }
 
         static unsigned hash(const StringImpl& string)
         {
             if (string.is8Bit())
-                return hash(string.span8());
-            return hash(string.span16());
+                return hash(string.characters8(), string.length());
+            return hash(string.characters16(), string.length());
         }
         static unsigned hash(const StringImpl* string)
         {
             ASSERT(string);
             return hash(*string);
+        }
+
+        static unsigned hash(const LChar* data, unsigned length)
+        {
+            return StringHasher::computeHashAndMaskTop8Bits<LChar, FoldCase>(data, length);
+        }
+
+        static inline unsigned hash(const char* data, unsigned length)
+        {
+            return hash(reinterpret_cast<const LChar*>(data), length);
         }
 
         static inline bool equal(const StringImpl& a, const StringImpl& b)
@@ -243,25 +251,20 @@ namespace WTF {
         static unsigned hash(StringView key)
         {
             if (key.is8Bit())
-                return ASCIICaseInsensitiveHash::hash(key.span8());
-            return ASCIICaseInsensitiveHash::hash(key.span16());
+                return ASCIICaseInsensitiveHash::hash(key.characters8(), key.length());
+            return ASCIICaseInsensitiveHash::hash(key.characters16(), key.length());
         }
 
         static bool equal(const String& a, StringView b)
         {
             return equalIgnoringASCIICaseCommon(a, b);
         }
-
-        static void translate(String& location, StringView view, unsigned)
-        {
-            location = view.toString();
-        }
     };
 
     struct HashTranslatorASCIILiteral {
         static unsigned hash(ASCIILiteral literal)
         {
-            return StringHasher::computeHashAndMaskTop8Bits(literal.span8());
+            return StringHasher::computeHashAndMaskTop8Bits(literal.characters(), literal.length());
         }
 
         static bool equal(const String& a, ASCIILiteral b)
@@ -279,7 +282,7 @@ namespace WTF {
     struct HashTranslatorASCIILiteralCaseInsensitive {
         static unsigned hash(ASCIILiteral key)
         {
-            return ASCIICaseInsensitiveHash::hash(key.span8());
+            return ASCIICaseInsensitiveHash::hash(key.characters(), key.length());
         }
 
         static bool equal(const String& a, ASCIILiteral b)

@@ -47,7 +47,6 @@ struct VideoPresetData {
     Vector<FrameRateRange> frameRateRanges;
     double minZoom { 1 };
     double maxZoom { 1 };
-    bool isEfficient { false };
 };
 
 class VideoPreset {
@@ -56,8 +55,8 @@ public:
         : m_data(WTFMove(data))
     {
     }
-    VideoPreset(IntSize size, Vector<FrameRateRange>&& frameRateRanges, std::optional<double> minZoom, std::optional<double> maxZoom, bool isEfficient)
-        : m_data { size, WTFMove(frameRateRanges), minZoom.value_or(1), maxZoom.value_or(1), isEfficient }
+    VideoPreset(IntSize size, Vector<FrameRateRange>&& frameRateRanges, std::optional<double> minZoom, std::optional<double> maxZoom)
+        : m_data { size, WTFMove(frameRateRanges), minZoom.value_or(1), maxZoom.value_or(1) }
     {
         ASSERT(m_data.maxZoom >= m_data.minZoom);
     }
@@ -79,7 +78,6 @@ public:
 
     bool isZoomSupported() const { return m_data.minZoom != 1 || m_data.maxZoom != 1; }
 
-    bool isEfficient() const { return m_data.isEfficient; }
     void log()const;
 
 protected:

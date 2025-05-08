@@ -51,19 +51,19 @@ constexpr unsigned stackAdjustmentForAlignment()
 
 // Align argument count taking into account the CallFrameHeaderSize may be
 // an "unaligned" count of registers.
-constexpr unsigned roundArgumentCountToAlignFrame(unsigned argumentCount)
+inline unsigned roundArgumentCountToAlignFrame(unsigned argumentCount)
 {
     return WTF::roundUpToMultipleOf(stackAlignmentRegisters(), argumentCount + CallFrame::headerSizeInRegisters) - CallFrame::headerSizeInRegisters;
 }
 
 // Align local register count to make the last local end on a stack aligned address given the
 // CallFrame is at an address that is stack aligned minus CallerFrameAndPC::sizeInRegisters
-constexpr unsigned roundLocalRegisterCountForFramePointerOffset(unsigned localRegisterCount)
+inline unsigned roundLocalRegisterCountForFramePointerOffset(unsigned localRegisterCount)
 {
     return WTF::roundUpToMultipleOf(stackAlignmentRegisters(), localRegisterCount + CallerFrameAndPC::sizeInRegisters) - CallerFrameAndPC::sizeInRegisters;
 }
 
-constexpr unsigned argumentCountForStackSize(unsigned sizeInBytes)
+inline unsigned argumentCountForStackSize(unsigned sizeInBytes)
 {
     unsigned sizeInRegisters = sizeInBytes / sizeof(void*);
 

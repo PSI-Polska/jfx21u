@@ -27,7 +27,6 @@
 
 #include <wtf/MonotonicTime.h>
 #include <wtf/Noncopyable.h>
-#include <wtf/text/ASCIILiteral.h>
 
 namespace WTF {
 
@@ -41,7 +40,7 @@ class TimingScope {
     WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(TimingScope);
 public:
-    TimingScope(ASCIILiteral name, unsigned logIterationInterval = 1)
+    TimingScope(const char* name, unsigned logIterationInterval = 1)
         : m_startTime(MonotonicTime::now())
         , m_name(name)
         , m_logIterationInterval(logIterationInterval)
@@ -57,7 +56,7 @@ private:
     WTF_EXPORT_PRIVATE void scopeDidEnd();
 
     MonotonicTime m_startTime;
-    ASCIILiteral m_name;
+    const char* m_name;
     unsigned m_logIterationInterval;
 };
 

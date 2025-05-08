@@ -57,8 +57,6 @@ public:
     Entry* get(const String& subject, RegExp*);
     void set(const String& subject, RegExp*, JSImmutableButterfly*, MatchResult, const Vector<int>&);
 
-    DECLARE_VISIT_AGGREGATE;
-
     void clear()
     {
         m_entries.fill(Entry { });

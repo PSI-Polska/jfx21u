@@ -42,14 +42,14 @@ DOMWindowExtension::DOMWindowExtension(LocalDOMWindow* window, DOMWrapperWorld& 
     , m_wasDetached(false)
 {
     ASSERT(this->frame());
-    if (RefPtr window = m_window.get())
-        window->registerObserver(*this);
+    if (m_window)
+        m_window->registerObserver(*this);
 }
 
 DOMWindowExtension::~DOMWindowExtension()
 {
-    if (RefPtr window = m_window.get())
-        window->unregisterObserver(*this);
+    if (m_window)
+        m_window->unregisterObserver(*this);
 }
 
 LocalFrame* DOMWindowExtension::frame() const
@@ -57,19 +57,14 @@ LocalFrame* DOMWindowExtension::frame() const
     return m_window ? m_window->frame() : nullptr;
 }
 
-RefPtr<LocalFrame> DOMWindowExtension::protectedFrame() const
-{
-    return frame();
-}
-
 void DOMWindowExtension::suspendForBackForwardCache()
 {
     // Calling out to the client might result in this DOMWindowExtension being destroyed
     // while there is still work to do.
-    Ref protectedThis { *this };
+    Ref<DOMWindowExtension> protectedThis(*this);
 
     Ref frame = *this->frame();
-    frame->checkedLoader()->client().dispatchWillDisconnectDOMWindowExtensionFromGlobalObject(this);
+    frame->loader().client().dispatchWillDisconnectDOMWindowExtensionFromGlobalObject(this);
 
     m_disconnectedFrame = WTFMove(frame);
 }
@@ -82,7 +77,7 @@ void DOMWindowExtension::resumeFromBackForwardCache()
 
     m_disconnectedFrame = nullptr;
 
-    protectedFrame()->checkedLoader()->client().dispatchDidReconnectDOMWindowExtensionToGlobalObject(this);
+    frame()->loader().client().dispatchDidReconnectDOMWindowExtensionToGlobalObject(this);
 }
 
 void DOMWindowExtension::willDestroyGlobalObjectInCachedFrame()
@@ -91,17 +86,17 @@ void DOMWindowExtension::willDestroyGlobalObjectInCachedFrame()
 
     // Calling out to the client might result in this DOMWindowExtension being destroyed
     // while there is still work to do.
-    Ref protectedThis { *this };
+    Ref<DOMWindowExtension> protectedThis(*this);
 
-    if (RefPtr disconnectedFrame = m_disconnectedFrame)
-        disconnectedFrame->checkedLoader()->client().dispatchWillDestroyGlobalObjectForDOMWindowExtension(this);
+    if (m_disconnectedFrame)
+        m_disconnectedFrame->loader().client().dispatchWillDestroyGlobalObjectForDOMWindowExtension(this);
     m_disconnectedFrame = nullptr;
 
     // DOMWindowExtension lifetime isn't tied directly to the LocalDOMWindow itself so it is important that it unregister
     // itself from any LocalDOMWindow it is associated with if that LocalDOMWindow is going away.
     ASSERT(m_window);
-    if (RefPtr window = m_window.get())
-        window->unregisterObserver(*this);
+    if (m_window)
+        m_window->unregisterObserver(*this);
     m_window = nullptr;
 }
 
@@ -111,19 +106,19 @@ void DOMWindowExtension::willDestroyGlobalObjectInFrame()
 
     // Calling out to the client might result in this DOMWindowExtension being destroyed
     // while there is still work to do.
-    Ref protectedThis { *this };
+    Ref<DOMWindowExtension> protectedThis(*this);
 
     if (!m_wasDetached) {
-        RefPtr frame = this->frame();
+        auto* frame = this->frame();
         ASSERT(frame);
-        frame->checkedLoader()->client().dispatchWillDestroyGlobalObjectForDOMWindowExtension(this);
+        frame->loader().client().dispatchWillDestroyGlobalObjectForDOMWindowExtension(this);
     }
 
     // DOMWindowExtension lifetime isn't tied directly to the LocalDOMWindow itself so it is important that it unregister
     // itself from any LocalDOMWindow it is associated with if that LocalDOMWindow is going away.
     ASSERT(m_window);
-    if (RefPtr window = m_window.get())
-        window->unregisterObserver(*this);
+    if (m_window)
+        m_window->unregisterObserver(*this);
     m_window = nullptr;
 }
 
@@ -134,11 +129,11 @@ void DOMWindowExtension::willDetachGlobalObjectFromFrame()
 
     // Calling out to the client might result in this DOMWindowExtension being destroyed
     // while there is still work to do.
-    Ref protectedThis { *this };
+    Ref<DOMWindowExtension> protectedThis(*this);
 
-    RefPtr frame = this->frame();
+    auto* frame = this->frame();
     ASSERT(frame);
-    frame->checkedLoader()->client().dispatchWillDestroyGlobalObjectForDOMWindowExtension(this);
+    frame->loader().client().dispatchWillDestroyGlobalObjectForDOMWindowExtension(this);
 
     m_wasDetached = true;
 }

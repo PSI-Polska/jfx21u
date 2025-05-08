@@ -155,9 +155,4 @@ unsigned DragData::numberOfFiles() const
     return m_platformDragData->filenames().size();
 }
 
-bool DragData::shouldMatchStyleOnDrop() const
-{
-    return false;
-}
-
 } // namespace WebCore

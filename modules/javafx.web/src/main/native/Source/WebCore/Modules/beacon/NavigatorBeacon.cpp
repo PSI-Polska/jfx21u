@@ -37,7 +37,6 @@
 #include "Navigator.h"
 #include "Page.h"
 #include <wtf/URL.h>
-#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -68,7 +67,7 @@ ASCIILiteral NavigatorBeacon::supplementName()
     return "NavigatorBeacon"_s;
 }
 
-void NavigatorBeacon::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess)
+void NavigatorBeacon::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&)
 {
     if (!resource.resourceError().isNull())
         logError(resource.resourceError());

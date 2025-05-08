@@ -27,7 +27,6 @@
 
 #include <wtf/Assertions.h>
 #include <wtf/FastMalloc.h>
-#include <wtf/StdLibExtras.h>
 
 namespace JSC { namespace DFG {
 class StructureAbstractValue;
@@ -168,7 +167,8 @@ public:
         return mergeOtherOutOfLine(other);
     }
 
-    void forEach(const Invocable<void(const T&)> auto& functor) const
+    template<typename Functor>
+    void forEach(const Functor& functor) const
     {
         if (isThin()) {
             if (!singleEntry())
@@ -182,7 +182,8 @@ public:
             functor(list->list()[i]);
     }
 
-    void genericFilter(const Invocable<bool(const T&)> auto& functor)
+    template<typename Functor>
+    void genericFilter(const Functor& functor)
     {
         if (isThin()) {
             if (!singleEntry())

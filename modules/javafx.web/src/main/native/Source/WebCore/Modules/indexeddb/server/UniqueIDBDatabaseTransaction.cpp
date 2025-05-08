@@ -27,7 +27,6 @@
 #include "UniqueIDBDatabaseTransaction.h"
 
 #include "IDBIterateCursorData.h"
-#include "IDBRequestData.h"
 #include "IDBResultData.h"
 #include "Logging.h"
 #include "UniqueIDBDatabase.h"
@@ -117,20 +116,7 @@ bool UniqueIDBDatabaseTransaction::isReadOnly() const
     return m_transactionInfo.mode() == IDBTransactionMode::Readonly;
 }
 
-bool UniqueIDBDatabaseTransaction::shouldAbortDueToUnhandledRequestError(uint64_t handledRequestResultsCount) const
-{
-    if (handledRequestResultsCount > m_requestResults.size()) {
-        RELEASE_LOG_ERROR(IndexedDB, "%p - UniqueIDBDatabaseTransaction::shouldAbortDueToUnhandledRequestError: finished request count (%" PRIu64 ") is bigger than total request count %zu", this, handledRequestResultsCount, m_requestResults.size());
-        return false;
-    }
-
-    auto pendingRequestResults = m_requestResults.subspan(handledRequestResultsCount);
-    return WTF::anyOf(pendingRequestResults, [&] (auto& error) {
-        return !error.isNull();
-    });
-}
-
-void UniqueIDBDatabaseTransaction::commit(uint64_t handledRequestResultsCount)
+void UniqueIDBDatabaseTransaction::commit(uint64_t pendingRequestCount)
 {
     LOG(IndexedDB, "UniqueIDBDatabaseTransaction::commit");
 
@@ -138,7 +124,26 @@ void UniqueIDBDatabaseTransaction::commit(uint64_t handledRequestResultsCount)
     if (!database)
         return;
 
-    database->commitTransaction(*this, handledRequestResultsCount, [this, weakThis = WeakPtr { *this }](auto& error) {
+    std::optional<IDBError> errorInPendingRequests;
+    while (pendingRequestCount--) {
+        auto error = m_requestResults.takeLast();
+        if (!error.isNull()) {
+            errorInPendingRequests = error;
+            break;
+        }
+    }
+
+    if (errorInPendingRequests) {
+        database->abortTransaction(*this, [this, weakThis = WeakPtr { *this }, &errorInPendingRequests](auto&) {
+            LOG(IndexedDB, "UniqueIDBDatabaseTransaction::commit with error (callback)");
+
+            if (weakThis && m_databaseConnection)
+                m_databaseConnection->didCommitTransaction(*this, *errorInPendingRequests);
+        });
+        return;
+    }
+
+    database->commitTransaction(*this, [this, weakThis = WeakPtr { *this }](auto& error) {
         LOG(IndexedDB, "UniqueIDBDatabaseTransaction::commit (callback)");
 
         if (weakThis && m_databaseConnection)
@@ -162,6 +167,8 @@ void UniqueIDBDatabaseTransaction::createObjectStore(const IDBRequestData& reque
 
         if (!weakThis || !m_databaseConnection)
             return;
+
+        m_requestResults.append(error);
 
         if (error.isNull())
             m_databaseConnection->didCreateObjectStore(IDBResultData::createObjectStoreSuccess(requestData.requestIdentifier()));
@@ -196,7 +203,7 @@ void UniqueIDBDatabaseTransaction::deleteObjectStore(const IDBRequestData& reque
     });
 }
 
-void UniqueIDBDatabaseTransaction::renameObjectStore(const IDBRequestData& requestData, IDBObjectStoreIdentifier objectStoreIdentifier, const String& newName)
+void UniqueIDBDatabaseTransaction::renameObjectStore(const IDBRequestData& requestData, uint64_t objectStoreIdentifier, const String& newName)
 {
     LOG(IndexedDB, "UniqueIDBDatabaseTransaction::renameObjectStore");
 
@@ -213,6 +220,8 @@ void UniqueIDBDatabaseTransaction::renameObjectStore(const IDBRequestData& reque
         if (!weakThis || !m_databaseConnection)
             return;
 
+        m_requestResults.append(error);
+
         if (error.isNull())
             m_databaseConnection->didRenameObjectStore(IDBResultData::renameObjectStoreSuccess(requestData.requestIdentifier()));
         else
@@ -220,7 +229,7 @@ void UniqueIDBDatabaseTransaction::renameObjectStore(const IDBRequestData& reque
     });
 }
 
-void UniqueIDBDatabaseTransaction::clearObjectStore(const IDBRequestData& requestData, IDBObjectStoreIdentifier objectStoreIdentifier)
+void UniqueIDBDatabaseTransaction::clearObjectStore(const IDBRequestData& requestData, uint64_t objectStoreIdentifier)
 {
     LOG(IndexedDB, "UniqueIDBDatabaseTransaction::clearObjectStore");
 
@@ -262,6 +271,8 @@ void UniqueIDBDatabaseTransaction::createIndex(const IDBRequestData& requestData
         if (!weakThis || !m_databaseConnection)
             return;
 
+        m_requestResults.append(error);
+
         if (error.isNull())
             m_databaseConnection->didCreateIndex(IDBResultData::createIndexSuccess(requestData.requestIdentifier()));
         else
@@ -269,7 +280,7 @@ void UniqueIDBDatabaseTransaction::createIndex(const IDBRequestData& requestData
     });
 }
 
-void UniqueIDBDatabaseTransaction::deleteIndex(const IDBRequestData& requestData, IDBObjectStoreIdentifier objectStoreIdentifier, const String& indexName)
+void UniqueIDBDatabaseTransaction::deleteIndex(const IDBRequestData& requestData, uint64_t objectStoreIdentifier, const String& indexName)
 {
     LOG(IndexedDB, "UniqueIDBDatabaseTransaction::deleteIndex");
 
@@ -286,6 +297,8 @@ void UniqueIDBDatabaseTransaction::deleteIndex(const IDBRequestData& requestData
         if (!weakThis || !m_databaseConnection)
             return;
 
+        m_requestResults.append(error);
+
         if (error.isNull())
             m_databaseConnection->didDeleteIndex(IDBResultData::deleteIndexSuccess(requestData.requestIdentifier()));
         else
@@ -293,7 +306,7 @@ void UniqueIDBDatabaseTransaction::deleteIndex(const IDBRequestData& requestData
     });
 }
 
-void UniqueIDBDatabaseTransaction::renameIndex(const IDBRequestData& requestData, IDBObjectStoreIdentifier objectStoreIdentifier, uint64_t indexIdentifier, const String& newName)
+void UniqueIDBDatabaseTransaction::renameIndex(const IDBRequestData& requestData, uint64_t objectStoreIdentifier, uint64_t indexIdentifier, const String& newName)
 {
     LOG(IndexedDB, "UniqueIDBDatabaseTransaction::renameIndex");
 
@@ -309,6 +322,8 @@ void UniqueIDBDatabaseTransaction::renameIndex(const IDBRequestData& requestData
 
         if (!weakThis || !m_databaseConnection)
             return;
+
+        m_requestResults.append(error);
 
         if (error.isNull())
             m_databaseConnection->didRenameIndex(IDBResultData::renameIndexSuccess(requestData.requestIdentifier()));
@@ -497,7 +512,7 @@ void UniqueIDBDatabaseTransaction::iterateCursor(const IDBRequestData& requestDa
     });
 }
 
-const Vector<IDBObjectStoreIdentifier>& UniqueIDBDatabaseTransaction::objectStoreIdentifiers()
+const Vector<uint64_t>& UniqueIDBDatabaseTransaction::objectStoreIdentifiers()
 {
     if (!m_objectStoreIdentifiers.isEmpty())
         return m_objectStoreIdentifiers;

@@ -59,13 +59,13 @@
 #include "Settings.h"
 #include "WebAudioSourceProvider.h"
 #include <wtf/CompletionHandler.h>
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/NativePromise.h>
 #include <wtf/NeverDestroyed.h>
-#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MediaStreamTrack);
+WTF_MAKE_ISO_ALLOCATED_IMPL(MediaStreamTrack);
 
 Ref<MediaStreamTrack> MediaStreamTrack::create(ScriptExecutionContext& context, Ref<MediaStreamTrackPrivate>&& privateTrack, RegisterCaptureTrackToOwner registerCaptureTrackToOwner)
 {
@@ -291,12 +291,6 @@ MediaStreamTrack::TrackSettings MediaStreamTrack::getSettings() const
     if (settings.supportsTorch())
         result.torch = settings.torch();
 
-    if (settings.supportsBackgroundBlur())
-        result.backgroundBlur = settings.backgroundBlur();
-
-    if (settings.supportsPowerEfficient())
-        result.powerEfficient = settings.powerEfficient();
-
     return result;
 }
 
@@ -313,7 +307,12 @@ MediaStreamTrack::TrackCapabilities MediaStreamTrack::getCapabilities() const
 
 auto MediaStreamTrack::takePhoto(PhotoSettings&& settings) -> Ref<TakePhotoPromise>
 {
-    ASSERT(!m_ended);
+    // https://w3c.github.io/mediacapture-image/#dom-imagecapture-takephoto
+    // If the readyState of track provided in the constructor is not live, return
+    // a promise rejected with a new DOMException whose name is InvalidStateError,
+    // and abort these steps.
+    if (m_ended)
+        return TakePhotoPromise::createAndReject(Exception { ExceptionCode::InvalidStateError, "Track has ended"_s });
 
     return m_private->takePhoto(WTFMove(settings))->whenSettled(RunLoop::main(), [protectedThis = Ref { *this }] (auto&& result) mutable {
 
@@ -335,7 +334,12 @@ auto MediaStreamTrack::takePhoto(PhotoSettings&& settings) -> Ref<TakePhotoPromi
 
 auto MediaStreamTrack::getPhotoCapabilities() -> Ref<PhotoCapabilitiesPromise>
 {
-    ASSERT(!m_ended);
+    // https://w3c.github.io/mediacapture-image/#dom-imagecapture-getphotocapabilities
+    // If the readyState of track provided in the constructor is not live, return
+    // a promise rejected with a new DOMException whose name is InvalidStateError,
+    // and abort these steps.
+    if (m_ended)
+        return PhotoCapabilitiesPromise::createAndReject(Exception { ExceptionCode::InvalidStateError, "Track has ended"_s });
 
     return m_private->getPhotoCapabilities()->whenSettled(RunLoop::main(), [protectedThis = Ref { *this }] (auto&& result) mutable {
 
@@ -356,7 +360,8 @@ auto MediaStreamTrack::getPhotoCapabilities() -> Ref<PhotoCapabilitiesPromise>
 
 auto MediaStreamTrack::getPhotoSettings() -> Ref<PhotoSettingsPromise>
 {
-    ASSERT(!m_ended);
+    if (m_ended)
+        return PhotoSettingsPromise::createAndReject(Exception { ExceptionCode::InvalidStateError, "Track has ended"_s });
 
     return m_private->getPhotoSettings()->whenSettled(RunLoop::main(), [protectedThis = Ref { *this }] (auto&& result) mutable {
 
@@ -388,7 +393,7 @@ static MediaConstraints createMediaConstraints(const std::optional<MediaTrackCon
 void MediaStreamTrack::applyConstraints(const std::optional<MediaTrackConstraints>& constraints, DOMPromiseDeferred<void>&& promise)
 {
     if (m_ended) {
-        promise.resolve();
+        promise.reject(Exception { ExceptionCode::InvalidAccessError, "Track has ended"_s });
         return;
     }
 
@@ -576,6 +581,11 @@ void MediaStreamTrack::configureTrackRendering()
     // ... media from the source only flows when a MediaStreamTrack object is both unmuted and enabled
 }
 
+const char* MediaStreamTrack::activeDOMObjectName() const
+{
+    return "MediaStreamTrack";
+}
+
 void MediaStreamTrack::suspend(ReasonForSuspension reason)
 {
     if (reason != ReasonForSuspension::BackForwardCache)
@@ -598,7 +608,11 @@ bool MediaStreamTrack::virtualHasPendingActivity() const
 #if ENABLE(WEB_AUDIO)
 RefPtr<WebAudioSourceProvider> MediaStreamTrack::createAudioSourceProvider()
 {
+#if ENABLE(WEB_AUDIO)
     return m_private->createAudioSourceProvider();
+#else
+    return nullptr;
+#endif
 }
 #endif
 

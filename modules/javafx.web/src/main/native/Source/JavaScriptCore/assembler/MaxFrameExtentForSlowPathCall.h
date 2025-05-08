@@ -38,9 +38,17 @@ namespace JSC {
 #if !ENABLE(ASSEMBLER)
 static constexpr size_t maxFrameExtentForSlowPathCall = 0;
 
+#elif CPU(X86_64) && OS(WINDOWS)
+// 4 args in registers, but stack space needs to be allocated for all args.
+static constexpr size_t maxFrameExtentForSlowPathCall = 64;
+
 #elif CPU(X86_64)
-// All args in registers. Windows also uses System V ABI.
+// All args in registers.
 static constexpr size_t maxFrameExtentForSlowPathCall = 0;
+
+#elif CPU(X86)
+// 7 args on stack (28 bytes).
+static constexpr size_t maxFrameExtentForSlowPathCall = 40;
 
 #elif CPU(ARM64) || CPU(ARM64E) || CPU(RISCV64)
 // All args in registers.

@@ -75,7 +75,7 @@ public:
     void releaseClientIsoSubspace(VM&);
 
 private:
-    IsoSubspace& isoSubspaceforHeap(Locker<Lock>&, Heap&);
+    IsoSubspace& isoSubspaceforHeap(LockHolder&, Heap&);
 
     Lock m_lock;
 

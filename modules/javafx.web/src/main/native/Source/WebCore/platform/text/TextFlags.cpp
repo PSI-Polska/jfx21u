@@ -74,41 +74,32 @@ WTF::TextStream& operator<<(TextStream& ts, Kerning kerning)
     return ts;
 }
 
-WTF::TextStream& operator<<(TextStream& ts, FontOpticalSizing opticalSizing)
-{
-    switch (opticalSizing) {
-    case FontOpticalSizing::Enabled: ts << "auto"; break;
-    case FontOpticalSizing::Disabled: ts << "none"; break;
-    }
-    return ts;
-}
-
-WTF::TextStream& operator<<(TextStream& ts, const FontVariantAlternates& alternates)
+WTF::TextStream& operator<<(TextStream& ts, FontVariantAlternates alternates)
 {
     if (alternates.isNormal())
         ts << "normal";
     else {
         auto values = alternates.values();
         StringBuilder builder;
-        auto append = [&builder]<typename ...Ts>(Ts&& ...args) {
+        auto append = [&builder] <typename ...Ts> (Ts&& ...args) {
             // Separate elements with a space.
-            builder.append(builder.isEmpty() ? ""_s: " "_s, std::forward<Ts>(args)...);
+            builder.append(builder.isEmpty() ? "": " ", std::forward<Ts>(args)...);
         };
         // FIXME: These strings needs to be escaped.
         if (!values.stylistic.isNull())
-            append("stylistic("_s, values.stylistic, ')');
+            append("stylistic(", values.stylistic, ")");
         if (values.historicalForms)
             append("historical-forms"_s);
         if (!values.styleset.isEmpty())
-            append("styleset("_s, interleave(values.styleset, ", "_s), ')');
+            append("styleset(", makeStringByJoining(values.styleset, ", "_s), ")");
         if (!values.characterVariant.isEmpty())
-            append("character-variant("_s, interleave(values.characterVariant, ", "_s), ')');
+            append("character-variant(", makeStringByJoining(values.characterVariant, ", "_s), ")");
         if (!values.swash.isNull())
-            append("swash("_s, values.swash, ')');
+            append("swash(", values.swash, ")");
         if (!values.ornaments.isNull())
-            append("ornaments("_s, values.ornaments, ')');
+            append("ornaments(", values.ornaments, ")");
         if (!values.annotation.isNull())
-            append("annotation("_s, values.annotation, ')');
+            append("annotation(", values.annotation, ")");
 
         ts << builder.toString();
     }

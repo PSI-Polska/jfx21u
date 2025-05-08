@@ -37,7 +37,7 @@
 namespace WebCore {
 
 class WEBCORE_EXPORT SpeechSynthesisUtterance final : public PlatformSpeechSynthesisUtteranceClient, public RefCounted<SpeechSynthesisUtterance>, public ActiveDOMObject, public EventTarget {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SpeechSynthesisUtterance);
+    WTF_MAKE_ISO_ALLOCATED(SpeechSynthesisUtterance);
 public:
     using UtteranceCompletionHandler = Function<void(const SpeechSynthesisUtterance&)>;
     static Ref<SpeechSynthesisUtterance> create(ScriptExecutionContext&, const String&, UtteranceCompletionHandler&&);
@@ -69,9 +69,8 @@ public:
     MonotonicTime startTime() const { return m_platformUtterance->startTime(); }
     void setStartTime(MonotonicTime startTime) { m_platformUtterance->setStartTime(startTime); }
 
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
+    using RefCounted::ref;
+    using RefCounted::deref;
 
     PlatformSpeechSynthesisUtterance* platformUtterance() const { return m_platformUtterance.get(); }
 
@@ -86,11 +85,12 @@ private:
     void decrementActivityCountForEventDispatch();
 
     // ActiveDOMObject
+    const char* activeDOMObjectName() const final;
     bool virtualHasPendingActivity() const final;
 
     // EventTarget
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
-    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::SpeechSynthesisUtterance; }
+    EventTargetInterface eventTargetInterface() const final { return SpeechSynthesisUtteranceEventTargetInterfaceType; }
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 

@@ -31,8 +31,7 @@ namespace WebCore {
 class CachedSVGDocument;
 
 class SVGUseElement final : public SVGGraphicsElement, public SVGURIReference, private CachedSVGDocumentClient {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGUseElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGUseElement);
+    WTF_MAKE_ISO_ALLOCATED(SVGUseElement);
 public:
     static Ref<SVGUseElement> create(const QualifiedName&, Document&);
     virtual ~SVGUseElement();
@@ -69,12 +68,12 @@ private:
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) override;
     Path toClipPath() override;
     bool selfHasRelativeLengths() const override;
-    void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) final;
+    void notifyFinished(CachedResource&, const NetworkLoadMetrics&) final;
 
     Document* externalDocument() const;
     void updateExternalDocument();
 
-    RefPtr<SVGElement> findTarget(AtomString* targetID = nullptr) const;
+    SVGElement* findTarget(AtomString* targetID = nullptr) const;
 
     void cloneTarget(ContainerNode&, SVGElement& target) const;
     RefPtr<SVGElement> targetClone() const;

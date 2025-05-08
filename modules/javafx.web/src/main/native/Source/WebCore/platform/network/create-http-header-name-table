@@ -137,20 +137,21 @@ bool findHTTPHeaderName(StringView stringView, HTTPHeaderName& headerName)
         return false;
 
     if (stringView.is8Bit()) {
-        if (auto nameAndString = HTTPHeaderNamesHash::findHeaderNameImpl(reinterpret_cast<const char*>(stringView.span8().data()), length)) {
+        if (auto nameAndString = HTTPHeaderNamesHash::findHeaderNameImpl(reinterpret_cast<const char*>(stringView.characters8()), length)) {
             headerName = nameAndString->headerName;
             return true;
         }
     } else {
-        std::array<char, maxHTTPHeaderNameLength> characters;
-        size_t index = 0;
-        for (auto character : stringView.span16()) {
+        LChar characters[maxHTTPHeaderNameLength];
+        for (unsigned i = 0; i < length; ++i) {
+            UChar character = stringView.characters16()[i];
             if (!isASCII(character))
                 return false;
-            characters[index++] = static_cast<char>(character);
+                
+            characters[i] = static_cast<LChar>(character);
         }
         
-        if (auto nameAndString = HTTPHeaderNamesHash::findHeaderNameImpl(characters.data(), length)) {
+        if (auto nameAndString = HTTPHeaderNamesHash::findHeaderNameImpl(reinterpret_cast<const char*>(characters), length)) {
             headerName = nameAndString->headerName;
             return true;
         }

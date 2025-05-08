@@ -48,13 +48,13 @@
 #include "StyleResolver.h"
 #include "TextControlInnerElements.h"
 #include "UnicodeBidi.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderSearchField);
+WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSearchField);
 
 RenderSearchField::RenderSearchField(HTMLInputElement& element, RenderStyle&& style)
     : RenderTextControlSingleLine(Type::SearchField, element, WTFMove(style))
@@ -72,29 +72,30 @@ RenderSearchField::~RenderSearchField()
 
 void RenderSearchField::willBeDestroyed()
 {
-    if (RefPtr searchPopup = std::exchange(m_searchPopup, nullptr))
-        searchPopup->popupMenu()->disconnectClient();
+    if (m_searchPopup) {
+        m_searchPopup->popupMenu()->disconnectClient();
+        m_searchPopup = nullptr;
+    }
 
     RenderTextControlSingleLine::willBeDestroyed();
 }
 
 inline HTMLElement* RenderSearchField::resultsButtonElement() const
 {
-    return protectedInputElement()->resultsButtonElement();
+    return inputElement().resultsButtonElement();
 }
 
 inline HTMLElement* RenderSearchField::cancelButtonElement() const
 {
-    return protectedInputElement()->cancelButtonElement();
+    return inputElement().cancelButtonElement();
 }
 
 void RenderSearchField::addSearchResult()
 {
-    Ref inputElement = this->inputElement();
-    if (inputElement->maxResults() <= 0)
+    if (inputElement().maxResults() <= 0)
         return;
 
-    String value = inputElement->value();
+    String value = inputElement().value();
     if (value.isEmpty())
         return;
 
@@ -107,10 +108,10 @@ void RenderSearchField::addSearchResult()
 
     RecentSearch recentSearch = { value, WallTime::now() };
     m_recentSearches.insert(0, recentSearch);
-    while (static_cast<int>(m_recentSearches.size()) > inputElement->maxResults())
+    while (static_cast<int>(m_recentSearches.size()) > inputElement().maxResults())
         m_recentSearches.removeLast();
 
-    AtomString name = autosaveName();
+    const AtomString& name = autosaveName();
     if (!m_searchPopup)
         m_searchPopup = page().chrome().createSearchPopupMenu(*this);
 
@@ -145,25 +146,25 @@ void RenderSearchField::showPopup()
     FloatPoint absTopLeft = localToAbsolute(FloatPoint(), UseTransforms);
     IntRect absBounds = absoluteBoundingBoxRectIgnoringTransforms();
     absBounds.setLocation(roundedIntPoint(absTopLeft));
-    protectedSearchPopup()->protectedPopupMenu()->show(absBounds, view().frameView(), -1);
+    m_searchPopup->popupMenu()->show(absBounds, &view().frameView(), -1);
 }
 
 void RenderSearchField::hidePopup()
 {
-    if (RefPtr searchPopup = m_searchPopup)
-        searchPopup->protectedPopupMenu()->hide();
+    if (m_searchPopup)
+        m_searchPopup->popupMenu()->hide();
 }
 
 LayoutUnit RenderSearchField::computeControlLogicalHeight(LayoutUnit lineHeight, LayoutUnit nonContentHeight) const
 {
-    RefPtr resultsButton = resultsButtonElement();
-    if (auto* resultsRenderer = resultsButton ? resultsButton->renderBox() : nullptr) {
+    HTMLElement* resultsButton = resultsButtonElement();
+    if (RenderBox* resultsRenderer = resultsButton ? resultsButton->renderBox() : 0) {
         resultsRenderer->updateLogicalHeight();
         nonContentHeight = std::max(nonContentHeight, resultsRenderer->borderAndPaddingLogicalHeight() + resultsRenderer->marginLogicalHeight());
         lineHeight = std::max(lineHeight, resultsRenderer->logicalHeight());
     }
-    RefPtr cancelButton = cancelButtonElement();
-    if (auto* cancelRenderer = cancelButton ? cancelButton->renderBox() : nullptr) {
+    HTMLElement* cancelButton = cancelButtonElement();
+    if (RenderBox* cancelRenderer = cancelButton ? cancelButton->renderBox() : 0) {
         cancelRenderer->updateLogicalHeight();
         nonContentHeight = std::max(nonContentHeight, cancelRenderer->borderAndPaddingLogicalHeight() + cancelRenderer->marginLogicalHeight());
         lineHeight = std::max(lineHeight, cancelRenderer->logicalHeight());
@@ -191,7 +192,7 @@ void RenderSearchField::updateFromElement()
         updateCancelButtonVisibility();
 
     if (m_searchPopupIsVisible)
-        protectedSearchPopup()->protectedPopupMenu()->updateFromElement();
+        m_searchPopup->popupMenu()->updateFromElement();
 }
 
 void RenderSearchField::updateCancelButtonVisibility() const
@@ -202,7 +203,7 @@ void RenderSearchField::updateCancelButtonVisibility() const
 
     const RenderStyle& curStyle = cancelButtonRenderer->style();
     Visibility buttonVisibility = visibilityForCancelButton();
-    if (curStyle.usedVisibility() == buttonVisibility)
+    if (curStyle.visibility() == buttonVisibility)
         return;
 
     auto cancelButtonStyle = RenderStyle::clone(curStyle);
@@ -212,12 +213,12 @@ void RenderSearchField::updateCancelButtonVisibility() const
 
 Visibility RenderSearchField::visibilityForCancelButton() const
 {
-    return (style().usedVisibility() == Visibility::Hidden || inputElement().value().isEmpty()) ? Visibility::Hidden : Visibility::Visible;
+    return (style().visibility() == Visibility::Hidden || inputElement().value().isEmpty()) ? Visibility::Hidden : Visibility::Visible;
 }
 
 const AtomString& RenderSearchField::autosaveName() const
 {
-    return protectedInputElement()->attributeWithoutSynchronization(nameAttr);
+    return inputElement().attributeWithoutSynchronization(nameAttr);
 }
 
 // PopupMenuClient methods
@@ -235,12 +236,11 @@ void RenderSearchField::valueChanged(unsigned listIndex, bool fireEvents)
             }
         }
     } else {
-        Ref input = inputElement();
-        input->setValue(itemText(listIndex));
-        if (input->document().settings().searchInputIncrementalAttributeAndSearchEventEnabled()
+        inputElement().setValue(itemText(listIndex));
+        if (inputElement().document().settings().searchInputIncrementalAttributeAndSearchEventEnabled()
             && fireEvents)
-            input->onSearch();
-        input->select();
+            inputElement().onSearch();
+        inputElement().select();
     }
 }
 
@@ -288,7 +288,7 @@ PopupMenuStyle RenderSearchField::itemStyle(unsigned) const
 
 PopupMenuStyle RenderSearchField::menuStyle() const
 {
-    return PopupMenuStyle(style().visitedDependentColorWithColorFilter(CSSPropertyColor), style().visitedDependentColorWithColorFilter(CSSPropertyBackgroundColor), style().fontCascade(), style().usedVisibility() == Visibility::Visible,
+    return PopupMenuStyle(style().visitedDependentColorWithColorFilter(CSSPropertyColor), style().visitedDependentColorWithColorFilter(CSSPropertyBackgroundColor), style().fontCascade(), style().visibility() == Visibility::Visible,
         style().display() == DisplayType::None, true, style().textIndent(), style().direction(), isOverride(style().unicodeBidi()), PopupMenuStyle::CustomBackgroundColor);
 }
 
@@ -310,8 +310,7 @@ int RenderSearchField::clientInsetRight() const
 LayoutUnit RenderSearchField::clientPaddingLeft() const
 {
     LayoutUnit padding = paddingLeft();
-    RefPtr innerBlock = innerBlockElement();
-    if (auto* box = innerBlock ? innerBlock->renderBox() : nullptr)
+    if (RenderBox* box = innerBlockElement() ? innerBlockElement()->renderBox() : 0)
         padding += box->x();
     return padding;
 }
@@ -319,10 +318,8 @@ LayoutUnit RenderSearchField::clientPaddingLeft() const
 LayoutUnit RenderSearchField::clientPaddingRight() const
 {
     LayoutUnit padding = paddingRight();
-    RefPtr container = containerElement();
-    if (auto* containerBox = container ? container->renderBox() : nullptr) {
-        RefPtr innerBlock = innerBlockElement();
-        if (auto* innerBlockBox = innerBlock ? innerBlock->renderBox() : nullptr)
+    if (RenderBox* containerBox = containerElement() ? containerElement()->renderBox() : 0) {
+        if (RenderBox* innerBlockBox = innerBlockElement() ? innerBlockElement()->renderBox() : 0)
             padding += containerBox->width() - (innerBlockBox->x() + innerBlockBox->width());
     }
     return padding;
@@ -365,7 +362,7 @@ bool RenderSearchField::itemIsSelected(unsigned) const
 
 void RenderSearchField::setTextFromItem(unsigned listIndex)
 {
-    protectedInputElement()->setValue(itemText(listIndex));
+    inputElement().setValue(itemText(listIndex));
 }
 
 FontSelector* RenderSearchField::fontSelector() const
@@ -382,7 +379,7 @@ Ref<Scrollbar> RenderSearchField::createScrollbar(ScrollableArea& scrollableArea
 {
     bool usesLegacyScrollbarStyle = style().usesLegacyScrollbarStyle();
     if (usesLegacyScrollbarStyle)
-        return RenderScrollbar::createCustomScrollbar(scrollableArea, orientation, protectedInputElement().ptr());
+        return RenderScrollbar::createCustomScrollbar(scrollableArea, orientation, &inputElement());
     return Scrollbar::createNativeScrollbar(scrollableArea, orientation, widthStyle);
 }
 

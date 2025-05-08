@@ -71,7 +71,8 @@ public:
     void disconnectAllDevices(DOMPromiseDeferred<void>&&);
 
 private:
-    WebXRTest(WeakPtr<WebXRSystem, WeakPtrImplWithEventTargetData>&&);
+    WebXRTest(WeakPtr<WebXRSystem, WeakPtrImplWithEventTargetData>&& system)
+        : m_context(WTFMove(system)) { }
 
     WeakPtr<WebXRSystem, WeakPtrImplWithEventTargetData> m_context;
     Vector<Ref<WebFakeXRDevice>> m_devices;

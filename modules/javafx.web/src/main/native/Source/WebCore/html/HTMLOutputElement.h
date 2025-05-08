@@ -38,12 +38,10 @@ namespace WebCore {
 class DOMTokenList;
 
 class HTMLOutputElement final : public HTMLFormControlElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLOutputElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLOutputElement);
+    WTF_MAKE_ISO_ALLOCATED(HTMLOutputElement);
 public:
     static Ref<HTMLOutputElement> create(const QualifiedName&, Document&, HTMLFormElement*);
     static Ref<HTMLOutputElement> create(Document&);
-    ~HTMLOutputElement();
 
     String value() const;
     void setValue(String&&);

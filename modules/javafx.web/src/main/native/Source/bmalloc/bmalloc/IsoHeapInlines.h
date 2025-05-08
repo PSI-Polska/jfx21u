@@ -145,7 +145,7 @@ public: \
         bisoHeap().deallocate(p); \
     } \
     \
-    using WTFIsFastAllocated = int; \
+    using webkitFastMalloced = int; \
 private: \
     using __makeBisoMallocedInlineMacroSemicolonifier BUNUSED_TYPE_ALIAS = int
 

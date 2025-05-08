@@ -39,12 +39,12 @@ namespace JSC {
 struct WriteToJITRegionScope {
     ALWAYS_INLINE WriteToJITRegionScope()
     {
-        threadSelfRestrict<MemoryRestriction::kRwxToRw>();
+        threadSelfRestrictRWXToRW();
     }
 
     ALWAYS_INLINE ~WriteToJITRegionScope()
     {
-        threadSelfRestrict<MemoryRestriction::kRwxToRx>();
+        threadSelfRestrictRWXToRX();
     }
 };
 

@@ -34,7 +34,7 @@ namespace WebCore {
 
 static inline String toWTFString(const std::string& value)
 {
-    return String::fromUTF8(value);
+    return String::fromUTF8(value.data(), value.length());
 }
 
 LibWebRTCDTMFSenderBackend::LibWebRTCDTMFSenderBackend(rtc::scoped_refptr<webrtc::DtmfSenderInterface>&& sender)

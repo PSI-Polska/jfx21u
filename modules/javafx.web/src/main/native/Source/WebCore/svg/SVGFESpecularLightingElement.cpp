@@ -25,17 +25,16 @@
 
 #include "FESpecularLighting.h"
 #include "NodeName.h"
-#include "RenderElement.h"
 #include "RenderStyle.h"
 #include "SVGFELightElement.h"
 #include "SVGNames.h"
 #include "SVGParserUtilities.h"
 #include "SVGRenderStyle.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGFESpecularLightingElement);
+WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFESpecularLightingElement);
 
 inline SVGFESpecularLightingElement::SVGFESpecularLightingElement(const QualifiedName& tagName, Document& document)
     : SVGFilterPrimitiveStandardAttributes(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -61,21 +60,21 @@ void SVGFESpecularLightingElement::attributeChanged(const QualifiedName& name, c
 {
     switch (name.nodeName()) {
     case AttributeNames::inAttr:
-        Ref { m_in1 }->setBaseValInternal(newValue);
+        m_in1->setBaseValInternal(newValue);
         break;
     case AttributeNames::surfaceScaleAttr:
-        Ref { m_surfaceScale }->setBaseValInternal(newValue.toFloat());
+        m_surfaceScale->setBaseValInternal(newValue.toFloat());
         break;
     case AttributeNames::specularConstantAttr:
-        Ref { m_specularConstant }->setBaseValInternal(newValue.toFloat());
+        m_specularConstant->setBaseValInternal(newValue.toFloat());
         break;
     case AttributeNames::specularExponentAttr:
-        Ref { m_specularExponent }->setBaseValInternal(newValue.toFloat());
+        m_specularExponent->setBaseValInternal(newValue.toFloat());
         break;
     case AttributeNames::kernelUnitLengthAttr:
         if (auto result = parseNumberOptionalNumber(newValue)) {
-            Ref { m_kernelUnitLengthX }->setBaseValInternal(result->first);
-            Ref { m_kernelUnitLengthY }->setBaseValInternal(result->second);
+            m_kernelUnitLengthX->setBaseValInternal(result->first);
+            m_kernelUnitLengthY->setBaseValInternal(result->second);
         }
         break;
     default:
@@ -160,11 +159,11 @@ RefPtr<FilterEffect> SVGFESpecularLightingElement::createFilterEffect(const Filt
     if (!lightElement)
         return nullptr;
 
-    CheckedPtr renderer = this->renderer();
+    auto* renderer = this->renderer();
     if (!renderer)
         return nullptr;
 
-    Ref lightSource = lightElement->lightSource();
+    auto lightSource = lightElement->lightSource();
     auto& style = renderer->style();
 
     auto color = style.colorWithColorFilter(style.svgStyle().lightingColor());

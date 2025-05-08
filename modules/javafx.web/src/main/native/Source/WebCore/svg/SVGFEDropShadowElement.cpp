@@ -22,17 +22,15 @@
 #include "SVGFEDropShadowElement.h"
 
 #include "NodeName.h"
-#include "RenderElement.h"
 #include "RenderStyle.h"
-#include "SVGFilter.h"
 #include "SVGNames.h"
 #include "SVGParserUtilities.h"
 #include "SVGRenderStyle.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGFEDropShadowElement);
+WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFEDropShadowElement);
 
 inline SVGFEDropShadowElement::SVGFEDropShadowElement(const QualifiedName& tagName, Document& document)
     : SVGFilterPrimitiveStandardAttributes(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -55,8 +53,8 @@ Ref<SVGFEDropShadowElement> SVGFEDropShadowElement::create(const QualifiedName& 
 
 void SVGFEDropShadowElement::setStdDeviation(float x, float y)
 {
-    Ref { m_stdDeviationX }->setBaseValInternal(x);
-    Ref { m_stdDeviationY }->setBaseValInternal(y);
+    m_stdDeviationX->setBaseValInternal(x);
+    m_stdDeviationY->setBaseValInternal(y);
     updateSVGRendererForElementChange();
 }
 
@@ -65,18 +63,18 @@ void SVGFEDropShadowElement::attributeChanged(const QualifiedName& name, const A
     switch (name.nodeName()) {
     case AttributeNames::stdDeviationAttr:
         if (auto result = parseNumberOptionalNumber(newValue)) {
-            Ref { m_stdDeviationX }->setBaseValInternal(result->first);
-            Ref { m_stdDeviationY }->setBaseValInternal(result->second);
+            m_stdDeviationX->setBaseValInternal(result->first);
+            m_stdDeviationY->setBaseValInternal(result->second);
         }
         break;
     case AttributeNames::inAttr:
-        Ref { m_in1 }->setBaseValInternal(newValue);
+        m_in1->setBaseValInternal(newValue);
         break;
     case AttributeNames::dxAttr:
-        Ref { m_dx }->setBaseValInternal(newValue.toFloat());
+        m_dx->setBaseValInternal(newValue.toFloat());
         break;
     case AttributeNames::dyAttr:
-        Ref { m_dy }->setBaseValInternal(newValue.toFloat());
+        m_dy->setBaseValInternal(newValue.toFloat());
         break;
     default:
         break;
@@ -150,7 +148,7 @@ IntOutsets SVGFEDropShadowElement::outsets(const FloatRect& targetBoundingBox, S
 
 RefPtr<FilterEffect> SVGFEDropShadowElement::createFilterEffect(const FilterEffectVector&, const GraphicsContext&) const
 {
-    CheckedPtr renderer = this->renderer();
+    RenderObject* renderer = this->renderer();
     if (!renderer)
         return nullptr;
 

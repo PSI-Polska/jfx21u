@@ -119,12 +119,11 @@ bool RangeInputType::supportsRequired() const
 StepRange RangeInputType::createStepRange(AnyStepHandling anyStepHandling) const
 {
     ASSERT(element());
-    const Decimal stepBase = findStepBase(rangeDefaultStepBase);
     const Decimal minimum = parseToNumber(element()->attributeWithoutSynchronization(minAttr), rangeDefaultMinimum);
     const Decimal maximum = ensureMaximum(parseToNumber(element()->attributeWithoutSynchronization(maxAttr), rangeDefaultMaximum), minimum);
 
     const Decimal step = StepRange::parseStep(anyStepHandling, rangeStepDescription, element()->attributeWithoutSynchronization(stepAttr));
-    return StepRange(stepBase, RangeLimitations::Valid, minimum, maximum, step, rangeStepDescription);
+    return StepRange(minimum, RangeLimitations::Valid, minimum, maximum, step, rangeStepDescription);
 }
 
 // FIXME: Should this work for untrusted input?
@@ -138,17 +137,17 @@ void RangeInputType::handleMouseDownEvent(MouseEvent& event)
     if (element()->isDisabledFormControl())
         return;
 
-    RefPtr targetNode = dynamicDowncast<Node>(event.target());
+    auto* targetNode = dynamicDowncast<Node>(event.target());
     if (!targetNode)
         return;
 
     ASSERT(element()->shadowRoot());
-    if (targetNode != element() && !targetNode->isDescendantOf(element()->protectedUserAgentShadowRoot().get()))
+    if (targetNode != element() && !targetNode->isDescendantOf(element()->userAgentShadowRoot().get()))
         return;
-    Ref thumb = typedSliderThumbElement();
-    if (targetNode == thumb.ptr())
+    auto& thumb = typedSliderThumbElement();
+    if (targetNode == &thumb)
         return;
-    thumb->dragFrom(event.absoluteLocation());
+    thumb.dragFrom(event.absoluteLocation());
 }
 
 #if ENABLE(TOUCH_EVENTS)
@@ -208,7 +207,7 @@ auto RangeInputType::handleKeydownEvent(KeyboardEvent& event) -> ShouldCallBaseE
 
     bool isVertical = false;
     if (auto* renderer = element()->renderer())
-        isVertical = renderer->style().usedAppearance() == StyleAppearance::SliderVertical;
+        isVertical = renderer->style().effectiveAppearance() == StyleAppearance::SliderVertical;
 
     Decimal newValue;
     if (key == "Up"_s)
@@ -247,14 +246,13 @@ void RangeInputType::createShadowSubtree()
     ASSERT(element());
     ASSERT(element()->userAgentShadowRoot());
 
-    Ref document = element()->document();
+    Document& document = element()->document();
 
-    Ref shadowRoot = *element()->userAgentShadowRoot();
-    ScriptDisallowedScope::EventAllowedScope eventAllowedScope { shadowRoot };
+    ScriptDisallowedScope::EventAllowedScope eventAllowedScope { *element()->userAgentShadowRoot() };
 
-    Ref track = HTMLDivElement::create(document);
-    Ref container = SliderContainerElement::create(document);
-    shadowRoot->appendChild(ContainerNode::ChildChange::Source::Parser, container);
+    auto track = HTMLDivElement::create(document);
+    auto container = SliderContainerElement::create(document);
+    element()->userAgentShadowRoot()->appendChild(ContainerNode::ChildChange::Source::Parser, container);
     container->appendChild(ContainerNode::ChildChange::Source::Parser, track);
 
     track->setUserAgentPart(UserAgentParts::webkitSliderRunnableTrack());
@@ -268,16 +266,16 @@ HTMLElement* RangeInputType::sliderTrackElement() const
     if (!hasCreatedShadowSubtree())
         return nullptr;
 
-    RefPtr root = element()->userAgentShadowRoot();
-    ASSERT(root);
-    ASSERT(root->firstChild()); // container
-    ASSERT(root->firstChild()->isHTMLElement());
-    ASSERT(root->firstChild()->firstChild()); // track
+    ASSERT(element()->userAgentShadowRoot());
+    ASSERT(element()->userAgentShadowRoot()->firstChild()); // container
+    ASSERT(element()->userAgentShadowRoot()->firstChild()->isHTMLElement());
+    ASSERT(element()->userAgentShadowRoot()->firstChild()->firstChild()); // track
 
+    RefPtr<ShadowRoot> root = element()->userAgentShadowRoot();
     if (!root)
         return nullptr;
 
-    RefPtr container = childrenOfType<SliderContainerElement>(*root).first();
+    auto* container = childrenOfType<SliderContainerElement>(*root).first();
     if (!container)
         return nullptr;
 

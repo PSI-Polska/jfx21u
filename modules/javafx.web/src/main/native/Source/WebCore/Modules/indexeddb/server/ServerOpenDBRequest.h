@@ -26,8 +26,7 @@
 #pragma once
 
 #include "IDBConnectionToClient.h"
-#include "IDBDatabaseConnectionIdentifier.h"
-#include "IDBOpenRequestData.h"
+#include "IDBRequestData.h"
 #include <wtf/HashSet.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
@@ -40,10 +39,10 @@ namespace IDBServer {
 
 class ServerOpenDBRequest : public RefCounted<ServerOpenDBRequest> {
 public:
-    static Ref<ServerOpenDBRequest> create(IDBConnectionToClient&, const IDBOpenRequestData&);
+    static Ref<ServerOpenDBRequest> create(IDBConnectionToClient&, const IDBRequestData&);
 
     IDBConnectionToClient& connection() { return m_connection; }
-    const IDBOpenRequestData& requestData() const { return m_requestData; }
+    const IDBRequestData& requestData() const { return m_requestData; }
 
     bool isOpenRequest() const;
     bool isDeleteRequest() const;
@@ -53,22 +52,22 @@ public:
 
     uint64_t versionChangeID() const;
 
-    void notifiedConnectionsOfVersionChange(HashSet<IDBDatabaseConnectionIdentifier>&& connectionIdentifiers);
-    void connectionClosedOrFiredVersionChangeEvent(IDBDatabaseConnectionIdentifier);
+    void notifiedConnectionsOfVersionChange(HashSet<uint64_t>&& connectionIdentifiers);
+    void connectionClosedOrFiredVersionChangeEvent(uint64_t connectionIdentifier);
     bool hasConnectionsPendingVersionChangeEvent() const { return !m_connectionsPendingVersionChangeEvent.isEmpty(); }
     bool hasNotifiedConnectionsOfVersionChange() const { return m_notifiedConnectionsOfVersionChange; }
 
 
 private:
-    ServerOpenDBRequest(IDBConnectionToClient&, const IDBOpenRequestData&);
+    ServerOpenDBRequest(IDBConnectionToClient&, const IDBRequestData&);
 
     Ref<IDBConnectionToClient> m_connection;
-    IDBOpenRequestData m_requestData;
+    IDBRequestData m_requestData;
 
     bool m_notifiedBlocked { false };
 
     bool m_notifiedConnectionsOfVersionChange { false };
-    HashSet<IDBDatabaseConnectionIdentifier> m_connectionsPendingVersionChangeEvent;
+    HashSet<uint64_t> m_connectionsPendingVersionChangeEvent;
 };
 
 } // namespace IDBServer

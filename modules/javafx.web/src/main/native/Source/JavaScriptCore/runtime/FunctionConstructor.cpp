@@ -30,7 +30,6 @@
 #include "JSGeneratorFunction.h"
 #include "JSGlobalObject.h"
 #include "JSCInlines.h"
-#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace JSC {
@@ -68,19 +67,19 @@ void FunctionConstructor::finishCreation(VM& vm, FunctionPrototype* functionProt
 
 static String stringifyFunction(JSGlobalObject* globalObject, const ArgList& args, const Identifier& functionName, FunctionConstructionMode functionConstructionMode, ThrowScope& scope, std::optional<int>& functionConstructorParametersEndPosition)
 {
-    ASCIILiteral prefix;
+    const char* prefix = nullptr;
     switch (functionConstructionMode) {
     case FunctionConstructionMode::Function:
-        prefix = "function "_s;
+        prefix = "function ";
         break;
     case FunctionConstructionMode::Generator:
-        prefix = "function* "_s;
+        prefix = "function* ";
         break;
     case FunctionConstructionMode::Async:
-        prefix = "async function "_s;
+        prefix = "async function ";
         break;
     case FunctionConstructionMode::AsyncGenerator:
-        prefix = "async function* "_s;
+        prefix = "async function* ";
         break;
     }
 
@@ -104,15 +103,15 @@ static String stringifyFunction(JSGlobalObject* globalObject, const ArgList& arg
 
         auto* jsString = args.at(0).toString(globalObject);
         RETURN_IF_EXCEPTION(scope, { });
-        auto view = jsString->view(globalObject);
+        auto viewWithString = jsString->viewWithUnderlyingString(globalObject);
         RETURN_IF_EXCEPTION(scope, { });
-        builder.append(view.data);
+        builder.append(viewWithString.view);
         for (size_t i = 1; !builder.hasOverflowed() && i < args.size() - 1; i++) {
             auto* jsString = args.at(i).toString(globalObject);
             RETURN_IF_EXCEPTION(scope, { });
-            auto view = jsString->view(globalObject);
+            auto viewWithString = jsString->viewWithUnderlyingString(globalObject);
             RETURN_IF_EXCEPTION(scope, { });
-            builder.append(',', view.data);
+            builder.append(",", viewWithString.view);
         }
         if (UNLIKELY(builder.hasOverflowed())) {
             throwOutOfMemoryError(globalObject, scope);
@@ -123,9 +122,9 @@ static String stringifyFunction(JSGlobalObject* globalObject, const ArgList& arg
 
         auto* bodyString = args.at(args.size() - 1).toString(globalObject);
         RETURN_IF_EXCEPTION(scope, { });
-        auto body = bodyString->view(globalObject);
+        auto body = bodyString->viewWithUnderlyingString(globalObject);
         RETURN_IF_EXCEPTION(scope, { });
-        builder.append("\n) {\n"_s, body.data, "\n}"_s);
+        builder.append("\n) {\n", body.view, "\n}");
         if (UNLIKELY(builder.hasOverflowed())) {
             throwOutOfMemoryError(globalObject, scope);
             return { };
@@ -155,18 +154,17 @@ JSObject* constructFunction(JSGlobalObject* globalObject, const ArgList& args, c
     if (UNLIKELY(code.isNull()))
         return nullptr;
 
-    LexicallyScopedFeatures lexicallyScopedFeatures = globalObject->globalScopeExtension() ? TaintedByWithScopeLexicallyScopedFeature : NoLexicallyScopedFeatures;
-    RELEASE_AND_RETURN(scope, constructFunctionSkippingEvalEnabledCheck(globalObject, WTFMove(code), lexicallyScopedFeatures, functionName, sourceOrigin, sourceURL, taintedOrigin, position, -1, functionConstructorParametersEndPosition, functionConstructionMode, newTarget));
+    RELEASE_AND_RETURN(scope, constructFunctionSkippingEvalEnabledCheck(globalObject, WTFMove(code), functionName, sourceOrigin, sourceURL, taintedOrigin, position, -1, functionConstructorParametersEndPosition, functionConstructionMode, newTarget));
 }
 
-JSObject* constructFunctionSkippingEvalEnabledCheck(JSGlobalObject* globalObject, String&& program, LexicallyScopedFeatures lexicallyScopedFeatures, const Identifier& functionName, const SourceOrigin& sourceOrigin, const String& sourceURL, SourceTaintedOrigin taintedOrigin, const TextPosition& position, int overrideLineNumber, std::optional<int> functionConstructorParametersEndPosition, FunctionConstructionMode functionConstructionMode, JSValue newTarget)
+JSObject* constructFunctionSkippingEvalEnabledCheck(JSGlobalObject* globalObject, String&& program, const Identifier& functionName, const SourceOrigin& sourceOrigin, const String& sourceURL, SourceTaintedOrigin taintedOrigin, const TextPosition& position, int overrideLineNumber, std::optional<int> functionConstructorParametersEndPosition, FunctionConstructionMode functionConstructionMode, JSValue newTarget)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     SourceCode source = makeSource(program, sourceOrigin, taintedOrigin, sourceURL, position);
     JSObject* exception = nullptr;
-    FunctionExecutable* function = FunctionExecutable::fromGlobalCode(functionName, globalObject, source, lexicallyScopedFeatures, exception, overrideLineNumber, functionConstructorParametersEndPosition);
+    FunctionExecutable* function = FunctionExecutable::fromGlobalCode(functionName, globalObject, source, exception, overrideLineNumber, functionConstructorParametersEndPosition);
     if (UNLIKELY(!function)) {
         ASSERT(exception);
         throwException(globalObject, scope, exception);
@@ -202,13 +200,13 @@ JSObject* constructFunctionSkippingEvalEnabledCheck(JSGlobalObject* globalObject
 
     switch (functionConstructionMode) {
     case FunctionConstructionMode::Function:
-        return JSFunction::create(vm, globalObject, function, globalObject->globalScope(), structure);
+        return JSFunction::create(vm, function, globalObject->globalScope(), structure);
     case FunctionConstructionMode::Generator:
-        return JSGeneratorFunction::create(vm, globalObject, function, globalObject->globalScope(), structure);
+        return JSGeneratorFunction::create(vm, function, globalObject->globalScope(), structure);
     case FunctionConstructionMode::Async:
-        return JSAsyncFunction::create(vm, globalObject, function, globalObject->globalScope(), structure);
+        return JSAsyncFunction::create(vm, function, globalObject->globalScope(), structure);
     case FunctionConstructionMode::AsyncGenerator:
-        return JSAsyncGeneratorFunction::create(vm, globalObject, function, globalObject->globalScope(), structure);
+        return JSAsyncGeneratorFunction::create(vm, function, globalObject->globalScope(), structure);
     }
 
     ASSERT_NOT_REACHED();

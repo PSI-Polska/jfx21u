@@ -166,7 +166,7 @@ MediaTime TrackBuffer::findSeekTimeForTargetTime(const MediaTime& targetTime, co
     return abs(targetTime - futureSeekTime) < abs(targetTime - pastSeekTime) ? futureSeekTime : pastSeekTime;
 }
 
-PlatformTimeRanges TrackBuffer::removeSamples(const DecodeOrderSampleMap::MapType& samples, ASCIILiteral logPrefix)
+PlatformTimeRanges TrackBuffer::removeSamples(const DecodeOrderSampleMap::MapType& samples, const char* logPrefix)
 {
 #if !RELEASE_LOG_DISABLED
     auto logId = Logger::LogSiteIdentifier(logClassName(), logPrefix, logIdentifier());
@@ -177,12 +177,12 @@ PlatformTimeRanges TrackBuffer::removeSamples(const DecodeOrderSampleMap::MapTyp
     UNUSED_PARAM(logPrefix);
 #endif
 
-#if !RELEASE_LOG_DISABLED
-        uint64_t startBufferSize = m_samples.sizeInBytes();
-#endif
     PlatformTimeRanges erasedRanges;
     for (const auto& sampleIt : samples) {
         const DecodeOrderSampleMap::KeyType& decodeKey = sampleIt.first;
+#if !RELEASE_LOG_DISABLED
+        uint64_t startBufferSize = m_samples.sizeInBytes();
+#endif
 
         Ref sample = sampleIt.second;
 
@@ -201,16 +201,13 @@ PlatformTimeRanges TrackBuffer::removeSamples(const DecodeOrderSampleMap::MapTyp
         erasedRanges.add(startTime, endTime, AddTimeRangeOption::EliminateSmallGaps);
 
 #if !RELEASE_LOG_DISABLED
+        bytesRemoved += startBufferSize - m_samples.sizeInBytes();
         if (startTime < earliestSample)
             earliestSample = startTime;
         if (endTime > latestSample)
             latestSample = endTime;
 #endif
     }
-
-#if !RELEASE_LOG_DISABLED
-    bytesRemoved += startBufferSize - m_samples.sizeInBytes();
-#endif
 
     // Because we may have added artificial padding in the buffered ranges when adding samples, we may
     // need to remove that padding when removing those same samples. Walk over the erased ranges looking
@@ -253,7 +250,7 @@ static WARN_UNUSED_RETURN bool decodeTimeComparator(const PresentationOrderSampl
     return a.second->decodeTime() < b.second->decodeTime();
 };
 
-int64_t TrackBuffer::removeCodedFrames(const MediaTime& start, const MediaTime& end, const MediaTime& currentTime)
+bool TrackBuffer::removeCodedFrames(const MediaTime& start, const MediaTime& end, const MediaTime& currentTime)
 {
     // 3.5.9 Coded Frame Removal Algorithm
     // https://dvcs.w3.org/hg/html-media/raw-file/tip/media-source/media-source.html#sourcebuffer-coded-frame-removal
@@ -263,8 +260,6 @@ int64_t TrackBuffer::removeCodedFrames(const MediaTime& start, const MediaTime& 
     // remove end timestamp to that random access point timestamp.
     // NOTE: Step 3.2 will be incorrect for any random access point timestamp whose decode time is later than the sample at end,
     // but whose presentation time is less than the sample at end. Skip this step until step 3.3 below.
-
-    size_t framesSizeBefore = samples().sizeInBytes();
 
     // NOTE: To handle MediaSamples which may be an amalgamation of multiple shorter samples, find samples whose presentation
     // interval straddles the start and end times, and divide them if possible:
@@ -291,7 +286,7 @@ int64_t TrackBuffer::removeCodedFrames(const MediaTime& start, const MediaTime& 
     auto removePresentationStart = m_samples.presentationOrder().findSampleContainingOrAfterPresentationTime(start);
     auto removePresentationEnd = m_samples.presentationOrder().findSampleStartingOnOrAfterPresentationTime(end);
     if (removePresentationStart == removePresentationEnd)
-        return framesSizeBefore - samples().sizeInBytes(); // This could be negative if new frames were created above.
+        return false;
 
     // 3.3 Remove all media data, from this track buffer, that contain starting timestamps greater than or equal to
     // start and less than the remove end timestamp.
@@ -307,7 +302,7 @@ int64_t TrackBuffer::removeCodedFrames(const MediaTime& start, const MediaTime& 
 
     DecodeOrderSampleMap::MapType erasedSamples(removeDecodeStart, removeDecodeEnd);
 
-    PlatformTimeRanges erasedRanges = removeSamples(erasedSamples, "removeCodedFrames"_s);
+    PlatformTimeRanges erasedRanges = removeSamples(erasedSamples, "removeCodedFrames");
 
     // Only force the TrackBuffer to re-enqueue if the removed ranges overlap with enqueued and possibly
     // not yet displayed samples.
@@ -322,49 +317,7 @@ int64_t TrackBuffer::removeCodedFrames(const MediaTime& start, const MediaTime& 
 
     erasedRanges.invert();
     m_buffered.intersectWith(erasedRanges);
-
-    return framesSizeBefore - samples().sizeInBytes();
-}
-
-int64_t TrackBuffer::codedFramesIntervalSize(const MediaTime& start, const MediaTime& end)
-{
-    auto removePresentationStart = m_samples.presentationOrder().findSampleContainingOrAfterPresentationTime(start);
-    auto removePresentationEnd = m_samples.presentationOrder().findSampleStartingOnOrAfterPresentationTime(end);
-    if (removePresentationStart == removePresentationEnd)
-        return 0;
-
-    auto divideSampleIfPossibleAtPresentationTime = [&] (const MediaTime& time, bool dropFirstPart) -> int64_t  {
-        auto sampleIterator = m_samples.presentationOrder().findSampleContainingPresentationTime(time);
-        if (sampleIterator == m_samples.presentationOrder().end())
-            return 0;
-        Ref sample = sampleIterator->second;
-        if (!sample->isDivisable())
-            return 0;
-        MediaTime microsecond(1, 1000000);
-        MediaTime roundedTime = roundTowardsTimeScaleWithRoundingMargin(time, sample->presentationTime().timeScale(), microsecond);
-        std::pair<RefPtr<MediaSample>, RefPtr<MediaSample>> replacementSamples = sample->divide(roundedTime);
-        if (!replacementSamples.first || !replacementSamples.second)
-            return 0;
-        return dropFirstPart ? replacementSamples.first->sizeInBytes() : replacementSamples.second->sizeInBytes();
-    };
-
-    int64_t framesSize = 0;
-    framesSize -= divideSampleIfPossibleAtPresentationTime(start, true);
-    framesSize -= divideSampleIfPossibleAtPresentationTime(end, false);
-
-    auto minmaxDecodeTimeIterPair = std::minmax_element(removePresentationStart, removePresentationEnd, decodeTimeComparator);
-    auto& firstSample = minmaxDecodeTimeIterPair.first->second.get();
-    auto& lastSample = minmaxDecodeTimeIterPair.second->second.get();
-    auto removeDecodeStart = m_samples.decodeOrder().findSampleWithDecodeKey({ firstSample.decodeTime(), firstSample.presentationTime() });
-    auto removeDecodeLast = m_samples.decodeOrder().findSampleWithDecodeKey({ lastSample.decodeTime(), lastSample.presentationTime() });
-    auto removeDecodeEnd = m_samples.decodeOrder().findSyncSampleAfterDecodeIterator(removeDecodeLast);
-
-    DecodeOrderSampleMap::MapType erasedSamples(removeDecodeStart, removeDecodeEnd);
-
-    for (auto& erasedPair : erasedSamples)
-        framesSize += erasedPair.second->sizeInBytes();
-
-    return framesSize;
+    return true;
 }
 
 void TrackBuffer::resetTimestampOffset()

@@ -27,6 +27,7 @@
 
 #include "FloatRect.h"
 #include "Image.h"
+#include <wtf/EnumTraits.h>
 #include <wtf/OptionSet.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Seconds.h>
@@ -120,9 +121,6 @@ enum class TextIndicatorOption : uint16_t {
     // By default, TextIndicator does not consider the user-select property.
     // If this option is set, expand the range to include the highest `user-select: all` ancestor.
     UseUserSelectAllCommonAncestor = 1 << 12,
-
-    // If this option is set, exclude all content that is replaced by a separate render pass, like images, media, etc.
-    SkipReplacedContent = 1 << 13,
 };
 
 struct TextIndicatorData {
@@ -159,7 +157,6 @@ public:
     float contentImageScaleFactor() const { return m_data.contentImageScaleFactor; }
     Image* contentImageWithHighlight() const { return m_data.contentImageWithHighlight.get(); }
     Image* contentImage() const { return m_data.contentImage.get(); }
-    RefPtr<Image> protectedContentImage() const { return contentImage(); }
 
     TextIndicatorPresentationTransition presentationTransition() const { return m_data.presentationTransition; }
     void setPresentationTransition(TextIndicatorPresentationTransition transition) { m_data.presentationTransition = transition; }

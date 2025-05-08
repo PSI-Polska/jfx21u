@@ -28,15 +28,6 @@
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
-class CanvasObserver;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::CanvasObserver> : std::true_type { };
-}
-
-namespace WebCore {
 
 class CanvasBase;
 class FloatRect;

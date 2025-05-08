@@ -124,18 +124,16 @@ class BuiltinFunction:
         function_source = multilineCommentRegExp.sub("", function_string)
 
         intrinsic = "NoIntrinsic"
-        if "@intrinsic=" in function_source:
-            intrinsicMatch = functionIntrinsicRegExp.search(function_source)
-            if intrinsicMatch:
-                intrinsic = intrinsicMatch.group(1)
-                function_source = function_source.replace(intrinsicMatch.group(0), "")
+        intrinsicMatch = functionIntrinsicRegExp.search(function_source)
+        if intrinsicMatch:
+            intrinsic = intrinsicMatch.group(1)
+            function_source = functionIntrinsicRegExp.sub("", function_source)
 
         overridden_name = None
-        if "@overriddenName=" in function_source:
-            overriddenNameMatch = functionOverriddenNameRegExp.search(function_source)
-            if overriddenNameMatch:
-                overridden_name = overriddenNameMatch.group(1)
-                function_source = function_source.replace(overriddenNameMatch.group(0), "")
+        overriddenNameMatch = functionOverriddenNameRegExp.search(function_source)
+        if overriddenNameMatch:
+            overridden_name = overriddenNameMatch.group(1)
+            function_source = functionOverriddenNameRegExp.sub("", function_source)
 
         if not os.getenv("CONFIGURATION", "Debug").startswith("Debug"):
             function_source = lineWithOnlySingleLineCommentRegExp.sub("", function_source)
@@ -155,11 +153,10 @@ class BuiltinFunction:
             is_constructor = True
 
         visibility = "Public"
-        if "@visibility=" in function_source:
-            visibilityMatch = functionVisibilityRegExp.search(function_source)
-            if visibilityMatch:
-                visibility = visibilityMatch.group(1)
-                function_source = function_source.replace(visibilityMatch.group(1), "")
+        visibilityMatch = functionVisibilityRegExp.search(function_source)
+        if visibilityMatch:
+            visibility = visibilityMatch.group(1)
+            function_source = functionVisibilityRegExp.sub("", function_source)
         elif is_link_time_constant:
             visibility = "Private"
 

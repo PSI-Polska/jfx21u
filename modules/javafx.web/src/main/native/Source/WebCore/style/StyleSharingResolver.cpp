@@ -248,7 +248,7 @@ bool SharingResolver::canShareStyleWithElement(const Context& context, const Sty
     if (candidateElement.matchesDefaultPseudoClass() != element.matchesDefaultPseudoClass())
         return false;
 
-    if (candidateElement.hasKeyframeEffects(std::nullopt))
+    if (candidateElement.hasKeyframeEffects(PseudoId::None))
         return false;
 
     // Turn off style sharing for elements that can gain layers for reasons outside of the style system.
@@ -348,8 +348,8 @@ bool SharingResolver::sharingCandidateHasIdenticalStyleAffectingAttributes(const
 
 bool SharingResolver::classNamesAffectedByRules(const SpaceSplitString& classNames) const
 {
-    for (auto& className : classNames) {
-        if (m_ruleSets.features().classRules.contains(className))
+    for (unsigned i = 0; i < classNames.size(); ++i) {
+        if (m_ruleSets.features().classRules.contains(classNames[i]))
             return true;
     }
     return false;

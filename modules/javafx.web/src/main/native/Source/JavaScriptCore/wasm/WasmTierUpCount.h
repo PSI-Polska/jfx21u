@@ -129,15 +129,9 @@ public:
         RELEASE_ASSERT_NOT_REACHED();
     }
 
-    ALWAYS_INLINE CompilationStatus compilationStatusForOMG(MemoryMode mode) { return m_compilationStatusForOMG[static_cast<MemoryModeType>(mode)]; }
-    ALWAYS_INLINE void setCompilationStatusForOMG(MemoryMode mode, CompilationStatus status) { m_compilationStatusForOMG[static_cast<MemoryModeType>(mode)] = status; }
-
-    ALWAYS_INLINE CompilationStatus compilationStatusForOMGForOSREntry(MemoryMode mode) { return m_compilationStatusForOMGForOSREntry[static_cast<MemoryModeType>(mode)]; }
-    ALWAYS_INLINE void setCompilationStatusForOMGForOSREntry(MemoryMode mode, CompilationStatus status) { m_compilationStatusForOMGForOSREntry[static_cast<MemoryModeType>(mode)] = status; }
-
     Lock m_lock;
-    std::array<CompilationStatus, numberOfMemoryModes> m_compilationStatusForOMG;
-    std::array<CompilationStatus, numberOfMemoryModes> m_compilationStatusForOMGForOSREntry;
+    CompilationStatus m_compilationStatusForOMG { CompilationStatus::NotCompiled };
+    CompilationStatus m_compilationStatusForOMGForOSREntry { CompilationStatus::NotCompiled };
     SegmentedVector<TriggerReason, 16> m_osrEntryTriggers;
     Vector<uint32_t> m_outerLoops;
     Vector<std::unique_ptr<OSREntryData>> m_osrEntryData;

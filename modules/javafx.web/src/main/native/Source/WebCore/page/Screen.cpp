@@ -42,11 +42,11 @@
 #include "Quirks.h"
 #include "ResourceLoadObserver.h"
 #include "ScreenOrientation.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(Screen);
+WTF_MAKE_ISO_ALLOCATED_IMPL(Screen);
 
 Screen::Screen(LocalDOMWindow& window)
     : LocalDOMWindowProperty(&window)
@@ -57,13 +57,16 @@ Screen::~Screen() = default;
 
 static bool fingerprintingProtectionsEnabled(const LocalFrame& frame)
 {
-    return frame.mainFrame().advancedPrivacyProtections().contains(AdvancedPrivacyProtections::FingerprintingProtections);
-}
+    auto* localFrame = dynamicDowncast<LocalFrame>(frame.mainFrame());
+    if (!localFrame)
+        return false;
 
-static bool shouldFlipScreenDimensions(const LocalFrame& frame)
-{
-    RefPtr document = frame.protectedDocument();
-    return document && document->quirks().shouldFlipScreenDimensions();
+    RefPtr mainDocument = localFrame->document();
+    if (!mainDocument)
+        return false;
+
+    RefPtr loader = mainDocument->loader();
+    return loader && loader->fingerprintingProtectionsEnabled();
 }
 
 int Screen::height() const
@@ -72,11 +75,7 @@ int Screen::height() const
     if (!frame)
         return 0;
     if (frame->settings().webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->protectedDocument(), ScreenAPIsAccessed::Height);
-
-    if (shouldFlipScreenDimensions(*frame))
-        return static_cast<int>(frame->screenSize().width());
-
+        ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ScreenAPIsAccessed::Height);
     return static_cast<int>(frame->screenSize().height());
 }
 
@@ -86,11 +85,7 @@ int Screen::width() const
     if (!frame)
         return 0;
     if (frame->settings().webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->protectedDocument(), ScreenAPIsAccessed::Width);
-
-    if (shouldFlipScreenDimensions(*frame))
-        return static_cast<int>(frame->screenSize().height());
-
+        ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ScreenAPIsAccessed::Width);
     return static_cast<int>(frame->screenSize().width());
 }
 
@@ -100,8 +95,8 @@ unsigned Screen::colorDepth() const
     if (!frame)
         return 24;
     if (frame->settings().webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->protectedDocument(), ScreenAPIsAccessed::ColorDepth);
-    return static_cast<unsigned>(screenDepth(frame->protectedView().get()));
+        ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ScreenAPIsAccessed::ColorDepth);
+    return static_cast<unsigned>(screenDepth(frame->view()));
 }
 
 int Screen::availLeft() const
@@ -111,12 +106,12 @@ int Screen::availLeft() const
         return 0;
 
     if (frame->settings().webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->protectedDocument(), ScreenAPIsAccessed::AvailLeft);
+        ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ScreenAPIsAccessed::AvailLeft);
 
     if (fingerprintingProtectionsEnabled(*frame))
         return 0;
 
-    return static_cast<int>(screenAvailableRect(frame->protectedView().get()).x());
+    return static_cast<int>(screenAvailableRect(frame->view()).x());
 }
 
 int Screen::availTop() const
@@ -126,12 +121,12 @@ int Screen::availTop() const
         return 0;
 
     if (frame->settings().webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->protectedDocument(), ScreenAPIsAccessed::AvailTop);
+        ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ScreenAPIsAccessed::AvailTop);
 
     if (fingerprintingProtectionsEnabled(*frame))
         return 0;
 
-    return static_cast<int>(screenAvailableRect(frame->protectedView().get()).y());
+    return static_cast<int>(screenAvailableRect(frame->view()).y());
 }
 
 int Screen::availHeight() const
@@ -141,12 +136,12 @@ int Screen::availHeight() const
         return 0;
 
     if (frame->settings().webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->protectedDocument(), ScreenAPIsAccessed::AvailHeight);
+        ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ScreenAPIsAccessed::AvailHeight);
 
     if (fingerprintingProtectionsEnabled(*frame))
         return static_cast<int>(frame->screenSize().height());
 
-    return static_cast<int>(screenAvailableRect(frame->protectedView().get()).height());
+    return static_cast<int>(screenAvailableRect(frame->view()).height());
 }
 
 int Screen::availWidth() const
@@ -156,18 +151,18 @@ int Screen::availWidth() const
         return 0;
 
     if (frame->settings().webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->protectedDocument(), ScreenAPIsAccessed::AvailWidth);
+        ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ScreenAPIsAccessed::AvailWidth);
 
     if (fingerprintingProtectionsEnabled(*frame))
         return static_cast<int>(frame->screenSize().width());
 
-    return static_cast<int>(screenAvailableRect(frame->protectedView().get()).width());
+    return static_cast<int>(screenAvailableRect(frame->view()).width());
 }
 
 ScreenOrientation& Screen::orientation()
 {
     if (!m_screenOrientation)
-        m_screenOrientation = ScreenOrientation::create(window() ? window()->protectedDocument().get() : nullptr);
+        m_screenOrientation = ScreenOrientation::create(window() ? window()->document() : nullptr);
     return *m_screenOrientation;
 }
 

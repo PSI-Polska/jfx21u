@@ -30,22 +30,13 @@
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
-class DocumentStorageAccess;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::DocumentStorageAccess> : std::true_type { };
-}
-
-namespace WebCore {
 
 class DeferredPromise;
 class Document;
 class UserGestureIndicator;
 class WeakPtrImplWithEventTargetData;
 
-enum class StorageAccessWasGranted : uint8_t { No, Yes, YesWithException };
+enum class StorageAccessWasGranted : bool { No, Yes };
 
 enum class StorageAccessPromptWasShown : bool { No, Yes };
 

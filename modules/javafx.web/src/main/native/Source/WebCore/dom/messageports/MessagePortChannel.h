@@ -32,7 +32,6 @@
 #include <wtf/HashSet.h>
 #include <wtf/RefCounted.h>
 #include <wtf/WeakPtr.h>
-#include <wtf/text/MakeString.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -62,7 +61,7 @@ public:
     uint64_t beingTransferredCount();
 
 #if !LOG_DISABLED
-    String logString() const { return makeString(m_ports[0].logString(), ':', m_ports[1].logString()); }
+    String logString() const { return makeString(m_ports[0].logString(), ":", m_ports[1].logString()); }
 #endif
 
 private:

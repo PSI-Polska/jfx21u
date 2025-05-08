@@ -44,27 +44,30 @@ public:
     enum TransformAccumulation { FlattenTransform, AccumulateTransform };
     enum TransformMatrixTracking { DoNotTrackTransformMatrix, TrackSVGCTMMatrix, TrackSVGScreenCTMMatrix };
 
-    TransformState(TransformDirection mappingDirection, const FloatPoint& p, const FloatQuad& quad)
+    TransformState(bool useCSS3DTransformInterop, TransformDirection mappingDirection, const FloatPoint& p, const FloatQuad& quad)
         : m_lastPlanarPoint(p)
         , m_lastPlanarQuad(quad)
         , m_mapPoint(true)
         , m_mapQuad(true)
+        , m_useCSS3DTransformInterop(useCSS3DTransformInterop)
         , m_direction(mappingDirection)
     {
     }
 
-    TransformState(TransformDirection mappingDirection, const FloatPoint& p)
+    TransformState(bool useCSS3DTransformInterop, TransformDirection mappingDirection, const FloatPoint& p)
         : m_lastPlanarPoint(p)
         , m_mapPoint(true)
         , m_mapQuad(false)
+        , m_useCSS3DTransformInterop(useCSS3DTransformInterop)
         , m_direction(mappingDirection)
     {
     }
 
-    TransformState(TransformDirection mappingDirection, const FloatQuad& quad)
+    TransformState(bool useCSS3DTransformInterop, TransformDirection mappingDirection, const FloatQuad& quad)
         : m_lastPlanarQuad(quad)
         , m_mapPoint(false)
         , m_mapQuad(true)
+        , m_useCSS3DTransformInterop(useCSS3DTransformInterop)
         , m_direction(mappingDirection)
     {
     }
@@ -123,8 +126,8 @@ private:
     void flattenWithTransform(const TransformationMatrix&, bool* wasClamped);
     void applyAccumulatedOffset();
 
-    bool shouldFlattenBefore(TransformAccumulation accumulate = FlattenTransform);
-    bool shouldFlattenAfter(TransformAccumulation accumulate = FlattenTransform);
+    bool shouldFlattenBefore(TransformAccumulation accumulate);
+    bool shouldFlattenAfter(TransformAccumulation accumulate);
 
     TransformDirection inverseDirection() const;
 
@@ -141,6 +144,7 @@ private:
     bool m_accumulatingTransform { false };
     bool m_mapPoint;
     bool m_mapQuad;
+    bool m_useCSS3DTransformInterop;
     TransformMatrixTracking m_tracking { DoNotTrackTransformMatrix };
     TransformDirection m_direction;
 };

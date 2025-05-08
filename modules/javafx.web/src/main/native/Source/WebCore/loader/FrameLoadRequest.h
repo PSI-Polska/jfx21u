@@ -52,9 +52,7 @@ public:
     bool isEmpty() const { return m_resourceRequest.isEmpty(); }
 
     WEBCORE_EXPORT Document& requester();
-    Ref<Document> protectedRequester() const;
     const SecurityOrigin& requesterSecurityOrigin() const;
-    Ref<SecurityOrigin> protectedRequesterSecurityOrigin() const;
 
     ResourceRequest& resourceRequest() { return m_resourceRequest; }
     const ResourceRequest& resourceRequest() const { return m_resourceRequest; }
@@ -109,10 +107,8 @@ public:
     bool isRequestFromClientOrUserInput() const { return m_isRequestFromClientOrUserInput; }
 
     void setAdvancedPrivacyProtections(OptionSet<AdvancedPrivacyProtections> policy) { m_advancedPrivacyProtections = policy; }
-    std::optional<OptionSet<AdvancedPrivacyProtections>> advancedPrivacyProtections() const { return m_advancedPrivacyProtections; }
+    OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections() const { return m_advancedPrivacyProtections; }
 
-    NavigationHistoryBehavior navigationHistoryBehavior() const { return m_navigationHistoryBehavior; }
-    void setNavigationHistoryBehavior(NavigationHistoryBehavior historyHandling) { m_navigationHistoryBehavior = historyHandling; }
 private:
     Ref<Document> m_requester;
     Ref<SecurityOrigin> m_requesterSecurityOrigin;
@@ -134,8 +130,7 @@ private:
     InitiatedByMainFrame m_initiatedByMainFrame { InitiatedByMainFrame::Unknown };
     bool m_isRequestFromClientOrUserInput { false };
     bool m_isInitialFrameSrcLoad { false };
-    std::optional<OptionSet<AdvancedPrivacyProtections>> m_advancedPrivacyProtections;
-    NavigationHistoryBehavior m_navigationHistoryBehavior { NavigationHistoryBehavior::Auto };
+    OptionSet<AdvancedPrivacyProtections> m_advancedPrivacyProtections;
 };
 
 } // namespace WebCore

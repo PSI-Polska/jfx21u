@@ -26,33 +26,24 @@
 #pragma once
 
 #include "AnimationList.h"
-#include "AnimationMalloc.h"
 #include "CSSPropertyNames.h"
 #include "WebAnimationTypes.h"
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
-
-#if ENABLE(THREADED_ANIMATION_RESOLUTION)
-#include <wtf/WeakListHashSet.h>
-#endif
 
 namespace WebCore {
 
 class Document;
 class KeyframeEffect;
 class RenderStyle;
-class Settings;
-
-#if ENABLE(THREADED_ANIMATION_RESOLUTION)
-class AcceleratedEffect;
-#endif
 
 namespace Style {
 struct ResolutionContext;
 }
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(KeyframeEffectStack);
 class KeyframeEffectStack {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(KeyframeEffectStack);
 public:
     explicit KeyframeEffectStack();
     ~KeyframeEffectStack();
@@ -84,11 +75,6 @@ public:
 
     void applyPendingAcceleratedActions() const;
 
-    bool hasAcceleratedEffects(const Settings&) const;
-#if ENABLE(THREADED_ANIMATION_RESOLUTION)
-    void setAcceleratedEffects(WeakListHashSet<AcceleratedEffect>&& acceleratedEffects) { m_acceleratedEffects = WTFMove(acceleratedEffects); }
-#endif
-
 private:
     void ensureEffectsAreSorted();
     bool hasMatchingEffect(const Function<bool(const KeyframeEffect&)>&) const;
@@ -96,9 +82,6 @@ private:
     void stopAcceleratedAnimations();
 
     Vector<WeakPtr<KeyframeEffect>> m_effects;
-#if ENABLE(THREADED_ANIMATION_RESOLUTION)
-    WeakListHashSet<AcceleratedEffect> m_acceleratedEffects;
-#endif
     HashSet<String> m_invalidCSSAnimationNames;
     HashSet<AnimatableCSSProperty> m_acceleratedPropertiesOverriddenByCascade;
     RefPtr<const AnimationList> m_cssAnimationList;

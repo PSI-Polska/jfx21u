@@ -30,15 +30,6 @@
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
-class MainThreadDeferrableTask;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::MainThreadDeferrableTask> : std::true_type { };
-}
-
-namespace WebCore {
 
 class MainThreadDeferrableTask : public CanMakeWeakPtr<MainThreadDeferrableTask> {
 public:

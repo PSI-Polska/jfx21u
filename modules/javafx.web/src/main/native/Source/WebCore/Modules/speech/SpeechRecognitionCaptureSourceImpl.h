@@ -35,15 +35,6 @@
 #include "AudioSampleDataSource.h"
 #endif
 
-namespace WebCore {
-class SpeechRecognitionCaptureSourceImpl;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::SpeechRecognitionCaptureSourceImpl> : std::true_type { };
-}
-
 namespace WTF {
 class MediaTime;
 }
@@ -55,12 +46,10 @@ class PlatformAudioData;
 class SpeechRecognitionUpdate;
 enum class SpeechRecognitionUpdateType : uint8_t;
 
-class SpeechRecognitionCaptureSourceImpl final
-    : public RealtimeMediaSourceObserver
-    , public RealtimeMediaSource::AudioSampleObserver
-    , public CanMakeCheckedPtr<SpeechRecognitionCaptureSourceImpl> {
+class SpeechRecognitionCaptureSourceImpl
+    : public RealtimeMediaSource::Observer
+    , public RealtimeMediaSource::AudioSampleObserver {
     WTF_MAKE_FAST_ALLOCATED;
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SpeechRecognitionCaptureSourceImpl);
 public:
     using DataCallback = Function<void(const WTF::MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t)>;
     using StateUpdateCallback = Function<void(const SpeechRecognitionUpdate&)>;
@@ -69,12 +58,6 @@ public:
     void mute();
 
 private:
-    // CheckedPtr interface
-    uint32_t ptrCount() const final { return CanMakeCheckedPtr::ptrCount(); }
-    uint32_t ptrCountWithoutThreadCheck() const final { return CanMakeCheckedPtr::ptrCountWithoutThreadCheck(); }
-    void incrementPtrCount() const final { CanMakeCheckedPtr::incrementPtrCount(); }
-    void decrementPtrCount() const final { CanMakeCheckedPtr::decrementPtrCount(); }
-
     // RealtimeMediaSource::AudioSampleObserver
     void audioSamplesAvailable(const WTF::MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t) final;
 
@@ -82,7 +65,7 @@ private:
     void pullSamplesAndCallDataCallback(AudioSampleDataSource*, const WTF::MediaTime&, const CAAudioStreamDescription&, size_t sampleCount);
 #endif
 
-    // RealtimeMediaSourceObserver
+    // RealtimeMediaSource::Observer
     void sourceStarted() final;
     void sourceStopped() final;
     void sourceMutedChanged() final;

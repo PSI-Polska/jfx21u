@@ -40,9 +40,7 @@
 #include "config.h"
 #include "JPEGImageDecoder.h"
 
-#if USE(LCMS)
-#include "LCMSUniquePtr.h"
-#endif
+#include "PlatformDisplay.h"
 
 extern "C" {
 #include <setjmp.h>
@@ -235,7 +233,7 @@ static RefPtr<SharedBuffer> readICCProfile(jpeg_decompress_struct* info)
             return nullptr;
 
         unsigned markerSize = marker->data_length - iccHeaderSize;
-        buffer.append(std::span { reinterpret_cast<const uint8_t*>(marker->data + iccHeaderSize), markerSize });
+        buffer.append(reinterpret_cast<const uint8_t*>(marker->data + iccHeaderSize), markerSize);
     }
 
     if (buffer.isEmpty())
@@ -327,7 +325,7 @@ public:
         unsigned readOffset = m_bufferLength - m_info.src->bytes_in_buffer;
 
         m_info.src->bytes_in_buffer += newByteCount;
-        m_info.src->next_input_byte = (JOCTET*)data.span().subspan(readOffset).data();
+        m_info.src->next_input_byte = (JOCTET*)(data.data()) + readOffset;
 
         // If we still have bytes to skip, try to skip those now.
         if (m_bytesToSkip)
@@ -723,13 +721,15 @@ void JPEGImageDecoder::setICCProfile(RefPtr<SharedBuffer>&& buffer)
     if (!buffer)
         return;
 
-    auto span = buffer->span();
-    auto iccProfile = LCMSProfilePtr(cmsOpenProfileFromMem(span.data(), span.size()));
-    if (!iccProfile || cmsGetColorSpace(iccProfile.get()) != cmsSigRgbData)
+    auto iccProfile = LCMSProfilePtr(cmsOpenProfileFromMem(buffer->data(), buffer->size()));
+    if (!iccProfile)
         return;
 
-    auto srgbProfile = LCMSProfilePtr(cmsCreate_sRGBProfile());
-    m_iccTransform = LCMSTransformPtr(cmsCreateTransform(iccProfile.get(), TYPE_BGRA_8, srgbProfile.get(), TYPE_BGRA_8, INTENT_RELATIVE_COLORIMETRIC, 0));
+    auto* displayProfile = PlatformDisplay::sharedDisplay().colorProfile();
+    if (cmsGetColorSpace(iccProfile.get()) != cmsSigRgbData || cmsGetColorSpace(displayProfile) != cmsSigRgbData)
+        return;
+
+    m_iccTransform = LCMSTransformPtr(cmsCreateTransform(iccProfile.get(), TYPE_BGRA_8, displayProfile, TYPE_BGRA_8, INTENT_RELATIVE_COLORIMETRIC, 0));
 }
 #endif
 

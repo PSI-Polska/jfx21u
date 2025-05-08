@@ -36,16 +36,16 @@ class PerformanceEntry;
 class PerformanceObserverEntryList : public RefCounted<PerformanceObserverEntryList> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Ref<PerformanceObserverEntryList> create(Vector<Ref<PerformanceEntry>>&& entries);
+    static Ref<PerformanceObserverEntryList> create(Vector<RefPtr<PerformanceEntry>>&& entries);
 
-    const Vector<Ref<PerformanceEntry>>& getEntries() const { return m_entries; }
-    Vector<Ref<PerformanceEntry>> getEntriesByType(const String& entryType) const;
-    Vector<Ref<PerformanceEntry>> getEntriesByName(const String& name, const String& entryType) const;
+    const Vector<RefPtr<PerformanceEntry>>& getEntries() const { return m_entries; }
+    Vector<RefPtr<PerformanceEntry>> getEntriesByType(const String& entryType) const;
+    Vector<RefPtr<PerformanceEntry>> getEntriesByName(const String& name, const String& entryType) const;
 
 private:
-    PerformanceObserverEntryList(Vector<Ref<PerformanceEntry>>&& entries);
+    PerformanceObserverEntryList(Vector<RefPtr<PerformanceEntry>>&& entries);
 
-    Vector<Ref<PerformanceEntry>> m_entries;
+    Vector<RefPtr<PerformanceEntry>> m_entries;
 };
 
 } // namespace WebCore

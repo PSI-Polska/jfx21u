@@ -114,7 +114,7 @@ void CSSStyleRule::setSelectorText(const String& selectorText)
 
     CSSParser p(parserContext());
     auto isNestedContext = hasStyleRuleAncestor() ? CSSParserEnum::IsNestedContext::Yes : CSSParserEnum::IsNestedContext::No;
-    RefPtr sheet = parentStyleSheet();
+    auto* sheet = parentStyleSheet();
     auto selectorList = p.parseSelectorList(selectorText, sheet ? &sheet->contents() : nullptr, isNestedContext);
     if (!selectorList)
         return;
@@ -159,7 +159,7 @@ String CSSStyleRule::cssText() const
 void CSSStyleRule::cssTextForRules(StringBuilder& rules) const
 {
     for (unsigned index = 0; index < length(); index++)
-        rules.append("\n  "_s, item(index)->cssText());
+        rules.append("\n  ", item(index)->cssText());
 }
 
 String CSSStyleRule::cssTextWithReplacementURLs(const HashMap<String, String>& replacementURLStrings, const HashMap<RefPtr<CSSStyleSheet>, String>& replacementURLStringsForCSSStyleSheet) const
@@ -181,36 +181,37 @@ String CSSStyleRule::cssTextWithReplacementURLs(const HashMap<String, String>& r
 void CSSStyleRule::cssTextForRulesWithReplacementURLs(StringBuilder& rules, const HashMap<String, String>& replacementURLStrings, const HashMap<RefPtr<CSSStyleSheet>, String>& replacementURLStringsForCSSStyleSheet) const
 {
     for (unsigned index = 0; index < length(); index++)
-        rules.append("\n  "_s, item(index)->cssTextWithReplacementURLs(replacementURLStrings, replacementURLStringsForCSSStyleSheet));
+        rules.append("\n  ", item(index)->cssTextWithReplacementURLs(replacementURLStrings, replacementURLStringsForCSSStyleSheet));
 }
 
 String CSSStyleRule::cssTextInternal(StringBuilder& declarations, StringBuilder& rules) const
 {
     StringBuilder builder;
-    builder.append(selectorText(), " {"_s);
+    builder.append(selectorText());
+    builder.append(" {");
 
     if (declarations.isEmpty() && rules.isEmpty()) {
-        builder.append(" }"_s);
+            builder.append(" }");
         return builder.toString();
     }
 
     if (rules.isEmpty()) {
         builder.append(' ');
         builder.append(declarations);
-        builder.append(" }"_s);
+        builder.append(" }");
         return builder.toString();
     }
 
     if (declarations.isEmpty()) {
         builder.append(rules);
-        builder.append("\n}"_s);
+        builder.append("\n}");
         return builder.toString();
     }
 
-    builder.append("\n  "_s);
+    builder.append("\n  ");
     builder.append(declarations);
     builder.append(rules);
-    builder.append("\n}"_s);
+    builder.append("\n}");
     return builder.toString();
 }
 
@@ -234,7 +235,7 @@ ExceptionOr<unsigned> CSSStyleRule::insertRule(const String& ruleString, unsigne
     if (index > nestedRules().size())
         return Exception { ExceptionCode::IndexSizeError };
 
-    RefPtr styleSheet = parentStyleSheet();
+    auto* styleSheet = parentStyleSheet();
     RefPtr<StyleRuleBase> newRule = CSSParser::parseRule(parserContext(), styleSheet ? &styleSheet->contents() : nullptr, ruleString, CSSParserEnum::IsNestedContext::Yes);
     if (!newRule)
         return Exception { ExceptionCode::SyntaxError };
@@ -242,23 +243,20 @@ ExceptionOr<unsigned> CSSStyleRule::insertRule(const String& ruleString, unsigne
     if (!newRule->isStyleRule() && !newRule->isGroupRule())
         return Exception { ExceptionCode::HierarchyRequestError };
 
-    CSSStyleSheet::RuleMutationScope mutationScope(this);
     if (!m_styleRule->isStyleRuleWithNesting()) {
         // Call the parent rule (or parent stylesheet if top-level or nothing if it's an orphaned rule) to transform the current StyleRule to StyleRuleWithNesting.
         RefPtr<StyleRuleWithNesting> styleRuleWithNesting;
-        if (RefPtr parent = parentRule())
-            styleRuleWithNesting = parent->prepareChildStyleRuleForNesting(m_styleRule.get());
-        else if (RefPtr parent = parentStyleSheet())
-            styleRuleWithNesting = parent->prepareChildStyleRuleForNesting(m_styleRule.get());
+        if (auto parent = parentRule())
+            styleRuleWithNesting = parent->prepareChildStyleRuleForNesting(m_styleRule);
+        else if (auto parent = parentStyleSheet())
+            styleRuleWithNesting = parent->prepareChildStyleRuleForNesting(WTFMove(m_styleRule.get()));
         else
             styleRuleWithNesting = StyleRuleWithNesting::create(WTFMove(m_styleRule.get()));
         ASSERT(styleRuleWithNesting);
         m_styleRule = *styleRuleWithNesting;
     }
 
-    if (auto styleSheet = parentStyleSheet())
-        styleSheet->contents().clearHasNestingRulesCache();
-
+    CSSStyleSheet::RuleMutationScope mutationScope(this);
     downcast<StyleRuleWithNesting>(m_styleRule)->nestedRules().insert(index, newRule.releaseNonNull());
     m_childRuleCSSOMWrappers.insert(index, RefPtr<CSSRule>());
     return index;

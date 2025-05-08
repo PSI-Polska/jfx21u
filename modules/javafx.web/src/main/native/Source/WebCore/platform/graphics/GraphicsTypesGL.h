@@ -65,17 +65,12 @@ typedef GCGLuint PlatformGLObject;
 using GCGLDisplay = void*;
 using GCGLConfig = void*;
 using GCGLContext = void*;
-using GCEGLSurface = void*;
-using GCGLExternalImage = unsigned;
-using GCGLExternalSync = unsigned;
+using GCEGLImage = void*;
+using GCEGLSuface = void*;
+using GCEGLSync = void*;
 
 #if !PLATFORM(COCOA)
 typedef unsigned GLuint;
-#endif
-
-#if ENABLE(WEBXR)
-// GL_ANGLE_variable_rasterization_rate_metal
-using GCGLMTLRasterizationRateMapANGLE = void*;
 #endif
 
 // Order in inverse of in GL specification, so that iteration is in GL specification order.

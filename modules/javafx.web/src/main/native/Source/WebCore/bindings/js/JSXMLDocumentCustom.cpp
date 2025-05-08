@@ -27,6 +27,7 @@
 #include "JSXMLDocument.h"
 
 #include "JSDocumentCustom.h"
+#include "JSLocalDOMWindow.h"
 #include "NodeTraversal.h"
 
 namespace WebCore {

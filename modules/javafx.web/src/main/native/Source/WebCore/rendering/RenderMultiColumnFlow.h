@@ -34,11 +34,10 @@ class RenderMultiColumnSet;
 class RenderMultiColumnSpannerPlaceholder;
 
 class RenderMultiColumnFlow final : public RenderFragmentedFlow {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderMultiColumnFlow);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderMultiColumnFlow);
+    WTF_MAKE_ISO_ALLOCATED(RenderMultiColumnFlow);
 public:
     RenderMultiColumnFlow(Document&, RenderStyle&&);
-    virtual ~RenderMultiColumnFlow();
+    ~RenderMultiColumnFlow();
 
     RenderBlockFlow* multiColumnBlockFlow() const { return downcast<RenderBlockFlow>(parent()); }
 
@@ -102,7 +101,7 @@ public:
 private:
     ASCIILiteral renderName() const override;
     void addFragmentToThread(RenderFragmentContainer*) override;
-    void willBeRemovedFromTree() override;
+    void willBeRemovedFromTree(IsInternalMove) override;
     void fragmentedFlowDescendantBoxLaidOut(RenderBox*) override;
     LogicalExtentComputedValues computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit logicalTop) const override;
     LayoutUnit initialLogicalWidth() const override;

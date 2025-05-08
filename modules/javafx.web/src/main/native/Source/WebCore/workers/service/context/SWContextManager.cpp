@@ -337,13 +337,4 @@ void SWContextManager::setRegistrationUpdateViaCache(ServiceWorkerRegistrationId
     });
 }
 
-void SWContextManager::removeFetch(ServiceWorkerIdentifier serviceWorkerIdentifier, SWServerConnectionIdentifier serverConnectionIdentifier, FetchIdentifier fetchIdentifier, bool isNavigationFetch)
-{
-    ASSERT(isMainThread());
-    if (auto* proxy = serviceWorkerThreadProxy(serviceWorkerIdentifier))
-        proxy->removeFetch(serverConnectionIdentifier, fetchIdentifier);
-    if (isNavigationFetch && m_connection)
-        m_connection->removeNavigationFetch(serverConnectionIdentifier, fetchIdentifier);
-}
-
 } // namespace WebCore

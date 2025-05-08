@@ -71,7 +71,7 @@ void CachedXSLStyleSheet::finishLoading(const FragmentedSharedBuffer* data, cons
     if (data) {
         Ref contiguousData = data->makeContiguous();
         setEncodedSize(data->size());
-        m_sheet = protectedDecoder()->decodeAndFlush(contiguousData->span());
+        m_sheet = protectedDecoder()->decodeAndFlush(contiguousData->data(), encodedSize());
         m_data = WTFMove(contiguousData);
     } else {
         m_data = nullptr;
@@ -81,7 +81,7 @@ void CachedXSLStyleSheet::finishLoading(const FragmentedSharedBuffer* data, cons
     checkNotify(metrics);
 }
 
-void CachedXSLStyleSheet::checkNotify(const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess)
+void CachedXSLStyleSheet::checkNotify(const NetworkLoadMetrics&)
 {
     if (isLoading())
         return;

@@ -41,9 +41,13 @@ using Arg = Air::Arg;
 using Inst = Air::Inst;
 using Tmp = Air::Tmp;
 
-StackmapSpecial::StackmapSpecial() = default;
+StackmapSpecial::StackmapSpecial()
+{
+}
 
-StackmapSpecial::~StackmapSpecial() = default;
+StackmapSpecial::~StackmapSpecial()
+{
+}
 
 void StackmapSpecial::reportUsedRegisters(Inst& inst, const RegisterSetBuilder& usedRegisters)
 {
@@ -122,21 +126,7 @@ void StackmapSpecial::forEachArgImpl(
             case ValueRep::LateColdAny:
                 role = Arg::LateColdUse;
                 break;
-#if USE(JSVALUE32_64)
-            case ValueRep::SomeRegisterPair:
-            case ValueRep::RegisterPair:
-                role = Arg::Use;
-                break;
-            case ValueRep::SomeRegisterPairWithClobber:
-                role = Arg::UseDef;
-                break;
-            case ValueRep::SomeLateRegisterPair:
-            case ValueRep::LateRegisterPair:
-                role = Arg::LateUse;
-                break;
-            case ValueRep::SomeEarlyRegisterPair:
-#endif
-            case ValueRep::SomeEarlyRegister:
+            default:
                 RELEASE_ASSERT_NOT_REACHED();
                 break;
             }
@@ -245,9 +235,6 @@ bool StackmapSpecial::isArgValidForType(const Air::Arg& arg, Type type)
 {
     switch (arg.kind()) {
     case Arg::Tmp:
-#if USE(JSVALUE32_64)
-    case Arg::TmpPair:
-#endif
     case Arg::Imm:
     case Arg::BigImm:
         break;
@@ -288,22 +275,10 @@ bool StackmapSpecial::isArgValidForRep(Air::Code& code, const Air::Arg& arg, con
                 return true;
         }
         return false;
-#if USE(JSVALUE32_64)
-    case ValueRep::SomeRegisterPair:
-    case ValueRep::SomeRegisterPairWithClobber:
-    case ValueRep::SomeEarlyRegisterPair:
-    case ValueRep::SomeLateRegisterPair:
-        return arg.isTmpPair();
-    case ValueRep::LateRegisterPair:
-    case ValueRep::RegisterPair:
-        return arg == Arg(Tmp(rep.regHi()), Tmp(rep.regLo()));
-#endif
-    case ValueRep::Stack:
-    case ValueRep::Constant:
+    default:
         RELEASE_ASSERT_NOT_REACHED();
         return false;
     }
-    RELEASE_ASSERT_NOT_REACHED();
 }
 
 ValueRep StackmapSpecial::repForArg(Air::Code& code, const Arg& arg)
@@ -312,10 +287,6 @@ ValueRep StackmapSpecial::repForArg(Air::Code& code, const Arg& arg)
     case Arg::Tmp:
         return ValueRep::reg(arg.reg());
         break;
-#if USE(JSVALUE32_64)
-    case Arg::TmpPair:
-        return ValueRep::regPair(arg.regHi(), arg.regLo());
-#endif
     case Arg::Imm:
     case Arg::BigImm:
         return ValueRep::constant(arg.value());

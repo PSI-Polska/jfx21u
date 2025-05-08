@@ -33,16 +33,16 @@
 
 namespace WebCore {
 
-std::optional<Vector<uint8_t>> CryptoAlgorithmECDH::platformDeriveBits(const CryptoKeyEC& baseKey, const CryptoKeyEC& publicKey, UseCryptoKit)
+std::optional<Vector<uint8_t>> CryptoAlgorithmECDH::platformDeriveBits(const CryptoKeyEC& baseKey, const CryptoKeyEC& publicKey)
 {
-    auto ctx = EvpPKeyCtxPtr(EVP_PKEY_CTX_new(baseKey.platformKey().get(), nullptr));
+    auto ctx = EvpPKeyCtxPtr(EVP_PKEY_CTX_new(baseKey.platformKey(), nullptr));
     if (!ctx)
         return std::nullopt;
 
     if (EVP_PKEY_derive_init(ctx.get()) <= 0)
         return std::nullopt;
 
-    if (EVP_PKEY_derive_set_peer(ctx.get(), publicKey.platformKey().get()) <= 0)
+    if (EVP_PKEY_derive_set_peer(ctx.get(), publicKey.platformKey()) <= 0)
         return std::nullopt;
 
     // Call with a nullptr to get the required buffer size.

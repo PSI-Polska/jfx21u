@@ -35,7 +35,7 @@ namespace WebCore {
 class TextTrack;
 
 class TextTrackList final : public TrackListBase {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(TextTrackList);
+    WTF_MAKE_ISO_ALLOCATED(TextTrackList);
 public:
     static Ref<TextTrackList> create(ScriptExecutionContext* context)
     {
@@ -63,10 +63,11 @@ public:
     const MediaTime& duration() const { return m_duration; }
 
     // EventTarget
-    enum EventTargetInterfaceType eventTargetInterface() const override;
+    EventTargetInterface eventTargetInterface() const override;
 
 private:
     TextTrackList(ScriptExecutionContext*);
+    const char* activeDOMObjectName() const final;
 
     void invalidateTrackIndexesAfterTrack(TextTrack&);
 

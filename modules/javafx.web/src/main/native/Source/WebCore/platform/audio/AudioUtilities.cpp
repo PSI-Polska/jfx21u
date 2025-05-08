@@ -28,9 +28,10 @@
 
 #include "AudioUtilities.h"
 #include <random>
-#include <wtf/HashFunctions.h>
+#include <wtf/CryptographicallyRandomNumber.h>
+#include <wtf/HashMap.h>
 #include <wtf/MathExtras.h>
-#include <wtf/WeakRandomNumber.h>
+#include <wtf/WeakRandom.h>
 
 namespace WebCore {
 
@@ -84,22 +85,24 @@ void applyNoise(float* values, size_t numberOfElementsToProcess, float standardD
     std::mt19937 generator(device());
     std::normal_distribution<float> distribution(1, standardDeviation);
 
-    constexpr auto maximumTableSize = 2048;
-    constexpr auto minimumTableSize = 1024;
+    HashMap<float, float> noiseMultipliers;
+    auto computeNoiseMultiplier = [&](float rawValue) {
+        if (!noiseMultipliers.isValidKey(rawValue))
+            return distribution(generator);
 
-    size_t unusedCellCount = weakRandomNumber<uint32_t>() % (maximumTableSize - minimumTableSize);
-    size_t tableSize = maximumTableSize - unusedCellCount;
+        auto result = noiseMultipliers.ensure(rawValue, [&] {
+            return distribution(generator);
+        }).iterator->value;
 
-    // Avoid heap allocations on the rendering thread.
-    std::array<float, maximumTableSize> multipliers;
-    multipliers.fill(std::numeric_limits<float>::infinity());
+        static constexpr auto maxNoiseMultiplierMapSize = 250000;
+        if (noiseMultipliers.size() >= maxNoiseMultiplierMapSize)
+            noiseMultipliers.remove(noiseMultipliers.random());
 
-    for (size_t i = 0; i < numberOfElementsToProcess; ++i) {
-        auto& multiplier = multipliers[DefaultHash<double>::hash(values[i]) % tableSize];
-        if (std::isinf(multiplier))
-            multiplier = distribution(generator);
-        values[i] *= multiplier;
-    }
+        return result;
+    };
+
+    for (size_t i = 0; i < numberOfElementsToProcess; ++i)
+        values[i] *= computeNoiseMultiplier(values[i]);
 }
 
 } // AudioUtilites

@@ -42,7 +42,9 @@ FlowIndexing::FlowIndexing(Graph& graph)
     recompute();
 }
 
-FlowIndexing::~FlowIndexing() = default;
+FlowIndexing::~FlowIndexing()
+{
+}
 
 void FlowIndexing::recompute()
 {

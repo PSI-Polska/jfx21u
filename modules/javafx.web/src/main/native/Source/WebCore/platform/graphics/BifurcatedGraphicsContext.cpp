@@ -167,11 +167,6 @@ void BifurcatedGraphicsContext::beginTransparencyLayer(float opacity)
     VERIFY_STATE_SYNCHRONIZATION();
 }
 
-void BifurcatedGraphicsContext::beginTransparencyLayer(CompositeOperator, BlendMode)
-{
-    beginTransparencyLayer(1);
-}
-
 void BifurcatedGraphicsContext::endTransparencyLayer()
 {
     GraphicsContext::endTransparencyLayer();
@@ -191,10 +186,10 @@ void BifurcatedGraphicsContext::applyDeviceScaleFactor(float factor)
     VERIFY_STATE_SYNCHRONIZATION();
 }
 
-void BifurcatedGraphicsContext::fillRect(const FloatRect& rect, RequiresClipToRect requiresClipToRect)
+void BifurcatedGraphicsContext::fillRect(const FloatRect& rect)
 {
-    m_primaryContext.fillRect(rect, requiresClipToRect);
-    m_secondaryContext.fillRect(rect, requiresClipToRect);
+    m_primaryContext.fillRect(rect);
+    m_secondaryContext.fillRect(rect);
 
     VERIFY_STATE_SYNCHRONIZATION();
 }
@@ -215,10 +210,10 @@ void BifurcatedGraphicsContext::fillRect(const FloatRect& rect, Gradient& gradie
     VERIFY_STATE_SYNCHRONIZATION();
 }
 
-void BifurcatedGraphicsContext::fillRect(const FloatRect& rect, Gradient& gradient, const AffineTransform& gradientSpaceTransform, RequiresClipToRect requiresClipToRect)
+void BifurcatedGraphicsContext::fillRect(const FloatRect& rect, Gradient& gradient, const AffineTransform& gradientSpaceTransform)
 {
-    m_primaryContext.fillRect(rect, gradient, gradientSpaceTransform, requiresClipToRect);
-    m_secondaryContext.fillRect(rect, gradient, gradientSpaceTransform, requiresClipToRect);
+    m_primaryContext.fillRect(rect, gradient, gradientSpaceTransform);
+    m_secondaryContext.fillRect(rect, gradient, gradientSpaceTransform);
 
     VERIFY_STATE_SYNCHRONIZATION();
 }

@@ -44,9 +44,4 @@ enum class DOMPasteAccessResponse : uint8_t {
     GrantedForGesture
 };
 
-enum class DOMPasteRequiresInteraction : bool {
-    No,
-    Yes
-};
-
 } // namespace WebCore

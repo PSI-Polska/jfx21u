@@ -29,19 +29,19 @@
 #include "ClientOrigin.h"
 #include "Document.h"
 #include "EventNames.h"
+#include "FeaturePolicy.h"
 #include "FrameDestructionObserverInlines.h"
 #include "Page.h"
-#include "PermissionsPolicy.h"
 #include "SpeechRecognitionError.h"
 #include "SpeechRecognitionErrorEvent.h"
 #include "SpeechRecognitionEvent.h"
 #include "SpeechRecognitionResultData.h"
 #include "SpeechRecognitionResultList.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SpeechRecognition);
+WTF_MAKE_ISO_ALLOCATED_IMPL(SpeechRecognition);
 
 Ref<SpeechRecognition> SpeechRecognition::create(Document& document)
 {
@@ -78,7 +78,7 @@ ExceptionOr<void> SpeechRecognition::startRecognition()
         return Exception { ExceptionCode::UnknownError, "Recognition is not in a valid frame"_s };
 
     auto optionalFrameIdentifier = document->frameID();
-    if (!PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Microphone, document.get(), PermissionsPolicy::ShouldReportViolation::No)) {
+    if (!isFeaturePolicyAllowedByDocumentAndAllOwners(FeaturePolicy::Type::Microphone, document.get(), LogFeaturePolicyFailure::No)) {
         didError({ SpeechRecognitionErrorType::NotAllowed, "Permission is denied"_s });
         return { };
     }
@@ -105,6 +105,11 @@ void SpeechRecognition::abortRecognition()
 
     m_connection->abort(identifier());
     m_state = State::Aborting;
+}
+
+const char* SpeechRecognition::activeDOMObjectName() const
+{
+    return "SpeechRecognition";
 }
 
 void SpeechRecognition::stop()
@@ -207,11 +212,8 @@ void SpeechRecognition::didEnd()
     queueTaskToDispatchEvent(*this, TaskSource::Speech, Event::create(eventNames().endEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
-SpeechRecognition::~SpeechRecognition() = default;
-
-bool SpeechRecognition::virtualHasPendingActivity() const
+SpeechRecognition::~SpeechRecognition()
 {
-    return m_state != State::Inactive && hasEventListeners();
 }
 
 } // namespace WebCore

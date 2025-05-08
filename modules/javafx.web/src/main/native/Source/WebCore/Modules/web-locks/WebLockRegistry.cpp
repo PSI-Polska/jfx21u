@@ -32,6 +32,7 @@
 #include <wtf/CompletionHandler.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RobinHoodHashMap.h>
+#include <wtf/text/StringConcatenateNumbers.h>
 
 namespace WebCore {
 

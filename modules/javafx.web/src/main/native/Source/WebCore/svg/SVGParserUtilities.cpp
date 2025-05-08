@@ -281,7 +281,7 @@ std::optional<HashSet<String>> parseGlyphName(StringView string)
             while (inputStart < inputEnd && isASCIIWhitespace(*inputEnd))
                 --inputEnd;
 
-            values.add(String({ inputStart, static_cast<size_t>(inputEnd - inputStart + 1) }));
+            values.add(String(inputStart, inputEnd - inputStart + 1));
             skipOptionalSVGSpacesOrDelimiter(buffer, ',');
         }
         return values;
@@ -289,9 +289,8 @@ std::optional<HashSet<String>> parseGlyphName(StringView string)
 
 }
 
-template<typename CharacterType> static std::optional<UnicodeRange> parseUnicodeRange(std::span<const CharacterType> span)
+template<typename CharacterType> static std::optional<UnicodeRange> parseUnicodeRange(StringParsingBuffer<CharacterType> buffer)
 {
-    StringParsingBuffer buffer { span };
     unsigned length = buffer.lengthRemaining();
     if (length < 2 || buffer[0] != 'U' || buffer[1] != '+')
         return std::nullopt;
@@ -379,10 +378,10 @@ std::optional<std::pair<UnicodeRanges, HashSet<String>>> parseKerningUnicodeStri
                 break;
 
             // Try to parse unicode range first
-            if (auto range = parseUnicodeRange(std::span { inputStart, buffer.position() }))
+            if (auto range = parseUnicodeRange(StringParsingBuffer { inputStart, buffer.position() }))
                 rangeList.append(WTFMove(*range));
             else
-                stringList.add(String({ inputStart, buffer.position() }));
+                stringList.add(String(inputStart, buffer.position() - inputStart));
 
             if (buffer.atEnd())
                 break;

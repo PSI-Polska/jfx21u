@@ -37,13 +37,13 @@
 #include "RenderTable.h"
 #include "RenderTableCaption.h"
 #include "RenderTableCell.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderTableCol);
+WTF_MAKE_ISO_ALLOCATED_IMPL(RenderTableCol);
 
 RenderTableCol::RenderTableCol(Element& element, RenderStyle&& style)
     : RenderBox(Type::TableCol, element, WTFMove(style))
@@ -60,8 +60,6 @@ RenderTableCol::RenderTableCol(Document& document, RenderStyle&& style)
     setInline(true);
     ASSERT(isRenderTableCol());
 }
-
-RenderTableCol::~RenderTableCol() = default;
 
 void RenderTableCol::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
@@ -106,15 +104,15 @@ void RenderTableCol::updateFromElement()
         setNeedsLayoutAndPrefWidthsRecalc();
 }
 
-void RenderTableCol::insertedIntoTree()
+void RenderTableCol::insertedIntoTree(IsInternalMove isInternalMove)
 {
-    RenderBox::insertedIntoTree();
+    RenderBox::insertedIntoTree(isInternalMove);
     table()->addColumn(this);
 }
 
-void RenderTableCol::willBeRemovedFromTree()
+void RenderTableCol::willBeRemovedFromTree(IsInternalMove isInternalMove)
 {
-    RenderBox::willBeRemovedFromTree();
+    RenderBox::willBeRemovedFromTree(isInternalMove);
     if (auto* table = this->table()) {
         // We only need to invalidate the column cache when only individual columns are being removed (as opposed to when the entire table is being collapsed).
         table->invalidateColumns();
@@ -157,8 +155,6 @@ auto RenderTableCol::rectsForRepaintingAfterLayout(const RenderLayerModelObject*
 void RenderTableCol::imageChanged(WrappedImagePtr, const IntRect*)
 {
     // FIXME: Repaint only the rect the image paints in.
-    if (!parent())
-        return;
     repaint();
 }
 

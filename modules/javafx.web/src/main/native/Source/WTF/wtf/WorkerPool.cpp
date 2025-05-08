@@ -71,7 +71,7 @@ public:
         return m_pool.shouldSleep(locker);
     }
 
-    ASCIILiteral name() const final
+    const char* name() const final
     {
         return m_pool.name();
     }

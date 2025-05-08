@@ -25,15 +25,14 @@
 
 #include "config.h"
 #include "ApplePayContactField.h"
-#include "ApplePaySessionPaymentRequest.h"
 
 #if ENABLE(APPLE_PAY)
 
 namespace WebCore {
 
-ExceptionOr<ApplePaySessionPaymentRequestContactFields> convertAndValidate(unsigned version, const Vector<ApplePayContactField>& contactFields)
+ExceptionOr<ApplePaySessionPaymentRequest::ContactFields> convertAndValidate(unsigned version, const Vector<ApplePayContactField>& contactFields)
 {
-    ApplePaySessionPaymentRequestContactFields result;
+    ApplePaySessionPaymentRequest::ContactFields result;
 
     for (auto& contactField : contactFields) {
         switch (contactField) {

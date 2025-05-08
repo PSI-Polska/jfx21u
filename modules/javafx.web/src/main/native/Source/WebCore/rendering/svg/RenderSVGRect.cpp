@@ -29,14 +29,15 @@
 #include "config.h"
 #include "RenderSVGRect.h"
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "RenderSVGShapeInlines.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGRectElement.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderSVGRect);
+WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGRect);
 
 RenderSVGRect::RenderSVGRect(SVGRectElement& element, RenderStyle&& style)
     : RenderSVGShape(Type::SVGRect, element, WTFMove(style))
@@ -60,17 +61,16 @@ void RenderSVGRect::updateShapeFromElement()
     m_strokeBoundingBox = std::nullopt;
     m_approximateStrokeBoundingBox = std::nullopt;
 
-    Ref rectElement = this->rectElement();
-    SVGLengthContext lengthContext(rectElement.ptr());
+    SVGLengthContext lengthContext(&rectElement());
     FloatSize boundingBoxSize(lengthContext.valueForLength(style().width(), SVGLengthMode::Width), lengthContext.valueForLength(style().height(), SVGLengthMode::Height));
 
     // Spec: "A negative value is illegal. A value of zero disables rendering of the element."
     if (boundingBoxSize.isEmpty())
         return;
 
-    Ref svgStyle = style().svgStyle();
-    if (lengthContext.valueForLength(svgStyle->rx(), SVGLengthMode::Width) > 0
-        || lengthContext.valueForLength(svgStyle->ry(), SVGLengthMode::Height) > 0)
+    auto& svgStyle = style().svgStyle();
+    if (lengthContext.valueForLength(svgStyle.rx(), SVGLengthMode::Width) > 0
+        || lengthContext.valueForLength(svgStyle.ry(), SVGLengthMode::Height) > 0)
         m_shapeType = ShapeType::RoundedRectangle;
     else
         m_shapeType = ShapeType::Rectangle;
@@ -81,17 +81,17 @@ void RenderSVGRect::updateShapeFromElement()
         return;
     }
 
-    m_fillBoundingBox = FloatRect(FloatPoint(lengthContext.valueForLength(svgStyle->x(), SVGLengthMode::Width),
-        lengthContext.valueForLength(svgStyle->y(), SVGLengthMode::Height)),
+    m_fillBoundingBox = FloatRect(FloatPoint(lengthContext.valueForLength(svgStyle.x(), SVGLengthMode::Width),
+        lengthContext.valueForLength(svgStyle.y(), SVGLengthMode::Height)),
         boundingBoxSize);
 
     auto strokeBoundingBox = m_fillBoundingBox;
-    if (svgStyle->hasStroke())
+    if (svgStyle.hasStroke())
         strokeBoundingBox.inflate(this->strokeWidth() / 2);
 
 #if USE(CG)
     // CoreGraphics can inflate the stroke by 1px when drawing a rectangle with antialiasing disabled at non-integer coordinates, we need to compensate.
-    if (svgStyle->shapeRendering() == ShapeRendering::CrispEdges)
+    if (svgStyle.shapeRendering() == ShapeRendering::CrispEdges)
         strokeBoundingBox.inflate(1);
 #endif
 
@@ -204,3 +204,5 @@ bool RenderSVGRect::isRenderingDisabled() const
 }
 
 }
+
+#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

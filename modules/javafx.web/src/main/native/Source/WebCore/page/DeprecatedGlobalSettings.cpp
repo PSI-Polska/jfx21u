@@ -38,10 +38,6 @@
 #include "MediaSessionManagerCocoa.h"
 #endif
 
-#if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/DeprecatedGlobalSettingsAdditions.cpp>)
-#import <WebKitAdditions/DeprecatedGlobalSettingsAdditions.cpp>
-#endif
-
 namespace WebCore {
 
 DeprecatedGlobalSettings& DeprecatedGlobalSettings::shared()
@@ -165,18 +161,5 @@ bool DeprecatedGlobalSettings::allowsAnySSLCertificate()
 {
     return shared().m_allowsAnySSLCertificate;
 }
-
-#if ENABLE(WEB_PUSH_NOTIFICATIONS)
-
-bool DeprecatedGlobalSettings::builtInNotificationsEnabled()
-{
-#if defined(DEPRECATED_GLOBAL_SETTINGS_BUILT_IN_NOTIFICATIONS_ENABLED_ADDITIONS)
-    DEPRECATED_GLOBAL_SETTINGS_BUILT_IN_NOTIFICATIONS_ENABLED_ADDITIONS;
-#else
-    return shared().m_builtInNotificationsEnabled;
-#endif
-}
-
-#endif
 
 } // namespace WebCore

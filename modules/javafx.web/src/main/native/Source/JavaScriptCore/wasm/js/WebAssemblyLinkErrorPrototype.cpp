@@ -31,9 +31,16 @@
 #include "AuxiliaryBarrierInlines.h"
 #include "JSCInlines.h"
 
+#include "WebAssemblyLinkErrorPrototype.lut.h"
+
 namespace JSC {
 
-const ClassInfo WebAssemblyLinkErrorPrototype::s_info = { "WebAssembly.LinkError"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(WebAssemblyLinkErrorPrototype) };
+const ClassInfo WebAssemblyLinkErrorPrototype::s_info = { "WebAssembly.LinkError"_s, &Base::s_info, &prototypeTableWebAssemblyLinkError, nullptr, CREATE_METHOD_TABLE(WebAssemblyLinkErrorPrototype) };
+
+/* Source for WebAssemblyLinkErrorPrototype.lut.h
+ @begin prototypeTableWebAssemblyLinkError
+ @end
+ */
 
 WebAssemblyLinkErrorPrototype* WebAssemblyLinkErrorPrototype::create(VM& vm, JSGlobalObject*, Structure* structure)
 {

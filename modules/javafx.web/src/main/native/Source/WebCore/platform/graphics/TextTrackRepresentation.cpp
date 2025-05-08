@@ -38,7 +38,6 @@ public:
     void update() final { }
     PlatformLayer* platformLayer() final { return nullptr; }
     void setContentScale(float) final { }
-    void setBounds(const IntRect&) final { }
     IntRect bounds() const final { return IntRect(); }
     void setHidden(bool) const final { }
 };

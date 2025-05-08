@@ -45,7 +45,7 @@ public:
         if (!m_counterVector.isEmpty() || !counter.length())
             return m_counterVector;
 
-        m_counterVector.append(counter.span());
+        m_counterVector.append(counter.data(), counter.length());
         return m_counterVector;
     }
 

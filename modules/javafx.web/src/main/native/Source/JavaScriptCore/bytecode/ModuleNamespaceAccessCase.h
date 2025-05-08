@@ -50,6 +50,8 @@ public:
 private:
     ModuleNamespaceAccessCase(VM&, JSCell* owner, CacheableIdentifier, JSModuleNamespaceObject*, JSModuleEnvironment*, ScopeOffset);
 
+    Ref<AccessCase> cloneImpl() const;
+
     WriteBarrier<JSModuleNamespaceObject> m_moduleNamespaceObject;
     WriteBarrier<JSModuleEnvironment> m_moduleEnvironment;
     ScopeOffset m_scopeOffset;

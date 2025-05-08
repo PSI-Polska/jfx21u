@@ -37,7 +37,7 @@
 #include "MediaQueryParser.h"
 #include "MediaQueryParserContext.h"
 #include "NodeName.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 #if ENABLE(VIDEO)
 #include "HTMLMediaElement.h"
@@ -49,7 +49,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLSourceElement);
+WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLSourceElement);
 
 using namespace HTMLNames;
 
@@ -149,10 +149,9 @@ bool HTMLSourceElement::isURLAttribute(const Attribute& attribute) const
     return attribute.name() == srcAttr || HTMLElement::isURLAttribute(attribute);
 }
 
-bool HTMLSourceElement::attributeContainsURL(const Attribute& attribute) const
+const char* HTMLSourceElement::activeDOMObjectName() const
 {
-    return attribute.name() == srcsetAttr
-        || HTMLElement::attributeContainsURL(attribute);
+    return "HTMLSourceElement";
 }
 
 void HTMLSourceElement::stop()
@@ -238,7 +237,7 @@ Ref<Element> HTMLSourceElement::cloneElementWithoutAttributesAndChildren(Documen
 void HTMLSourceElement::copyNonAttributePropertiesFromElement(const Element& source)
 {
 #if ENABLE(ATTACHMENT_ELEMENT)
-    auto& sourceElement = downcast<HTMLSourceElement>(source);
+    auto& sourceElement = checkedDowncast<HTMLSourceElement>(source);
     copyAttachmentAssociatedPropertiesFromElement(sourceElement);
 #endif
     Element::copyNonAttributePropertiesFromElement(source);

@@ -57,10 +57,10 @@ ExceptionOr<void> DOMTokenList::validateToken(StringView token)
     return { };
 }
 
-ExceptionOr<void> DOMTokenList::validateTokens(std::span<const AtomString> tokens)
+ExceptionOr<void> DOMTokenList::validateTokens(const AtomString* tokens, size_t length)
 {
-    for (auto& token : tokens) {
-        auto result = validateToken(token);
+    for (size_t i = 0; i < length; ++i) {
+        auto result = validateToken(tokens[i]);
         if (result.hasException())
             return result;
     }
@@ -72,20 +72,20 @@ bool DOMTokenList::contains(const AtomString& token) const
     return tokens().contains(token);
 }
 
-inline ExceptionOr<void> DOMTokenList::addInternal(std::span<const AtomString> newTokens)
+inline ExceptionOr<void> DOMTokenList::addInternal(const AtomString* newTokens, size_t length)
 {
     // This is usually called with a single token.
     Vector<AtomString, 1> uniqueNewTokens;
-    uniqueNewTokens.reserveInitialCapacity(newTokens.size());
+    uniqueNewTokens.reserveInitialCapacity(length);
 
     auto& tokens = this->tokens();
 
-    for (auto& newToken : newTokens) {
-        auto result = validateToken(newToken);
+    for (size_t i = 0; i < length; ++i) {
+        auto result = validateToken(newTokens[i]);
         if (result.hasException())
             return result;
-        if (!tokens.contains(newToken) && !uniqueNewTokens.contains(newToken))
-            uniqueNewTokens.append(newToken);
+        if (!tokens.contains(newTokens[i]) && !uniqueNewTokens.contains(newTokens[i]))
+            uniqueNewTokens.append(newTokens[i]);
     }
 
     if (!uniqueNewTokens.isEmpty())
@@ -98,23 +98,23 @@ inline ExceptionOr<void> DOMTokenList::addInternal(std::span<const AtomString> n
 
 ExceptionOr<void> DOMTokenList::add(const FixedVector<AtomString>& tokens)
 {
-    return addInternal(tokens);
+    return addInternal(tokens.data(), tokens.size());
 }
 
 ExceptionOr<void> DOMTokenList::add(const AtomString& token)
 {
-    return addInternal({ &token, 1 });
+    return addInternal(&token, 1);
 }
 
-inline ExceptionOr<void> DOMTokenList::removeInternal(std::span<const AtomString> tokensToRemove)
+inline ExceptionOr<void> DOMTokenList::removeInternal(const AtomString* tokensToRemove, size_t length)
 {
-    auto result = validateTokens(tokensToRemove);
+    auto result = validateTokens(tokensToRemove, length);
     if (result.hasException())
         return result;
 
     auto& tokens = this->tokens();
-    for (auto& tokenToRemove : tokensToRemove)
-        tokens.removeFirst(tokenToRemove);
+    for (size_t i = 0; i < length; ++i)
+        tokens.removeFirst(tokensToRemove[i]);
 
     updateAssociatedAttributeFromTokens();
 
@@ -123,12 +123,12 @@ inline ExceptionOr<void> DOMTokenList::removeInternal(std::span<const AtomString
 
 ExceptionOr<void> DOMTokenList::remove(const FixedVector<AtomString>& tokens)
 {
-    return removeInternal(tokens);
+    return removeInternal(tokens.data(), tokens.size());
 }
 
 ExceptionOr<void> DOMTokenList::remove(const AtomString& token)
 {
-    return removeInternal({ &token, 1 });
+    return removeInternal(&token, 1);
 }
 
 ExceptionOr<bool> DOMTokenList::toggle(const AtomString& token, std::optional<bool> force)
@@ -252,6 +252,15 @@ void DOMTokenList::updateTokensFromAttributeValue(const AtomString& value)
 
     m_tokens.shrinkToFit();
     m_tokensNeedUpdating = false;
+}
+
+void DOMTokenList::associatedAttributeValueChanged(const AtomString&)
+{
+    // Do not reset the DOMTokenList value if the attribute value was changed by us.
+    if (m_inUpdateAssociatedAttributeFromTokens)
+        return;
+
+    m_tokensNeedUpdating = true;
 }
 
 // https://dom.spec.whatwg.org/#concept-dtl-update

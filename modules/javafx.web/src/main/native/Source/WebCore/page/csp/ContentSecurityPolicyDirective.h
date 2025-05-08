@@ -26,7 +26,6 @@
 
 #pragma once
 
-#include <wtf/text/MakeString.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -38,7 +37,7 @@ class ContentSecurityPolicyDirective {
 public:
     ContentSecurityPolicyDirective(const ContentSecurityPolicyDirectiveList& directiveList, const String& name, const String& value)
         : m_name(name)
-        , m_text(makeString(name, ' ', value))
+        , m_text(name + ' ' + value)
         , m_directiveList(directiveList)
     {
     }

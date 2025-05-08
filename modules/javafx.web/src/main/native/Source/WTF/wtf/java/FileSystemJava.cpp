@@ -521,15 +521,9 @@ bool fileIDsAreEqual(std::optional<PlatformFileID> a, std::optional<PlatformFile
     return true;
 }
 
-int overwriteEntireFile(const String& path, std::span<const uint8_t>)
+int overwriteEntireFile(const String& path, std::span<uint8_t> span)
 {
-    fprintf(stderr, "overwriteEntireFile(const String& path, std::span<const uint8_t>) NOT IMPLEMENTED\n");
-    return 0;
-}
-
-int64_t writeToFile(PlatformFileHandle, std::span<const uint8_t> data)
-{
-     fprintf(stderr, "writeToFile(PlatformFileHandle, std::span<const uint8_t> data) NOT IMPLEMENTED\n");
+    fprintf(stderr, "writeToFile(PlatformFileHandle, std::span<const uint8_t> data) NOT IMPLEMENTED\n");
      return 0;
 }
 

@@ -34,14 +34,12 @@ class LegacyRenderSVGResourceContainer;
 class SVGSVGElement;
 
 class LegacyRenderSVGRoot final : public RenderReplaced {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(LegacyRenderSVGRoot);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LegacyRenderSVGRoot);
+    WTF_MAKE_ISO_ALLOCATED(LegacyRenderSVGRoot);
 public:
     LegacyRenderSVGRoot(SVGSVGElement&, RenderStyle&&);
     virtual ~LegacyRenderSVGRoot();
 
     SVGSVGElement& svgSVGElement() const;
-    Ref<SVGSVGElement> protectedSVGSVGElement() const;
 
     bool isEmbeddedThroughSVGImage() const;
     bool isEmbeddedThroughFrameContainingSVGDocument() const;
@@ -52,6 +50,7 @@ public:
     bool isLayoutSizeChanged() const { return m_isLayoutSizeChanged; }
     bool isInLayout() const { return m_inLayout; }
     void setNeedsBoundariesUpdate() override { m_needsBoundariesOrTransformUpdate = true; }
+    bool needsBoundariesUpdate() override { return m_needsBoundariesOrTransformUpdate; }
     void setNeedsTransformUpdate() override { m_needsBoundariesOrTransformUpdate = true; }
 
     IntSize containerSize() const { return m_containerSize; }
@@ -79,8 +78,8 @@ private:
 
     void willBeDestroyed() override;
 
-    void insertedIntoTree() override;
-    void willBeRemovedFromTree() override;
+    void insertedIntoTree(IsInternalMove) override;
+    void willBeRemovedFromTree(IsInternalMove) override;
 
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
 

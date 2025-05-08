@@ -49,12 +49,12 @@
 #include "RawDataDocumentParser.h"
 #include "RenderElement.h"
 #include "Settings.h"
-#include <wtf/TZoneMallocInlines.h>
-#include <wtf/text/MakeString.h>
+#include <wtf/IsoMallocInlines.h>
+#include <wtf/text/StringConcatenateNumbers.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ImageDocument);
+WTF_MAKE_ISO_ALLOCATED_IMPL(ImageDocument);
 
 using namespace HTMLNames;
 
@@ -92,13 +92,12 @@ private:
 
     ImageDocument& document() const;
 
-    void appendBytes(DocumentWriter&, std::span<const uint8_t>) override;
+    void appendBytes(DocumentWriter&, const uint8_t*, size_t) override;
     void finish() override;
 };
 
 class ImageDocumentElement final : public HTMLImageElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_INLINE(ImageDocumentElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ImageDocumentElement);
+    WTF_MAKE_ISO_ALLOCATED_INLINE(ImageDocumentElement);
 public:
     static Ref<ImageDocumentElement> create(ImageDocument&);
 
@@ -199,7 +198,7 @@ inline ImageDocument& ImageDocumentParser::document() const
     return downcast<ImageDocument>(*RawDataDocumentParser::document());
 }
 
-void ImageDocumentParser::appendBytes(DocumentWriter&, std::span<const uint8_t>)
+void ImageDocumentParser::appendBytes(DocumentWriter&, const uint8_t*, size_t)
 {
     document().updateDuringParsing();
 }
@@ -231,6 +230,7 @@ void ImageDocument::createDocumentStructure()
 {
     auto rootElement = HTMLHtmlElement::create(*this);
     appendChild(rootElement);
+    rootElement->insertedByParser();
     rootElement->setInlineStyleProperty(CSSPropertyHeight, 100, CSSUnitType::CSS_PERCENTAGE);
 
     if (RefPtr localFrame = frame())
@@ -289,7 +289,7 @@ void ImageDocument::imageUpdated()
 #if PLATFORM(IOS_FAMILY)
         FloatSize screenSize = page()->chrome().screenSize();
         if (imageSize.width() > screenSize.width())
-            processViewport(makeString("width="_s, imageSize.width().toInt(), ",viewport-fit=cover"_s), ViewportArguments::Type::ImageDocument);
+            processViewport(makeString("width=", imageSize.width().toInt(), ",viewport-fit=cover"), ViewportArguments::Type::ImageDocument);
 
         if (page())
             page()->chrome().client().imageOrMediaDocumentSizeChanged(IntSize(imageSize.width(), imageSize.height()));
@@ -428,7 +428,7 @@ void ImageDocument::imageClicked(int x, int y)
 void ImageEventListener::handleEvent(ScriptExecutionContext&, Event& event)
 {
     RefPtr document = m_document.get();
-    if (auto* mouseEvent = dynamicDowncast<MouseEvent>(event); mouseEvent && isAnyClick(event) && document)
+    if (auto* mouseEvent = dynamicDowncast<MouseEvent>(event); mouseEvent && event.type() == eventNames().clickEvent && document)
         document->imageClicked(mouseEvent->offsetX(), mouseEvent->offsetY());
 }
 

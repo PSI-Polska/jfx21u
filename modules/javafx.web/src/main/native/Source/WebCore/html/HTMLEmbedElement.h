@@ -27,8 +27,7 @@
 namespace WebCore {
 
 class HTMLEmbedElement final : public HTMLPlugInImageElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLEmbedElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLEmbedElement);
+    WTF_MAKE_ISO_ALLOCATED(HTMLEmbedElement);
 public:
     static Ref<HTMLEmbedElement> create(Document&);
     static Ref<HTMLEmbedElement> create(const QualifiedName&, Document&);

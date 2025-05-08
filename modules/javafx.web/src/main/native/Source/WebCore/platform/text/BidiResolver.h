@@ -174,6 +174,7 @@ public:
     unsigned m_stop;
     unsigned char m_level;
     bool m_override : 1;
+    bool m_hasHyphen : 1; // Used by BidiRun subclass which is a layering violation but enables us to save 8 bytes per object on 64-bit.
 };
 
 enum VisualDirectionOverride {

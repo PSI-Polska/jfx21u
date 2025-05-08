@@ -58,7 +58,7 @@ public:
             return nullptr;
 
         ASSERT(m_buffer->isContiguous());
-        return downcast<SharedBuffer>(*m_buffer).span().data();
+        return downcast<SharedBuffer>(*m_buffer).data();
     }
 
     void lockUnderlyingBuffer() final

@@ -30,14 +30,11 @@
 #include "GPUPresentationContextDescriptor.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSGPUAdapter.h"
-#include "JSWGSLLanguageFeatures.h"
-#include "WGSLLanguageFeatures.h"
 
 namespace WebCore {
 
 GPU::GPU(Ref<WebGPU::GPU>&& backing)
     : m_backing(WTFMove(backing))
-    , m_wgslLanguageFeatures(WGSLLanguageFeatures::create())
 {
 }
 
@@ -67,30 +64,19 @@ void GPU::requestAdapter(const std::optional<GPURequestAdapterOptions>& options,
     });
 }
 
-GPUTextureFormat GPU::getPreferredCanvasFormat() const
+GPUTextureFormat GPU::getPreferredCanvasFormat()
 {
     return GPUTextureFormat::Bgra8unorm;
 }
 
-Ref<WGSLLanguageFeatures> GPU::wgslLanguageFeatures() const
+Ref<GPUPresentationContext> GPU::createPresentationContext(const GPUPresentationContextDescriptor& presentationContextDescriptor)
 {
-    return m_wgslLanguageFeatures;
+    return GPUPresentationContext::create(m_backing->createPresentationContext(presentationContextDescriptor.convertToBacking()));
 }
 
-RefPtr<GPUPresentationContext> GPU::createPresentationContext(const GPUPresentationContextDescriptor& presentationContextDescriptor)
+Ref<GPUCompositorIntegration> GPU::createCompositorIntegration()
 {
-    RefPtr context = m_backing->createPresentationContext(presentationContextDescriptor.convertToBacking());
-    if (!context)
-        return nullptr;
-    return GPUPresentationContext::create(context.releaseNonNull());
-}
-
-RefPtr<GPUCompositorIntegration> GPU::createCompositorIntegration()
-{
-    RefPtr integration = m_backing->createCompositorIntegration();
-    if (!integration)
-        return nullptr;
-    return GPUCompositorIntegration::create(integration.releaseNonNull());
+    return GPUCompositorIntegration::create(m_backing->createCompositorIntegration());
 }
 
 } // namespace WebCore

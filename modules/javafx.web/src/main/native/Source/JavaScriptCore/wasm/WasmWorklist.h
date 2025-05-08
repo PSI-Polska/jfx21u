@@ -60,6 +60,7 @@ public:
         Compilation,
         Preparation
     };
+    const char* priorityString(Priority);
 
     void dump(PrintStream&) const;
 

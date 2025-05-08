@@ -30,7 +30,6 @@
 #include "CSSRayValue.h"
 
 #include "CSSPrimitiveValueMappings.h"
-#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 

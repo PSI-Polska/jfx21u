@@ -49,19 +49,19 @@ class Document;
 class MediaStream final
     : public EventTarget
     , public ActiveDOMObject
-    , public MediaStreamPrivateObserver
+    , public MediaStreamPrivate::Observer
     , private MediaCanStartListener
 #if !RELEASE_LOG_DISABLED
     , private LoggerHelper
 #endif
     , public RefCounted<MediaStream> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(MediaStream, WEBCORE_EXPORT);
+    WTF_MAKE_ISO_ALLOCATED(MediaStream);
 public:
     static Ref<MediaStream> create(Document&);
     static Ref<MediaStream> create(Document&, MediaStream&);
-    static Ref<MediaStream> create(Document&, const Vector<Ref<MediaStreamTrack>>&);
+    static Ref<MediaStream> create(Document&, const Vector<RefPtr<MediaStreamTrack>>&);
     static Ref<MediaStream> create(Document&, Ref<MediaStreamPrivate>&&);
-    WEBCORE_EXPORT virtual ~MediaStream();
+    virtual ~MediaStream();
 
     String id() const { return m_private->id(); }
 
@@ -78,9 +78,9 @@ public:
 
     RefPtr<MediaStream> clone();
 
-    using MediaStreamPrivateObserver::weakPtrFactory;
-    using MediaStreamPrivateObserver::WeakValueType;
-    using MediaStreamPrivateObserver::WeakPtrImplType;
+    using MediaStreamPrivate::Observer::weakPtrFactory;
+    using MediaStreamPrivate::Observer::WeakValueType;
+    using MediaStreamPrivate::Observer::WeakPtrImplType;
 
     bool active() const { return m_isActive; }
     bool muted() const { return m_private->muted(); }
@@ -88,18 +88,16 @@ public:
     template<typename Function> bool hasMatchingTrack(Function&& function) const { return anyOf(m_trackMap.values(), std::forward<Function>(function)); }
 
     MediaStreamPrivate& privateStream() { return m_private.get(); }
-    Ref<MediaStreamPrivate> protectedPrivateStream();
 
     void startProducingData();
     void stopProducingData();
 
     // EventTarget
-    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::MediaStream; }
+    EventTargetInterface eventTargetInterface() const final { return MediaStreamEventTargetInterfaceType; }
     ScriptExecutionContext* scriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
 
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
+    using RefCounted<MediaStream>::ref;
+    using RefCounted<MediaStream>::deref;
 
     void addTrackFromPlatform(Ref<MediaStreamTrack>&&);
 
@@ -114,7 +112,7 @@ protected:
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_private->logger(); }
     WTFLogChannel& logChannel() const final;
-    ASCIILiteral logClassName() const final { return "MediaStream"_s; }
+    const char* logClassName() const final { return "MediaStream"; }
 #endif
 
 private:
@@ -125,7 +123,7 @@ private:
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
-    // MediaStreamPrivateObserver
+    // MediaStreamPrivate::Observer
     void activeStatusChanged() final;
     void didAddTrack(MediaStreamTrackPrivate&) final;
     void didRemoveTrack(MediaStreamTrackPrivate&) final;
@@ -136,8 +134,9 @@ private:
     // MediaCanStartListener
     void mediaCanStart(Document&) final;
 
-    // ActiveDOMObject.
+    // ActiveDOMObject API.
     void stop() final;
+    const char* activeDOMObjectName() const final;
     bool virtualHasPendingActivity() const final;
 
     void updateActiveState();

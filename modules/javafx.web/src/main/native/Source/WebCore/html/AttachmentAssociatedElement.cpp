@@ -41,13 +41,13 @@ void AttachmentAssociatedElement::setAttachmentElement(Ref<HTMLAttachmentElement
     if (auto existingAttachment = attachmentElement())
         existingAttachment->remove();
 
-    attachment->setInlineStyleProperty(CSSPropertyDisplay, CSSValueNone, IsImportant::Yes);
+    attachment->setInlineStyleProperty(CSSPropertyDisplay, CSSValueNone, true);
     asHTMLElement().ensureUserAgentShadowRoot().appendChild(WTFMove(attachment));
 }
 
 RefPtr<HTMLAttachmentElement> AttachmentAssociatedElement::attachmentElement() const
 {
-    if (RefPtr shadowRoot = asHTMLElement().userAgentShadowRoot())
+    if (auto shadowRoot = asHTMLElement().userAgentShadowRoot())
         return childrenOfType<HTMLAttachmentElement>(*shadowRoot).first();
 
     return nullptr;
@@ -78,7 +78,7 @@ void AttachmentAssociatedElement::cloneAttachmentAssociatedElementWithoutAttribu
 {
     if (auto attachment = attachmentElement()) {
         auto attachmentClone = attachment->cloneElementWithoutChildren(targetDocument);
-        clone.setAttachmentElement(downcast<HTMLAttachmentElement>(attachmentClone.get()));
+        clone.setAttachmentElement(checkedDowncast<HTMLAttachmentElement>(attachmentClone.get()));
     }
 }
 

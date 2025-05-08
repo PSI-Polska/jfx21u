@@ -31,7 +31,6 @@
 #include "JSFunction.h"
 #include "JSRemoteFunction.h"
 #include "NativeExecutable.h"
-#include <wtf/text/MakeString.h>
 
 namespace JSC {
 
@@ -59,15 +58,11 @@ inline Structure* JSArrowFunction::createStructure(VM& vm, JSGlobalObject* globa
     return Structure::create(vm, globalObject, prototype, TypeInfo(JSFunctionType, StructureFlags), info());
 }
 
-inline JSFunction* JSFunction::createWithInvalidatedReallocationWatchpoint(VM& vm, JSGlobalObject* globalObject, FunctionExecutable* executable, JSScope* scope)
-{
-    return createWithInvalidatedReallocationWatchpoint(vm, globalObject, executable, scope, selectStructureForNewFuncExp(globalObject, executable));
-}
-
-inline JSFunction* JSFunction::createWithInvalidatedReallocationWatchpoint(VM& vm, JSGlobalObject*, FunctionExecutable* executable, JSScope* scope, Structure* structure)
+inline JSFunction* JSFunction::createWithInvalidatedReallocationWatchpoint(
+    VM& vm, FunctionExecutable* executable, JSScope* scope)
 {
     ASSERT(executable->singleton().hasBeenInvalidated());
-    return createImpl(vm, executable, scope, structure);
+    return createImpl(vm, executable, scope, selectStructureForNewFuncExp(scope->globalObject(), executable));
 }
 
 inline JSFunction::JSFunction(VM& vm, FunctionExecutable* executable, JSScope* scope, Structure* structure)
@@ -161,7 +156,7 @@ inline double JSFunction::originalLength(VM& vm)
 }
 
 template<typename... StringTypes>
-ALWAYS_INLINE String makeNameWithOutOfMemoryCheck(JSGlobalObject* globalObject, ThrowScope& throwScope, ASCIILiteral messagePrefix, StringTypes... strings)
+ALWAYS_INLINE String makeNameWithOutOfMemoryCheck(JSGlobalObject* globalObject, ThrowScope& throwScope, const char* messagePrefix, StringTypes... strings)
 {
     String name = tryMakeString(strings...);
     if (UNLIKELY(!name)) {
@@ -202,10 +197,10 @@ inline JSString* JSFunction::originalName(JSGlobalObject* globalObject)
         name = ecmaName.string();
 
     if (jsExecutable()->isGetter()) {
-        name = makeNameWithOutOfMemoryCheck(globalObject, scope, "Getter "_s, "get "_s, name);
+        name = makeNameWithOutOfMemoryCheck(globalObject, scope, "Getter ", "get ", name);
         RETURN_IF_EXCEPTION(scope, { });
     } else if (jsExecutable()->isSetter()) {
-        name = makeNameWithOutOfMemoryCheck(globalObject, scope, "Setter "_s, "set "_s, name);
+        name = makeNameWithOutOfMemoryCheck(globalObject, scope, "Setter ", "set ", name);
         RETURN_IF_EXCEPTION(scope, { });
     }
     return jsString(vm, WTFMove(name));

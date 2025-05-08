@@ -25,16 +25,14 @@
 #include "DocumentInlines.h"
 #include "FEConvolveMatrix.h"
 #include "NodeName.h"
-#include "SVGDocumentExtensions.h"
 #include "SVGNames.h"
 #include "SVGParserUtilities.h"
-#include <wtf/TZoneMallocInlines.h>
-#include <wtf/text/MakeString.h>
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGFEConvolveMatrixElement);
+WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFEConvolveMatrixElement);
 
 inline SVGFEConvolveMatrixElement::SVGFEConvolveMatrixElement(const QualifiedName& tagName, Document& document)
     : SVGFilterPrimitiveStandardAttributes(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -65,59 +63,59 @@ void SVGFEConvolveMatrixElement::attributeChanged(const QualifiedName& name, con
 {
     switch (name.nodeName()) {
     case AttributeNames::inAttr:
-        Ref { m_in1 }->setBaseValInternal(newValue);
+        m_in1->setBaseValInternal(newValue);
         break;
     case AttributeNames::orderAttr: {
         auto result = parseNumberOptionalNumber(newValue);
         if (result && result->first >= 1 && result->second >= 1) {
-            Ref { m_orderX }->setBaseValInternal(result->first);
-            Ref { m_orderY }->setBaseValInternal(result->second);
+            m_orderX->setBaseValInternal(result->first);
+            m_orderY->setBaseValInternal(result->second);
         } else
-            protectedDocument()->checkedSVGExtensions()->reportWarning(makeString("feConvolveMatrix: problem parsing order=\""_s, newValue, "\". Filtered element will not be displayed."_s));
+            document().accessSVGExtensions().reportWarning("feConvolveMatrix: problem parsing order=\"" + newValue + "\". Filtered element will not be displayed.");
         break;
     }
     case AttributeNames::edgeModeAttr: {
         EdgeModeType propertyValue = SVGPropertyTraits<EdgeModeType>::fromString(newValue);
         if (propertyValue != EdgeModeType::Unknown)
-            Ref { m_edgeMode }->setBaseValInternal<EdgeModeType>(propertyValue);
+            m_edgeMode->setBaseValInternal<EdgeModeType>(propertyValue);
         else
-            protectedDocument()->checkedSVGExtensions()->reportWarning(makeString("feConvolveMatrix: problem parsing edgeMode=\""_s, newValue, "\". Filtered element will not be displayed."_s));
+            document().accessSVGExtensions().reportWarning("feConvolveMatrix: problem parsing edgeMode=\"" + newValue + "\". Filtered element will not be displayed.");
         break;
     }
     case AttributeNames::kernelMatrixAttr:
-        Ref { m_kernelMatrix }->baseVal()->parse(newValue);
+        m_kernelMatrix->baseVal()->parse(newValue);
         break;
     case AttributeNames::divisorAttr:
         if (float divisor = newValue.toFloat())
-            Ref { m_divisor }->setBaseValInternal(divisor);
+            m_divisor->setBaseValInternal(divisor);
         else
-            protectedDocument()->checkedSVGExtensions()->reportWarning(makeString("feConvolveMatrix: problem parsing divisor=\""_s, newValue, "\". Filtered element will not be displayed."_s));
+            document().accessSVGExtensions().reportWarning("feConvolveMatrix: problem parsing divisor=\"" + newValue + "\". Filtered element will not be displayed.");
         break;
     case AttributeNames::biasAttr:
-        Ref { m_bias }->setBaseValInternal(newValue.toFloat());
+        m_bias->setBaseValInternal(newValue.toFloat());
         break;
     case AttributeNames::targetXAttr:
-        Ref { m_targetX }->setBaseValInternal(parseInteger<unsigned>(newValue).value_or(0));
+        m_targetX->setBaseValInternal(parseInteger<unsigned>(newValue).value_or(0));
         break;
     case AttributeNames::targetYAttr:
-        Ref { m_targetY }->setBaseValInternal(parseInteger<unsigned>(newValue).value_or(0));
+        m_targetY->setBaseValInternal(parseInteger<unsigned>(newValue).value_or(0));
         break;
     case AttributeNames::kernelUnitLengthAttr: {
         auto result = parseNumberOptionalNumber(newValue);
         if (result && result->first > 0 && result->second > 0) {
-            Ref { m_kernelUnitLengthX }->setBaseValInternal(result->first);
-            Ref { m_kernelUnitLengthY }->setBaseValInternal(result->second);
+            m_kernelUnitLengthX->setBaseValInternal(result->first);
+            m_kernelUnitLengthY->setBaseValInternal(result->second);
         } else
-            protectedDocument()->checkedSVGExtensions()->reportWarning(makeString("feConvolveMatrix: problem parsing kernelUnitLength=\""_s, newValue, "\". Filtered element will not be displayed."_s));
+            document().accessSVGExtensions().reportWarning("feConvolveMatrix: problem parsing kernelUnitLength=\"" + newValue + "\". Filtered element will not be displayed.");
         break;
     }
     case AttributeNames::preserveAlphaAttr:
         if (newValue == trueAtom())
-            Ref { m_preserveAlpha }->setBaseValInternal(true);
+            m_preserveAlpha->setBaseValInternal(true);
         else if (newValue == falseAtom())
-            Ref { m_preserveAlpha }->setBaseValInternal(false);
+            m_preserveAlpha->setBaseValInternal(false);
         else
-            protectedDocument()->checkedSVGExtensions()->reportWarning(makeString("feConvolveMatrix: problem parsing preserveAlphaAttr=\""_s, newValue, "\". Filtered element will not be displayed."_s));
+            document().accessSVGExtensions().reportWarning("feConvolveMatrix: problem parsing preserveAlphaAttr=\"" + newValue + "\". Filtered element will not be displayed.");
         break;
     default:
         break;
@@ -152,15 +150,15 @@ bool SVGFEConvolveMatrixElement::setFilterEffectAttribute(FilterEffect& filterEf
 
 void SVGFEConvolveMatrixElement::setOrder(float x, float y)
 {
-    Ref { m_orderX }->setBaseValInternal(x);
-    Ref { m_orderY }->setBaseValInternal(y);
+    m_orderX->setBaseValInternal(x);
+    m_orderY->setBaseValInternal(y);
     updateSVGRendererForElementChange();
 }
 
 void SVGFEConvolveMatrixElement::setKernelUnitLength(float x, float y)
 {
-    Ref { m_kernelUnitLengthX }->setBaseValInternal(x);
-    Ref { m_kernelUnitLengthY }->setBaseValInternal(y);
+    m_kernelUnitLengthX->setBaseValInternal(x);
+    m_kernelUnitLengthY->setBaseValInternal(y);
     updateSVGRendererForElementChange();
 }
 

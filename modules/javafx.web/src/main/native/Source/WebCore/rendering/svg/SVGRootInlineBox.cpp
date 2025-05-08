@@ -35,11 +35,11 @@
 #include "SVGNames.h"
 #include "SVGRenderingContext.h"
 #include "SVGTextPositioningElement.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGRootInlineBox);
+WTF_MAKE_ISO_ALLOCATED_IMPL(SVGRootInlineBox);
 
 SVGRootInlineBox::SVGRootInlineBox(RenderSVGText& renderSVGText)
     : LegacyRootInlineBox(renderSVGText)
@@ -57,6 +57,7 @@ void SVGRootInlineBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffse
     ASSERT(paintInfo.phase == PaintPhase::Foreground || paintInfo.phase == PaintPhase::Selection);
     ASSERT(!paintInfo.context().paintingDisabled());
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (renderer().document().settings().layerBasedSVGEngineEnabled()) {
         auto overflowRect(visualOverflowRect(lineTop, lineBottom));
         flipForWritingMode(overflowRect);
@@ -65,6 +66,10 @@ void SVGRootInlineBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffse
         if (!paintInfo.rect.intersects(overflowRect))
             return;
     }
+#else
+    UNUSED_PARAM(lineTop);
+    UNUSED_PARAM(lineBottom);
+#endif
 
     bool isPrinting = renderSVGText().document().printing();
     bool hasSelection = !isPrinting && selectionState() != RenderObject::HighlightState::None;
@@ -82,6 +87,7 @@ void SVGRootInlineBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffse
         }
     }
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (renderer().document().settings().layerBasedSVGEngineEnabled()) {
         for (auto* child = firstChild(); child; child = child->nextOnLine()) {
             if (child->renderer().isRenderText() || !child->boxModelObject()->hasSelfPaintingLayer())
@@ -90,6 +96,7 @@ void SVGRootInlineBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffse
 
         return;
     }
+#endif
 
     SVGRenderingContext renderingContext(renderSVGText(), paintInfo, SVGRenderingContext::SaveGraphicsContext);
     if (renderingContext.isRenderingPrepared()) {
@@ -131,7 +138,7 @@ void SVGRootInlineBox::layoutCharactersInTextBoxes(LegacyInlineFlowBox* start, S
             characterLayout.layoutInlineTextBox(*textBox);
         } else {
             // Skip generated content.
-            RefPtr node = child->renderer().node();
+            Node* node = child->renderer().node();
             if (!node)
                 continue;
 

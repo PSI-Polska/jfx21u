@@ -52,9 +52,9 @@ String CSSLayerBlockRule::cssText() const
 {
     StringBuilder builder;
 
-    builder.append("@layer"_s);
+    builder.append("@layer");
     if (auto name = this->name(); !name.isEmpty())
-        builder.append(' ', name);
+        builder.append(" ", name);
     appendCSSTextForItems(builder);
     return builder.toString();
 }

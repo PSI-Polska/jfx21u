@@ -47,7 +47,7 @@ class DateComponents;
 struct DateTimeChooserParameters;
 
 // A super class of date, datetime, datetime-local, month, time, and week types.
-class BaseDateAndTimeInputType : public InputType, private DateTimeChooserClient, private DateTimeEditElementEditControlOwner {
+class BaseDateAndTimeInputType : public InputType, private DateTimeChooserClient, private DateTimeEditElement::EditControlOwner {
 public:
     bool typeMismatchFor(const String&) const final;
     bool valueMissing(const String&) const final;
@@ -107,7 +107,6 @@ private:
     void setValue(const String&, bool valueChanged, TextFieldEventBehavior, TextControlSetValueSelection) final;
     WallTime valueAsDate() const override;
     ExceptionOr<void> setValueAsDate(WallTime) const override;
-    WallTime accessibilityValueAsDate() const final;
     double valueAsDouble() const final;
     ExceptionOr<void> setValueAsDecimal(const Decimal&, TextFieldEventBehavior) const final;
     Decimal defaultValueForStepUp() const override;
@@ -133,7 +132,7 @@ private:
     void handleFocusEvent(Node* oldFocusedNode, FocusDirection) final;
     bool accessKeyAction(bool sendMouseEvents) final;
 
-    // DateTimeEditElementEditControlOwner functions:
+    // DateTimeEditElement::EditControlOwner functions:
     void didBlurFromControl() final;
     void didChangeValueFromControl() final;
     bool isEditControlOwnerDisabled() const final;

@@ -27,7 +27,6 @@
 #include "IDBKeyRangeData.h"
 
 #include "IDBKey.h"
-#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -100,7 +99,7 @@ bool IDBKeyRangeData::isValid() const
 #if !LOG_DISABLED
 String IDBKeyRangeData::loggingString() const
 {
-    auto result = makeString(lowerOpen ? "( "_s : "[ "_s, lowerKey.loggingString(), ", "_s, upperKey.loggingString(), upperOpen ? " )"_s : " ]"_s);
+    auto result = makeString(lowerOpen ? "( " : "[ ", lowerKey.loggingString(), ", ", upperKey.loggingString(), upperOpen ? " )" : " ]");
     if (result.length() > 400)
         result = makeString(StringView(result).left(397), "..."_s);
 

@@ -33,7 +33,6 @@
 #include "HTMLBRElement.h"
 #include "HTMLElement.h"
 #include "HTMLNames.h"
-#include "HitTestSource.h"
 #include "InlineIteratorBox.h"
 #include "InlineIteratorLineBoxInlines.h"
 #include "InlineIteratorLogicalOrderTraversal.h"
@@ -48,10 +47,12 @@
 #include "TextIterator.h"
 #include "VisibleSelection.h"
 #include <unicode/ubrk.h>
-#include <wtf/text/MakeString.h>
 #include <wtf/text/TextBreakIterator.h>
 
 namespace WebCore {
+
+using namespace HTMLNames;
+using namespace WTF::Unicode;
 
 static Node* previousLeafWithSameEditability(Node* node, EditableType editableType)
 {
@@ -93,7 +94,7 @@ static Position previousLineCandidatePosition(Node* node, const VisiblePosition&
         if (highestEditableRoot(firstPositionInOrBeforeNode(previousNode.get()), editableType) != highestRoot)
             break;
 
-        Position pos = previousNode->hasTagName(HTMLNames::brTag) ? positionBeforeNode(previousNode.get()) :
+        Position pos = previousNode->hasTagName(brTag) ? positionBeforeNode(previousNode.get()) :
             makeDeprecatedLegacyPosition(previousNode.get(), caretMaxOffset(*previousNode));
 
         if (pos.isCandidate())
@@ -264,7 +265,7 @@ static UBreakIterator* wordBreakIteratorForMinOffsetBoundary(const VisiblePositi
     }
     append(string, textBox->originalText());
 
-    return WTF::wordBreakIterator(string.span());
+    return wordBreakIterator(StringView(string.data(), string.size()));
 }
 
 static UBreakIterator* wordBreakIteratorForMaxOffsetBoundary(const VisiblePosition& visiblePosition, InlineIterator::TextBoxIterator textBox,
@@ -288,7 +289,7 @@ static UBreakIterator* wordBreakIteratorForMaxOffsetBoundary(const VisiblePositi
         append(string, nextTextBox->originalText());
     }
 
-    return WTF::wordBreakIterator(string.span());
+    return wordBreakIterator(StringView(string.data(), string.size()));
 }
 
 static bool isLogicalStartOfWord(UBreakIterator* iter, int position, bool hardLineBreak)
@@ -490,7 +491,7 @@ unsigned backwardSearchForBoundaryWithTextIterator(SimplifiedBackwardsTextIterat
             prependRepeatedCharacter(string, 'x', it.text().length());
         }
         if (string.size() > suffixLength) {
-            next = searchFunction(string.span(), string.size() - suffixLength, MayHaveMoreContext, needMoreContext);
+            next = searchFunction(StringView(string.data(), string.size()), string.size() - suffixLength, MayHaveMoreContext, needMoreContext);
             if (next > 1) // FIXME: This is a work around for https://webkit.org/b/115070. We need to provide more contexts in general case.
                 break;
         }
@@ -499,7 +500,7 @@ unsigned backwardSearchForBoundaryWithTextIterator(SimplifiedBackwardsTextIterat
     if (needMoreContext && string.size() > suffixLength) {
         // The last search returned the beginning of the buffer and asked for more context,
         // but there is no earlier text. Force a search with what's available.
-        next = searchFunction(string.span(), string.size() - suffixLength, DontHaveMoreContext, needMoreContext);
+        next = searchFunction(StringView(string.data(), string.size()), string.size() - suffixLength, DontHaveMoreContext, needMoreContext);
         ASSERT(!needMoreContext);
     }
 
@@ -521,7 +522,7 @@ unsigned forwardSearchForBoundaryWithTextIterator(TextIterator& it, Vector<UChar
             appendRepeatedCharacter(string, 'x', it.text().length());
         }
         if (string.size() > prefixLength) {
-            next = searchFunction(string.span(), prefixLength, MayHaveMoreContext, needMoreContext);
+            next = searchFunction(StringView(string.data(), string.size()), prefixLength, MayHaveMoreContext, needMoreContext);
             if (next != string.size())
                 break;
         }
@@ -530,7 +531,7 @@ unsigned forwardSearchForBoundaryWithTextIterator(TextIterator& it, Vector<UChar
     if (needMoreContext && string.size() > prefixLength) {
         // The last search returned the end of the buffer and asked for more context,
         // but there is no further text. Force a search with what's available.
-        next = searchFunction(string.span(), prefixLength, DontHaveMoreContext, needMoreContext);
+        next = searchFunction(StringView(string.data(), string.size()), prefixLength, DontHaveMoreContext, needMoreContext);
         ASSERT(!needMoreContext);
     }
 
@@ -1000,9 +1001,7 @@ VisiblePosition previousLinePosition(const VisiblePosition& visiblePosition, Lay
         RefPtr node = renderer->node();
         if (node && editingIgnoresContent(*node))
             return positionInParentBeforeNode(node.get());
-        // FIXME: The HitTestSource state should be propagated down from calls into JavaScript bindings.
-        // For the time being, just err on the side of passing in `Bindings`.
-        return const_cast<RenderObject&>(renderer.get()).positionForPoint(pointInLine, HitTestSource::Script, nullptr);
+        return const_cast<RenderObject&>(renderer.get()).positionForPoint(pointInLine, nullptr);
     }
 
     // Could not find a previous line. This means we must already be on the first line.
@@ -1060,9 +1059,7 @@ VisiblePosition nextLinePosition(const VisiblePosition& visiblePosition, LayoutU
         RefPtr node = renderer->node();
         if (node && editingIgnoresContent(*node))
             return positionInParentBeforeNode(node.get());
-        // FIXME: The HitTestSource state should be propagated down from calls into JavaScript bindings.
-        // For the time being, just err on the side of passing in `Bindings`.
-        return const_cast<RenderObject&>(renderer.get()).positionForPoint(pointInLine, HitTestSource::Script, nullptr);
+        return const_cast<RenderObject&>(renderer.get()).positionForPoint(pointInLine, nullptr);
     }
 
     // Could not find a next line. This means we must already be on the last line.
@@ -1679,29 +1676,24 @@ static VisiblePosition nextWordBoundaryInDirection(const VisiblePosition& vp, Se
 static VisiblePosition nextSentenceBoundaryInDirection(const VisiblePosition& vp, SelectionDirection direction)
 {
     bool useDownstream = directionIsDownstream(direction);
-    VisiblePosition result = vp;
+    bool withinUnitOfGranularity = withinTextUnitOfGranularity(vp, TextGranularity::SentenceGranularity, direction);
+    VisiblePosition result;
 
-    do {
-        if (withinTextUnitOfGranularity(result, TextGranularity::SentenceGranularity, direction))
-            result = useDownstream ? endOfSentence(result) : startOfSentence(result);
+    if (withinUnitOfGranularity)
+        result = useDownstream ? endOfSentence(vp) : startOfSentence(vp);
     else {
-            auto nextPosition = useDownstream ? nextSentencePosition(result) : previousSentencePosition(result);
-            if (nextPosition.isNull() || nextPosition == result)
+        result = useDownstream ? nextSentencePosition(vp) : previousSentencePosition(vp);
+        if (result.isNull() || result == vp)
             return VisiblePosition();
 
-            auto newResult = useDownstream ? startOfSentence(nextPosition) : endOfSentence(nextPosition);
-            if (areVisiblePositionsInSameTreeScope(newResult, result) && (useDownstream ? newResult < result : newResult > result))
-                newResult = useDownstream ? endOfSentence(nextPosition) : startOfSentence(nextPosition);
-
-            if (newResult == result)
-                break;
-
-            result = WTFMove(newResult);
+        result = useDownstream ? startOfSentence(result) : endOfSentence(result);
     }
-    } while (areVisiblePositionsInSameTreeScope(result, vp) && (useDownstream ? (result < vp) : (result > vp)));
 
     if (result == vp)
         return VisiblePosition();
+
+    // Positions can only be compared if they are in the same tree scope.
+    ASSERT_IMPLIES(areVisiblePositionsInSameTreeScope(result, vp), useDownstream ? (result > vp) : (result < vp));
 
     return result;
 }
@@ -1943,32 +1935,6 @@ std::optional<SimpleRange> rangeExpandedAroundPositionByCharacters(const Visible
         start = start.previous(Character);
         end = end.next(Character);
     }
-    return makeSimpleRange(start, end);
-}
-
-std::optional<SimpleRange> rangeExpandedAroundRangeByCharacters(const VisibleSelection& selection, uint64_t numberOfCharactersToExpandBackwards, uint64_t numberOfCharactersToExpandForwards)
-{
-    auto range = selection.firstRange();
-    if (!range)
-        return std::nullopt;
-
-    auto extendedPosition = [](const BoundaryPoint& point, uint64_t characterCount, SelectionDirection direction) {
-        auto visiblePosition = VisiblePosition { makeContainerOffsetPosition(point) };
-
-        for (uint64_t i = 0; i < characterCount; ++i) {
-            auto nextVisiblePosition = positionOfNextBoundaryOfGranularity(visiblePosition, TextGranularity::CharacterGranularity, direction);
-            if (nextVisiblePosition.isNull())
-                break;
-
-            visiblePosition = nextVisiblePosition;
-        }
-
-        return visiblePosition;
-    };
-
-    auto start = extendedPosition(range->start, numberOfCharactersToExpandBackwards, SelectionDirection::Backward);
-    auto end = extendedPosition(range->end, numberOfCharactersToExpandForwards, SelectionDirection::Forward);
-
     return makeSimpleRange(start, end);
 }
 

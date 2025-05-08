@@ -27,7 +27,7 @@
 #include "ResourceLoadStatistics.h"
 
 #include "KeyedCoding.h"
-#include "PublicSuffixStore.h"
+#include "PublicSuffix.h"
 #include <wtf/MainThread.h>
 #include <wtf/text/ASCIILiteral.h>
 #include <wtf/text/StringBuilder.h>
@@ -351,7 +351,7 @@ bool ResourceLoadStatistics::decode(KeyedDecoder& decoder, unsigned modelVersion
 
 static void appendBoolean(StringBuilder& builder, ASCIILiteral label, bool flag)
 {
-    builder.append("    "_s, label, ": "_s, flag ? "Yes"_s : "No"_s);
+    builder.append("    ", label, ": ", flag ? "Yes" : "No");
 }
 
 static void appendHashSet(StringBuilder& builder, const String& label, const HashSet<RegistrableDomain>& hashSet)
@@ -359,9 +359,9 @@ static void appendHashSet(StringBuilder& builder, const String& label, const Has
     if (hashSet.isEmpty())
         return;
 
-    builder.append("    "_s, label, ":\n"_s);
+    builder.append("    ", label, ":\n");
     for (auto& entry : hashSet)
-        builder.append("        "_s, entry.string(), '\n');
+        builder.append("        ", entry.string(), '\n');
 }
 
 #if ENABLE(WEB_API_STATISTICS)
@@ -370,9 +370,9 @@ static void appendHashSet(StringBuilder& builder, const String& label, const Has
     if (hashSet.isEmpty())
         return;
 
-    builder.append("    "_s, label, ":\n"_s);
+    builder.append("    ", label, ":\n");
     for (auto& entry : hashSet)
-        builder.append("        "_s, entry, '\n');
+        builder.append("        ", entry, '\n');
 }
 
 static ASCIILiteral navigatorAPIEnumToString(NavigatorAPIsAccessed navigatorEnum)
@@ -419,18 +419,18 @@ static void appendNavigatorAPIOptionSet(StringBuilder& builder, const OptionSet<
 {
     if (optionSet.isEmpty())
         return;
-    builder.append("    navigatorFunctionsAccessed:\n"_s);
+    builder.append("    navigatorFunctionsAccessed:\n");
     for (auto navigatorAPI : optionSet)
-        builder.append("        "_s, navigatorAPIEnumToString(navigatorAPI), '\n');
+        builder.append("        ", navigatorAPIEnumToString(navigatorAPI), '\n');
 }
 
 static void appendScreenAPIOptionSet(StringBuilder& builder, const OptionSet<ScreenAPIsAccessed>& optionSet)
 {
     if (optionSet.isEmpty())
         return;
-    builder.append("    screenFunctionsAccessed:\n"_s);
+    builder.append("    screenFunctionsAccessed:\n");
     for (auto screenAPI : optionSet) {
-        builder.append("        "_s, screenAPIEnumToString(screenAPI), '\n');
+        builder.append("        ", screenAPIEnumToString(screenAPI), '\n');
     }
 }
 #endif
@@ -443,11 +443,13 @@ static bool hasHadRecentUserInteraction(Seconds interactionTimeSeconds)
 String ResourceLoadStatistics::toString() const
 {
     StringBuilder builder;
-    builder.append("Registrable domain: "_s, registrableDomain.string(), '\n');
+    builder.append("Registrable domain: ", registrableDomain.string(), '\n');
 
     // User interaction
     appendBoolean(builder, "hadUserInteraction"_s, hadUserInteraction);
-    builder.append("\n    mostRecentUserInteraction: "_s, hasHadRecentUserInteraction(mostRecentUserInteractionTime.secondsSinceEpoch()) ? "within 24 hours\n"_s : "-1\n"_s);
+    builder.append('\n');
+    builder.append("    mostRecentUserInteraction: "_s, hasHadRecentUserInteraction(mostRecentUserInteractionTime.secondsSinceEpoch()) ? "within 24 hours" : "-1");
+    builder.append('\n');
     appendBoolean(builder, "grandfathered"_s, grandfathered);
     builder.append('\n');
 
@@ -474,7 +476,9 @@ String ResourceLoadStatistics::toString() const
     appendBoolean(builder, "isPrevalentResource"_s, isPrevalentResource);
     builder.append('\n');
     appendBoolean(builder, "isVeryPrevalentResource"_s, isVeryPrevalentResource);
-    builder.append("\n    dataRecordsRemoved: "_s, dataRecordsRemoved, '\n');
+    builder.append('\n');
+    builder.append("    dataRecordsRemoved: ", dataRecordsRemoved);
+    builder.append('\n');
 
 #if ENABLE(WEB_API_STATISTICS)
     appendHashSet(builder, "fontsFailedToLoad"_s, fontsFailedToLoad);
@@ -484,7 +488,8 @@ String ResourceLoadStatistics::toString() const
     appendScreenAPIOptionSet(builder, screenFunctionsAccessed);
     appendHashSet(builder, "canvasTextWritten"_s, canvasActivityRecord.textWritten);
     appendBoolean(builder, "canvasReadData"_s, canvasActivityRecord.wasDataRead);
-    builder.append("\n\n"_s);
+    builder.append('\n');
+    builder.append('\n');
 #endif
 
     return builder.toString();

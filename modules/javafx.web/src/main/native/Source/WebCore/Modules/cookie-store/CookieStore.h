@@ -30,8 +30,8 @@
 #include "CookieJar.h"
 #include "EventTarget.h"
 #include <wtf/Forward.h>
+#include <wtf/IsoMalloc.h>
 #include <wtf/RefCounted.h>
-#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -44,7 +44,7 @@ class DeferredPromise;
 class ScriptExecutionContext;
 
 class CookieStore final : public RefCounted<CookieStore>, public EventTarget, public ActiveDOMObject, public CookieChangeListener {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CookieStore);
+    WTF_MAKE_ISO_ALLOCATED(CookieStore);
 public:
     static Ref<CookieStore> create(ScriptExecutionContext*);
     ~CookieStore();
@@ -61,9 +61,8 @@ public:
     void remove(String&& name, Ref<DeferredPromise>&&);
     void remove(CookieStoreDeleteOptions&&, Ref<DeferredPromise>&&);
 
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
+    using RefCounted::ref;
+    using RefCounted::deref;
 
     using EventTarget::weakPtrFactory;
     using EventTarget::WeakValueType;
@@ -76,11 +75,12 @@ private:
     void cookiesDeleted(const String& host, const Vector<Cookie>&) final;
 
     // ActiveDOMObject
+    const char* activeDOMObjectName() const final;
     void stop() final;
     bool virtualHasPendingActivity() const final;
 
     // EventTarget
-    enum EventTargetInterfaceType eventTargetInterface() const final;
+    EventTargetInterface eventTargetInterface() const final;
     ScriptExecutionContext* scriptExecutionContext() const final;
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
@@ -90,7 +90,6 @@ private:
 
     class MainThreadBridge;
     Ref<MainThreadBridge> m_mainThreadBridge;
-    Ref<MainThreadBridge> protectedMainThreadBridge() const;
 
     bool m_hasChangeEventListener { false };
     WeakPtr<CookieJar> m_cookieJar;

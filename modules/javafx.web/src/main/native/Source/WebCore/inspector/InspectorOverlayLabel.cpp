@@ -35,7 +35,6 @@
 #include "FontCascadeDescription.h"
 #include "GraphicsContext.h"
 #include "Path.h"
-#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -210,8 +209,8 @@ Path InspectorOverlayLabel::draw(GraphicsContext& context, float maximumLineWidt
     constexpr UChar ellipsis = 0x2026;
 
     auto font = systemFont();
-    float lineHeight = font.metricsOfPrimaryFont().height();
-    float lineDescent = font.metricsOfPrimaryFont().descent();
+    float lineHeight = font.metricsOfPrimaryFont().floatHeight();
+    float lineDescent = font.metricsOfPrimaryFont().floatDescent();
 
     Vector<ComputedContentRun> computedContentRuns;
 
@@ -376,7 +375,7 @@ Path InspectorOverlayLabel::draw(GraphicsContext& context, float maximumLineWidt
 FloatSize InspectorOverlayLabel::expectedSize(const Vector<Content>& contents, Arrow::Direction direction)
 {
     auto font = systemFont();
-    float lineHeight = font.metricsOfPrimaryFont().height();
+    float lineHeight = font.metricsOfPrimaryFont().floatHeight();
 
     float longestLineWidth = 0;
     int currentLine = 0;

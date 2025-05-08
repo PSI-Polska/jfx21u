@@ -37,23 +37,20 @@ class SecurityOrigin;
 class URLRegistry;
 class URLRegistrable;
 
-class PublicURLManager final : public RefCounted<PublicURLManager>, public ActiveDOMObject {
+class PublicURLManager final : public ActiveDOMObject {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Ref<PublicURLManager> create(ScriptExecutionContext*);
+    explicit PublicURLManager(ScriptExecutionContext*);
 
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
+    static std::unique_ptr<PublicURLManager> create(ScriptExecutionContext*);
 
     void registerURL(const URL&, URLRegistrable&);
     void revoke(const URL&);
 
 private:
-    explicit PublicURLManager(ScriptExecutionContext*);
-
-    // ActiveDOMObject.
+    // ActiveDOMObject API.
     void stop() override;
+    const char* activeDOMObjectName() const override;
 
     bool m_isStopped { false };
 };

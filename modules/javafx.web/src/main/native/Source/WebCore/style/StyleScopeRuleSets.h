@@ -53,7 +53,6 @@ struct InvalidationRuleSet {
     IsNegation isNegation;
 };
 
-enum class SelectorsForStyleAttribute : uint8_t { None, SubjectPositionOnly, NonSubjectPosition };
 class ScopeRuleSets {
 public:
     ScopeRuleSets(Resolver&);
@@ -61,7 +60,6 @@ public:
 
     bool isAuthorStyleDefined() const { return m_isAuthorStyleDefined; }
     RuleSet* userAgentMediaQueryStyle() const;
-    RuleSet* dynamicViewTransitionsStyle() const;
     RuleSet& authorStyle() const { return *m_authorStyle; }
     RuleSet* userStyle() const;
     RuleSet* styleForCascadeLevel(CascadeLevel);
@@ -77,9 +75,7 @@ public:
     const Vector<InvalidationRuleSet>* pseudoClassInvalidationRuleSets(const PseudoClassInvalidationKey&) const;
     const Vector<InvalidationRuleSet>* hasPseudoClassInvalidationRuleSets(const PseudoClassInvalidationKey&) const;
 
-    const HashSet<AtomString>& customPropertyNamesInStyleContainerQueries() const;
-
-    SelectorsForStyleAttribute selectorsForStyleAttribute() const;
+    bool hasComplexSelectorsForStyleAttribute() const;
 
     void setUsesSharedUserStyle(bool b) { m_usesSharedUserStyle = b; }
     void initializeUserStyle();
@@ -93,16 +89,9 @@ public:
     bool hasContainerQueries() const;
     bool hasScopeRules() const;
 
-    RefPtr<StyleRuleViewTransition> viewTransitionRule() const;
-
     std::optional<DynamicMediaQueryEvaluationChanges> evaluateDynamicMediaQueryRules(const MQ::MediaQueryEvaluator&);
 
     RuleFeatureSet& mutableFeatures();
-
-    void setDynamicViewTransitionsStyle(RuleSet* ruleSet)
-    {
-        m_dynamicViewTransitionsStyle = ruleSet;
-    }
 
     bool& isInvalidatingStyleWithRuleSets() { return m_isInvalidatingStyleWithRuleSets; }
 
@@ -115,7 +104,6 @@ private:
 
     RefPtr<RuleSet> m_authorStyle;
     mutable RefPtr<RuleSet> m_userAgentMediaQueryStyle;
-    mutable RefPtr<RuleSet> m_dynamicViewTransitionsStyle;
     RefPtr<RuleSet> m_userStyle;
 
     Resolver& m_styleResolver;
@@ -129,9 +117,7 @@ private:
     mutable HashMap<PseudoClassInvalidationKey, std::unique_ptr<Vector<InvalidationRuleSet>>> m_pseudoClassInvalidationRuleSets;
     mutable HashMap<PseudoClassInvalidationKey, std::unique_ptr<Vector<InvalidationRuleSet>>> m_hasPseudoClassInvalidationRuleSets;
 
-    mutable std::optional<HashSet<AtomString>> m_customPropertyNamesInStyleContainerQueries;
-
-    mutable std::optional<SelectorsForStyleAttribute> m_cachedSelectorsForStyleAttribute;
+    mutable std::optional<bool> m_cachedHasComplexSelectorsForStyleAttribute;
 
     mutable unsigned m_defaultStyleVersionOnFeatureCollection { 0 };
     mutable unsigned m_userAgentMediaQueryRuleCountOnUpdate { 0 };

@@ -28,45 +28,45 @@
 
 #if ENABLE(VIDEO)
 
+#include "Document.h"
 #include "InbandDataTextTrack.h"
 #include "InbandGenericTextTrack.h"
 #include "InbandTextTrackPrivate.h"
 #include "InbandWebVTTTextTrack.h"
-#include "ScriptExecutionContext.h"
 #include "TextTrackClient.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(InbandTextTrack);
+WTF_MAKE_ISO_ALLOCATED_IMPL(InbandTextTrack);
 
-Ref<InbandTextTrack> InbandTextTrack::create(ScriptExecutionContext& context, InbandTextTrackPrivate& trackPrivate)
+Ref<InbandTextTrack> InbandTextTrack::create(Document& document, InbandTextTrackPrivate& trackPrivate)
 {
     switch (trackPrivate.cueFormat()) {
     case InbandTextTrackPrivate::CueFormat::Data:
-        return InbandDataTextTrack::create(context, trackPrivate);
+        return InbandDataTextTrack::create(document, trackPrivate);
     case InbandTextTrackPrivate::CueFormat::Generic:
-        return InbandGenericTextTrack::create(context, trackPrivate);
+        return InbandGenericTextTrack::create(document, trackPrivate);
     case InbandTextTrackPrivate::CueFormat::WebVTT:
-        return InbandWebVTTTextTrack::create(context, trackPrivate);
+        return InbandWebVTTTextTrack::create(document, trackPrivate);
     }
     ASSERT_NOT_REACHED();
-    auto textTrack = InbandDataTextTrack::create(context, trackPrivate);
+    auto textTrack = InbandDataTextTrack::create(document, trackPrivate);
     textTrack->suspendIfNeeded();
     return textTrack;
 }
 
-InbandTextTrack::InbandTextTrack(ScriptExecutionContext& context, InbandTextTrackPrivate& trackPrivate)
-    : TextTrack(&context, emptyAtom(), trackPrivate.id(), trackPrivate.label(), trackPrivate.language(), InBand)
+InbandTextTrack::InbandTextTrack(Document& document, InbandTextTrackPrivate& trackPrivate)
+    : TextTrack(&document, emptyAtom(), trackPrivate.id(), trackPrivate.label(), trackPrivate.language(), InBand)
     , m_private(trackPrivate)
 {
-    addClientToTrackPrivateBase(*this, trackPrivate);
+    m_private->setClient(*this);
     updateKindFromPrivate();
 }
 
 InbandTextTrack::~InbandTextTrack()
 {
-    removeClientFromTrackPrivateBase(Ref { m_private });
+    m_private->clearClient();
 }
 
 void InbandTextTrack::setPrivate(InbandTextTrackPrivate& trackPrivate)
@@ -74,9 +74,9 @@ void InbandTextTrack::setPrivate(InbandTextTrackPrivate& trackPrivate)
     if (m_private.ptr() == &trackPrivate)
         return;
 
-    removeClientFromTrackPrivateBase(Ref { m_private });
+    m_private->clearClient();
     m_private = trackPrivate;
-    addClientToTrackPrivateBase(*this, trackPrivate);
+    m_private->setClient(*this);
 
     setModeInternal(mode());
     updateKindFromPrivate();

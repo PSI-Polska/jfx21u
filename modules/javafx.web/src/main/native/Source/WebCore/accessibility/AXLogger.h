@@ -51,7 +51,7 @@ enum class AXStreamOptions : uint8_t {
 
 #if !LOG_DISABLED
 
-class AXLogger final {
+class AXLogger {
 public:
     AXLogger() = default;
     AXLogger(const String& methodName);
@@ -61,7 +61,6 @@ public:
     void log(const AXCoreObject&);
     void log(RefPtr<AXCoreObject>);
     void log(const Vector<RefPtr<AXCoreObject>>&);
-    void log(const std::pair<Ref<AccessibilityObject>, AXObjectCache::AXNotification>&);
     void log(const std::pair<RefPtr<AXCoreObject>, AXObjectCache::AXNotification>&);
     void log(const AccessibilitySearchCriteria&);
     void log(AccessibilityObjectInclusion);

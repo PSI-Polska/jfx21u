@@ -37,8 +37,6 @@ namespace WebCore {
 
 class SourceBuffer;
 class TrackListBase;
-class TrackPrivateBase;
-class TrackPrivateBaseClient;
 using TrackID = uint64_t;
 
 class TrackBase
@@ -49,7 +47,7 @@ class TrackBase
 #endif
 {
 public:
-    virtual ~TrackBase();
+    virtual ~TrackBase() = default;
 
     virtual void didMoveToNewDocument(Document&);
 
@@ -98,9 +96,6 @@ protected:
     SourceBuffer* m_sourceBuffer { nullptr };
 #endif
 
-    void addClientToTrackPrivateBase(TrackPrivateBaseClient&, TrackPrivateBase&);
-    void removeClientFromTrackPrivateBase(TrackPrivateBase&);
-
 private:
     Type m_type;
     int m_uniqueId;
@@ -114,7 +109,6 @@ private:
     const void* m_logIdentifier { nullptr };
 #endif
     WeakPtr<TrackListBase, WeakPtrImplWithEventTargetData> m_trackList;
-    size_t m_clientRegistrationId;
 };
 
 class MediaTrackBase : public TrackBase {

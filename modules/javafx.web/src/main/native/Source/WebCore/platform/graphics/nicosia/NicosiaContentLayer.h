@@ -45,6 +45,7 @@ public:
         virtual void swapBuffersIfNeeded() = 0;
     };
 
+    static Ref<ContentLayer> create(Client&);
     static Ref<ContentLayer> create(Client&, Ref<WebCore::TextureMapperPlatformLayerProxy>&&);
 
     virtual ~ContentLayer();

@@ -25,11 +25,11 @@
 
 #pragma once
 
+// FIXME: move Stage out of StageAttribute so we don't need to include this
 #include "ASTForward.h"
-#include "WGSLEnums.h"
+#include "ASTStageAttribute.h"
 #include <wtf/HashMap.h>
 #include <wtf/Vector.h>
-#include <wtf/text/WTFString.h>
 
 namespace WGSL {
 
@@ -37,32 +37,38 @@ class ShaderModule;
 struct PipelineLayout;
 struct PrepareResult;
 
+namespace Reflection {
+struct EntryPointInformation;
+}
+
 class CallGraph {
     friend class CallGraphBuilder;
 
 public:
     struct Callee {
         AST::Function* target;
-        Vector<std::tuple<AST::Function*, AST::CallExpression*>> callSites;
+        Vector<AST::CallExpression*> callSites;
     };
 
     struct EntryPoint {
         AST::Function& function;
         ShaderStage stage;
-        String originalName;
+        Reflection::EntryPointInformation& information;
     };
 
+    ShaderModule& ast() const { return m_ast; }
     const Vector<EntryPoint>& entrypoints() const { return m_entrypoints; }
     const Vector<Callee>& callees(AST::Function& function) const { return m_calleeMap.find(&function)->value; }
 
 private:
-    CallGraph() { }
+    CallGraph(ShaderModule&);
 
+    ShaderModule& m_ast;
     Vector<EntryPoint> m_entrypoints;
     HashMap<String, AST::Function*> m_functionsByName;
     HashMap<AST::Function*, Vector<Callee>> m_calleeMap;
 };
 
-void buildCallGraph(ShaderModule&);
+CallGraph buildCallGraph(ShaderModule&, const HashMap<String, std::optional<PipelineLayout>>& pipelineLayouts, HashMap<String, Reflection::EntryPointInformation>&);
 
 } // namespace WGSL

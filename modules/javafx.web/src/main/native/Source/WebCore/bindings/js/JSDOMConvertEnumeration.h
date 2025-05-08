@@ -35,28 +35,26 @@ namespace WebCore {
 // Specialized by generated code for IDL enumeration conversion.
 template<typename T> std::optional<T> parseEnumerationFromString(const String&);
 template<typename T> std::optional<T> parseEnumeration(JSC::JSGlobalObject&, JSC::JSValue);
-template<typename T> ASCIILiteral expectedEnumerationValues();
+template<typename T> const char* expectedEnumerationValues();
 
 // Specialized by generated code for IDL enumeration conversion.
 template<typename T> JSC::JSString* convertEnumerationToJS(JSC::VM&, T);
 
 template<typename T> struct Converter<IDLEnumeration<T>> : DefaultConverter<IDLEnumeration<T>> {
-    using Result = ConversionResult<IDLEnumeration<T>>;
-
     template<typename ExceptionThrower = DefaultExceptionThrower>
-    static Result convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value, ExceptionThrower&& exceptionThrower = ExceptionThrower())
+    static T convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value, ExceptionThrower&& exceptionThrower = ExceptionThrower())
     {
         auto& vm = JSC::getVM(&lexicalGlobalObject);
         auto throwScope = DECLARE_THROW_SCOPE(vm);
 
         auto result = parseEnumeration<T>(lexicalGlobalObject, value);
-        RETURN_IF_EXCEPTION(throwScope, Result::exception());
+        RETURN_IF_EXCEPTION(throwScope, { });
 
         if (UNLIKELY(!result)) {
             exceptionThrower(lexicalGlobalObject, throwScope);
-            return Result::exception();
+            return { };
         }
-        return Result { WTFMove(result.value()) };
+        return result.value();
     }
 };
 

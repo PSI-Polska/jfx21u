@@ -51,7 +51,6 @@
 #include <wtf/Ref.h>
 #include <wtf/SetForScope.h>
 #include <wtf/Vector.h>
-#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -140,7 +139,7 @@ bool ValidatedFormListedElement::reportValidity()
 
     // Needs to update layout now because we'd like to call isFocusable(),
     // which has !renderer()->needsLayout() assertion.
-    asHTMLElement().protectedDocument()->updateLayoutIgnorePendingStylesheets();
+    asHTMLElement().document().updateLayoutIgnorePendingStylesheets();
     if (auto validationAnchor = focusableValidationAnchorElement())
         focusAndShowValidationMessage(validationAnchor.releaseNonNull());
     else
@@ -177,7 +176,7 @@ void ValidatedFormListedElement::reportNonFocusableControlError()
 {
     auto& document = asHTMLElement().document();
     if (document.frame()) {
-        auto message = makeString("An invalid form control with name='"_s, name(), "' is not focusable."_s);
+        auto message = makeString("An invalid form control with name='", name(), "' is not focusable.");
         document.addConsoleMessage(MessageSource::Rendering, MessageLevel::Error, message);
     }
 }
@@ -252,7 +251,7 @@ void ValidatedFormListedElement::updateValidity()
     bool newIsValid = this->computeValidity();
 
     if (newIsValid != m_isValid) {
-        SUPPRESS_UNCOUNTED_LOCAL auto& element = asHTMLElement();
+        HTMLElement& element = asHTMLElement();
         Style::PseudoClassChangeInvalidation styleInvalidation(element, {
             { CSSSelector::PseudoClass::Valid, newIsValid },
             { CSSSelector::PseudoClass::Invalid, !newIsValid },
@@ -276,7 +275,7 @@ void ValidatedFormListedElement::updateValidity()
             }
         }
 
-        if (CheckedPtr cache = element.document().existingAXObjectCache())
+        if (auto* cache = element.document().existingAXObjectCache())
             cache->onValidityChange(element);
     }
 

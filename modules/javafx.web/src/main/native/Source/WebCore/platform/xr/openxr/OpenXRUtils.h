@@ -21,6 +21,7 @@
 
 #if ENABLE(WEBXR) && USE(OPENXR)
 
+#if USE(EGL)
 // EGL symbols required by openxr_platform.h
 #if USE(LIBEPOXY)
 #define __GBM__ 1
@@ -29,11 +30,14 @@
 #include <EGL/egl.h>
 #endif
 
+#endif // USE(EGL)
+
 #include "Logging.h"
 #include "PlatformXR.h"
 #include <openxr/openxr.h>
 #include <openxr/openxr_platform.h>
-#include <wtf/text/MakeString.h>
+
+#include <wtf/text/StringConcatenateNumbers.h>
 #include <wtf/text/WTFString.h>
 
 namespace PlatformXR {
@@ -54,7 +58,7 @@ inline String resultToString(XrResult value, XrInstance instance)
     XrResult result = xrResultToString(instance, value, buffer);
     if (result == XR_SUCCESS)
         return String::fromLatin1(buffer);
-    return makeString("<unknown "_s, int(value), '>');
+    return makeString("<unknown ", int(value), ">");
 }
 
 #define RETURN_IF_FAILED(call, label, instance, ...)                                                      \

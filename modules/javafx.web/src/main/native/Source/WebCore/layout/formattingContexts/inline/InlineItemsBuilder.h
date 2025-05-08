@@ -29,10 +29,7 @@
 #include "InlineItem.h"
 #include "InlineLineTypes.h"
 #include "LayoutElementBox.h"
-#include "SecurityOrigin.h"
-#include <wtf/HashMap.h>
 #include <wtf/text/StringBuilder.h>
-#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 namespace Layout {
@@ -40,21 +37,18 @@ class InlineTextBox;
 
 class InlineItemsBuilder {
 public:
-    InlineItemsBuilder(InlineContentCache&, const ElementBox& root, const SecurityOrigin&);
+    InlineItemsBuilder(InlineContentCache&, const ElementBox& root);
     void build(InlineItemPosition startPosition);
-
-    static void populateBreakingPositionCache(const InlineItemList&, const Document&);
 
 private:
     void collectInlineItems(InlineItemList&, InlineItemPosition startPosition);
-    using LayoutQueue = Vector<CheckedRef<const Box>, 8>;
+    using LayoutQueue = Vector<CheckedRef<const Box>>;
     LayoutQueue initializeLayoutQueue(InlineItemPosition startPosition);
-    LayoutQueue traverseUntilDamaged(const Box& firstDamagedLayoutBox);
+    bool traverseUntilDamaged(LayoutQueue&, const Box& subtreeRoot, const Box& firstDamagedLayoutBox);
     void breakAndComputeBidiLevels(InlineItemList&);
     void computeInlineTextItemWidths(InlineItemList&);
 
     void handleTextContent(const InlineTextBox&, InlineItemList&, std::optional<size_t> partialContentOffset);
-    bool buildInlineItemListForTextFromBreakingPositionsCache(const InlineTextBox&, InlineItemList&);
     void handleInlineBoxStart(const Box&, InlineItemList&);
     void handleInlineBoxEnd(const Box&, InlineItemList&);
     void handleInlineLevelBox(const Box&, InlineItemList&);
@@ -67,7 +61,6 @@ private:
 private:
     InlineContentCache& m_inlineContentCache;
     const ElementBox& m_root;
-    const SecurityOrigin& m_securityOrigin;
 
     bool m_contentRequiresVisualReordering { false };
     bool m_isTextAndForcedLineBreakOnlyContent { true };

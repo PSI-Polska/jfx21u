@@ -28,7 +28,6 @@
 
 #include <windows.h>
 #include <wtf/Assertions.h>
-#include <wtf/DataLog.h>
 #include <wtf/MathExtras.h>
 #include <wtf/PageBlock.h>
 #include <wtf/SoftLinking.h>
@@ -134,7 +133,7 @@ void OSAllocator::hintMemoryNotNeededSoon(void*, size_t)
 {
 }
 
-bool OSAllocator::tryProtect(void* address, size_t bytes, bool readable, bool writable)
+bool OSAllocator::protect(void* address, size_t bytes, bool readable, bool writable)
 {
     if (!bytes)
         return true;
@@ -149,14 +148,6 @@ bool OSAllocator::tryProtect(void* address, size_t bytes, bool readable, bool wr
         protection = PAGE_NOACCESS;
     }
     return VirtualAlloc(address, bytes, MEM_COMMIT, protection);
-}
-
-void OSAllocator::protect(void* address, size_t bytes, bool readable, bool writable)
-{
-    if (bool result = tryProtect(address, bytes, readable, writable); UNLIKELY(!result)) {
-        dataLogLn("mprotect failed: ", static_cast<int>(GetLastError()));
-        RELEASE_ASSERT_NOT_REACHED();
-    }
 }
 
 } // namespace WTF

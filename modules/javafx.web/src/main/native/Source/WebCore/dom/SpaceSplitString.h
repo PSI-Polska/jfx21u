@@ -31,11 +31,6 @@ class SpaceSplitStringData {
 public:
     static RefPtr<SpaceSplitStringData> create(const AtomString&);
 
-    auto begin() const { return tokenArrayStart(); }
-    auto end() const { return tokenArrayStart() + size(); }
-    auto begin() { return tokenArrayStart(); }
-    auto end() { return tokenArrayStart() + size(); }
-
     bool contains(const AtomString& string)
     {
         const AtomString* data = tokenArrayStart();
@@ -51,7 +46,7 @@ public:
     bool containsAll(SpaceSplitStringData&);
 
     unsigned size() const { return m_size; }
-    static constexpr ptrdiff_t sizeMemoryOffset() { return OBJECT_OFFSETOF(SpaceSplitStringData, m_size); }
+    static ptrdiff_t sizeMemoryOffset() { return OBJECT_OFFSETOF(SpaceSplitStringData, m_size); }
 
     const AtomString& operator[](unsigned i)
     {
@@ -78,9 +73,7 @@ public:
         m_refCount = tempRefCount;
     }
 
-    const AtomString& keyString() const { return m_keyString; }
-
-    static constexpr ptrdiff_t tokensMemoryOffset() { return sizeof(SpaceSplitStringData); }
+    static ptrdiff_t tokensMemoryOffset() { return sizeof(SpaceSplitStringData); }
 
 private:
     static Ref<SpaceSplitStringData> create(const AtomString&, unsigned tokenCount);
@@ -97,7 +90,6 @@ private:
     static void destroy(SpaceSplitStringData*);
 
     AtomString* tokenArrayStart() { return reinterpret_cast<AtomString*>(this + 1); }
-    const AtomString* tokenArrayStart() const { return reinterpret_cast<const AtomString*>(this + 1); }
 
     AtomString m_keyString;
     unsigned m_refCount;
@@ -110,13 +102,6 @@ public:
 
     enum class ShouldFoldCase : bool { No, Yes };
     SpaceSplitString(const AtomString&, ShouldFoldCase);
-
-    const AtomString& keyString() const
-    {
-        if (m_data)
-            return m_data->keyString();
-        return nullAtom();
-    }
 
     friend bool operator==(const SpaceSplitString&, const SpaceSplitString&) = default;
     void set(const AtomString&, ShouldFoldCase);
@@ -132,11 +117,6 @@ public:
         ASSERT_WITH_SECURITY_IMPLICATION(m_data);
         return (*m_data)[i];
     }
-
-    auto begin() const { return m_data ? m_data->begin() : nullptr; }
-    auto end() const { return m_data ? m_data->end() : nullptr; }
-    auto begin() { return m_data ? m_data->begin() : nullptr; }
-    auto end() { return m_data ? m_data->end() : nullptr; }
 
     static bool spaceSplitStringContainsValue(StringView spaceSplitString, StringView value, ShouldFoldCase);
 

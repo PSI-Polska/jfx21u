@@ -29,7 +29,6 @@
 
 #include "AudioTrackPrivate.h"
 #include "MediaStreamTrackPrivate.h"
-#include <wtf/CheckedRef.h>
 
 namespace WebCore {
 
@@ -37,12 +36,9 @@ class AudioMediaStreamTrackRenderer;
 
 class AudioTrackPrivateMediaStream final
     : public AudioTrackPrivate
-    , public MediaStreamTrackPrivateObserver
-    , private RealtimeMediaSource::AudioSampleObserver
-    , public CanMakeCheckedPtr<AudioTrackPrivateMediaStream> {
+    , public MediaStreamTrackPrivate::Observer
+    , private RealtimeMediaSource::AudioSampleObserver {
     WTF_MAKE_NONCOPYABLE(AudioTrackPrivateMediaStream)
-    WTF_MAKE_FAST_ALLOCATED;
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(AudioTrackPrivateMediaStream);
 public:
     static Ref<AudioTrackPrivateMediaStream> create(MediaStreamTrackPrivate& streamTrack)
     {
@@ -69,17 +65,11 @@ public:
     bool muted() const { return m_muted; }
 
 #if !RELEASE_LOG_DISABLED
-    ASCIILiteral logClassName() const final { return "AudioTrackPrivateMediaStream"_s; }
+    const char* logClassName() const final { return "AudioTrackPrivateMediaStream"; }
 #endif
 
 private:
     explicit AudioTrackPrivateMediaStream(MediaStreamTrackPrivate&);
-
-    // CheckedPtr interface
-    uint32_t ptrCount() const final { return CanMakeCheckedPtr::ptrCount(); }
-    uint32_t ptrCountWithoutThreadCheck() const final { return CanMakeCheckedPtr::ptrCountWithoutThreadCheck(); }
-    void incrementPtrCount() const final { CanMakeCheckedPtr::incrementPtrCount(); }
-    void decrementPtrCount() const final { CanMakeCheckedPtr::decrementPtrCount(); }
 
     static std::unique_ptr<AudioMediaStreamTrackRenderer> createRenderer(AudioTrackPrivateMediaStream&);
 
@@ -90,7 +80,7 @@ private:
     int trackIndex() const final { return m_index; }
     bool isBackedByMediaStreamTrack() const final { return true; }
 
-    // MediaStreamTrackPrivateObserver
+    // MediaStreamTrackPrivate::Observer
     void trackEnded(MediaStreamTrackPrivate&) final;
     void trackMutedChanged(MediaStreamTrackPrivate&)  final;
     void trackEnabledChanged(MediaStreamTrackPrivate&)  final;

@@ -35,7 +35,7 @@ LegacyRenderSVGResourceSolidColor::LegacyRenderSVGResourceSolidColor() = default
 
 LegacyRenderSVGResourceSolidColor::~LegacyRenderSVGResourceSolidColor() = default;
 
-auto LegacyRenderSVGResourceSolidColor::applyResource(RenderElement& renderer, const RenderStyle& style, GraphicsContext*& context, OptionSet<RenderSVGResourceMode> resourceMode) -> OptionSet<ApplyResult>
+bool LegacyRenderSVGResourceSolidColor::applyResource(RenderElement& renderer, const RenderStyle& style, GraphicsContext*& context, OptionSet<RenderSVGResourceMode> resourceMode)
 {
     ASSERT(context);
     ASSERT(!resourceMode.isEmpty());
@@ -69,7 +69,7 @@ auto LegacyRenderSVGResourceSolidColor::applyResource(RenderElement& renderer, c
             context->setTextDrawingMode(TextDrawingMode::Stroke);
     }
 
-    return { ApplyResult::ResourceApplied };
+    return true;
 }
 
 void LegacyRenderSVGResourceSolidColor::postApplyResource(RenderElement&, GraphicsContext*& context, OptionSet<RenderSVGResourceMode> resourceMode, const Path* path, const RenderElement* shape)

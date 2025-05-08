@@ -32,13 +32,15 @@
 
 #include "RenderBlockFlow.h"
 #include "RenderBoxInlines.h"
+#include "RenderRubyRun.h"
 #include "RenderStyleInlines.h"
 
 namespace WebCore {
 
-LineWidth::LineWidth(RenderBlockFlow& block, bool isFirstLine)
+LineWidth::LineWidth(RenderBlockFlow& block, bool isFirstLine, IndentTextOrNot shouldIndentText)
     : m_block(block)
     , m_isFirstLine(isFirstLine)
+    , m_shouldIndentText(shouldIndentText)
 {
     updateAvailableWidth();
 }
@@ -70,8 +72,8 @@ void LineWidth::updateAvailableWidth(LayoutUnit replacedHeight)
 {
     LayoutUnit height = m_block.logicalHeight();
     LayoutUnit logicalHeight = m_block.minLineHeightForReplacedRenderer(m_isFirstLine, replacedHeight);
-    m_left = m_block.logicalLeftOffsetForLine(height, logicalHeight);
-    m_right = m_block.logicalRightOffsetForLine(height, logicalHeight);
+    m_left = m_block.logicalLeftOffsetForLine(height, shouldIndentText(), logicalHeight);
+    m_right = m_block.logicalRightOffsetForLine(height, shouldIndentText(), logicalHeight);
 
     computeAvailableWidthFromLeftAndRight();
 }
@@ -101,6 +103,8 @@ void LineWidth::shrinkAvailableWidthForNewFloatIfNeeded(const FloatingObject& ne
 
     if (newFloat.type() == FloatingObject::FloatLeft) {
         float newLeft = m_block.logicalRightForFloat(newFloat);
+        if (shouldIndentText() == IndentText && m_block.style().isLeftToRightDirection())
+            newLeft += floorToInt(m_block.textIndentOffset());
         if (shapeDeltas.isValid()) {
             if (shapeDeltas.lineOverlapsShape())
                 newLeft += shapeDeltas.rightMarginBoxDelta();
@@ -110,6 +114,8 @@ void LineWidth::shrinkAvailableWidthForNewFloatIfNeeded(const FloatingObject& ne
         m_left = std::max<float>(m_left, newLeft);
     } else {
         float newRight = m_block.logicalLeftForFloat(newFloat);
+        if (shouldIndentText() == IndentText && !m_block.style().isLeftToRightDirection())
+            newRight -= floorToInt(m_block.textIndentOffset());
         if (shapeDeltas.isValid()) {
             if (shapeDeltas.lineOverlapsShape())
                 newRight += shapeDeltas.leftMarginBoxDelta();
@@ -133,11 +139,25 @@ void LineWidth::commit()
     m_hasCommitted = true;
 }
 
-inline static float availableWidthAtOffset(const RenderBlockFlow& block, const LayoutUnit& offset,
+void LineWidth::applyOverhang(const RenderRubyRun& rubyRun, RenderObject* startRenderer, RenderObject* endRenderer)
+{
+    float startOverhang;
+    float endOverhang;
+    rubyRun.getOverhang(m_isFirstLine, startRenderer, endRenderer, startOverhang, endOverhang);
+
+    startOverhang = std::min(startOverhang, m_committedWidth);
+    m_availableWidth += startOverhang;
+
+    endOverhang = std::max(std::min(endOverhang, m_availableWidth - currentWidth()), 0.0f);
+    m_availableWidth += endOverhang;
+    m_overhangWidth += startOverhang + endOverhang;
+}
+
+inline static float availableWidthAtOffset(const RenderBlockFlow& block, const LayoutUnit& offset, IndentTextOrNot shouldIndentText,
     float& newLineLeft, float& newLineRight, const LayoutUnit& lineHeight = 0)
 {
-    newLineLeft = block.logicalLeftOffsetForLine(offset, lineHeight);
-    newLineRight = block.logicalRightOffsetForLine(offset, lineHeight);
+    newLineLeft = block.logicalLeftOffsetForLine(offset, shouldIndentText, lineHeight);
+    newLineRight = block.logicalRightOffsetForLine(offset, shouldIndentText, lineHeight);
     return std::max(0.0f, newLineRight - newLineLeft);
 }
 
@@ -147,7 +167,7 @@ void LineWidth::updateLineDimension(LayoutUnit newLineTop, LayoutUnit newLineWid
         return;
 
     m_block.setLogicalHeight(newLineTop);
-    m_availableWidth = newLineWidth;
+    m_availableWidth = newLineWidth + m_overhangWidth;
     m_left = newLineLeft;
     m_right = newLineRight;
 }
@@ -163,7 +183,7 @@ void LineWidth::wrapNextToShapeOutside(bool isFirstLine)
     float newLineLeft = m_left;
     float newLineRight = m_right;
     while (true) {
-        newLineWidth = availableWidthAtOffset(m_block, newLineTop, newLineLeft, newLineRight, lineHeight);
+        newLineWidth = availableWidthAtOffset(m_block, newLineTop, shouldIndentText(), newLineLeft, newLineRight, lineHeight);
         if (newLineWidth >= m_uncommittedWidth)
             break;
 
@@ -195,7 +215,7 @@ void LineWidth::fitBelowFloats(bool isFirstLine)
         if (floatLogicalBottom <= lastFloatLogicalBottom)
             break;
 
-        newLineWidth = availableWidthAtOffset(m_block, floatLogicalBottom, newLineLeft, newLineRight);
+        newLineWidth = availableWidthAtOffset(m_block, floatLogicalBottom, shouldIndentText(), newLineLeft, newLineRight);
         lastFloatLogicalBottom = floatLogicalBottom;
 
         if (newLineWidth >= m_uncommittedWidth)
@@ -213,7 +233,20 @@ void LineWidth::setTrailingWhitespaceWidth(float collapsedWhitespace, float bord
 
 void LineWidth::computeAvailableWidthFromLeftAndRight()
 {
-    m_availableWidth = std::max<float>(0, m_right - m_left);
+    m_availableWidth = std::max<float>(0, m_right - m_left) + m_overhangWidth;
+}
+
+IndentTextOrNot requiresIndent(bool isFirstLine, bool isAfterHardLineBreak, const RenderStyle& style)
+{
+    IndentTextOrNot shouldIndentText = DoNotIndentText;
+    if (isFirstLine)
+        shouldIndentText = IndentText;
+    else if (isAfterHardLineBreak && style.textIndentLine() == TextIndentLine::EachLine)
+        shouldIndentText = IndentText;
+
+    if (style.textIndentType() == TextIndentType::Hanging)
+        shouldIndentText = shouldIndentText == IndentText ? DoNotIndentText : IndentText;
+    return shouldIndentText;
 }
 
 }

@@ -332,7 +332,7 @@ void FrameLoaderClientJava::transitionToCommittedFromCachedFrame(CachedFrame*)
     notImplemented();
 }
 
-void FrameLoaderClientJava::transitionToCommittedForNewPage(InitializingIframe initializingIframe)
+void FrameLoaderClientJava::transitionToCommittedForNewPage()
 {
     FloatRect pageRect = frame()->page()->chrome().pageRect();
     Color bkColor(Color::white);
@@ -432,18 +432,17 @@ void FrameLoaderClientJava::dispatchDecidePolicyForNewWindowAction(const Navigat
     policyFunction(permit ? PolicyAction::Use : PolicyAction::Ignore);
 }
 
-
 void FrameLoaderClientJava::dispatchDecidePolicyForNavigationAction(const NavigationAction& action,
                                                                     const ResourceRequest& req,
-                                                                    const ResourceResponse& redirectResponse,  // Use the correct name
-                                                                    FormState* formState,
-                                                                    const String& clientRedirectSourceForHistory,  // Use the correct name
-                                                                    std::optional<NavigationIdentifier> navigationID,  // Use a name for the optional identifier
-                                                                    std::optional<HitTestResult>&& hitTestResult,  // Match argument names
-                                                                    bool hasOpener,
-                                                                    SandboxFlags sandboxFlags,
-                                                                    PolicyDecisionMode decisionMode,
-                                                                    FramePolicyFunction&& policyFunction)
+                                                                    const ResourceResponse&,
+                                                                    FormState*,
+                                                                    const String&,
+                                                                    uint64_t,
+                                                                    std::optional<HitTestResult>&&,
+                                                                    bool,
+                                                                    SandboxFlags,
+                                                                    PolicyDecisionMode,
+                                                                                                                                        FramePolicyFunction&& policyFunction)
 {
     using namespace FrameLoaderClientJavaInternal;
     JNIEnv* env = WTF::GetJavaEnv();
@@ -504,15 +503,7 @@ RefPtr<LocalFrame> FrameLoaderClientJava::createFrame(const AtomString& name, HT
     initRefs(env);
 
     auto* localFrame = dynamicDowncast<LocalFrame>(m_frame);
-    //RefPtr<LocalFrame> childFrame(LocalFrame::createSubframe(*page(), makeUniqueRef<FrameLoaderClientJava>(m_webPage),localFrame->loader().frameID(),ownerElement));
-    //createSubframe function expects a ClientCreator&&, which is a callable type
-    //Instead of passing makeUniqueRef<FrameLoaderClientJava>(m_webPage) directly, we nned to wrap it in a lambda or
-    //some callable object that matches the expected type for ClientCreator
-    auto clientCreator = [this](auto& localFrame) -> WTF::UniqueRef<WebCore::LocalFrameLoaderClient> {
-        return makeUniqueRef<FrameLoaderClientJava>(m_webPage);  // Use only m_webPage
-    };
-    RefPtr<LocalFrame> childFrame = LocalFrame::createSubframe(*page(), std::move(clientCreator), localFrame->loader().frameID(), ownerElement);
-
+    RefPtr<LocalFrame> childFrame(LocalFrame::createSubframe(*page(), makeUniqueRef<FrameLoaderClientJava>(m_webPage),localFrame->loader().frameID(),ownerElement));
     static_cast<FrameLoaderClientJava&>(childFrame->loader().client()).setFrame(childFrame.get());
 
     childFrame->tree().setSpecifiedName(name);
@@ -831,7 +822,7 @@ LocalFrame* FrameLoaderClientJava::dispatchCreatePage(const NavigationAction& ac
         return nullptr;
     Frame *f = frame();
     auto* localFrame = dynamicDowncast<LocalFrame>(f);
-    RefPtr<Page> newPage = webPage->chrome().createWindow(*localFrame, { }, action);
+    Page* newPage = webPage->chrome().createWindow(*localFrame, { }, action);
 
     // createWindow can return null (e.g., popup blocker denies the window).
     if (!newPage)
@@ -1072,8 +1063,7 @@ void FrameLoaderClientJava::setMainDocumentError(
     notImplemented();
 }
 
-void FrameLoaderClientJava::startDownload(const ResourceRequest&, const String& suggestedName, FromDownloadAttribute fromDownloadAttribute)
-
+void FrameLoaderClientJava::startDownload(const ResourceRequest&, const String&)
 {
     notImplemented();
 }

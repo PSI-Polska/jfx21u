@@ -42,8 +42,7 @@ void CalcExpressionNumber::dump(TextStream& ts) const
 
 bool CalcExpressionNumber::operator==(const CalcExpressionNode& other) const
 {
-    auto* otherExpressionNumber = dynamicDowncast<CalcExpressionNumber>(other);
-    return otherExpressionNumber && *this == *otherExpressionNumber;
+    return is<CalcExpressionNumber>(other) && *this == downcast<CalcExpressionNumber>(other);
 }
 
 }

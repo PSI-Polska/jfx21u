@@ -96,14 +96,10 @@ Path buildPathFromByteStream(const SVGPathByteStream& stream)
     if (stream.isEmpty())
         return { };
 
-    if (auto path = stream.cachedPath())
-        return path.value();
-
     Path path;
     SVGPathBuilder builder(path);
     SVGPathByteStreamSource source(stream);
     SVGPathParser::parse(source, builder);
-    stream.cachePath(path);
     return path;
 }
 

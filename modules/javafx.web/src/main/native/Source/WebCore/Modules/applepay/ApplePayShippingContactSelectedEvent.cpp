@@ -29,19 +29,24 @@
 #if ENABLE(APPLE_PAY)
 
 #include "PaymentContact.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ApplePayShippingContactSelectedEvent);
+WTF_MAKE_ISO_ALLOCATED_IMPL(ApplePayShippingContactSelectedEvent);
 
 ApplePayShippingContactSelectedEvent::ApplePayShippingContactSelectedEvent(const AtomString& type, unsigned version, const PaymentContact& shippingContact)
-    : Event(EventInterfaceType::ApplePayShippingContactSelectedEvent, type, CanBubble::No, IsCancelable::No)
+    : Event(type, CanBubble::No, IsCancelable::No)
     , m_shippingContact(shippingContact.toApplePayPaymentContact(version))
 {
 }
 
 ApplePayShippingContactSelectedEvent::~ApplePayShippingContactSelectedEvent() = default;
+
+EventInterface ApplePayShippingContactSelectedEvent::eventInterface() const
+{
+    return ApplePayShippingContactSelectedEventInterfaceType;
+}
 
 }
 

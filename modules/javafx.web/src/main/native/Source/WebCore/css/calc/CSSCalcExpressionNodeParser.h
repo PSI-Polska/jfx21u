@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "CSSCalcSymbolsAllowed.h"
 #include "CSSValueKeywords.h"
 #include "CalcOperator.h"
 #include "CalculationCategory.h"
@@ -34,14 +33,15 @@
 namespace WebCore {
 
 class CSSCalcExpressionNode;
+class CSSCalcSymbolTable;
 class CSSParserToken;
 class CSSParserTokenRange;
 
 class CSSCalcExpressionNodeParser {
 public:
-    explicit CSSCalcExpressionNodeParser(CalculationCategory destinationCategory, CSSCalcSymbolsAllowed symbolsAllowed)
+    explicit CSSCalcExpressionNodeParser(CalculationCategory destinationCategory, const CSSCalcSymbolTable& symbolTable)
         : m_destinationCategory(destinationCategory)
-        , m_symbolsAllowed(WTFMove(symbolsAllowed))
+        , m_symbolTable(symbolTable)
     {
     }
 
@@ -57,7 +57,7 @@ private:
     bool parseCalcValue(CSSParserTokenRange&, CSSValueID, int depth, RefPtr<CSSCalcExpressionNode>&);
 
     CalculationCategory m_destinationCategory;
-    CSSCalcSymbolsAllowed m_symbolsAllowed;
+    SingleThreadWeakRef<const CSSCalcSymbolTable> m_symbolTable;
 };
 
 }

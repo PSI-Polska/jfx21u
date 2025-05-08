@@ -21,8 +21,6 @@
 #include "config.h"
 #include "CSSPrimitiveValue.h"
 
-#include "CSSAnchorValue.h"
-#include "CSSCalcSymbolTable.h"
 #include "CSSCalcValue.h"
 #include "CSSHelper.h"
 #include "CSSMarkup.h"
@@ -47,15 +45,14 @@
 #include <wtf/Hasher.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
-#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
+#include <wtf/text/StringConcatenateNumbers.h>
 
 namespace WebCore {
 
 static inline bool isValidCSSUnitTypeForDoubleConversion(CSSUnitType unitType)
 {
     switch (unitType) {
-    case CSSUnitType::CSS_ANCHOR:
     case CSSUnitType::CSS_CALC:
     case CSSUnitType::CSS_CALC_PERCENTAGE_WITH_LENGTH:
     case CSSUnitType::CSS_CALC_PERCENTAGE_WITH_NUMBER:
@@ -157,7 +154,6 @@ static inline bool isStringType(CSSUnitType type)
     case CSSUnitType::CSS_ATTR:
     case CSSUnitType::CSS_FONT_FAMILY:
         return true;
-    case CSSUnitType::CSS_ANCHOR:
     case CSSUnitType::CSS_CALC:
     case CSSUnitType::CSS_CALC_PERCENTAGE_WITH_LENGTH:
     case CSSUnitType::CSS_CALC_PERCENTAGE_WITH_NUMBER:
@@ -316,21 +312,6 @@ CSSPrimitiveValue::CSSPrimitiveValue(Color color)
     new (reinterpret_cast<Color*>(&m_value.colorAsInteger)) Color(WTFMove(color));
 }
 
-Color CSSPrimitiveValue::absoluteColor() const
-{
-    if (isColor())
-        return color();
-
-    // FIXME: there are some cases where we can resolve a dynamic color at parse time, we should support them.
-    if (isUnresolvedColor())
-        return { };
-
-    if (StyleColor::isAbsoluteColorKeyword(valueID()))
-        return StyleColor::colorFromAbsoluteKeyword(valueID());
-
-    return { };
-}
-
 CSSPrimitiveValue::CSSPrimitiveValue(StaticCSSValueTag, CSSValueID valueID)
     : CSSValue(PrimitiveClass)
 {
@@ -371,13 +352,6 @@ CSSPrimitiveValue::CSSPrimitiveValue(CSSUnresolvedColor unresolvedColor)
     m_value.unresolvedColor = new CSSUnresolvedColor(WTFMove(unresolvedColor));
 }
 
-CSSPrimitiveValue::CSSPrimitiveValue(Ref<CSSAnchorValue> value)
-    : CSSValue(PrimitiveClass)
-{
-    setPrimitiveUnitType(CSSUnitType::CSS_ANCHOR);
-    m_value.anchor = &value.leakRef();
-}
-
 CSSPrimitiveValue::~CSSPrimitiveValue()
 {
     auto type = primitiveUnitType();
@@ -389,9 +363,6 @@ CSSPrimitiveValue::~CSSPrimitiveValue()
     case CSSUnitType::CSS_FONT_FAMILY:
         if (m_value.string)
             m_value.string->deref();
-        break;
-    case CSSUnitType::CSS_ANCHOR:
-        m_value.anchor->deref();
         break;
     case CSSUnitType::CSS_CALC:
             m_value.calc->deref();
@@ -605,11 +576,6 @@ Ref<CSSPrimitiveValue> CSSPrimitiveValue::create(CSSUnresolvedColor value)
     return adoptRef(*new CSSPrimitiveValue(WTFMove(value)));
 }
 
-Ref<CSSPrimitiveValue> CSSPrimitiveValue::create(Ref<CSSAnchorValue> value)
-{
-    return adoptRef(*new CSSPrimitiveValue(WTFMove(value)));
-}
-
 Ref<CSSPrimitiveValue> CSSPrimitiveValue::createAttr(String value)
 {
     return adoptRef(*new CSSPrimitiveValue(WTFMove(value), CSSUnitType::CSS_ATTR));
@@ -733,8 +699,8 @@ double CSSPrimitiveValue::computeUnzoomedNonCalcLengthDouble(CSSUnitType primiti
     case CSSUnitType::CSS_REX: {
         ASSERT(fontCascadeForUnit);
         auto& fontMetrics = fontCascadeForUnit->metricsOfPrimaryFont();
-        if (fontMetrics.xHeight())
-            return fontMetrics.xHeight().value() * value;
+        if (fontMetrics.hasXHeight())
+            return fontMetrics.xHeight() * value;
         auto& fontDescription = fontCascadeForUnit->fontDescription();
         return ((propertyToCompute == CSSPropertyFontSize) ? fontDescription.specifiedSize() : fontDescription.computedSize()) / 2.0 * value;
     }
@@ -742,9 +708,9 @@ double CSSPrimitiveValue::computeUnzoomedNonCalcLengthDouble(CSSUnitType primiti
     case CSSUnitType::CSS_RCAP: {
         ASSERT(fontCascadeForUnit);
         auto& fontMetrics = fontCascadeForUnit->metricsOfPrimaryFont();
-        if (fontMetrics.capHeight())
-            return fontMetrics.capHeight().value() * value;
-        return fontMetrics.intAscent() * value;
+        if (fontMetrics.hasCapHeight())
+            return fontMetrics.floatCapHeight() * value;
+        return fontMetrics.ascent() * value;
     }
     case CSSUnitType::CSS_CH:
     case CSSUnitType::CSS_RCH:
@@ -753,7 +719,7 @@ double CSSPrimitiveValue::computeUnzoomedNonCalcLengthDouble(CSSUnitType primiti
     case CSSUnitType::CSS_IC:
     case CSSUnitType::CSS_RIC:
         ASSERT(fontCascadeForUnit);
-        return fontCascadeForUnit->metricsOfPrimaryFont().ideogramWidth().value_or(0) * value;
+        return fontCascadeForUnit->metricsOfPrimaryFont().ideogramWidth() * value;
     case CSSUnitType::CSS_PX:
         return value;
     case CSSUnitType::CSS_CM:
@@ -967,7 +933,7 @@ double CSSPrimitiveValue::computeNonCalcLengthDouble(const CSSToLengthConversion
     case CSSUnitType::CSS_LH:
         if (conversionData.computingLineHeight() || conversionData.computingFontSize()) {
             // Try to get the parent's computed line-height, or fall back to the initial line-height of this element's font spacing.
-            value *= conversionData.parentStyle() ? conversionData.parentStyle()->computedLineHeight() : conversionData.fontCascadeForFontUnits().metricsOfPrimaryFont().intLineSpacing();
+            value *= conversionData.parentStyle() ? conversionData.parentStyle()->computedLineHeight() : conversionData.fontCascadeForFontUnits().metricsOfPrimaryFont().lineSpacing();
         } else
             value *= conversionData.computedLineHeightForFontUnits();
         break;
@@ -1118,13 +1084,13 @@ double CSSPrimitiveValue::doubleValue(CSSUnitType unitType) const
 
 double CSSPrimitiveValue::doubleValue() const
 {
-    return isCalculated() ? m_value.calc->doubleValue({ }) : m_value.number;
+    return isCalculated() ? m_value.calc->doubleValue() : m_value.number;
 }
 
 double CSSPrimitiveValue::doubleValueDividingBy100IfPercentage() const
 {
     if (isCalculated())
-        return m_value.calc->primitiveType() == CSSUnitType::CSS_PERCENTAGE ? m_value.calc->doubleValue({ }) / 100.0 : m_value.calc->doubleValue({ });
+        return m_value.calc->primitiveType() == CSSUnitType::CSS_PERCENTAGE ? m_value.calc->doubleValue() / 100.0 : m_value.calc->doubleValue();
     if (isPercentage())
         return m_value.number / 100.0;
     return m_value.number;
@@ -1230,49 +1196,30 @@ String CSSPrimitiveValue::stringValue() const
     }
 }
 
-static NEVER_INLINE ASCIILiteral formatNonfiniteCSSNumberValuePrefix(double number)
+static NEVER_INLINE String formatNonfiniteValue(double number, ASCIILiteral suffix)
 {
+    auto prefix = [&] {
         if (number == std::numeric_limits<double>::infinity())
             return "infinity"_s;
         if (number == -std::numeric_limits<double>::infinity())
             return "-infinity"_s;
         ASSERT(std::isnan(number));
         return "NaN"_s;
-}
-
-static NEVER_INLINE void formatNonfiniteCSSNumberValue(StringBuilder& builder, double number, ASCIILiteral suffix)
-{
-    return builder.append(formatNonfiniteCSSNumberValuePrefix(number), suffix.isEmpty() ? ""_s : " * 1"_s, suffix);
-}
-
-static NEVER_INLINE String formatNonfiniteCSSNumberValue(double number, ASCIILiteral suffix)
-{
-    return makeString(formatNonfiniteCSSNumberValuePrefix(number), suffix.isEmpty() ? ""_s : " * 1"_s, suffix);
-}
-
-NEVER_INLINE void formatCSSNumberValue(StringBuilder& builder, double value, ASCIILiteral suffix)
-{
-    if (!std::isfinite(value))
-        return formatNonfiniteCSSNumberValue(builder, value, suffix);
-    return builder.append(FormattedCSSNumber::create(value), suffix);
-}
-
-NEVER_INLINE String formatCSSNumberValue(double value, ASCIILiteral suffix)
-{
-    if (!std::isfinite(value))
-        return formatNonfiniteCSSNumberValue(value, suffix);
-    return makeString(FormattedCSSNumber::create(value), suffix);
+    }();
+    return makeString(prefix, suffix.isEmpty() ? ""_s : " * 1"_s, suffix);
 }
 
 NEVER_INLINE String CSSPrimitiveValue::formatNumberValue(ASCIILiteral suffix) const
 {
-    return formatCSSNumberValue(m_value.number, suffix);
+    if (!std::isfinite(m_value.number))
+        return formatNonfiniteValue(m_value.number, suffix);
+    return makeString(FormattedCSSNumber::create(m_value.number), suffix);
 }
 
 NEVER_INLINE String CSSPrimitiveValue::formatIntegerValue(ASCIILiteral suffix) const
 {
     if (!std::isfinite(m_value.number))
-        return formatNonfiniteCSSNumberValue(m_value.number, suffix);
+        return formatNonfiniteValue(m_value.number, suffix);
     return makeString(m_value.number, suffix);
 }
 
@@ -1343,7 +1290,6 @@ ASCIILiteral CSSPrimitiveValue::unitTypeString(CSSUnitType unitType)
     case CSSUnitType::CSS_VW: return "vw"_s;
     case CSSUnitType::CSS_X: return "x"_s;
 
-    case CSSUnitType::CSS_ANCHOR:
         case CSSUnitType::CSS_ATTR:
         case CSSUnitType::CSS_CALC:
         case CSSUnitType::CSS_CALC_PERCENTAGE_WITH_LENGTH:
@@ -1438,8 +1384,6 @@ ALWAYS_INLINE String CSSPrimitiveValue::serializeInternal() const
     case CSSUnitType::CSS_X:
         return formatNumberValue(unitTypeString(type));
 
-    case CSSUnitType::CSS_ANCHOR:
-        return m_value.anchor->customCSSText();
     case CSSUnitType::CSS_ATTR:
         return makeString("attr("_s, m_value.string, ')');
     case CSSUnitType::CSS_CALC:
@@ -1592,8 +1536,6 @@ bool CSSPrimitiveValue::equals(const CSSPrimitiveValue& other) const
         return m_value.calc->equals(*other.m_value.calc);
     case CSSUnitType::CSS_UNRESOLVED_COLOR:
         return m_value.unresolvedColor->equals(*other.m_value.unresolvedColor);
-    case CSSUnitType::CSS_ANCHOR:
-        return m_value.anchor->equals(*other.m_value.anchor);
     case CSSUnitType::CSS_IDENT:
     case CSSUnitType::CSS_CALC_PERCENTAGE_WITH_NUMBER:
     case CSSUnitType::CSS_CALC_PERCENTAGE_WITH_LENGTH:
@@ -1702,9 +1644,6 @@ bool CSSPrimitiveValue::addDerivedHash(Hasher& hasher) const
     case CSSUnitType::CSS_UNRESOLVED_COLOR:
         add(hasher, m_value.unresolvedColor);
         break;
-    case CSSUnitType::CSS_ANCHOR:
-        add(hasher, m_value.anchor);
-        break;
     case CSSUnitType::CSS_IDENT:
     case CSSUnitType::CSS_CALC_PERCENTAGE_WITH_NUMBER:
     case CSSUnitType::CSS_CALC_PERCENTAGE_WITH_LENGTH:
@@ -1751,9 +1690,6 @@ void CSSPrimitiveValue::collectComputedStyleDependencies(ComputedStyleDependenci
         break;
     case CSSUnitType::CSS_CALC:
         m_value.calc->collectComputedStyleDependencies(dependencies);
-        break;
-    case CSSUnitType::CSS_ANCHOR:
-        m_value.anchor->collectComputedStyleDependencies(dependencies);
         break;
     case CSSUnitType::CSS_VW:
     case CSSUnitType::CSS_VH:
@@ -1829,32 +1765,20 @@ bool CSSPrimitiveValue::convertingToLengthHasRequiredConversionData(int lengthCo
     // return std::optional<double> instead of having this check here.
 
     bool isFixedNumberConversion = lengthConversion & (FixedIntegerConversion | FixedFloatConversion);
-    if (!isFixedNumberConversion)
-        return true;
-
     auto dependencies = computedStyleDependencies();
     if (!dependencies.rootProperties.isEmpty() && !conversionData.rootStyle())
-        return false;
+        return !isFixedNumberConversion;
 
     if (!dependencies.properties.isEmpty() && !conversionData.style())
-        return false;
+        return !isFixedNumberConversion;
 
     if (dependencies.containerDimensions && !conversionData.elementForContainerUnitResolution())
-        return false;
+        return !isFixedNumberConversion;
 
-    if (dependencies.viewportDimensions && !conversionData.renderView())
-        return false;
+    if (dependencies.viewportDimensions && conversionData.defaultViewportFactor().isEmpty())
+        return !isFixedNumberConversion;
 
     return true;
-}
-
-IterationStatus CSSPrimitiveValue::customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
-{
-    if (auto* calc = cssCalcValue()) {
-        if (func(const_cast<CSSCalcValue&>(*calc)) == IterationStatus::Done)
-            return IterationStatus::Done;
-    }
-    return IterationStatus::Continue;
 }
 
 } // namespace WebCore

@@ -29,7 +29,6 @@
 #import <wtf/FastMalloc.h>
 #import <wtf/Ref.h>
 #import <wtf/RefCounted.h>
-#import <wtf/TZoneMalloc.h>
 #import <wtf/Vector.h>
 
 struct WGPURenderBundleImpl {
@@ -59,9 +58,8 @@ class TextureView;
 
 // https://gpuweb.github.io/gpuweb/#gpurenderbundle
 class RenderBundle : public WGPURenderBundleImpl, public RefCounted<RenderBundle> {
-    WTF_MAKE_TZONE_ALLOCATED(RenderBundle);
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    using MinVertexCountsContainer = HashMap<uint64_t, IndexBufferAndIndexData, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>>;
     using ResourcesContainer = NSMapTable<id<MTLResource>, ResourceUsageAndRenderStage*>;
     static Ref<RenderBundle> create(NSArray<RenderBundleICBWithResources*> *resources, RefPtr<WebGPU::RenderBundleEncoder> encoder, const WGPURenderBundleEncoderDescriptor& descriptor, uint64_t commandCount, Device& device)
     {
@@ -83,11 +81,10 @@ public:
 
     void replayCommands(RenderPassEncoder&) const;
     void updateMinMaxDepths(float minDepth, float maxDepth);
-    bool validateRenderPass(bool depthReadOnly, bool stencilReadOnly, const WGPURenderPassDescriptor&, const Vector<RefPtr<TextureView>>&, const RefPtr<TextureView>&) const;
+    bool validateRenderPass(bool depthReadOnly, bool stencilReadOnly, const WGPURenderPassDescriptor&) const;
     bool validatePipeline(const RenderPipeline*);
     uint64_t drawCount() const;
     NSString* lastError() const;
-    bool requiresCommandReplay() const;
 
 private:
     RenderBundle(NSArray<RenderBundleICBWithResources*> *, RefPtr<RenderBundleEncoder>, const WGPURenderBundleEncoderDescriptor&, uint64_t, Device&);
@@ -98,7 +95,6 @@ private:
     NSArray<RenderBundleICBWithResources*> *m_renderBundlesResources;
     WGPURenderBundleEncoderDescriptor m_descriptor;
     Vector<WGPUTextureFormat> m_descriptorColorFormats;
-
     NSString* m_lastErrorString { nil };
     uint64_t m_commandCount { 0 };
     float m_minDepth { 0.f };

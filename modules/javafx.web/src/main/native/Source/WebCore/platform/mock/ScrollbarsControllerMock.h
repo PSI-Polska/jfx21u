@@ -45,7 +45,6 @@ class ScrollbarsControllerMock final : public ScrollbarsController {
 public:
     ScrollbarsControllerMock(ScrollableArea&, Function<void(const String&)>&&);
     virtual ~ScrollbarsControllerMock();
-    bool isScrollbarsControllerMock() const final { return true; }
 
 private:
 
@@ -59,7 +58,7 @@ private:
     void mouseEnteredScrollbar(Scrollbar*) const final;
     void mouseExitedScrollbar(Scrollbar*) const final;
     void mouseIsDownInScrollbar(Scrollbar*, bool) const final;
-    ASCIILiteral scrollbarPrefix(Scrollbar*) const;
+    const char* scrollbarPrefix(Scrollbar*) const;
 
     Function<void(const String&)> m_logger;
     Scrollbar* m_verticalScrollbar { nullptr };
@@ -68,6 +67,3 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ScrollbarsControllerMock)
-    static bool isType(const WebCore::ScrollbarsController& controller) { return controller.isScrollbarsControllerMock(); }
-SPECIALIZE_TYPE_TRAITS_END()

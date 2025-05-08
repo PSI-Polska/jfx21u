@@ -38,11 +38,9 @@ class VTTCue;
 class VTTCueBox;
 
 class RenderVTTCue final : public RenderBlockFlow {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderVTTCue);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderVTTCue);
+    WTF_MAKE_ISO_ALLOCATED(RenderVTTCue);
 public:
     RenderVTTCue(VTTCueBox&, RenderStyle&&);
-    virtual ~RenderVTTCue();
 
 private:
     void layout() override;

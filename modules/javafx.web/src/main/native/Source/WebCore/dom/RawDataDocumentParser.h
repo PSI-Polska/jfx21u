@@ -47,7 +47,7 @@ private:
     void flush(DocumentWriter& writer) override
     {
         // Make sure appendBytes is called at least once.
-        appendBytes(writer, { });
+        appendBytes(writer, nullptr, 0);
     }
 
     void insert(SegmentedString&&) override

@@ -90,7 +90,6 @@ namespace JSC {
 //   Note: print() does not automatically insert a '\n' at the end of the line.
 //   If you want a '\n', you'll have to add it explicitly (as in the examples above).
 
-namespace Printer {
 
 struct AllRegisters {
     explicit AllRegisters(unsigned charsToIndent = 0)
@@ -165,6 +164,8 @@ struct MemWord : public Memory {
     { }
 };
 
+namespace Printer {
+
 // Add some specialized printers.
 
 void printAllRegisters(PrintStream&, Context&);
@@ -223,7 +224,7 @@ struct Printer<MemWord<IntType>> : public Printer<Memory> {
     { }
 };
 
-void SYSV_ABI printCallback(Probe::Context&);
+void printCallback(Probe::Context&);
 
 } // namespace Printer
 
@@ -232,12 +233,6 @@ inline void MacroAssembler::print(Arguments&&... arguments)
 {
     auto printRecordList = Printer::makePrintRecordList(std::forward<Arguments>(arguments)...);
     probe(tagCFunction<JITProbePtrTag>(Printer::printCallback), printRecordList);
-}
-
-template<typename... Arguments>
-inline void MacroAssembler::println(Arguments&&... arguments)
-{
-    print(std::forward<Arguments>(arguments)..., "\n");
 }
 
 inline void MacroAssembler::print(Printer::PrintRecordList* printRecordList)

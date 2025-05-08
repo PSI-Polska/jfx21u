@@ -30,54 +30,36 @@
 #include <wtf/WeakPtr.h>
 
 namespace WTF {
-class TaskCancellationGroup;
-class TaskCancellationGroupImpl;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WTF::TaskCancellationGroup> : std::true_type { };
-template<> struct IsDeprecatedWeakRefSmartPointerException<WTF::TaskCancellationGroupImpl> : std::true_type { };
-}
-
-namespace WTF {
 
 class CancellableTask;
 
-class TaskCancellationGroupImpl : public CanMakeWeakPtr<TaskCancellationGroupImpl> {
-        WTF_MAKE_FAST_ALLOCATED;
-public:
-        void cancel() { weakPtrFactory().revokeAll(); }
-        bool hasPendingTask() const { return weakPtrFactory().weakPtrCount(); }
-};
-
-class TaskCancellationGroupHandle {
-public:
-        bool isCancelled() const { return !m_impl; }
-        void clear() { m_impl = nullptr; }
-private:
-        friend class TaskCancellationGroup;
-    explicit TaskCancellationGroupHandle(TaskCancellationGroupImpl& impl)
-        : m_impl(impl)
-    {
-    }
-    WeakPtr<TaskCancellationGroupImpl> m_impl;
-};
-
 class TaskCancellationGroup : public CanMakeWeakPtr<TaskCancellationGroup> {
 public:
-    TaskCancellationGroup()
-        : m_impl(makeUniqueRef<TaskCancellationGroupImpl>())
-    {
-    }
+    TaskCancellationGroup() : m_impl(makeUniqueRef<Impl>()) { }
     void cancel() { m_impl->cancel(); }
     bool hasPendingTask() const { return m_impl->hasPendingTask(); }
 
 private:
     friend class CancellableTask;
-    TaskCancellationGroupHandle createHandle() { return TaskCancellationGroupHandle { m_impl }; }
+    class Impl : public CanMakeWeakPtr<Impl> {
+        WTF_MAKE_FAST_ALLOCATED;
+    public:
+        void cancel() { weakPtrFactory().revokeAll(); }
+        bool hasPendingTask() const { return weakPtrFactory().weakPtrCount(); }
+    };
 
-    UniqueRef<TaskCancellationGroupImpl> m_impl;
+    class Handle {
+    public:
+        bool isCancelled() const { return !m_impl; }
+        void clear() { m_impl = nullptr; }
+    private:
+        friend class TaskCancellationGroup;
+        explicit Handle(Impl& impl) : m_impl(impl) { }
+        WeakPtr<Impl> m_impl;
+    };
+    Handle createHandle() { return Handle { m_impl }; }
+
+    UniqueRef<Impl> m_impl;
 };
 
 class CancellableTask {
@@ -86,7 +68,7 @@ public:
     void operator()();
 
 private:
-    TaskCancellationGroupHandle m_cancellationGroup;
+    TaskCancellationGroup::Handle m_cancellationGroup;
     Function<void()> m_task;
 };
 

@@ -42,7 +42,9 @@ RTCDataChannelRemoteSource::RTCDataChannelRemoteSource(RTCDataChannelIdentifier 
     m_handler->setClient(*this, { });
 }
 
-RTCDataChannelRemoteSource::~RTCDataChannelRemoteSource() = default;
+RTCDataChannelRemoteSource::~RTCDataChannelRemoteSource()
+{
+}
 
 } // namespace WebCore
 

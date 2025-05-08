@@ -62,7 +62,7 @@ static std::optional<String> readString(WTF::Persistence::Decoder& decoder)
     Vector<uint8_t> buffer(size.value());
     if (!decoder.decodeFixedLengthData({ buffer.data(), size.value() }))
         return std::nullopt;
-    auto result = String::fromUTF8(buffer.span());
+    auto result = String::fromUTF8(buffer.data(), size.value());
     if (result.isNull())
         return std::nullopt;
 
@@ -83,14 +83,14 @@ static bool readSimpleValue(WTF::Persistence::Decoder& decoder, KeyedDecoderGene
     return true;
 }
 
-std::unique_ptr<KeyedDecoder> KeyedDecoder::decoder(std::span<const uint8_t> data)
+std::unique_ptr<KeyedDecoder> KeyedDecoder::decoder(const uint8_t* data, size_t size)
 {
-    return makeUnique<KeyedDecoderGeneric>(data);
+    return makeUnique<KeyedDecoderGeneric>(data, size);
 }
 
-KeyedDecoderGeneric::KeyedDecoderGeneric(std::span<const uint8_t> data)
+KeyedDecoderGeneric::KeyedDecoderGeneric(const uint8_t* data, size_t size)
 {
-    WTF::Persistence::Decoder decoder(data);
+    WTF::Persistence::Decoder decoder({ data, size });
 
     m_rootDictionary = makeUnique<Dictionary>();
     m_dictionaryStack.append(m_rootDictionary.get());
@@ -239,13 +239,14 @@ bool KeyedDecoderGeneric::decodeSimpleValue(const String& key, T& result)
     return true;
 }
 
-bool KeyedDecoderGeneric::decodeBytes(const String& key, std::span<const uint8_t>& data)
+bool KeyedDecoderGeneric::decodeBytes(const String& key, const uint8_t*& data, size_t& size)
 {
     auto value = getPointerFromDictionaryStack<Vector<uint8_t>>(key);
     if (!value)
         return false;
 
-    data = value->span();
+    data = value->data();
+    size = value->size();
     return true;
 }
 

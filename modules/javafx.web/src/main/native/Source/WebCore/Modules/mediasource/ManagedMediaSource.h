@@ -34,7 +34,7 @@
 namespace WebCore {
 
 class ManagedMediaSource final : public MediaSource {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ManagedMediaSource);
+    WTF_MAKE_ISO_ALLOCATED(ManagedMediaSource);
 public:
     static Ref<ManagedMediaSource> create(ScriptExecutionContext&);
     ~ManagedMediaSource();
@@ -52,7 +52,8 @@ public:
 private:
     explicit ManagedMediaSource(ScriptExecutionContext&);
     void monitorSourceBuffers() final;
-    void elementDetached() final;
+    bool isOpen() const final;
+    bool isBuffered(const PlatformTimeRanges&) const;
     void setStreaming(bool);
     void streamingTimerFired();
     void ensurePrefsRead();

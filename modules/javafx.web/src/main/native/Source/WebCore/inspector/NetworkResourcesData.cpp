@@ -101,16 +101,17 @@ unsigned NetworkResourcesData::ResourceData::decodeDataToContent()
     ASSERT(!hasContent());
 
     auto buffer = m_dataBuffer.takeAsContiguous();
+    size_t dataLength = buffer->size();
 
     if (m_decoder) {
         m_base64Encoded = false;
-        m_content = m_decoder->decodeAndFlush(buffer->span());
+        m_content = m_decoder->decodeAndFlush(buffer->data(), dataLength);
     } else {
         m_base64Encoded = true;
-        m_content = base64EncodeToString(buffer->span());
+        m_content = base64EncodeToString(buffer->data(), dataLength);
     }
 
-    return m_content.sizeInBytes() - buffer->size();
+    return m_content.sizeInBytes() - dataLength;
 }
 
 NetworkResourcesData::NetworkResourcesData()

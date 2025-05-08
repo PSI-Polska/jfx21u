@@ -27,11 +27,11 @@
 #include "RenderView.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGSVGElement.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(LegacyRenderSVGViewportContainer);
+WTF_MAKE_ISO_ALLOCATED_IMPL(LegacyRenderSVGViewportContainer);
 
 LegacyRenderSVGViewportContainer::LegacyRenderSVGViewportContainer(SVGSVGElement& element, RenderStyle&& style)
     : LegacyRenderSVGContainer(Type::LegacySVGViewportContainer, element, WTFMove(style))
@@ -41,8 +41,6 @@ LegacyRenderSVGViewportContainer::LegacyRenderSVGViewportContainer(SVGSVGElement
 {
     ASSERT(isLegacyRenderSVGViewportContainer());
 }
-
-LegacyRenderSVGViewportContainer::~LegacyRenderSVGViewportContainer() = default;
 
 SVGSVGElement& LegacyRenderSVGViewportContainer::svgSVGElement() const
 {
@@ -62,16 +60,16 @@ void LegacyRenderSVGViewportContainer::applyViewportClip(PaintInfo& paintInfo)
 
 void LegacyRenderSVGViewportContainer::calcViewport()
 {
-    Ref element = svgSVGElement();
-    SVGLengthContext lengthContext(element.ptr());
-    FloatRect newViewport(element->x().value(lengthContext), element->y().value(lengthContext), element->width().value(lengthContext), element->height().value(lengthContext));
+    SVGSVGElement& element = svgSVGElement();
+    SVGLengthContext lengthContext(&element);
+    FloatRect newViewport(element.x().value(lengthContext), element.y().value(lengthContext), element.width().value(lengthContext), element.height().value(lengthContext));
 
     if (m_viewport == newViewport)
         return;
 
     m_viewport = newViewport;
 
-    invalidateCachedBoundaries();
+    setNeedsBoundariesUpdate();
     setNeedsTransformUpdate();
 }
 

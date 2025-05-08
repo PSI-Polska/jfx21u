@@ -282,13 +282,13 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_getReadyStateImpl
     auto readyState = IMPL->readyState();
     const char* readyStateStr { };
     switch (readyState) {
-    case WebCore::Document::ReadyState::Loading:
+    case WebCore::Document::Loading:
         readyStateStr = "loading";
         break;
-    case WebCore::Document::ReadyState::Interactive:
+    case WebCore::Document::Interactive:
         readyStateStr = "interactive";
         break;
-    case WebCore::Document::ReadyState::Complete:
+    case WebCore::Document::Complete:
         readyStateStr = "complete";
         break;
     default:

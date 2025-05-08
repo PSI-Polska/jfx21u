@@ -1,8 +1,7 @@
 // Copyright 2015 The Chromium Authors. All rights reserved.
-// Copyright (C) 2016-2024 Apple Inc. All rights reserved.
+// Copyright (C) 2016-2023 Apple Inc. All rights reserved.
 // Copyright (C) 2021 Metrological Group B.V.
 // Copyright (C) 2021 Igalia S.L.
-// Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -41,19 +40,10 @@
 #include "CSSParserImpl.h"
 #include "CSSParserTokenRange.h"
 #include "CSSPropertyParser.h"
-#include "CSSPropertyParserConsumer+Angle.h"
-#include "CSSPropertyParserConsumer+Ident.h"
-#include "CSSPropertyParserConsumer+Integer.h"
-#include "CSSPropertyParserConsumer+List.h"
-#include "CSSPropertyParserConsumer+Number.h"
-#include "CSSPropertyParserConsumer+Percent.h"
-#include "CSSPropertyParserConsumer+URL.h"
 #include "CSSPropertyParserHelpers.h"
-#include "CSSToLengthConversionData.h"
 #include "CSSTokenizer.h"
 #include "CSSUnicodeRangeValue.h"
 #include "Document.h"
-#include "FilterOperationsBuilder.h"
 #include "FontCustomPlatformData.h"
 #include "ParsingUtilities.h"
 #include "ScriptExecutionContext.h"
@@ -82,19 +72,16 @@ std::optional<CSSPropertyParserHelpers::FontRaw> CSSPropertyParserWorkerSafe::pa
     return CSSPropertyParserHelpers::consumeFontRaw(range, mode);
 }
 
-std::optional<FilterOperations> CSSPropertyParserWorkerSafe::parseFilterString(const Document& document, RenderStyle& style, const String& string, CSSParserMode mode)
+Color CSSPropertyParserWorkerSafe::parseColor(const String& string)
 {
+    if (auto color = CSSParserFastPaths::parseSimpleColor(string))
+        return *color;
+
     CSSTokenizer tokenizer(string);
     CSSParserTokenRange range(tokenizer.tokenRange());
     range.consumeWhitespace();
 
-    auto parsedValue = CSSPropertyParserHelpers::consumeFilter(range, CSSParserContext(mode), CSSPropertyParserHelpers::AllowedFilterFunctions::PixelFilters);
-    if (!parsedValue)
-        return std::nullopt;
-
-    CSSToLengthConversionData conversionData { style, nullptr, nullptr, nullptr };
-
-    return Style::createFilterOperations(document, style, conversionData, *parsedValue);
+    return CSSPropertyParserHelpers::consumeColorWorkerSafe(range, CSSParserContext(HTMLStandardMode));
 }
 
 static CSSParserMode parserMode(ScriptExecutionContext& context)
@@ -242,7 +229,7 @@ namespace CSSPropertyParserHelpersWorkerSafe {
 static RefPtr<CSSFontFaceSrcResourceValue> consumeFontFaceSrcURI(CSSParserTokenRange& range, const CSSParserContext& context)
 {
     StringView parsedURL = CSSPropertyParserHelpers::consumeURLRaw(range);
-    String urlString = !parsedURL.is8Bit() && parsedURL.containsOnlyASCII() ? String::make8Bit(parsedURL.span16()) : parsedURL.toString();
+    String urlString = !parsedURL.is8Bit() && parsedURL.containsOnlyASCII() ? String::make8Bit(parsedURL.characters16(), parsedURL.length()) : parsedURL.toString();
     auto location = context.completeURL(urlString);
     if (location.resolvedURL.isNull())
         return nullptr;

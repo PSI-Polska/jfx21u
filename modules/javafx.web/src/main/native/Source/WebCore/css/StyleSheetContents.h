@@ -21,7 +21,6 @@
 #pragma once
 
 #include "CSSParserContext.h"
-#include <optional>
 #include <wtf/CheckedRef.h>
 #include <wtf/Function.h>
 #include <wtf/HashMap.h>
@@ -73,7 +72,6 @@ public:
     WEBCORE_EXPORT bool parseString(const String&);
 
     bool isCacheable() const;
-    bool isCacheableWithNoBaseURLDependency() const;
 
     bool isLoading() const;
     bool subresourcesAllowReuse(CachePolicy, FrameLoader&) const;
@@ -89,8 +87,6 @@ public:
     const String& charset() const { return m_parserContext.charset; }
 
     bool loadCompleted() const { return m_loadCompleted; }
-
-    bool mayDependOnBaseURL() const;
 
     bool traverseRules(const Function<bool(const StyleRuleBase&)>& handler) const;
     bool traverseSubresources(const Function<bool(const CachedResource&)>& handler) const;
@@ -146,8 +142,8 @@ public:
     bool isMutable() const { return m_isMutable; }
     void setMutable() { m_isMutable = true; }
 
-    bool hasNestingRules() const;
-    void clearHasNestingRulesCache() { m_hasNestingRulesCache = { }; }
+    bool hasNestingRules() const { return m_hasNestingRules; }
+    void setHasNestingRules() { m_hasNestingRules = true; }
 
     bool isInMemoryCache() const { return m_inMemoryCacheCount; }
     void addedToMemoryCache();
@@ -187,7 +183,7 @@ private:
     bool m_didLoadErrorOccur { false };
     bool m_usesStyleBasedEditability { false };
     bool m_isMutable { false };
-    mutable std::optional<bool> m_hasNestingRulesCache;
+    bool m_hasNestingRules { false };
     unsigned m_inMemoryCacheCount { 0 };
 
     CSSParserContext m_parserContext;

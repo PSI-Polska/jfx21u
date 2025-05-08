@@ -26,7 +26,6 @@
 #pragma once
 
 #include "CachedResource.h"
-#include "ContentSecurityPolicy.h"
 #include "Element.h"
 #include "ResourceLoadPriority.h"
 #include "ResourceLoaderOptions.h"
@@ -85,7 +84,7 @@ public:
     void updateReferrerPolicy(ReferrerPolicy);
     void updateReferrerAndOriginHeaders(FrameLoader&);
     void updateUserAgentHeader(FrameLoader&);
-    void upgradeInsecureRequestIfNeeded(Document&, ContentSecurityPolicy::AlwaysUpgradeRequest = ContentSecurityPolicy::AlwaysUpgradeRequest::No);
+    void upgradeInsecureRequestIfNeeded(Document&);
     void setAcceptHeaderIfNone(CachedResource::Type);
     void updateAccordingCacheMode();
     void updateAcceptEncodingHeader();
@@ -132,6 +131,6 @@ private:
     bool m_ignoreForRequestCount { false };
 };
 
-void upgradeInsecureResourceRequestIfNeeded(ResourceRequest&, Document&, ContentSecurityPolicy::AlwaysUpgradeRequest = ContentSecurityPolicy::AlwaysUpgradeRequest::No);
+void upgradeInsecureResourceRequestIfNeeded(ResourceRequest&, Document&);
 
 } // namespace WebCore

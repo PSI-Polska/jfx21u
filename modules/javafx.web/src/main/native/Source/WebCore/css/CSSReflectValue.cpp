@@ -26,7 +26,7 @@
 #include "config.h"
 #include "CSSReflectValue.h"
 
-#include <wtf/text/MakeString.h>
+#include "CSSPrimitiveValue.h"
 
 namespace WebCore {
 

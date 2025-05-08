@@ -27,7 +27,6 @@
 #pragma once
 
 #include "CacheableIdentifier.h"
-#include "CallLinkStatus.h"
 #include "ObjectPropertyConditionSet.h"
 #include "PropertyOffset.h"
 #include "StructureSet.h"
@@ -38,18 +37,13 @@ namespace DOMJIT {
 class GetterSetter;
 }
 
-class CallLinkStatus;
 class InByStatus;
 struct DumpContext;
 
 class InByVariant {
     WTF_MAKE_TZONE_ALLOCATED(InByVariant);
 public:
-    InByVariant(CacheableIdentifier, const StructureSet& = StructureSet(), PropertyOffset = invalidOffset, const ObjectPropertyConditionSet& = ObjectPropertyConditionSet(), std::unique_ptr<CallLinkStatus> = nullptr);
-    ~InByVariant();
-
-    InByVariant(const InByVariant&);
-    InByVariant& operator=(const InByVariant&);
+    InByVariant(CacheableIdentifier, const StructureSet& = StructureSet(), PropertyOffset = invalidOffset, const ObjectPropertyConditionSet& = ObjectPropertyConditionSet());
 
     bool isSet() const { return !!m_structureSet.size(); }
     explicit operator bool() const { return isSet(); }
@@ -60,7 +54,6 @@ public:
     const ObjectPropertyConditionSet& conditionSet() const { return m_conditionSet; }
 
     PropertyOffset offset() const { return m_offset; }
-    CallLinkStatus* callLinkStatus() const { return m_callLinkStatus.get(); }
 
     bool isHit() const { return offset() != invalidOffset; }
 
@@ -93,7 +86,6 @@ private:
     ObjectPropertyConditionSet m_conditionSet;
     PropertyOffset m_offset;
     CacheableIdentifier m_identifier;
-    std::unique_ptr<CallLinkStatus> m_callLinkStatus;
 };
 
 } // namespace JSC

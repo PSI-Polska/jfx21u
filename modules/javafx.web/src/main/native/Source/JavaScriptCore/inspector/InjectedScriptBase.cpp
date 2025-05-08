@@ -39,7 +39,6 @@
 #include "JSNativeStdFunction.h"
 #include "ScriptFunctionCall.h"
 #include <wtf/JSONValues.h>
-#include <wtf/text/MakeString.h>
 
 namespace Inspector {
 
@@ -64,7 +63,7 @@ static RefPtr<JSON::Value> jsToInspectorValue(JSC::JSGlobalObject* globalObject,
     if (value.isInt32())
         return JSON::Value::create(value.asInt32());
     if (value.isString())
-        return JSON::Value::create(asString(value)->value(globalObject).data);
+        return JSON::Value::create(asString(value)->value(globalObject));
 
     if (value.isObject()) {
         if (isJSArray(value)) {
@@ -118,7 +117,9 @@ InjectedScriptBase::InjectedScriptBase(const String& name, JSC::JSGlobalObject* 
 {
 }
 
-InjectedScriptBase::~InjectedScriptBase() = default;
+InjectedScriptBase::~InjectedScriptBase()
+{
+}
 
 bool InjectedScriptBase::hasAccessToInspectedScriptState() const
 {

@@ -95,15 +95,13 @@ bool JSDOMWindowProperties::getOwnPropertySlot(JSObject* object, JSGlobalObject*
     if (proto->hasProperty(lexicalGlobalObject, propertyName))
         return false;
 
+    // FIXME: We should probably add support for JSRemoteDOMWindowBase too.
     auto* jsWindow = jsDynamicCast<JSDOMWindowBase*>(thisObject->globalObject());
     if (!jsWindow)
         return false;
 
     auto& window = jsWindow->wrapped();
-    RefPtr localWindow = dynamicDowncast<LocalDOMWindow>(window);
-    if (!localWindow)
-        return false;
-    return jsDOMWindowPropertiesGetOwnPropertySlotNamedItemGetter(thisObject, *localWindow, lexicalGlobalObject, propertyName, slot);
+    return jsDOMWindowPropertiesGetOwnPropertySlotNamedItemGetter(thisObject, window, lexicalGlobalObject, propertyName, slot);
 }
 
 bool JSDOMWindowProperties::getOwnPropertySlotByIndex(JSObject* object, JSGlobalObject* lexicalGlobalObject, unsigned index, PropertySlot& slot)

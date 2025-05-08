@@ -23,6 +23,5 @@
  */
 
 [
-    RethrowException,
-    GenerateIsReachable=ImplScriptExecutionContext
+    RethrowException
 ] callback WebLockGrantedCallback = Promise<any> (WebLock? webLock);

@@ -28,5 +28,5 @@
     Exposed=(Window,Worker),
 ] interface CanvasGradient {
     // opaque object
-    [CallWith=CurrentScriptExecutionContext] undefined addColorStop(double offset, DOMString color);
+    undefined addColorStop(double offset, DOMString color);
 };

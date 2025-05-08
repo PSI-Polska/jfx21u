@@ -40,7 +40,7 @@ class SSALoweringPhase : public Phase {
 
 public:
     SSALoweringPhase(Graph& graph)
-        : Phase(graph, "SSA lowering"_s)
+        : Phase(graph, "SSA lowering")
         , m_insertionSet(graph)
     {
     }

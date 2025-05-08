@@ -35,20 +35,22 @@
 namespace WebCore {
 
 template <typename CharacterType>
-static inline bool isCSSTokenizerIdentifier(std::span<const CharacterType> characters)
+static inline bool isCSSTokenizerIdentifier(const CharacterType* characters, unsigned length)
 {
+    const CharacterType* end = characters + length;
+
     // -?
-    while (!characters.empty() && characters.front() == '-')
-        characters = characters.subspan(1);
+    if (characters != end && characters[0] == '-')
+        ++characters;
 
     // {nmstart}
-    if (characters.empty() || !isNameStartCodePoint(characters.front()))
+    if (characters == end || !isNameStartCodePoint(characters[0]))
         return false;
-    characters = characters.subspan(1);
+    ++characters;
 
     // {nmchar}*
-    for (; !characters.empty(); characters = characters.subspan(1)) {
-        if (!isNameCodePoint(characters.front()))
+    for (; characters != end; ++characters) {
+        if (!isNameCodePoint(characters[0]))
             return false;
     }
 
@@ -58,12 +60,14 @@ static inline bool isCSSTokenizerIdentifier(std::span<const CharacterType> chara
 // "ident" from the CSS tokenizer, minus backslash-escape sequences
 static bool isCSSTokenizerIdentifier(const String& string)
 {
-    if (string.isEmpty())
+    unsigned length = string.length();
+
+    if (!length)
         return false;
 
     if (string.is8Bit())
-        return isCSSTokenizerIdentifier(string.span8());
-    return isCSSTokenizerIdentifier(string.span16());
+        return isCSSTokenizerIdentifier(string.characters8(), length);
+    return isCSSTokenizerIdentifier(string.characters16(), length);
 }
 
 static void serializeCharacter(char32_t c, StringBuilder& appendTo)
@@ -141,7 +145,7 @@ String serializeString(const String& string)
 String serializeURL(const String& string)
 {
     StringBuilder builder;
-    builder.append("url("_s);
+    builder.append("url(");
     serializeString(string, builder);
     builder.append(')');
     return builder.toString();

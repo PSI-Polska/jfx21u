@@ -45,21 +45,15 @@ SVGViewSpec::SVGViewSpec(SVGElement& contextElement)
 
 RefPtr<SVGElement> SVGViewSpec::viewTarget() const
 {
-    RefPtr contextElement = m_contextElement.get();
-    if (!contextElement)
+    if (!m_contextElement)
         return nullptr;
-    return dynamicDowncast<SVGElement>(contextElement->treeScope().getElementById(m_viewTargetString));
-}
-
-Ref<SVGTransformList> SVGViewSpec::protectedTransform()
-{
-    return m_transform;
+    return dynamicDowncast<SVGElement>(m_contextElement->treeScope().getElementById(m_viewTargetString));
 }
 
 void SVGViewSpec::reset()
 {
     m_viewTargetString = emptyString();
-    protectedTransform()->clearItems();
+    m_transform->clearItems();
     SVGFitToViewBox::reset();
     SVGZoomAndPan::reset();
 }
@@ -73,7 +67,9 @@ template<typename CharacterType> static constexpr CharacterType viewTargetSpec[]
 
 bool SVGViewSpec::parseViewSpec(StringView string)
 {
-    return readCharactersForParsing(string, [&]<typename CharacterType> (StringParsingBuffer<CharacterType> buffer) -> bool {
+    return readCharactersForParsing(string, [&](auto buffer) -> bool {
+        using CharacterType = typename decltype(buffer)::CharacterType;
+
         if (buffer.atEnd() || !m_contextElement)
             return false;
 
@@ -101,7 +97,7 @@ bool SVGViewSpec::parseViewSpec(StringView string)
                     skipUntil(buffer, ')');
                     if (buffer.atEnd())
                         return false;
-                    m_viewTargetString = String({ viewTargetStart, buffer.position() });
+                    m_viewTargetString = String(viewTargetStart, buffer.position() - viewTargetStart);
                     ++buffer;
                 } else
                     return false;
@@ -132,7 +128,7 @@ bool SVGViewSpec::parseViewSpec(StringView string)
                     return false;
                 if (!skipExactly(buffer, '('))
                     return false;
-                protectedTransform()->parse(buffer);
+                m_transform->parse(buffer);
                 if (!skipExactly(buffer, ')'))
                     return false;
             } else

@@ -33,7 +33,6 @@
 
 namespace WebCore {
 
-class CSSCalcSymbolTable;
 class CSSToLengthConversionData;
 class CalcExpressionNode;
 
@@ -50,15 +49,12 @@ public:
         CssCalcOperation,
         CssCalcNegate,
         CssCalcInvert,
-        CssCalcSymbol,
     };
 
-    virtual ~CSSCalcExpressionNode();
-
-    virtual bool isResolvable() const = 0;
+    virtual ~CSSCalcExpressionNode() = default;
     virtual bool isZero() const = 0;
     virtual std::unique_ptr<CalcExpressionNode> createCalcExpression(const CSSToLengthConversionData&) const = 0;
-    virtual double doubleValue(CSSUnitType, const CSSCalcSymbolTable&) const = 0;
+    virtual double doubleValue(CSSUnitType) const = 0;
     virtual double computeLengthPx(const CSSToLengthConversionData&) const = 0;
     virtual bool equals(const CSSCalcExpressionNode& other) const { return m_category == other.m_category; }
     virtual Type type() const = 0;

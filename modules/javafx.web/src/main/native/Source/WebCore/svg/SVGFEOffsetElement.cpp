@@ -24,13 +24,12 @@
 
 #include "FEOffset.h"
 #include "NodeName.h"
-#include "SVGFilter.h"
 #include "SVGNames.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGFEOffsetElement);
+WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFEOffsetElement);
 
 inline SVGFEOffsetElement::SVGFEOffsetElement(const QualifiedName& tagName, Document& document)
     : SVGFilterPrimitiveStandardAttributes(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -54,13 +53,13 @@ void SVGFEOffsetElement::attributeChanged(const QualifiedName& name, const AtomS
 {
     switch (name.nodeName()) {
     case AttributeNames::dxAttr:
-        Ref { m_dx }->setBaseValInternal(newValue.toFloat());
+        m_dx->setBaseValInternal(newValue.toFloat());
         break;
     case AttributeNames::dyAttr:
-        Ref { m_dy }->setBaseValInternal(newValue.toFloat());
+        m_dy->setBaseValInternal(newValue.toFloat());
         break;
     case AttributeNames::inAttr:
-        Ref { m_in1 }->setBaseValInternal(newValue);
+        m_in1->setBaseValInternal(newValue);
         break;
     default:
         break;

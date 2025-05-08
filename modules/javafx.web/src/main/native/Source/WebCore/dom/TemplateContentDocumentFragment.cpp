@@ -26,11 +26,11 @@
 #include "config.h"
 #include "TemplateContentDocumentFragment.h"
 
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TemplateContentDocumentFragment);
+WTF_MAKE_ISO_ALLOCATED_IMPL(TemplateContentDocumentFragment);
 
 } // namespace WebCore
 

@@ -28,11 +28,11 @@
 #if ENABLE(VIDEO)
 
 #include "TrackEvent.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TrackEvent);
+WTF_MAKE_ISO_ALLOCATED_IMPL(TrackEvent);
 
 static inline std::optional<TrackEvent::TrackEventTrack> convertToTrackEventTrack(Ref<TrackBase>&& track)
 {
@@ -40,11 +40,11 @@ static inline std::optional<TrackEvent::TrackEventTrack> convertToTrackEventTrac
     case TrackBase::BaseTrack:
         return std::nullopt;
     case TrackBase::TextTrack:
-        return TrackEvent::TrackEventTrack { RefPtr { uncheckedDowncast<TextTrack>(WTFMove(track)) } };
+        return TrackEvent::TrackEventTrack { RefPtr<TextTrack>(&downcast<TextTrack>(track.get())) };
     case TrackBase::AudioTrack:
-        return TrackEvent::TrackEventTrack { RefPtr { uncheckedDowncast<AudioTrack>(WTFMove(track)) } };
+        return TrackEvent::TrackEventTrack { RefPtr<AudioTrack>(&downcast<AudioTrack>(track.get())) };
     case TrackBase::VideoTrack:
-        return TrackEvent::TrackEventTrack { RefPtr { uncheckedDowncast<VideoTrack>(WTFMove(track)) } };
+        return TrackEvent::TrackEventTrack { RefPtr<VideoTrack>(&downcast<VideoTrack>(track.get())) };
     }
 
     ASSERT_NOT_REACHED();
@@ -52,18 +52,23 @@ static inline std::optional<TrackEvent::TrackEventTrack> convertToTrackEventTrac
 }
 
 TrackEvent::TrackEvent(const AtomString& type, CanBubble canBubble, IsCancelable cancelable, Ref<TrackBase>&& track)
-    : Event(EventInterfaceType::TrackEvent, type, canBubble, cancelable)
+    : Event(type, canBubble, cancelable)
     , m_track(convertToTrackEventTrack(WTFMove(track)))
 {
 }
 
 TrackEvent::TrackEvent(const AtomString& type, Init&& initializer, IsTrusted isTrusted)
-    : Event(EventInterfaceType::TrackEvent, type, initializer, isTrusted)
+    : Event(type, initializer, isTrusted)
     , m_track(WTFMove(initializer.track))
 {
 }
 
 TrackEvent::~TrackEvent() = default;
+
+EventInterface TrackEvent::eventInterface() const
+{
+    return TrackEventInterfaceType;
+}
 
 } // namespace WebCore
 

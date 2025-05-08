@@ -213,9 +213,9 @@ Vector<MarkedText> MarkedText::collectForDocumentMarkers(const RenderText& rende
             return MarkedText::Type::GrammarError;
         case DocumentMarker::Type::CorrectionIndicator:
             return MarkedText::Type::Correction;
-#if ENABLE(WRITING_TOOLS)
-        case DocumentMarker::Type::WritingToolsTextSuggestion:
-            return MarkedText::Type::WritingToolsTextSuggestion;
+#if ENABLE(UNIFIED_TEXT_REPLACEMENT)
+        case DocumentMarker::Type::UnifiedTextReplacement:
+            return MarkedText::Type::Correction;
 #endif
         case DocumentMarker::Type::TextMatch:
             return MarkedText::Type::TextMatch;
@@ -244,8 +244,8 @@ Vector<MarkedText> MarkedText::collectForDocumentMarkers(const RenderText& rende
                 break;
             FALLTHROUGH;
         case DocumentMarker::Type::CorrectionIndicator:
-#if ENABLE(WRITING_TOOLS)
-        case DocumentMarker::Type::WritingToolsTextSuggestion:
+#if ENABLE(UNIFIED_TEXT_REPLACEMENT)
+        case DocumentMarker::Type::UnifiedTextReplacement:
 #endif
         case DocumentMarker::Type::Replacement:
         case DocumentMarker::Type::DictationAlternatives:
@@ -289,9 +289,9 @@ Vector<MarkedText> MarkedText::collectForDocumentMarkers(const RenderText& rende
         switch (marker->type()) {
         case DocumentMarker::Type::Spelling:
         case DocumentMarker::Type::CorrectionIndicator:
-#if ENABLE(WRITING_TOOLS)
-        case DocumentMarker::Type::WritingToolsTextSuggestion:
-            if (marker->type() == DocumentMarker::Type::WritingToolsTextSuggestion && std::get<DocumentMarker::WritingToolsTextSuggestionData>(marker->data()).state != DocumentMarker::WritingToolsTextSuggestionData::State::Accepted)
+#if ENABLE(UNIFIED_TEXT_REPLACEMENT)
+        case DocumentMarker::Type::UnifiedTextReplacement:
+            if (marker->type() == DocumentMarker::Type::UnifiedTextReplacement && std::get<DocumentMarker::UnifiedTextReplacementData>(marker->data()).state != DocumentMarker::UnifiedTextReplacementData::State::Pending)
                 break;
 
             BFALLTHROUGH;
@@ -322,27 +322,12 @@ Vector<MarkedText> MarkedText::collectForDocumentMarkers(const RenderText& rende
     return markedTexts;
 }
 
-Vector<MarkedText> MarkedText::collectForDraggedAndTransparentContent(const DocumentMarker::Type type, const RenderText& renderer, const TextBoxSelectableRange& selectableRange)
+Vector<MarkedText> MarkedText::collectForDraggedContent(const RenderText& renderer, const TextBoxSelectableRange& selectableRange)
 {
-    auto markerTypeForDocumentMarker = [] (DocumentMarker::Type type) {
-        switch (type) {
-        case DocumentMarker::Type::DraggedContent:
-            return MarkedText::Type::DraggedContent;
-        case DocumentMarker::Type::TransparentContent:
-            return MarkedText::Type::TransparentContent;
-        default:
-            return MarkedText::Type::Unmarked;
-        }
-    };
-    Type markerType = markerTypeForDocumentMarker(type);
-    if (markerType == MarkedText::Type::Unmarked) {
-        ASSERT_NOT_REACHED();
-        return { };
-    }
-    auto contentRanges = renderer.contentRangesBetweenOffsetsForType(type, selectableRange.start, selectableRange.start + selectableRange.length);
+    auto draggedContentRanges = renderer.draggedContentRangesBetweenOffsets(selectableRange.start, selectableRange.start + selectableRange.length);
 
-    return contentRanges.map([&](const auto& range) -> MarkedText {
-        return { selectableRange.clamp(range.first), selectableRange.clamp(range.second), markerType };
+    return draggedContentRanges.map([&](const auto& range) -> MarkedText {
+        return { selectableRange.clamp(range.first), selectableRange.clamp(range.second), MarkedText::Type::DraggedContent };
     });
 }
 

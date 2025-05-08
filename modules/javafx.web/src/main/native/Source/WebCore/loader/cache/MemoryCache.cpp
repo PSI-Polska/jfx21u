@@ -35,7 +35,7 @@
 #include "Image.h"
 #include "LocalFrameView.h"
 #include "Logging.h"
-#include "PublicSuffixStore.h"
+#include "PublicSuffix.h"
 #include "SharedBuffer.h"
 #include "WorkerGlobalScope.h"
 #include "WorkerLoaderProxy.h"
@@ -648,12 +648,6 @@ void MemoryCache::removeFromLiveDecodedResourcesList(CachedResource& resource)
     m_liveDecodedResources.remove(resource);
 }
 
-void MemoryCache::moveToEndOfLiveDecodedResourcesListIfPresent(CachedResource& resource)
-{
-    RELEASE_ASSERT(isMainThread());
-    m_liveDecodedResources.moveToLastIfPresent(resource);
-}
-
 void MemoryCache::insertInLiveDecodedResourcesList(CachedResource& resource)
 {
     RELEASE_ASSERT(isMainThread());
@@ -802,9 +796,9 @@ void MemoryCache::prune()
 void MemoryCache::pruneSoon()
 {
     RELEASE_ASSERT(isMainThread());
-    if (!needsPruning())
-        return;
     if (m_pruneTimer.isActive())
+        return;
+    if (!needsPruning())
         return;
     m_pruneTimer.startOneShot(0_s);
 }

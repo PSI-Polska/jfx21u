@@ -32,9 +32,9 @@ namespace JSC { namespace DFG {
 
 void BlockSet::dump(PrintStream& out) const
 {
-    CommaPrinter comma(" "_s);
+    CommaPrinter comma(" ");
     for (BlockIndex blockIndex = m_set.findBit(0, true); blockIndex < m_set.size(); blockIndex = m_set.findBit(blockIndex + 1, true))
-        out.print(comma, "#"_s, blockIndex);
+        out.print(comma, "#", blockIndex);
 }
 
 } } // namespace JSC::DFG

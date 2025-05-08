@@ -38,7 +38,7 @@ SimpleTypedArrayController::SimpleTypedArrayController(bool allowAtomicsWait)
 {
 }
 
-SimpleTypedArrayController::~SimpleTypedArrayController() = default;
+SimpleTypedArrayController::~SimpleTypedArrayController() { }
 
 JSArrayBuffer* SimpleTypedArrayController::toJS(JSGlobalObject* lexicalGlobalObject, JSGlobalObject* globalObject, ArrayBuffer* native)
 {
@@ -62,10 +62,10 @@ bool SimpleTypedArrayController::isAtomicsWaitAllowedOnCurrentThread()
     return m_allowAtomicsWait;
 }
 
-bool SimpleTypedArrayController::JSArrayBufferOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, JSC::AbstractSlotVisitor& visitor, ASCIILiteral* reason)
+bool SimpleTypedArrayController::JSArrayBufferOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, JSC::AbstractSlotVisitor& visitor, const char** reason)
 {
     if (UNLIKELY(reason))
-        *reason = "JSArrayBuffer is opaque root"_s;
+        *reason = "JSArrayBuffer is opaque root";
     auto& wrapper = *JSC::jsCast<JSC::JSArrayBuffer*>(handle.slot()->asCell());
     return visitor.containsOpaqueRoot(wrapper.impl());
 }

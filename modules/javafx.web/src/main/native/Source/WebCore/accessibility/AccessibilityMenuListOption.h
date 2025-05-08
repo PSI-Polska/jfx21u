@@ -25,14 +25,13 @@
 
 #pragma once
 
-#include "AccessibilityNodeObject.h"
 #include "AccessibilityObject.h"
 
 namespace WebCore {
 
 class HTMLOptionElement;
 
-class AccessibilityMenuListOption final : public AccessibilityNodeObject {
+class AccessibilityMenuListOption final : public AccessibilityObject {
 public:
     static Ref<AccessibilityMenuListOption> create(HTMLOptionElement&);
     void setParent(AccessibilityObject* parent) { m_parent = parent; }
@@ -46,8 +45,8 @@ private:
     bool canHaveChildren() const final { return false; }
     AccessibilityObject* parentObject() const final { return m_parent.get(); }
 
-    HTMLOptionElement* optionElement() const;
     Element* actionElement() const final;
+    Node* node() const final;
     bool isEnabled() const final;
     bool isVisible() const final;
     bool isOffScreen() const final;
@@ -58,6 +57,7 @@ private:
     String stringValue() const final;
     bool computeAccessibilityIsIgnored() const final;
 
+    WeakPtr<HTMLOptionElement, WeakPtrImplWithEventTargetData> m_element;
     WeakPtr<AccessibilityObject> m_parent;
 };
 

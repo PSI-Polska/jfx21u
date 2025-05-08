@@ -41,20 +41,21 @@ public:
     explicit BoyerMooreHorspoolTable(StringView pattern)
     {
         if (pattern.is8Bit())
-            initializeTable(pattern.span8());
+            initializeTable(std::span(pattern.characters8(), pattern.characters8() + pattern.length()));
         else
-            initializeTable(pattern.span16());
+            initializeTable(std::span(pattern.characters16(), pattern.characters16() + pattern.length()));
     }
 
     explicit constexpr BoyerMooreHorspoolTable(ASCIILiteral pattern)
     {
-        initializeTable(pattern.span8());
+        initializeTable(std::span(pattern.characters(), pattern.characters() + pattern.length()));
     }
 
     ALWAYS_INLINE size_t find(StringView string, StringView matchString) const
     {
+        unsigned length = string.length();
         unsigned matchLength = matchString.length();
-        if (matchLength > string.length())
+        if (matchLength > length)
             return notFound;
 
         if (UNLIKELY(!matchLength))
@@ -62,13 +63,13 @@ public:
 
         if (string.is8Bit()) {
             if (matchString.is8Bit())
-                return findInner(string.span8(), matchString.span8());
-            return findInner(string.span8(), matchString.span16());
+                return findInner(string.characters8(), matchString.characters8(), length, matchLength);
+            return findInner(string.characters8(), matchString.characters16(), length, matchLength);
         }
 
         if (matchString.is8Bit())
-            return findInner(string.span16(), matchString.span8());
-        return findInner(string.span16(), matchString.span16());
+            return findInner(string.characters16(), matchString.characters8(), length, matchLength);
+        return findInner(string.characters16(), matchString.characters16(), length, matchLength);
     }
 
 private:
@@ -88,14 +89,14 @@ private:
     }
 
     template <typename SearchCharacterType, typename MatchCharacterType>
-    ALWAYS_INLINE size_t findInner(std::span<const SearchCharacterType> characters, std::span<const MatchCharacterType> matchCharacters) const
+    ALWAYS_INLINE size_t findInner(const SearchCharacterType* characters, const MatchCharacterType* matchCharacters, unsigned length, unsigned matchLength) const
     {
-        auto* cursor = characters.data();
-        auto* last = characters.data() + characters.size() - matchCharacters.size();
+        auto* cursor = characters;
+        auto* last = characters + length - matchLength;
         while (cursor <= last) {
-            if (equal(cursor, matchCharacters))
-                return cursor - characters.data();
-            cursor += m_table[static_cast<uint8_t>(cursor[matchCharacters.size() - 1])];
+            if (equal(cursor, matchCharacters, matchLength))
+                return cursor - characters;
+            cursor += m_table[static_cast<uint8_t>(cursor[matchLength - 1])];
         }
         return notFound;
     }

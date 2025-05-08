@@ -35,7 +35,6 @@
 #include "FontCustomPlatformData.h"
 #include "SVGFontFaceElement.h"
 #include "ScriptExecutionContext.h"
-#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -65,7 +64,7 @@ void CSSFontFaceSrcLocalValue::setSVGFontFaceElement(SVGFontFaceElement& element
 
 String CSSFontFaceSrcLocalValue::customCSSText() const
 {
-    return makeString("local("_s, serializeString(m_fontFaceName), ')');
+    return makeString("local(", serializeString(m_fontFaceName), ')');
 }
 
 bool CSSFontFaceSrcLocalValue::equals(const CSSFontFaceSrcLocalValue& other) const
@@ -129,18 +128,11 @@ void CSSFontFaceSrcResourceValue::customSetReplacementURLForSubresources(const H
     auto replacementURLString = replacementURLStrings.get(m_location.resolvedURL.string());
     if (!replacementURLString.isNull())
         m_replacementURLString = replacementURLString;
-    m_shouldUseResolvedURLInCSSText = true;
 }
 
 void CSSFontFaceSrcResourceValue::customClearReplacementURLForSubresources()
 {
     m_replacementURLString = { };
-    m_shouldUseResolvedURLInCSSText = false;
-}
-
-bool CSSFontFaceSrcResourceValue::customMayDependOnBaseURL() const
-{
-    return WebCore::mayDependOnBaseURL(m_location);
 }
 
 String CSSFontFaceSrcResourceValue::customCSSText() const
@@ -148,19 +140,15 @@ String CSSFontFaceSrcResourceValue::customCSSText() const
     StringBuilder builder;
     if (!m_replacementURLString.isEmpty())
         builder.append(serializeURL(m_replacementURLString));
-    else {
-        if (m_shouldUseResolvedURLInCSSText)
-            builder.append(serializeURL(m_location.resolvedURL.string()));
     else
     builder.append(serializeURL(m_location.specifiedURLString));
-    }
     if (!m_format.isEmpty())
-        builder.append(" format("_s, serializeString(m_format), ')');
+        builder.append(" format(", serializeString(m_format), ')');
     if (!m_technologies.isEmpty()) {
-        builder.append(" tech("_s);
+        builder.append(" tech(");
         for (size_t i = 0; i < m_technologies.size(); ++i) {
             if (i)
-                builder.append(", "_s);
+                builder.append(", ");
             builder.append(cssTextFromFontTech(m_technologies[i]));
         }
         builder.append(')');

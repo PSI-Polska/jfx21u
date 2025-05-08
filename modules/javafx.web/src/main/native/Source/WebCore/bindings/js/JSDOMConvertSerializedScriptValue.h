@@ -31,15 +31,9 @@
 namespace WebCore {
 
 template<typename T> struct Converter<IDLSerializedScriptValue<T>> : DefaultConverter<IDLSerializedScriptValue<T>> {
-    using Result = ConversionResult<IDLSerializedScriptValue<T>>;
-
-    static Result convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
+    static RefPtr<T> convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
     {
-        auto result = T::convert(lexicalGlobalObject, value);
-        if (!result)
-            return Result::exception();
-
-        return Result { result.releaseNonNull() };
+        return T::convert(lexicalGlobalObject, value);
     }
 };
 

@@ -35,7 +35,6 @@
 
 #include <functional>
 #include <wtf/CommaPrinter.h>
-#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WTF {
@@ -60,37 +59,32 @@ enum class Token {
     Invalid,
 };
 
-constexpr auto nullToken = "null"_s;
-constexpr auto trueToken = "true"_s;
-constexpr auto falseToken = "false"_s;
+const char* const nullToken = "null";
+const char* const trueToken = "true";
+const char* const falseToken = "false";
 
 template<typename CodeUnit>
-bool parseConstToken(std::span<const CodeUnit> data, std::span<const CodeUnit>& tokenEnd, const char* token)
+bool parseConstToken(const CodeUnit* start, const CodeUnit* end, const CodeUnit** tokenEnd, const char* token)
 {
-    while (!data.empty() && *token != '\0') {
-        auto character = data.front();
-        data = data.subspan(1);
-        if (character != *token++)
-            break;
-    }
+    while (start < end && *token != '\0' && *start++ == *token++) { }
 
     if (*token != '\0')
         return false;
 
-    tokenEnd = data;
+    *tokenEnd = start;
     return true;
 }
 
 template<typename CodeUnit>
-bool readInt(std::span<const CodeUnit> data, std::span<const CodeUnit>& tokenEnd, bool canHaveLeadingZeros)
+bool readInt(const CodeUnit* start, const CodeUnit* end, const CodeUnit** tokenEnd, bool canHaveLeadingZeros)
 {
-    if (data.empty())
+    if (start == end)
         return false;
 
-    bool haveLeadingZero = '0' == data.front();
+    bool haveLeadingZero = '0' == *start;
     int length = 0;
-    while (!data.empty() && '0' <= data.front() && data.front() <= '9') {
-        data = data.subspan(1);
+    while (start < end && '0' <= *start && *start <= '9') {
+        ++start;
         ++length;
     }
 
@@ -100,95 +94,92 @@ bool readInt(std::span<const CodeUnit> data, std::span<const CodeUnit>& tokenEnd
     if (!canHaveLeadingZeros && length > 1 && haveLeadingZero)
         return false;
 
-    tokenEnd = data;
+    *tokenEnd = start;
     return true;
 }
 
 template<typename CodeUnit>
-bool parseNumberToken(std::span<const CodeUnit> data, std::span<const CodeUnit>& tokenEnd)
+bool parseNumberToken(const CodeUnit* start, const CodeUnit* end, const CodeUnit** tokenEnd)
 {
     // We just grab the number here. We validate the size in DecodeNumber.
     // According to RFC 4627, a valid number is: [minus] int [frac] [exp]
-    if (data.empty())
+    if (start == end)
         return false;
 
-    CodeUnit c = data.front();
+    CodeUnit c = *start;
     if ('-' == c)
-        data = data.subspan(1);
+        ++start;
 
-    if (!readInt(data, data, false))
+    if (!readInt(start, end, &start, false))
         return false;
 
-    if (data.empty()) {
-        tokenEnd = data;
+    if (start == end) {
+        *tokenEnd = start;
         return true;
     }
 
     // Optional fraction part.
-    c = data.front();
+    c = *start;
     if ('.' == c) {
-        data = data.subspan(1);
-        if (!readInt(data, data, true))
+        ++start;
+        if (!readInt(start, end, &start, true))
             return false;
-        if (data.empty()) {
-            tokenEnd = data;
+        if (start == end) {
+            *tokenEnd = start;
             return true;
         }
-        c = data.front();
+        c = *start;
     }
 
     // Optional exponent part.
     if ('e' == c || 'E' == c) {
-        data = data.subspan(1);
-        if (data.empty())
+        ++start;
+        if (start == end)
             return false;
-        c = data.front();
+        c = *start;
         if ('-' == c || '+' == c) {
-            data = data.subspan(1);
-            if (data.empty())
+            ++start;
+            if (start == end)
                 return false;
         }
-        if (!readInt(data, data, true))
+        if (!readInt(start, end, &start, true))
             return false;
     }
 
-    tokenEnd = data;
+    *tokenEnd = start;
     return true;
 }
 
 template<typename CodeUnit>
-bool readHexDigits(std::span<const CodeUnit> data, std::span<const CodeUnit>& tokenEnd, unsigned digits)
+bool readHexDigits(const CodeUnit* start, const CodeUnit* end, const CodeUnit** tokenEnd, int digits)
 {
-    if (data.size() < digits)
+    if (end - start < digits)
         return false;
 
-    for (unsigned i = 0; i < digits; ++i) {
-        if (!isASCIIHexDigit(data.front()))
+    for (int i = 0; i < digits; ++i) {
+        if (!isASCIIHexDigit(*start++))
             return false;
-        data = data.subspan(1);
     }
 
-    tokenEnd = data;
+    *tokenEnd = start;
     return true;
 }
 
 template<typename CodeUnit>
-bool parseStringToken(std::span<const CodeUnit> data, std::span<const CodeUnit>& tokenEnd)
+bool parseStringToken(const CodeUnit* start, const CodeUnit* end, const CodeUnit** tokenEnd)
 {
-    while (!data.empty()) {
-        CodeUnit c = data.front();
-        data = data.subspan(1);
-        if ('\\' == c && !data.empty()) {
-            c = data.front();
-            data = data.subspan(1);
+    while (start < end) {
+        CodeUnit c = *start++;
+        if ('\\' == c && start < end) {
+            c = *start++;
             // Make sure the escaped char is valid.
             switch (c) {
             case 'x':
-                if (!readHexDigits(data, data, 2))
+                if (!readHexDigits(start, end, &start, 2))
                     return false;
                 break;
             case 'u':
-                if (!readHexDigits(data, data, 4))
+                if (!readHexDigits(start, end, &start, 4))
                     return false;
                 break;
             case '\\':
@@ -205,7 +196,7 @@ bool parseStringToken(std::span<const CodeUnit> data, std::span<const CodeUnit>&
                 return false;
             }
         } else if ('"' == c) {
-            tokenEnd = data;
+            *tokenEnd = start;
             return true;
         }
     }
@@ -214,46 +205,46 @@ bool parseStringToken(std::span<const CodeUnit> data, std::span<const CodeUnit>&
 }
 
 template<typename CodeUnit>
-Token parseToken(std::span<const CodeUnit> data, std::span<const CodeUnit>& tokenStart, std::span<const CodeUnit>& tokenEnd)
+Token parseToken(const CodeUnit* start, const CodeUnit* end, const CodeUnit** tokenStart, const CodeUnit** tokenEnd)
 {
-    while (!data.empty() && isASCIIWhitespaceWithoutFF(data.front()))
-        data = data.subspan(1);
+    while (start < end && isASCIIWhitespaceWithoutFF(*start))
+        ++start;
 
-    if (data.empty())
+    if (start == end)
         return Token::Invalid;
 
-    tokenStart = data;
+    *tokenStart = start;
 
-    switch (data.front()) {
+    switch (*start) {
     case 'n':
-        if (parseConstToken(data, tokenEnd, nullToken))
+        if (parseConstToken(start, end, tokenEnd, nullToken))
             return Token::Null;
         break;
     case 't':
-        if (parseConstToken(data, tokenEnd, trueToken))
+        if (parseConstToken(start, end, tokenEnd, trueToken))
             return Token::BoolTrue;
         break;
     case 'f':
-        if (parseConstToken(data, tokenEnd, falseToken))
+        if (parseConstToken(start, end, tokenEnd, falseToken))
             return Token::BoolFalse;
         break;
     case '[':
-        tokenEnd = data.subspan(1);
+        *tokenEnd = start + 1;
         return Token::ArrayBegin;
     case ']':
-        tokenEnd = data.subspan(1);
+        *tokenEnd = start + 1;
         return Token::ArrayEnd;
     case ',':
-        tokenEnd = data.subspan(1);
+        *tokenEnd = start + 1;
         return Token::ListSeparator;
     case '{':
-        tokenEnd = data.subspan(1);
+        *tokenEnd = start + 1;
         return Token::ObjectBegin;
     case '}':
-        tokenEnd = data.subspan(1);
+        *tokenEnd = start + 1;
         return Token::ObjectEnd;
     case ':':
-        tokenEnd = data.subspan(1);
+        *tokenEnd = start + 1;
         return Token::ObjectPairSeparator;
     case '0':
     case '1':
@@ -266,11 +257,11 @@ Token parseToken(std::span<const CodeUnit> data, std::span<const CodeUnit>& toke
     case '8':
     case '9':
     case '-':
-        if (parseNumberToken(data, tokenEnd))
+        if (parseNumberToken(start, end, tokenEnd))
             return Token::Number;
         break;
     case '"':
-        if (parseStringToken(data.subspan(1), tokenEnd))
+        if (parseStringToken(start + 1, end, tokenEnd))
             return Token::String;
         break;
     }
@@ -279,19 +270,17 @@ Token parseToken(std::span<const CodeUnit> data, std::span<const CodeUnit>& toke
 }
 
 template<typename CodeUnit>
-bool decodeString(std::span<const CodeUnit> data, StringBuilder& output)
+bool decodeString(const CodeUnit* start, const CodeUnit* end, StringBuilder& output)
 {
-    while (!data.empty()) {
-        UChar c = data.front();
-        data = data.subspan(1);
+    while (start < end) {
+        UChar c = *start++;
         if ('\\' != c) {
             output.append(c);
             continue;
         }
-        if (UNLIKELY(data.empty()))
+        if (UNLIKELY(start >= end))
             return false;
-        c = data.front();
-        data = data.subspan(1);
+        c = *start++;
         switch (c) {
         case '"':
         case '/':
@@ -316,16 +305,16 @@ bool decodeString(std::span<const CodeUnit> data, StringBuilder& output)
             c = '\v';
             break;
         case 'x':
-            if (UNLIKELY(data.size() < 2))
+            if (UNLIKELY(start + 1 >= end))
                 return false;
-            c = toASCIIHexValue(data[0], data[1]);
-            data = data.subspan(2);
+            c = toASCIIHexValue(start[0], start[1]);
+            start += 2;
             break;
         case 'u':
-            if (UNLIKELY(data.size() < 4))
+            if (UNLIKELY(start + 3 >= end))
                 return false;
-            c = toASCIIHexValue(data[0], data[1]) << 8 | toASCIIHexValue(data[2], data[3]);
-            data = data.subspan(4);
+            c = toASCIIHexValue(start[0], start[1]) << 8 | toASCIIHexValue(start[2], start[3]);
+            start += 4;
             break;
         default:
             return false;
@@ -337,16 +326,19 @@ bool decodeString(std::span<const CodeUnit> data, StringBuilder& output)
 }
 
 template<typename CodeUnit>
-bool decodeString(std::span<const CodeUnit> data, String& output)
+bool decodeString(const CodeUnit* start, const CodeUnit* end, String& output)
 {
-    if (data.empty()) {
+    if (start == end) {
         output = emptyString();
         return true;
     }
 
+    if (start > end)
+        return false;
+
     StringBuilder buffer;
-    buffer.reserveCapacity(data.size());
-    if (!decodeString(data, buffer))
+    buffer.reserveCapacity(end - start);
+    if (!decodeString(start, end, buffer))
         return false;
 
     output = buffer.toString();
@@ -354,15 +346,15 @@ bool decodeString(std::span<const CodeUnit> data, String& output)
 }
 
 template<typename CodeUnit>
-RefPtr<JSON::Value> buildValue(std::span<const CodeUnit> data, std::span<const CodeUnit>& valueTokenEnd, int depth)
+RefPtr<JSON::Value> buildValue(const CodeUnit* start, const CodeUnit* end, const CodeUnit** valueTokenEnd, int depth)
 {
     if (depth > stackLimit)
         return nullptr;
 
     RefPtr<JSON::Value> result;
-    std::span<const CodeUnit> tokenStart;
-    std::span<const CodeUnit> tokenEnd;
-    Token token = parseToken(data, tokenStart, tokenEnd);
+    const CodeUnit* tokenStart;
+    const CodeUnit* tokenEnd;
+    Token token = parseToken(start, end, &tokenStart, &tokenEnd);
     switch (token) {
     case Token::Invalid:
         return nullptr;
@@ -377,7 +369,7 @@ RefPtr<JSON::Value> buildValue(std::span<const CodeUnit> data, std::span<const C
         break;
     case Token::Number: {
         bool ok;
-        double value = charactersToDouble(tokenStart.first(tokenEnd.data() - tokenStart.data()), &ok);
+        double value = charactersToDouble(tokenStart, tokenEnd - tokenStart, &ok);
         if (!ok)
             return nullptr;
         result = JSON::Value::create(value);
@@ -385,9 +377,7 @@ RefPtr<JSON::Value> buildValue(std::span<const CodeUnit> data, std::span<const C
     }
     case Token::String: {
         String value;
-        if (tokenEnd.data() - tokenStart.data() < 2)
-            return nullptr;
-        bool ok = decodeString(std::span { tokenStart.data() + 1, tokenEnd.data() - 1 }, value);
+        bool ok = decodeString(tokenStart + 1, tokenEnd - 1, value);
         if (!ok)
             return nullptr;
         result = JSON::Value::create(value);
@@ -395,20 +385,20 @@ RefPtr<JSON::Value> buildValue(std::span<const CodeUnit> data, std::span<const C
     }
     case Token::ArrayBegin: {
         Ref<JSON::Array> array = JSON::Array::create();
-        data = tokenEnd;
-        token = parseToken(data, tokenStart, tokenEnd);
+        start = tokenEnd;
+        token = parseToken(start, end, &tokenStart, &tokenEnd);
         while (token != Token::ArrayEnd) {
-            RefPtr<JSON::Value> arrayNode = buildValue(data, tokenEnd, depth + 1);
+            RefPtr<JSON::Value> arrayNode = buildValue(start, end, &tokenEnd, depth + 1);
             if (!arrayNode)
                 return nullptr;
             array->pushValue(arrayNode.releaseNonNull());
 
             // After a list value, we expect a comma or the end of the list.
-            data = tokenEnd;
-            token = parseToken(data, tokenStart, tokenEnd);
+            start = tokenEnd;
+            token = parseToken(start, end, &tokenStart, &tokenEnd);
             if (token == Token::ListSeparator) {
-                data = tokenEnd;
-                token = parseToken(data, tokenStart, tokenEnd);
+                start = tokenEnd;
+                token = parseToken(start, end, &tokenStart, &tokenEnd);
                 if (token == Token::ArrayEnd)
                     return nullptr;
             } else if (token != Token::ArrayEnd) {
@@ -422,35 +412,33 @@ RefPtr<JSON::Value> buildValue(std::span<const CodeUnit> data, std::span<const C
     }
     case Token::ObjectBegin: {
         Ref<JSON::Object> object = JSON::Object::create();
-        data = tokenEnd;
-        token = parseToken(data, tokenStart, tokenEnd);
+        start = tokenEnd;
+        token = parseToken(start, end, &tokenStart, &tokenEnd);
         while (token != Token::ObjectEnd) {
             if (token != Token::String)
                 return nullptr;
             String key;
-            if (tokenEnd.data() - tokenStart.data() < 2)
+            if (!decodeString(tokenStart + 1, tokenEnd - 1, key))
                 return nullptr;
-            if (!decodeString(std::span { tokenStart.data() + 1, tokenEnd.data() - 1 }, key))
-                return nullptr;
-            data = tokenEnd;
+            start = tokenEnd;
 
-            token = parseToken(data, tokenStart, tokenEnd);
+            token = parseToken(start, end, &tokenStart, &tokenEnd);
             if (token != Token::ObjectPairSeparator)
                 return nullptr;
-            data = tokenEnd;
+            start = tokenEnd;
 
-            RefPtr<JSON::Value> value = buildValue(data, tokenEnd, depth + 1);
+            RefPtr<JSON::Value> value = buildValue(start, end, &tokenEnd, depth + 1);
             if (!value)
                 return nullptr;
             object->setValue(key, value.releaseNonNull());
-            data = tokenEnd;
+            start = tokenEnd;
 
             // After a key/value pair, we expect a comma or the end of the
             // object.
-            token = parseToken(data, tokenStart, tokenEnd);
+            token = parseToken(start, end, &tokenStart, &tokenEnd);
             if (token == Token::ListSeparator) {
-                data = tokenEnd;
-                token = parseToken(data, tokenStart, tokenEnd);
+                start = tokenEnd;
+                token = parseToken(start, end, &tokenStart, &tokenEnd);
                 if (token == Token::ObjectEnd)
                     return nullptr;
             } else if (token != Token::ObjectEnd) {
@@ -467,7 +455,7 @@ RefPtr<JSON::Value> buildValue(std::span<const CodeUnit> data, std::span<const C
         // We got a token that's not a value.
         return nullptr;
     }
-    valueTokenEnd = tokenEnd;
+    *valueTokenEnd = tokenEnd;
     return result;
 }
 
@@ -532,11 +520,11 @@ Ref<Value> Value::create(const String& value)
 
 RefPtr<Value> Value::parseJSON(StringView json)
 {
-    auto containsNonSpace = [] (auto span) {
-        if (!span.data())
+    auto containsNonSpace = [] (const auto* begin, const auto* end) {
+        if (!begin)
             return false;
-        for (auto character : span) {
-            if (!isASCIIWhitespaceWithoutFF(character))
+        for (const auto* it = begin; it < end; it++) {
+            if (!isASCIIWhitespaceWithoutFF(*it))
                 return true;
         }
         return false;
@@ -544,16 +532,18 @@ RefPtr<Value> Value::parseJSON(StringView json)
 
     RefPtr<Value> result;
     if (json.is8Bit()) {
-        auto data = json.span8();
-        std::span<const LChar> tokenEnd;
-        result = buildValue(data, tokenEnd, 0);
-        if (containsNonSpace(tokenEnd))
+        const LChar* start = json.characters8();
+        const LChar* end = start + json.length();
+        const LChar* tokenEnd { nullptr };
+        result = buildValue(start, end, &tokenEnd, 0);
+        if (containsNonSpace(tokenEnd, end))
             return nullptr;
     } else {
-        auto data = json.span16();
-        std::span<const UChar> tokenEnd;
-        result = buildValue(data, tokenEnd, 0);
-        if (containsNonSpace(tokenEnd))
+        const UChar* start = json.characters16();
+        const UChar* end = start + json.length();
+        const UChar* tokenEnd { nullptr };
+        result = buildValue(start, end, &tokenEnd, 0);
+        if (containsNonSpace(tokenEnd, end))
             return nullptr;
     }
     return result;
@@ -620,25 +610,25 @@ void Value::dump(PrintStream& out) const
     }
     case Type::Object: {
         auto& object = *static_cast<const ObjectBase*>(this);
-        CommaPrinter comma(","_s);
-        out.print("{"_s);
+        CommaPrinter comma(",");
+        out.print("{");
         for (const auto& key : object.m_order) {
             auto findResult = object.m_map.find(key);
             ASSERT(findResult != object.m_map.end());
             StringBuilder builder;
             builder.appendQuotedJSONString(findResult->key);
-            out.print(comma, builder.toString(), ":"_s, findResult->value.get());
+            out.print(comma, builder.toString(), ":", findResult->value.get());
         }
-        out.print("}"_s);
+        out.print("}");
         break;
     }
     case Type::Array: {
         auto& array = *static_cast<const ArrayBase*>(this);
-        CommaPrinter comma(","_s);
-        out.print("["_s);
+        CommaPrinter comma(",");
+        out.print("[");
         for (auto& value : array.m_map)
             out.print(comma, value.get());
-        out.print("]"_s);
+        out.print("]");
         break;
     }
     default:
@@ -657,13 +647,13 @@ void Value::writeJSONImpl(StringBuilder& output) const
 {
     switch (m_type) {
     case Type::Null:
-        output.append("null"_s);
+        output.append("null");
         break;
     case Type::Boolean:
         if (m_value.boolean)
-            output.append("true"_s);
+            output.append("true");
         else
-            output.append("false"_s);
+            output.append("false");
         break;
     case Type::String:
         output.appendQuotedJSONString(m_value.string);
@@ -671,7 +661,7 @@ void Value::writeJSONImpl(StringBuilder& output) const
     case Type::Double:
     case Type::Integer: {
         if (!std::isfinite(m_value.number))
-            output.append("null"_s);
+            output.append("null");
         else
             output.append(m_value.number);
         break;

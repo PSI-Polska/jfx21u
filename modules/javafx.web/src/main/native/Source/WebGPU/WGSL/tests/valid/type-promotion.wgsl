@@ -59,6 +59,6 @@ fn main() {
         _ = f2(global);
     }
 
-    testCallee();
+    _ = testCallee();
     _ = testLiteral();
 }

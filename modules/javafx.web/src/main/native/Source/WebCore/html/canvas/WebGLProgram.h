@@ -58,6 +58,11 @@ public:
 
     void contextDestroyed() final;
 
+    unsigned numActiveAttribLocations();
+    GCGLint getActiveAttribLocation(GCGLuint index);
+
+    bool isUsingVertexAttrib0();
+
     bool getLinkStatus();
 
     unsigned getLinkCount() const { return m_linkCount; }
@@ -92,9 +97,12 @@ private:
 
     void deleteObjectImpl(const AbstractLocker&, GraphicsContextGL*, PlatformGLObject) override;
 
+    void cacheActiveAttribLocations(GraphicsContextGL*);
     void cacheInfoIfNeeded();
 
     static Lock s_instancesLock;
+
+    Vector<GCGLint> m_activeAttribLocations;
 
     GCGLint m_linkStatus { 0 };
 

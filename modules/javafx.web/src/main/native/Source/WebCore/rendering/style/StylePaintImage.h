@@ -26,6 +26,8 @@
 
 #pragma once
 
+#if ENABLE(CSS_PAINTING_API)
+
 #include "StyleGeneratedImage.h"
 #include <wtf/text/WTFString.h>
 
@@ -64,3 +66,5 @@ private:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_STYLE_IMAGE(StylePaintImage, isPaintImage)
+
+#endif // ENABLE(CSS_PAINTING_API)

@@ -59,14 +59,7 @@
 #define USE_LIBPAS_THREAD_SUSPEND_LOCK 1
 #include <bmalloc/pas_thread_suspend_lock.h>
 #endif
-#if USE(TZONE_MALLOC)
-#if BUSE(TZONE)
-#include <bmalloc/TZoneHeapManager.h>
-#else
-#error USE(TZONE_MALLOC) requires BUSE(TZONE)
 #endif
-#endif // USE(TZONE_MALLOC)
-#endif // !USE(SYSTEM_MALLOC)
 
 namespace WTF {
 
@@ -158,7 +151,7 @@ uint32_t ThreadLike::currentSequence()
 
 struct Thread::NewThreadContext : public ThreadSafeRefCounted<NewThreadContext> {
 public:
-    NewThreadContext(ASCIILiteral name, Function<void()>&& entryPoint, Ref<Thread>&& thread)
+    NewThreadContext(const char* name, Function<void()>&& entryPoint, Ref<Thread>&& thread)
         : name(name)
         , entryPoint(WTFMove(entryPoint))
         , thread(WTFMove(thread))
@@ -167,7 +160,7 @@ public:
 
     enum class Stage { Start, EstablishedHandle, Initialized };
     Stage stage { Stage::Start };
-    ASCIILiteral name;
+    const char* name;
     Function<void()> entryPoint;
     Ref<Thread> thread;
     Mutex mutex;
@@ -214,9 +207,8 @@ const char* Thread::normalizeThreadName(const char* threadName)
     if (result.length() > kLinuxThreadNameLimit)
         result = result.right(kLinuxThreadNameLimit);
 #endif
-    auto characters = result.span8();
-    ASSERT(characters[characters.size()] == '\0');
-    return byteCast<char>(characters.data());
+    ASSERT(result.characters8()[result.length()] == '\0');
+    return reinterpret_cast<const char*>(result.characters8());
 #endif
 }
 
@@ -271,7 +263,7 @@ void Thread::entryPoint(NewThreadContext* newThreadContext)
     function();
 }
 
-Ref<Thread> Thread::create(ASCIILiteral name, Function<void()>&& entryPoint, ThreadType threadType, QOS qos, SchedulingPolicy schedulingPolicy)
+Ref<Thread> Thread::create(const char* name, Function<void()>&& entryPoint, ThreadType threadType, QOS qos, SchedulingPolicy schedulingPolicy)
 {
     WTF::initialize();
     Ref<Thread> thread = adoptRef(*new Thread());
@@ -405,8 +397,7 @@ void Thread::registerGCThread(GCThreadType gcThreadType)
 
 bool Thread::mayBeGCThread()
 {
-    // TODO: FIX THIS
-    return Thread::current().gcThreadType() != GCThreadType::None || Thread::current().m_isCompilationThread;
+    return Thread::current().gcThreadType() != GCThreadType::None;
 }
 
 void Thread::registerJSThread(Thread& thread)
@@ -507,9 +498,6 @@ void initialize()
     std::call_once(onceKey, [] {
         setPermissionsOfConfigPage();
         Config::initialize();
-#if USE(TZONE_MALLOC)
-        bmalloc::api::TZoneHeapManager::singleton(); // Force initialization.
-#endif
         Gigacage::ensureGigacage();
         Config::AssertNotFrozenScope assertScope;
 #if !HAVE(FAST_TLS) && !OS(WINDOWS)
@@ -517,6 +505,9 @@ void initialize()
 #endif
         initializeDates();
         Thread::initializePlatformThreading();
+#if USE(PTHREADS) && HAVE(MACHINE_CONTEXT)
+        SignalHandlers::initialize();
+#endif
 #if PLATFORM(COCOA)
         initializeLibraryPathDiagnostics();
 #endif

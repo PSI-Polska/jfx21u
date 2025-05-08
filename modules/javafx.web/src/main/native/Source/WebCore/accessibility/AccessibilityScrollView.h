@@ -30,7 +30,6 @@
 
 namespace WebCore {
 
-class AXRemoteFrame;
 class AccessibilityScrollbar;
 class Scrollbar;
 class ScrollView;
@@ -55,7 +54,6 @@ private:
     bool computeAccessibilityIsIgnored() const override;
     bool isAccessibilityScrollViewInstance() const override { return true; }
     bool isEnabled() const override { return true; }
-    bool hasRemoteFrameChild() const final { return m_remoteFrame; }
 
     bool isAttachment() const override;
     PlatformWidget platformWidget() const override;
@@ -71,7 +69,6 @@ private:
     void setFocused(bool) override;
     bool canSetFocusAttribute() const override;
     bool isFocused() const override;
-    void addRemoteFrameChild();
 
     Document* document() const override;
     LocalFrameView* documentFrameView() const override;
@@ -88,7 +85,6 @@ private:
     RefPtr<AccessibilityObject> m_horizontalScrollbar;
     RefPtr<AccessibilityObject> m_verticalScrollbar;
     bool m_childrenDirty;
-    RefPtr<AXRemoteFrame> m_remoteFrame;
 };
 
 } // namespace WebCore

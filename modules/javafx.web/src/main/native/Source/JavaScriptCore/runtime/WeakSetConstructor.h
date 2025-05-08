@@ -36,7 +36,7 @@ class WeakSetConstructor final : public InternalFunction {
 public:
     typedef InternalFunction Base;
 
-    static WeakSetConstructor* create(VM& vm, Structure* structure, WeakSetPrototype* prototype)
+    static WeakSetConstructor* create(VM& vm, Structure* structure, WeakSetPrototype* prototype, GetterSetter*)
     {
         WeakSetConstructor* constructor = new (NotNull, allocateCell<WeakSetConstructor>(vm)) WeakSetConstructor(vm, structure);
         constructor->finishCreation(vm, prototype);

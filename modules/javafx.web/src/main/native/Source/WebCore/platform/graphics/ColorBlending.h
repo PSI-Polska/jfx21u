@@ -33,10 +33,9 @@ class Color;
 // NOTE: These functions do a lossy conversion to 8-bit sRGBA before blending.
 
 // This is an implementation of Porter-Duff's "source-over" equation.
-WEBCORE_EXPORT Color blendSourceOver(const Color& backdrop, const Color& source);
+Color blendSourceOver(const Color&, const Color&);
 
 // Bespoke "whitening" algorithm used by RenderTheme::transformSelectionBackgroundColor.
-// Note: This is a no-op if the color to blend with isn't opaque, which is likely not what you were expecting.
 Color blendWithWhite(const Color&);
 
 Color blend(const Color& from, const Color& to, const BlendingContext&);

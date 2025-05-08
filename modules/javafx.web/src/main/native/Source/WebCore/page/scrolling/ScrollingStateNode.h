@@ -234,10 +234,8 @@ enum class ScrollingStateNodeProperty : uint64_t {
     MouseActivityState                          = ContentAreaHoverState << 1,
     ScrollbarHoverState                         = MouseActivityState << 1,
     ScrollbarEnabledState                       = ScrollbarHoverState << 1,
-    ScrollbarLayoutDirection                    = ScrollbarEnabledState << 1,
-    ScrollbarWidth                              = ScrollbarLayoutDirection << 1,
         // ScrollingStateFrameScrollingNode
-    KeyboardScrollData                          = ScrollbarWidth << 1,
+    KeyboardScrollData                          = ScrollbarEnabledState << 1,
     FrameScaleFactor                            = KeyboardScrollData << 1,
     EventTrackingRegion                         = FrameScaleFactor << 1,
     RootContentsLayer                           = EventTrackingRegion << 1,
@@ -375,7 +373,7 @@ inline ScrollingNodeID ScrollingStateNode::parentNodeID() const
 {
     auto parent = m_parent.get();
     if (!parent)
-        return { };
+        return 0;
     return parent->scrollingNodeID();
 }
 

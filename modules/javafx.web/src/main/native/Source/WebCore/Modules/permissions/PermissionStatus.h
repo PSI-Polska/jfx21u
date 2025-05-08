@@ -40,7 +40,7 @@ namespace WebCore {
 class ScriptExecutionContext;
 
 class PermissionStatus final : public ActiveDOMObject, public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<PermissionStatus>, public EventTarget  {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(PermissionStatus);
+    WTF_MAKE_ISO_ALLOCATED(PermissionStatus);
 public:
     static Ref<PermissionStatus> create(ScriptExecutionContext&, PermissionState, PermissionDescriptor, PermissionQuerySource, WeakPtr<Page>&&);
     ~PermissionStatus();
@@ -50,19 +50,19 @@ public:
 
     void stateChanged(PermissionState);
 
-    // ActiveDOMObject.
-    void ref() const final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::ref(); }
-    void deref() const final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::deref(); }
+    using ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::ref;
+    using ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::deref;
 
 private:
     PermissionStatus(ScriptExecutionContext&, PermissionState, PermissionDescriptor, PermissionQuerySource, WeakPtr<Page>&&);
 
     // ActiveDOMObject
+    const char* activeDOMObjectName() const final;
     bool virtualHasPendingActivity() const final;
 
     // EventTarget
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
-    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::PermissionStatus; }
+    EventTargetInterface eventTargetInterface() const final { return PermissionStatusEventTargetInterfaceType; }
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
     void eventListenersDidChange() final;

@@ -47,7 +47,4 @@ struct ScrollSnapAlign {
     friend bool operator==(const ScrollSnapAlign&, const ScrollSnapAlign&) = default;
 };
 
-TextStream& operator<<(TextStream&, ScrollSnapType);
-TextStream& operator<<(TextStream&, ScrollSnapAlign);
-
 } // namespace WebCore

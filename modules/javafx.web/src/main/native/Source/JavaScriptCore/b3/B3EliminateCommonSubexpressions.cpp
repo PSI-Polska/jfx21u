@@ -121,11 +121,11 @@ public:
 
     void dump(PrintStream& out) const
     {
-        out.print("{"_s);
+        out.print("{");
         CommaPrinter comma;
         for (auto& entry : m_map)
-            out.print(comma, pointerDump(entry.key), "=>"_s, pointerListDump(entry.value));
-        out.print("}"_s);
+            out.print(comma, pointerDump(entry.key), "=>", pointerListDump(entry.value));
+        out.print("}");
     }
 
 private:
@@ -837,7 +837,7 @@ private:
 
 bool eliminateCommonSubexpressions(Procedure& proc)
 {
-    PhaseScope phaseScope(proc, "eliminateCommonSubexpressions"_s);
+    PhaseScope phaseScope(proc, "eliminateCommonSubexpressions");
 
     CSE cse(proc);
     return cse.run();

@@ -71,12 +71,10 @@ JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyTag, (JSGlobalObject* globalObjec
             type = Wasm::Types::F32;
         else if (valueString == "f64"_s)
             type = Wasm::Types::F64;
-        else if (valueString == "v128"_s)
-            type = Wasm::Types::V128;
         else if (valueString == "funcref"_s || valueString == "anyfunc"_s)
-            type = Wasm::funcrefType();
+            type = Wasm::Types::Funcref;
         else if (valueString == "externref"_s)
-            type = Wasm::externrefType();
+            type = Wasm::Types::Externref;
         else {
             throwTypeError(globalObject, scope, "WebAssembly.Tag constructor expects the 'parameters' field of the first argument to be a sequence of WebAssembly value types."_s);
             return;
@@ -96,7 +94,7 @@ JSC_DEFINE_HOST_FUNCTION(callJSWebAssemblyTag, (JSGlobalObject* globalObject, Ca
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(globalObject, scope, "WebAssembly.Tag"_s));
+    return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(globalObject, scope, "WebAssembly.Tag"));
 }
 
 WebAssemblyTagConstructor* WebAssemblyTagConstructor::create(VM& vm, Structure* structure, WebAssemblyTagPrototype* thisPrototype)

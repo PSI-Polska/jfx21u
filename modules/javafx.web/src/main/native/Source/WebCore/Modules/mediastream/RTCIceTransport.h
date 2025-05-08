@@ -47,8 +47,8 @@ namespace WebCore {
 
 class RTCPeerConnection;
 
-class RTCIceTransport : public RefCounted<RTCIceTransport>, public ActiveDOMObject, public EventTarget, public RTCIceTransportBackendClient {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RTCIceTransport);
+class RTCIceTransport : public RefCounted<RTCIceTransport>, public ActiveDOMObject, public EventTarget, public RTCIceTransportBackend::Client {
+    WTF_MAKE_ISO_ALLOCATED(RTCIceTransport);
 public:
     static Ref<RTCIceTransport> create(ScriptExecutionContext&, UniqueRef<RTCIceTransportBackend>&&, RTCPeerConnection&);
     ~RTCIceTransport();
@@ -59,9 +59,8 @@ public:
     const RTCIceTransportBackend& backend() const { return m_backend.get(); }
     RefPtr<RTCPeerConnection> connection() const { return m_connection.get(); }
 
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
+    using RefCounted<RTCIceTransport>::ref;
+    using RefCounted<RTCIceTransport>::deref;
 
     struct CandidatePair {
         RefPtr<RTCIceCandidate> local;
@@ -73,16 +72,17 @@ private:
     RTCIceTransport(ScriptExecutionContext&, UniqueRef<RTCIceTransportBackend>&&, RTCPeerConnection&);
 
     // EventTarget
-    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::RTCIceTransport; }
+    EventTargetInterface eventTargetInterface() const final { return RTCIceTransportEventTargetInterfaceType; }
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
-    // ActiveDOMObject.
+    // ActiveDOMObject
     void stop() final;
+    const char* activeDOMObjectName() const final { return "RTCIceTransport"; }
     bool virtualHasPendingActivity() const final;
 
-    // RTCIceTransportBackendClient
+    // RTCIceTransportBackend::Client
     void onStateChanged(RTCIceTransportState) final;
     void onGatheringStateChanged(RTCIceGatheringState) final;
     void onSelectedCandidatePairChanged(RefPtr<RTCIceCandidate>&&, RefPtr<RTCIceCandidate>&&) final;

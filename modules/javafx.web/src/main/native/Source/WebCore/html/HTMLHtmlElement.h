@@ -28,14 +28,17 @@
 namespace WebCore {
 
 class HTMLHtmlElement final : public HTMLElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLHtmlElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLHtmlElement);
+    WTF_MAKE_ISO_ALLOCATED(HTMLHtmlElement);
 public:
     WEBCORE_EXPORT static Ref<HTMLHtmlElement> create(Document&);
     static Ref<HTMLHtmlElement> create(const QualifiedName&, Document&);
 
+    void insertedByParser();
+
 private:
     HTMLHtmlElement(const QualifiedName&, Document&);
+
+    bool isURLAttribute(const Attribute&) const final;
 };
 
 } // namespace WebCore

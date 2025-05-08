@@ -53,10 +53,9 @@ class WorkerConsoleClient;
 class WorkerOrWorkletGlobalScope;
 class WorkerScriptFetcher;
 
-class WorkerOrWorkletScriptController final : public CanMakeCheckedPtr<WorkerOrWorkletScriptController> {
+class WorkerOrWorkletScriptController : public CanMakeCheckedPtr {
     WTF_MAKE_NONCOPYABLE(WorkerOrWorkletScriptController);
     WTF_MAKE_FAST_ALLOCATED;
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WorkerOrWorkletScriptController);
 public:
     WorkerOrWorkletScriptController(WorkerThreadType, Ref<JSC::VM>&&, WorkerOrWorkletGlobalScope*);
     ~WorkerOrWorkletScriptController();
@@ -95,7 +94,6 @@ public:
 
     void disableEval(const String& errorMessage);
     void disableWebAssembly(const String& errorMessage);
-    void setRequiresTrustedTypes(bool required);
 
     void evaluate(const ScriptSourceCode&, String* returnedExceptionMessage = nullptr);
     void evaluate(const ScriptSourceCode&, NakedPtr<JSC::Exception>& returnedException, String* returnedExceptionMessage = nullptr);

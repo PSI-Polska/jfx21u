@@ -32,27 +32,16 @@
 #include "LocalFrameView.h"
 #include "RenderLayer.h"
 #include "RenderObject.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MouseRelatedEvent);
+WTF_MAKE_ISO_ALLOCATED_IMPL(MouseRelatedEvent);
 
-// FIXME: Remove this variant.
-MouseRelatedEvent::MouseRelatedEvent()
-    : UIEventWithKeyState(EventInterfaceType::Invalid)
-{
-}
-
-MouseRelatedEvent::MouseRelatedEvent(enum EventInterfaceType eventInterface)
-    : UIEventWithKeyState(eventInterface)
-{
-}
-
-MouseRelatedEvent::MouseRelatedEvent(enum EventInterfaceType eventInterface, const AtomString& eventType, CanBubble canBubble, IsCancelable isCancelable, IsComposed isComposed,
+MouseRelatedEvent::MouseRelatedEvent(const AtomString& eventType, CanBubble canBubble, IsCancelable isCancelable, IsComposed isComposed,
     MonotonicTime timestamp, RefPtr<WindowProxy>&& view, int detail,
     const IntPoint& screenLocation, const IntPoint& windowLocation, double movementX, double movementY, OptionSet<Modifier> modifiers, IsSimulated isSimulated, IsTrusted isTrusted)
-    : UIEventWithKeyState(eventInterface, eventType, canBubble, isCancelable, isComposed, timestamp, WTFMove(view), detail, modifiers, isTrusted)
+    : UIEventWithKeyState(eventType, canBubble, isCancelable, isComposed, timestamp, WTFMove(view), detail, modifiers, isTrusted)
     , m_screenLocation(screenLocation)
     , m_movementX(movementX)
     , m_movementY(movementY)
@@ -61,18 +50,19 @@ MouseRelatedEvent::MouseRelatedEvent(enum EventInterfaceType eventInterface, con
     init(m_isSimulated, windowLocation);
 }
 
-MouseRelatedEvent::MouseRelatedEvent(enum EventInterfaceType eventInterface, const AtomString& type, IsCancelable isCancelable, MonotonicTime timestamp, RefPtr<WindowProxy>&& view, const IntPoint& globalLocation, OptionSet<Modifier> modifiers)
-    : MouseRelatedEvent(eventInterface, type, CanBubble::Yes, isCancelable, IsComposed::Yes, timestamp,
+MouseRelatedEvent::MouseRelatedEvent(const AtomString& type, IsCancelable isCancelable, MonotonicTime timestamp, RefPtr<WindowProxy>&& view, const IntPoint& globalLocation, OptionSet<Modifier> modifiers)
+    : MouseRelatedEvent(type, CanBubble::Yes, isCancelable, IsComposed::Yes, timestamp,
         WTFMove(view), 0, globalLocation, globalLocation /* Converted in init */, 0, 0, modifiers, IsSimulated::No)
 {
 }
 
-MouseRelatedEvent::MouseRelatedEvent(enum EventInterfaceType eventInterface, const AtomString& eventType, const MouseRelatedEventInit& initializer, IsTrusted isTrusted)
-    : UIEventWithKeyState(eventInterface, eventType, initializer, isTrusted)
+MouseRelatedEvent::MouseRelatedEvent(const AtomString& eventType, const MouseRelatedEventInit& initializer, IsTrusted isTrusted)
+    : UIEventWithKeyState(eventType, initializer)
     , m_screenLocation(IntPoint(initializer.screenX, initializer.screenY))
     , m_movementX(initializer.movementX)
     , m_movementY(initializer.movementY)
 {
+    ASSERT_UNUSED(isTrusted, isTrusted == IsTrusted::No);
     init(false, IntPoint(0, 0));
 }
 
@@ -266,6 +256,11 @@ int MouseRelatedEvent::pageX() const
 int MouseRelatedEvent::pageY() const
 {
     return m_pageLocation.y();
+}
+
+const LayoutPoint& MouseRelatedEvent::pageLocation() const
+{
+    return m_pageLocation;
 }
 
 } // namespace WebCore

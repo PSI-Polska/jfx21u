@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "CSSTokenizerInputStream.h"
 #include "SegmentedString.h"
 #include <wtf/text/OrdinalNumber.h>
 
@@ -73,7 +72,7 @@ public:
 
     void markEndOfFile()
     {
-        m_last->append(span(kEndOfFileMarker));
+        m_last->append(String { &kEndOfFileMarker, 1 });
         m_last->close();
     }
 

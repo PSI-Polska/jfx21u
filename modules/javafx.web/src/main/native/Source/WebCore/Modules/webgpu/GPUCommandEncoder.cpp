@@ -41,20 +41,14 @@ void GPUCommandEncoder::setLabel(String&& label)
     m_backing->setLabel(WTFMove(label));
 }
 
-ExceptionOr<Ref<GPURenderPassEncoder>> GPUCommandEncoder::beginRenderPass(const GPURenderPassDescriptor& renderPassDescriptor)
+Ref<GPURenderPassEncoder> GPUCommandEncoder::beginRenderPass(const GPURenderPassDescriptor& renderPassDescriptor)
 {
-    RefPtr encoder = m_backing->beginRenderPass(renderPassDescriptor.convertToBacking());
-    if (!encoder)
-        return Exception { ExceptionCode::InvalidStateError, "GPUCommandEncoder.beginRenderPass: Unable to begin render pass."_s };
-    return GPURenderPassEncoder::create(encoder.releaseNonNull());
+    return GPURenderPassEncoder::create(m_backing->beginRenderPass(renderPassDescriptor.convertToBacking()));
 }
 
-ExceptionOr<Ref<GPUComputePassEncoder>> GPUCommandEncoder::beginComputePass(const std::optional<GPUComputePassDescriptor>& computePassDescriptor)
+Ref<GPUComputePassEncoder> GPUCommandEncoder::beginComputePass(const std::optional<GPUComputePassDescriptor>& computePassDescriptor)
 {
-    RefPtr computePass = m_backing->beginComputePass(computePassDescriptor ? std::optional { computePassDescriptor->convertToBacking() } : std::nullopt);
-    if (!computePass)
-        return Exception { ExceptionCode::InvalidStateError, "GPUCommandEncoder.beginComputePass: Unable to begin compute pass."_s };
-    return GPUComputePassEncoder::create(computePass.releaseNonNull());
+    return GPUComputePassEncoder::create(m_backing->beginComputePass(computePassDescriptor ? std::optional { computePassDescriptor->convertToBacking() } : std::nullopt));
 }
 
 void GPUCommandEncoder::copyBufferToBuffer(
@@ -138,12 +132,9 @@ static WebGPU::CommandBufferDescriptor convertToBacking(const std::optional<GPUC
     return commandBufferDescriptor->convertToBacking();
 }
 
-ExceptionOr<Ref<GPUCommandBuffer>> GPUCommandEncoder::finish(const std::optional<GPUCommandBufferDescriptor>& commandBufferDescriptor)
+Ref<GPUCommandBuffer> GPUCommandEncoder::finish(const std::optional<GPUCommandBufferDescriptor>& commandBufferDescriptor)
 {
-    RefPtr buffer = m_backing->finish(convertToBacking(commandBufferDescriptor));
-    if (!buffer)
-        return Exception { ExceptionCode::InvalidStateError, "GPUCommandEncoder.finish: Unable to finish."_s };
-    return GPUCommandBuffer::create(buffer.releaseNonNull());
+    return GPUCommandBuffer::create(m_backing->finish(convertToBacking(commandBufferDescriptor)));
 }
 
 }

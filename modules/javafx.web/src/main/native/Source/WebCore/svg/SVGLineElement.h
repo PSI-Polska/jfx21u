@@ -27,8 +27,7 @@
 namespace WebCore {
 
 class SVGLineElement final : public SVGGeometryElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGLineElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGLineElement);
+    WTF_MAKE_ISO_ALLOCATED(SVGLineElement);
 public:
     static Ref<SVGLineElement> create(const QualifiedName&, Document&);
 

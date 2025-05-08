@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2004 Allan Sandfeld Jensen (kde@carewolf.com)
- * Copyright (C) 2006-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2018 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -35,8 +35,8 @@
 #include "RenderListItem.h"
 #include "RenderStyle.h"
 #include "RenderView.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/StdLibExtras.h>
-#include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(TREE_DEBUGGING)
 #include <stdio.h>
@@ -46,7 +46,7 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderCounter);
+WTF_MAKE_ISO_ALLOCATED_IMPL(RenderCounter);
 
 using CounterMap = HashMap<AtomString, Ref<CounterNode>>;
 using CounterMaps = SingleThreadWeakHashMap<RenderElement, std::unique_ptr<CounterMap>>;
@@ -466,24 +466,27 @@ String RenderCounter::originalText() const
     RefPtr child = m_counterNode.get();
     int value = child->actsAsReset() ? child->value() : child->countInParent();
 
-    auto counterText = [&](int value) {
-        if (m_counter.listStyleType().type == ListStyleType::Type::None)
+    auto counterText = [](const ListStyleType& styleType, int value, CSSCounterStyle* counterStyle) {
+        if (styleType.type == ListStyleType::Type::None)
             return emptyString();
 
-        if (m_counter.listStyleType().type == ListStyleType::Type::CounterStyle) {
-            ASSERT(counterStyle());
-            return counterStyle()->text(value, makeTextFlow(style().writingMode(), style().direction()));
+        if (styleType.type == ListStyleType::Type::CounterStyle) {
+            ASSERT(counterStyle);
+            return counterStyle->text(value);
         }
 
         ASSERT_NOT_REACHED();
         return emptyString();
     };
-    auto text = counterText(value);
+    auto counterStyle = this->counterStyle();
+    String text = counterText(m_counter.listStyleType(), value, counterStyle.get());
+
     if (!m_counter.separator().isNull()) {
         if (!child->actsAsReset())
             child = child->parent();
         while (CounterNode* parent = child->parent()) {
-            text = makeString(counterText(child->countInParent()), m_counter.separator(), text);
+            text = counterText(m_counter.listStyleType(), child->countInParent(), counterStyle.get())
+                + m_counter.separator() + text;
             child = parent;
         }
     }
@@ -603,7 +606,7 @@ RefPtr<CSSCounterStyle> RenderCounter::counterStyle() const
 
 #if ENABLE(TREE_DEBUGGING)
 
-void showCounterRendererTree(const WebCore::RenderObject* renderer, ASCIILiteral counterName)
+void showCounterRendererTree(const WebCore::RenderObject* renderer, const char* counterName)
 {
     if (!renderer)
         return;
@@ -611,7 +614,7 @@ void showCounterRendererTree(const WebCore::RenderObject* renderer, ASCIILiteral
     while (root->parent())
         root = root->parent();
 
-    AtomString identifier { counterName };
+    auto identifier = AtomString::fromLatin1(counterName);
     for (auto* current = root; current; current = current->nextInPreOrder()) {
         auto* element = dynamicDowncast<WebCore::RenderElement>(*current);
         if (!element)
@@ -622,7 +625,7 @@ void showCounterRendererTree(const WebCore::RenderObject* renderer, ASCIILiteral
         fprintf(stderr, "%p N:%p P:%p PS:%p NS:%p C:%p\n",
             current, current->node(), current->parent(), current->previousSibling(),
             current->nextSibling(), element->hasCounterNodeMap() ?
-            !counterName.isNull() ? WebCore::counterMaps().find(*downcast<WebCore::RenderElement>(current))->value->get(identifier) : (WebCore::CounterNode*)1 : (WebCore::CounterNode*)0);
+            counterName ? WebCore::counterMaps().find(*downcast<WebCore::RenderElement>(current))->value->get(identifier) : (WebCore::CounterNode*)1 : (WebCore::CounterNode*)0);
     }
     fflush(stderr);
 }

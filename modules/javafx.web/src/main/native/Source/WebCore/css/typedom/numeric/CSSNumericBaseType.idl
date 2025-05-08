@@ -24,7 +24,9 @@
 */
 
 // https://drafts.css-houdini.org/css-typed-om/#enumdef-cssnumericbasetype
-enum CSSNumericBaseType {
+[
+    EnabledBySetting=CSSTypedOMEnabled,
+] enum CSSNumericBaseType {
     "length",
     "angle",
     "time",

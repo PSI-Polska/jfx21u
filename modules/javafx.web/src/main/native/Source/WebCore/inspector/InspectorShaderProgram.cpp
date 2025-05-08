@@ -39,7 +39,6 @@
 #include <JavaScriptCore/IdentifiersFactory.h>
 #include <JavaScriptCore/ScriptCallStack.h>
 #include <JavaScriptCore/ScriptCallStackFactory.h>
-#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -51,7 +50,7 @@ Ref<InspectorShaderProgram> InspectorShaderProgram::create(WebGLProgram& program
 }
 
 InspectorShaderProgram::InspectorShaderProgram(WebGLProgram& program, InspectorCanvas& inspectorCanvas)
-    : m_identifier(makeString("program:"_s, IdentifiersFactory::createIdentifier()))
+    : m_identifier("program:" + IdentifiersFactory::createIdentifier())
     , m_canvas(inspectorCanvas)
     , m_program(program)
 {

@@ -120,7 +120,7 @@ public:
     // GridIterator(m_grid, ForColumns, 1) will walk over the rows of the 2nd column.
     GridIterator(const Grid&, GridTrackSizingDirection, unsigned fixedTrackIndex, unsigned varyingTrackIndex = 0);
 
-    static GridIterator createForSubgrid(const RenderGrid& subgrid, const GridIterator& outer, GridSpan subgridSpanInOuter);
+    static GridIterator createForSubgrid(const RenderGrid& subgrid, const GridIterator& outer);
 
     RenderBox* nextGridItem();
     bool isEmptyAreaEnough(unsigned rowSpan, unsigned columnSpan) const;
@@ -136,7 +136,7 @@ private:
     GridTrackSizingDirection m_direction;
     unsigned m_rowIndex;
     unsigned m_columnIndex;
-    unsigned m_gridItemIndex;
+    unsigned m_childIndex;
 };
 
 } // namespace WebCore

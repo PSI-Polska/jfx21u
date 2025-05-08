@@ -28,8 +28,7 @@ class RenderObject;
 class SVGMarkerElement;
 
 class LegacyRenderSVGResourceMarker final : public LegacyRenderSVGResourceContainer {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(LegacyRenderSVGResourceMarker);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LegacyRenderSVGResourceMarker);
+    WTF_MAKE_ISO_ALLOCATED(LegacyRenderSVGResourceMarker);
 public:
     LegacyRenderSVGResourceMarker(SVGMarkerElement&, RenderStyle&&);
     virtual ~LegacyRenderSVGResourceMarker();
@@ -51,7 +50,7 @@ public:
     const AffineTransform& localToParentTransform() const override;
     AffineTransform markerTransformation(const FloatPoint& origin, float angle, float strokeWidth) const;
 
-    OptionSet<ApplyResult> applyResource(RenderElement&, const RenderStyle&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>) override { return { }; }
+    bool applyResource(RenderElement&, const RenderStyle&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>) override { return false; }
     FloatRect resourceBoundingBox(const RenderObject&, RepaintRectCalculation) override { return FloatRect(); }
 
     FloatPoint referencePoint() const;

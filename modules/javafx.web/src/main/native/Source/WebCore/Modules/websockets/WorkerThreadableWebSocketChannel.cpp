@@ -46,8 +46,6 @@
 #include "WorkerThread.h"
 #include <JavaScriptCore/ArrayBuffer.h>
 #include <wtf/MainThread.h>
-#include <wtf/StdLibExtras.h>
-#include <wtf/text/MakeString.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -416,8 +414,8 @@ void WorkerThreadableWebSocketChannel::Bridge::connect(const URL& url, const Str
 
         auto& document = downcast<Document>(context);
 
-        if (RefPtr frame = document.frame(); frame && MixedContentChecker::shouldBlockRequestForRunnableContent(*frame, document.securityOrigin(), url, MixedContentChecker::ShouldLogWarning::No)) {
-            peer->fail(makeString("The page at "_s, document.url().stringCenterEllipsizedToLength(), " was blocked from connecting insecurely to "_s, url.stringCenterEllipsizedToLength(), " either because the protocol is insecure or the page is embedded from an insecure page."_s));
+        if (document.frame() && !MixedContentChecker::frameAndAncestorsCanRunInsecureContent(*document.frame(), document.securityOrigin(), url, MixedContentChecker::ShouldLogWarning::No)) {
+            peer->fail(makeString("The page at ", document.url().stringCenterEllipsizedToLength(), " was blocked from connecting insecurely to ", url.stringCenterEllipsizedToLength(), " either because the protocol is insecure or the page is embedded from an insecure page."));
                 return;
             }
 
@@ -453,7 +451,7 @@ ThreadableWebSocketChannel::SendResult WorkerThreadableWebSocketChannel::Bridge:
     // ArrayBuffer isn't thread-safe, hence the content of ArrayBuffer is copied into Vector<uint8_t>.
     Vector<uint8_t> data(byteLength);
     if (binaryData.byteLength())
-        memcpySpan(data.mutableSpan(), binaryData.span().subspan(byteOffset, byteLength));
+        memcpy(data.data(), static_cast<const uint8_t*>(binaryData.data()) + byteOffset, byteLength);
     setMethodNotCompleted();
 
     m_loaderProxy.postTaskToLoader([peer = m_peer, data = WTFMove(data)](ScriptExecutionContext& context) {
@@ -461,7 +459,7 @@ ThreadableWebSocketChannel::SendResult WorkerThreadableWebSocketChannel::Bridge:
         ASSERT_UNUSED(context, context.isDocument());
         ASSERT(peer);
 
-        auto arrayBuffer = ArrayBuffer::create(data.span());
+        auto arrayBuffer = ArrayBuffer::create(data.data(), data.size());
         peer->send(arrayBuffer);
     });
 

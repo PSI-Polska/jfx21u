@@ -45,6 +45,7 @@ protected:
 
     WatchpointSet* additionalSetImpl() const { return m_additionalSet.get(); }
     void dumpImpl(PrintStream&, CommaPrinter&, Indenter&) const;
+    Ref<AccessCase> cloneImpl() const;
 
 private:
     RefPtr<WatchpointSet> m_additionalSet;

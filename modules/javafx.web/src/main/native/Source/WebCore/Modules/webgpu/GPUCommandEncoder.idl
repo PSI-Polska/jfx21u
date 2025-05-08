@@ -33,7 +33,7 @@ typedef (sequence<GPUIntegerCoordinate> or GPUExtent3DDict) GPUExtent3D;
 
 [
     EnabledBySetting=WebGPUEnabled,
-    Exposed=(Window,Worker),
+    Exposed=(Window,DedicatedWorker),
     SecureContext
 ]
 interface GPUCommandEncoder {

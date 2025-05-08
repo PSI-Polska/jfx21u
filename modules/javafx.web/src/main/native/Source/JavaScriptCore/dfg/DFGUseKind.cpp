@@ -101,9 +101,6 @@ void printInternal(PrintStream& out, UseKind useKind)
     case ProxyObjectUse:
         out.print("ProxyObject");
         return;
-    case GlobalProxyUse:
-        out.print("GlobalProxy");
-        return;
     case DerivedArrayUse:
         out.print("DerivedArray");
         return;
@@ -115,12 +112,6 @@ void printInternal(PrintStream& out, UseKind useKind)
         return;
     case SetObjectUse:
         out.print("SetObject");
-        return;
-    case MapIteratorObjectUse:
-        out.print("MapIteratorObject");
-        return;
-    case SetIteratorObjectUse:
-        out.print("SetIteratorObject");
         return;
     case WeakMapObjectUse:
         out.print("WeakMapObject");

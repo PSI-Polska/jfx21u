@@ -42,7 +42,7 @@ public:
     }
 
 private:
-    WeakRef<Document, WeakPtrImplWithEventTargetData> m_document;
+    CheckedRef<Document> m_document;
 };
 
 } // namespace WebCore

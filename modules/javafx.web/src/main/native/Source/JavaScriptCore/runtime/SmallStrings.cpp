@@ -47,8 +47,8 @@ void SmallStrings::initializeCommonStrings(VM& vm)
 
     for (unsigned i = 0; i < singleCharacterStringCount; ++i) {
         ASSERT(!m_singleCharacterStrings[i]);
-        std::array<const LChar, 1> string = { static_cast<LChar>(i) };
-        m_singleCharacterStrings[i] = JSString::createHasOtherOwner(vm, AtomStringImpl::add(string).releaseNonNull());
+        const LChar string[] = { static_cast<LChar>(i) };
+        m_singleCharacterStrings[i] = JSString::createHasOtherOwner(vm, AtomStringImpl::add(string, 1).releaseNonNull());
         ASSERT(m_needsToBeVisited);
     }
 
@@ -110,14 +110,16 @@ void SmallStrings::visitStrongReferences(Visitor& visitor)
 template void SmallStrings::visitStrongReferences(AbstractSlotVisitor&);
 template void SmallStrings::visitStrongReferences(SlotVisitor&);
 
-SmallStrings::~SmallStrings() = default;
+SmallStrings::~SmallStrings()
+{
+}
 
 Ref<AtomStringImpl> SmallStrings::singleCharacterStringRep(unsigned char character)
 {
     if (LIKELY(m_isInitialized))
         return *static_cast<AtomStringImpl*>(const_cast<StringImpl*>(m_singleCharacterStrings[character]->tryGetValueImpl()));
-    std::array<const LChar, 1> string = { static_cast<LChar>(character) };
-    return AtomStringImpl::add(string).releaseNonNull();
+    const LChar string[] = { static_cast<LChar>(character) };
+    return AtomStringImpl::add(string, 1).releaseNonNull();
 }
 
 void SmallStrings::initialize(VM* vm, JSString*& string, ASCIILiteral value)

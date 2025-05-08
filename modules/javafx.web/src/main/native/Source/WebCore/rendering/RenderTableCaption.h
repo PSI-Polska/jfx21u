@@ -26,8 +26,7 @@ namespace WebCore {
 class RenderTable;
 
 class RenderTableCaption final : public RenderBlockFlow {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderTableCaption);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderTableCaption);
+    WTF_MAKE_ISO_ALLOCATED(RenderTableCaption);
 public:
     RenderTableCaption(Element&, RenderStyle&&);
     virtual ~RenderTableCaption();
@@ -35,8 +34,8 @@ public:
     Element& element() const { return downcast<Element>(nodeForNonAnonymous()); }
 
 private:
-    void insertedIntoTree() override;
-    void willBeRemovedFromTree() override;
+    void insertedIntoTree(IsInternalMove) override;
+    void willBeRemovedFromTree(IsInternalMove) override;
     LayoutUnit containingBlockLogicalWidthForContent() const final;
 
     RenderTable* table() const;

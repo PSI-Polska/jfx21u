@@ -26,20 +26,18 @@
 #pragma once
 
 #include "LayoutBox.h"
-#include <wtf/TZoneMalloc.h>
+#include <wtf/IsoMalloc.h>
 #include <wtf/UniqueRef.h>
 
 namespace WebCore {
 
 class CachedImage;
-class RenderElement;
 class RenderStyle;
 
 namespace Layout {
 
 class ElementBox : public Box {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ElementBox);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ElementBox);
+    WTF_MAKE_ISO_ALLOCATED(ElementBox);
 public:
     ElementBox(ElementAttributes&&, RenderStyle&&, std::unique_ptr<RenderStyle>&& firstLineStyle = nullptr, OptionSet<BaseTypeFlag> = { ElementBoxFlag });
 
@@ -89,16 +87,12 @@ public:
     LayoutUnit intrinsicRatio() const;
     bool hasAspectRatio() const;
 
-    void setListMarkerAttributes(OptionSet<ListMarkerAttribute> listMarkerAttributes) { m_replacedData->listMarkerAttributes = listMarkerAttributes; }
-
     bool isListMarkerImage() const { return m_replacedData && m_replacedData->listMarkerAttributes.contains(ListMarkerAttribute::Image); }
     bool isListMarkerOutside() const { return m_replacedData && m_replacedData->listMarkerAttributes.contains(ListMarkerAttribute::Outside); }
     bool isListMarkerInsideList() const { return m_replacedData && m_replacedData->listMarkerAttributes.contains(ListMarkerAttribute::HasListElementAncestor); }
 
     // FIXME: This doesn't belong.
     CachedImage* cachedImage() const { return m_replacedData ? m_replacedData->cachedImage : nullptr; }
-
-    RenderElement* rendererForIntegration() const;
 
 private:
     friend class Box;

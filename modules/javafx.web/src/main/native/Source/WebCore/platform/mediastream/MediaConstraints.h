@@ -36,6 +36,7 @@
 #include "RealtimeMediaSourceSupportedConstraints.h"
 #include <cstdlib>
 #include <wtf/ArgumentCoder.h>
+#include <wtf/EnumTraits.h>
 #include <wtf/Function.h>
 #include <wtf/Vector.h>
 
@@ -44,12 +45,6 @@ namespace WebCore {
 class MediaConstraint {
 public:
     enum class DataType : uint8_t { Integer, Double, Boolean, String };
-    explicit MediaConstraint(DataType dataType)
-        : m_dataType(dataType)
-    {
-    }
-
-    virtual ~MediaConstraint() = default;
 
     bool isInt() const { return m_dataType == DataType::Integer; }
     bool isDouble() const { return m_dataType == DataType::Double; }
@@ -60,7 +55,10 @@ public:
 
     void log(MediaConstraintType) const;
 
-    virtual bool isRequired() const { return false; }
+    explicit MediaConstraint(DataType dataType)
+        : m_dataType(dataType)
+    {
+    }
 
 private:
     DataType m_dataType { DataType::Integer };
@@ -121,7 +119,7 @@ public:
     template<typename RangeType>
     double fitnessDistance(const RangeType& range) const
     {
-        return fitnessDistance(range.min(), range.max());
+        return fitnessDistance(range.min, range.max);
     }
 
     double fitnessDistance(ValueType rangeMin, ValueType rangeMax) const
@@ -235,7 +233,7 @@ public:
     template<typename RangeType>
     ValueType valueForCapabilityRange(ValueType current, const RangeType& range) const
     {
-        return valueForCapabilityRange(current, range.min(), range.max());
+        return valueForCapabilityRange(current, range.min, range.max);
     }
 
     ValueType valueForCapabilityRange(ValueType current, ValueType capabilityMin, ValueType capabilityMax) const
@@ -362,8 +360,6 @@ protected:
                 m_ideal = value;
         }
     }
-
-    bool isRequired() const final { return !!m_min || !!m_max || !!m_exact; }
 
     std::optional<ValueType> m_min;
     std::optional<ValueType> m_max;
@@ -498,8 +494,6 @@ private:
     {
     }
 
-    bool isRequired() const final { return !!m_exact; }
-
     std::optional<bool> m_exact;
     std::optional<bool> m_ideal;
 };
@@ -582,8 +576,6 @@ private:
     {
     }
 
-    bool isRequired() const final { return !m_exact.isEmpty(); }
-
     Vector<String> m_exact;
     Vector<String> m_ideal;
 };
@@ -591,7 +583,7 @@ private:
 class MediaTrackConstraintSetMap {
 public:
     MediaTrackConstraintSetMap() = default;
-    MediaTrackConstraintSetMap(std::optional<IntConstraint> width, std::optional<IntConstraint> height, std::optional<IntConstraint> sampleRate, std::optional<IntConstraint> sampleSize, std::optional<DoubleConstraint> aspectRatio, std::optional<DoubleConstraint> frameRate, std::optional<DoubleConstraint> volume, std::optional<BooleanConstraint> echoCancellation, std::optional<BooleanConstraint> displaySurface, std::optional<BooleanConstraint> logicalSurface, std::optional<StringConstraint>&& facingMode, std::optional<StringConstraint>&& deviceId, std::optional<StringConstraint>&& groupId, std::optional<StringConstraint>&& whiteBalanceMode, std::optional<DoubleConstraint> zoom, std::optional<BooleanConstraint> torch, std::optional<BooleanConstraint> backgroundBlur, std::optional<BooleanConstraint> powerEfficient)
+    MediaTrackConstraintSetMap(std::optional<IntConstraint> width, std::optional<IntConstraint> height, std::optional<IntConstraint> sampleRate, std::optional<IntConstraint> sampleSize, std::optional<DoubleConstraint> aspectRatio, std::optional<DoubleConstraint> frameRate, std::optional<DoubleConstraint> volume, std::optional<BooleanConstraint> echoCancellation, std::optional<BooleanConstraint> displaySurface, std::optional<BooleanConstraint> logicalSurface, std::optional<StringConstraint>&& facingMode, std::optional<StringConstraint>&& deviceId, std::optional<StringConstraint>&& groupId, std::optional<StringConstraint>&& whiteBalanceMode, std::optional<DoubleConstraint> zoom, std::optional<BooleanConstraint> torch)
         : m_width(width)
         , m_height(height)
         , m_sampleRate(sampleRate)
@@ -608,15 +600,12 @@ public:
         , m_whiteBalanceMode(WTFMove(whiteBalanceMode))
         , m_zoom(zoom)
         , m_torch(torch)
-        , m_backgroundBlur(backgroundBlur)
-        , m_powerEfficient(powerEfficient)
     {
     }
 
     WEBCORE_EXPORT void forEach(Function<void(MediaConstraintType, const MediaConstraint&)>&&) const;
     void filter(const Function<bool(MediaConstraintType, const MediaConstraint&)>&) const;
     bool isEmpty() const;
-    WEBCORE_EXPORT bool isValid() const;
     WEBCORE_EXPORT size_t size() const;
 
     WEBCORE_EXPORT void set(MediaConstraintType, std::optional<IntConstraint>&&);
@@ -651,8 +640,6 @@ public:
     const std::optional<StringConstraint>& whiteBalanceMode() const { return m_whiteBalanceMode; }
     const std::optional<DoubleConstraint>& zoom() const { return m_zoom; }
     const std::optional<BooleanConstraint>& torch() const { return m_torch; }
-    const std::optional<BooleanConstraint>& backgroundBlur() const { return m_backgroundBlur; }
-    const std::optional<BooleanConstraint>& powerEfficient() const { return m_powerEfficient; }
 
     MediaTrackConstraintSetMap isolatedCopy() const;
 
@@ -678,9 +665,6 @@ private:
     std::optional<StringConstraint> m_whiteBalanceMode;
     std::optional<DoubleConstraint> m_zoom;
     std::optional<BooleanConstraint> m_torch;
-
-    std::optional<BooleanConstraint> m_backgroundBlur;
-    std::optional<BooleanConstraint> m_powerEfficient;
 };
 
 struct MediaConstraints {
@@ -693,9 +677,6 @@ struct MediaConstraints {
     bool isValid { false };
 
     MediaConstraints isolatedCopy() const;
-
-    enum class DeviceType : bool { Camera, Microphone };
-    bool hasDisallowedRequiredConstraintForDeviceSelection(DeviceType) const;
 };
 
 } // namespace WebCore

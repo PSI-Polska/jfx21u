@@ -34,7 +34,6 @@
 #include <mutex>
 #include <unicode/uidna.h>
 #include <unicode/uscript.h>
-#include <wtf/IteratorRange.h>
 #include <wtf/text/WTFString.h>
 
 namespace WTF {
@@ -399,14 +398,14 @@ void initializeDefaultIDNAllowedScriptList()
         addScriptToIDNAllowedScriptList(script);
 }
 
-static bool allCharactersInAllowedIDNScriptList(std::span<const UChar> buffer)
+static bool allCharactersInAllowedIDNScriptList(const UChar* buffer, int32_t length)
 {
     loadIDNAllowedScriptList();
-    size_t i = 0;
+    int32_t i = 0;
     std::optional<char32_t> previousCodePoint;
-    while (i < buffer.size()) {
+    while (i < length) {
         char32_t c;
-        U16_NEXT(buffer, i, buffer.size(), c);
+        U16_NEXT(buffer, i, length, c);
         UErrorCode error = U_ZERO_ERROR;
         UScriptCode script = uscript_getScript(c, &error);
         if (error != U_ZERO_ERROR) {
@@ -433,11 +432,13 @@ static bool allCharactersInAllowedIDNScriptList(std::span<const UChar> buffer)
 }
 
 template<typename Func>
-static inline bool isSecondLevelDomainNameAllowedByTLDRules(std::span<const UChar> buffer, Func characterIsAllowed)
+static inline bool isSecondLevelDomainNameAllowedByTLDRules(const UChar* buffer, int32_t length, Func characterIsAllowed)
 {
-    ASSERT(!buffer.empty());
+    ASSERT(length > 0);
 
-    for (auto ch : makeReversedRange(buffer)) {
+    for (int32_t i = length - 1; i >= 0; --i) {
+        UChar ch = buffer[i];
+
         if (characterIsAllowed(ch))
             continue;
 
@@ -453,8 +454,8 @@ static inline bool isSecondLevelDomainNameAllowedByTLDRules(std::span<const UCha
 #define CHECK_RULES_IF_SUFFIX_MATCHES(suffix, function) \
     { \
         static const int32_t suffixLength = sizeof(suffix) / sizeof(suffix[0]); \
-        if (buffer.size() > suffixLength && !memcmp(buffer.last(suffixLength).data(), suffix, sizeof(suffix))) \
-            return isSecondLevelDomainNameAllowedByTLDRules(buffer.first(buffer.size() - suffixLength), function); \
+        if (length > suffixLength && !memcmp(buffer + length - suffixLength, suffix, sizeof(suffix))) \
+            return isSecondLevelDomainNameAllowedByTLDRules(buffer, length - suffixLength, function); \
     }
 
 static bool isRussianDomainNameCharacter(UChar ch)
@@ -463,11 +464,11 @@ static bool isRussianDomainNameCharacter(UChar ch)
     return (ch >= 0x0430 && ch <= 0x044f) || ch == 0x0451 || isASCIIDigit(ch) || ch == '-';
 }
 
-static bool allCharactersAllowedByTLDRules(std::span<const UChar> buffer)
+static bool allCharactersAllowedByTLDRules(const UChar* buffer, int32_t length)
 {
     // Skip trailing dot for root domain.
-    if (buffer.back() == '.')
-        buffer = buffer.first(buffer.size() - 1);
+    if (buffer[length - 1] == '.')
+        length--;
 
     // http://cctld.ru/files/pdf/docs/rules_ru-rf.pdf
     static const UChar cyrillicRF[] = {
@@ -650,24 +651,23 @@ std::optional<String> mapHostName(const String& hostName, URLDecodeFunction deco
     auto expectedSourceBuffer = string.charactersWithNullTermination();
     if (!expectedSourceBuffer)
         return std::nullopt;
-    auto sourceBuffer = expectedSourceBuffer->span();
+    auto sourceBuffer = expectedSourceBuffer.value();
 
-    std::array<UChar, URLParser::hostnameBufferLength> destinationBuffer;
+    UChar destinationBuffer[URLParser::hostnameBufferLength];
     UErrorCode uerror = U_ZERO_ERROR;
     UIDNAInfo processingDetails = UIDNA_INFO_INITIALIZER;
-    size_t numCharactersConverted = (decodeFunction ? uidna_nameToASCII : uidna_nameToUnicode)(&URLParser::internationalDomainNameTranscoder(), sourceBuffer.data(), length, destinationBuffer.data(), destinationBuffer.size(), &processingDetails, &uerror);
+    int32_t numCharactersConverted = (decodeFunction ? uidna_nameToASCII : uidna_nameToUnicode)(&URLParser::internationalDomainNameTranscoder(), sourceBuffer.data(), length, destinationBuffer, URLParser::hostnameBufferLength, &processingDetails, &uerror);
     int allowedErrors = decodeFunction ? 0 : URLParser::allowedNameToASCIIErrors;
     if (length && (U_FAILURE(uerror) || processingDetails.errors & ~allowedErrors))
         return std::nullopt;
 
-    auto span = std::span { destinationBuffer }.first(numCharactersConverted);
-    if (numCharactersConverted == length && equal(sourceBuffer.data(), span))
+    if (numCharactersConverted == static_cast<int32_t>(length) && equal(sourceBuffer.data(), destinationBuffer, length))
         return String();
 
-    if (!decodeFunction && !allCharactersInAllowedIDNScriptList(span) && !allCharactersAllowedByTLDRules(span))
+    if (!decodeFunction && !allCharactersInAllowedIDNScriptList(destinationBuffer, numCharactersConverted) && !allCharactersAllowedByTLDRules(destinationBuffer, numCharactersConverted))
         return String();
 
-    return String { span };
+    return String(destinationBuffer, numCharactersConverted);
 }
 
 using MappingRangesVector = std::optional<Vector<std::tuple<unsigned, unsigned, String>>>;
@@ -799,8 +799,8 @@ static void applyHostNameFunctionToURLString(const String& string, URLDecodeFunc
     unsigned hostNameEnd = hostNameTerminator == notFound ? string.length() : hostNameTerminator;
 
     // Find "@" for the start of the host name.
-    auto lastUserInfoTerminator = StringView { string }.left(hostNameEnd).reverseFind('@');
-    unsigned hostNameStart = lastUserInfoTerminator == notFound ? authorityStart : lastUserInfoTerminator + 1;
+    auto userInfoTerminator = StringView { string }.left(hostNameEnd).find('@', authorityStart);
+    unsigned hostNameStart = userInfoTerminator == notFound ? authorityStart : userInfoTerminator + 1;
 
     collectRangesThatNeedMapping(string, hostNameStart, hostNameEnd - hostNameStart, array, decodeFunction);
 }
@@ -852,9 +852,9 @@ static String escapeUnsafeCharacters(const String& sourceBuffer)
 
     outBuffer.grow(i);
     if (sourceBuffer.is8Bit())
-        StringImpl::copyCharacters(outBuffer.data(), sourceBuffer.span8().first(i));
+        StringImpl::copyCharacters(outBuffer.data(), sourceBuffer.characters8(), i);
     else
-        StringImpl::copyCharacters(outBuffer.data(), sourceBuffer.span16().first(i));
+        StringImpl::copyCharacters(outBuffer.data(), sourceBuffer.characters16(), i);
 
     for (; i < length; ) {
         char32_t c = sourceBuffer.characterStartingAt(i);
@@ -884,7 +884,7 @@ static String escapeUnsafeCharacters(const String& sourceBuffer)
 
 String userVisibleURL(const CString& url)
 {
-    auto before = url.span();
+    auto* before = url.dataAsUInt8Ptr();
     int length = url.length();
 
     if (!length)
@@ -900,7 +900,7 @@ String userVisibleURL(const CString& url)
 
     char* q = after.data();
     {
-        auto p = before;
+        const unsigned char* p = before;
         for (int i = 0; i < length; i++) {
             unsigned char c = p[i];
             // unescape escape sequences that indicate bytes greater than 0x7f

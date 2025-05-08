@@ -27,11 +27,11 @@
 #include "SVGNames.h"
 #include "SVGSVGElement.h"
 #include "SVGStringList.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGViewElement);
+WTF_MAKE_ISO_ALLOCATED_IMPL(SVGViewElement);
 
 inline SVGViewElement::SVGViewElement(const QualifiedName& tagName, Document& document)
     : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -59,11 +59,10 @@ void SVGViewElement::svgAttributeChanged(const QualifiedName& attrName)
         return;
 
     if (SVGFitToViewBox::isKnownAttribute(attrName)) {
-        RefPtr targetElement = m_targetElement.get();
-        if (!targetElement)
+        if (!m_targetElement)
             return;
-        targetElement->inheritViewAttributes(*this);
-        targetElement->updateSVGRendererForElementChange();
+        m_targetElement->inheritViewAttributes(*this);
+        m_targetElement->updateSVGRendererForElementChange();
         return;
     }
 

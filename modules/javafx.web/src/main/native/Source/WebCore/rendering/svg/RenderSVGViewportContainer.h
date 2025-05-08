@@ -23,6 +23,7 @@
 
 #pragma once
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "RenderSVGContainer.h"
 #include "RenderSVGRoot.h"
 
@@ -31,15 +32,12 @@ namespace WebCore {
 class SVGSVGElement;
 
 class RenderSVGViewportContainer final : public RenderSVGContainer {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGViewportContainer);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGViewportContainer);
+    WTF_MAKE_ISO_ALLOCATED(RenderSVGViewportContainer);
 public:
     RenderSVGViewportContainer(RenderSVGRoot&, RenderStyle&&);
     RenderSVGViewportContainer(SVGSVGElement&, RenderStyle&&);
-    virtual ~RenderSVGViewportContainer();
 
     SVGSVGElement& svgSVGElement() const;
-    Ref<SVGSVGElement> protectedSVGSVGElement() const;
     FloatRect viewport() const { return { { }, viewportSize() }; }
     FloatSize viewportSize() const { return m_viewport.size(); }
 
@@ -71,3 +69,4 @@ private:
 
 SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGViewportContainer, isRenderSVGViewportContainer())
 
+#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

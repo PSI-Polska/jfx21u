@@ -30,105 +30,36 @@
 
 #include "GraphicsLayerContentsDisplayDelegate.h"
 #include "HTMLCanvasElement.h"
+#include "ImageBufferPipe.h"
 #include "OffscreenCanvas.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-#if !USE(NICOSIA)
-namespace {
-// FIXME: Once NICOSIA PlaceholderRenderingContextSource is reimplemented with delegated display compositor interface,
-// move these to PlaceholderRenderingContextSource.
-class DelegatedDisplayPlaceholderRenderingContextSource final : public PlaceholderRenderingContextSource {
-public:
-    void setPlaceholderBuffer(ImageBuffer& image) final
-    {
-        RefPtr<GraphicsLayerAsyncContentsDisplayDelegate> delegate;
-        {
-            Locker locker { m_lock };
-            if (m_delegate)
-                m_delegate->tryCopyToLayer(image);
-        }
-        PlaceholderRenderingContextSource::setPlaceholderBuffer(image);
-    }
+WTF_MAKE_ISO_ALLOCATED_IMPL(PlaceholderRenderingContext);
 
-    void setContentsToLayer(GraphicsLayer& layer) final
-    {
-        Locker locker { m_lock };
-        m_delegate = layer.createAsyncContentsDisplayDelegate(m_delegate.get());
-    }
-
-private:
-    using PlaceholderRenderingContextSource::PlaceholderRenderingContextSource;
-    Lock m_lock;
-    RefPtr<GraphicsLayerAsyncContentsDisplayDelegate> m_delegate WTF_GUARDED_BY_LOCK(m_lock);
-    friend Ref<PlaceholderRenderingContextSource> PlaceholderRenderingContextSource::create(PlaceholderRenderingContext&);
-};
-
-}
-
-Ref<PlaceholderRenderingContextSource> PlaceholderRenderingContextSource::create(PlaceholderRenderingContext& context)
-{
-    return adoptRef(*new DelegatedDisplayPlaceholderRenderingContextSource(context));
-}
-
-#endif
-
-PlaceholderRenderingContextSource::PlaceholderRenderingContextSource(PlaceholderRenderingContext& placeholder)
-    : m_placeholder(placeholder)
-{
-}
-
-void PlaceholderRenderingContextSource::setPlaceholderBuffer(ImageBuffer& imageBuffer)
-{
-    RefPtr clone = imageBuffer.clone();
-    if (!clone)
-        return;
-    std::unique_ptr serializedClone = ImageBuffer::sinkIntoSerializedImageBuffer(WTFMove(clone));
-    if (!serializedClone)
-        return;
-    callOnMainThread([weakPlaceholder = m_placeholder, buffer = WTFMove(serializedClone)] () mutable {
-        RefPtr placeholder = weakPlaceholder.get();
-        if (!placeholder)
-            return;
-        RefPtr imageBuffer = SerializedImageBuffer::sinkIntoImageBuffer(WTFMove(buffer), placeholder->canvas().scriptExecutionContext()->graphicsClient());
-        if (!imageBuffer)
-            return;
-        placeholder->setPlaceholderBuffer(imageBuffer.releaseNonNull());
-    });
-}
-
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(PlaceholderRenderingContext);
-
-std::unique_ptr<PlaceholderRenderingContext> PlaceholderRenderingContext::create(HTMLCanvasElement& element)
-{
-    return std::unique_ptr<PlaceholderRenderingContext> { new PlaceholderRenderingContext(element) };
-}
-
-PlaceholderRenderingContext::PlaceholderRenderingContext(HTMLCanvasElement& canvas)
+PlaceholderRenderingContext::PlaceholderRenderingContext(CanvasBase& canvas)
     : CanvasRenderingContext(canvas)
-    , m_source(PlaceholderRenderingContextSource::create(*this))
 {
+    m_imageBufferPipe = ImageBufferPipe::create();
 }
 
-HTMLCanvasElement& PlaceholderRenderingContext::canvas() const
+HTMLCanvasElement* PlaceholderRenderingContext::canvas() const
 {
-    return static_cast<HTMLCanvasElement&>(canvasBase());
-}
-
-IntSize PlaceholderRenderingContext::size() const
-{
-    return canvas().size();
+    auto& base = canvasBase();
+    if (!is<HTMLCanvasElement>(base))
+        return nullptr;
+    return &downcast<HTMLCanvasElement>(base);
 }
 
 void PlaceholderRenderingContext::setContentsToLayer(GraphicsLayer& layer)
 {
-    m_source->setContentsToLayer(layer);
-}
+    if (m_imageBufferPipe) {
+        m_imageBufferPipe->setContentsToLayer(layer);
+        return;
+    }
 
-void PlaceholderRenderingContext::setPlaceholderBuffer(Ref<ImageBuffer>&& buffer)
-{
-    canvasBase().setImageBufferAndMarkDirty(WTFMove(buffer));
+    return CanvasRenderingContext::setContentsToLayer(layer);
 }
 
 }

@@ -44,18 +44,11 @@ struct NowPlayingInfoArtwork {
     }
 };
 
-struct NowPlayingMetadata {
+struct NowPlayingInfo {
     String title;
     String artist;
     String album;
     String sourceApplicationIdentifier;
-    std::optional<NowPlayingInfoArtwork> artwork;
-
-    friend bool operator==(const NowPlayingMetadata&, const NowPlayingMetadata&) = default;
-};
-
-struct NowPlayingInfo {
-    NowPlayingMetadata metadata;
     double duration { 0 };
     double currentTime { 0 };
     double rate { 1.0 };
@@ -63,6 +56,7 @@ struct NowPlayingInfo {
     MediaUniqueIdentifier uniqueIdentifier;
     bool isPlaying { false };
     bool allowsNowPlayingControlsVisibility { false };
+    std::optional<NowPlayingInfoArtwork> artwork;
 
     friend bool operator==(const NowPlayingInfo&, const NowPlayingInfo&) = default;
 };

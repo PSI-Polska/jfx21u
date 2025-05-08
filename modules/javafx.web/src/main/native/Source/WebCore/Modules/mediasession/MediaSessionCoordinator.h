@@ -42,7 +42,7 @@ template<typename> class DOMPromiseDeferred;
 class MediaSessionCoordinator
     : public RefCounted<MediaSessionCoordinator>
     , public MediaSessionCoordinatorClient
-    , public MediaSessionObserver
+    , public MediaSession::Observer
     , public ActiveDOMObject
     , public EventTarget  {
     WTF_MAKE_FAST_ALLOCATED;
@@ -68,10 +68,8 @@ public:
     using MediaSessionCoordinatorClient::weakPtrFactory;
     using MediaSessionCoordinatorClient::WeakValueType;
     using MediaSessionCoordinatorClient::WeakPtrImplType;
-
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
+    using RefCounted::ref;
+    using RefCounted::deref;
 
     struct PlaySessionCommand {
         std::optional<double> atTime;
@@ -85,14 +83,15 @@ private:
     // EventTarget
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
-    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::MediaSessionCoordinator; }
+    EventTargetInterface eventTargetInterface() const final { return MediaSessionCoordinatorEventTargetInterfaceType; }
     ScriptExecutionContext* scriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
     void eventListenersDidChange() final;
 
-    // ActiveDOMObject.
+    // ActiveDOMObject
+    const char* activeDOMObjectName() const final { return "MediaSessionCoordinator"; }
     bool virtualHasPendingActivity() const final;
 
-    // MediaSessionObserver
+    // MediaSession::Observer
     void metadataChanged(const RefPtr<MediaMetadata>&) final;
     void positionStateChanged(const std::optional<MediaPositionState>&) final;
     void playbackStateChanged(MediaSessionPlaybackState) final;
@@ -110,7 +109,7 @@ private:
     const Logger& logger() const { return m_logger; }
     const void* logIdentifier() const { return m_logIdentifier; }
     static WTFLogChannel& logChannel();
-    static ASCIILiteral logClassName() { return "MediaSessionCoordinator"_s; }
+    static const char* logClassName() { return "MediaSessionCoordinator"; }
     bool shouldFireEvents() const;
 
     WeakPtr<MediaSession> m_session;

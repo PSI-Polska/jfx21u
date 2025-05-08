@@ -28,13 +28,13 @@
 
 #include "ElementInlines.h"
 #include <wtf/ASCIICType.h>
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DatasetDOMStringMap);
+WTF_MAKE_ISO_ALLOCATED_IMPL(DatasetDOMStringMap);
 
 static bool isValidAttributeName(const String& name)
 {
@@ -91,17 +91,18 @@ static inline AtomString convertPropertyNameToAttributeName(const StringImpl& na
     unsigned length = name.length();
     buffer.reserveInitialCapacity(std::size(dataPrefix) + length);
 
-    buffer.append(std::span { dataPrefix });
+    buffer.append(dataPrefix, std::size(dataPrefix));
 
-    auto characters = name.span<CharacterType>();
-    for (auto character : characters) {
+    const CharacterType* characters = name.characters<CharacterType>();
+    for (unsigned i = 0; i < length; ++i) {
+        CharacterType character = characters[i];
         if (isASCIIUpper(character)) {
             buffer.append('-');
             buffer.append(toASCIILower(character));
         } else
             buffer.append(character);
     }
-    return buffer.span();
+    return AtomString(buffer.data(), buffer.size());
 }
 
 static AtomString convertPropertyNameToAttributeName(const String& name)

@@ -47,9 +47,6 @@ public:
         // It's cached in a simple way.
         Simple,
 
-        // It's cached for a megamorphic case.
-        Megamorphic,
-
         // It's known to often take slow path.
         TakesSlowPath
     };
@@ -62,7 +59,7 @@ public:
     InstanceOfStatus(State state)
         : m_state(state)
     {
-        ASSERT(state == NoInformation || state == TakesSlowPath || state == Megamorphic);
+        ASSERT(state == NoInformation || state == TakesSlowPath);
     }
 
     explicit InstanceOfStatus(StubInfoSummary summary)
@@ -72,11 +69,9 @@ public:
             m_state = NoInformation;
             return;
         case StubInfoSummary::Simple:
+        case StubInfoSummary::Megamorphic:
         case StubInfoSummary::MakesCalls:
             RELEASE_ASSERT_NOT_REACHED();
-            return;
-        case StubInfoSummary::Megamorphic:
-            m_state = Megamorphic;
             return;
         case StubInfoSummary::TakesSlowPath:
         case StubInfoSummary::TakesSlowPathAndMakesCalls:
@@ -98,7 +93,6 @@ public:
     explicit operator bool() const { return isSet(); }
 
     bool isSimple() const { return m_state == Simple; }
-    bool isMegamorphic() const { return m_state == Megamorphic; }
     bool takesSlowPath() const { return m_state == TakesSlowPath; }
 
     JSObject* commonPrototype() const;

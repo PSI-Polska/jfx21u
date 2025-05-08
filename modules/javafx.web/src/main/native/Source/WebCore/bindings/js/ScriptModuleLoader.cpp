@@ -61,7 +61,6 @@
 #include <JavaScriptCore/JSString.h>
 #include <JavaScriptCore/SourceProvider.h>
 #include <JavaScriptCore/Symbol.h>
-#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -328,7 +327,6 @@ JSC::JSInternalPromise* ScriptModuleLoader::importModule(JSC::JSGlobalObject* js
         return type.value_or(JSC::ScriptFetchParameters::Type::JavaScript);
     };
 
-    auto specifier = moduleName->value(jsGlobalObject);
     // If SourceOrigin and/or CachedScriptFetcher is null, we import the module with the default fetcher.
     // SourceOrigin can be null if the source code is not coupled with the script file.
     // The examples,
@@ -364,8 +362,7 @@ JSC::JSInternalPromise* ScriptModuleLoader::importModule(JSC::JSGlobalObject* js
         auto type = getTypeFromAssertions();
         RETURN_IF_EXCEPTION(scope, reject(scope));
 
-        URL moduleURL = globalObject.importMap().resolve(specifier, baseURL);
-        parameters = ModuleFetchParameters::create(type, globalObject.importMap().integrityForURL(moduleURL), /* isTopLevelModule */ true);
+        parameters = ModuleFetchParameters::create(type, emptyString(), /* isTopLevelModule */ true);
 
         if (sourceOrigin.fetcher()) {
             scriptFetcher = sourceOrigin.fetcher();
@@ -388,6 +385,7 @@ JSC::JSInternalPromise* ScriptModuleLoader::importModule(JSC::JSGlobalObject* js
     ASSERT(scriptFetcher);
     ASSERT(parameters);
 
+    auto specifier = moduleName->value(jsGlobalObject);
     RETURN_IF_EXCEPTION(scope, reject(scope));
     RELEASE_AND_RETURN(scope, JSC::importModule(jsGlobalObject, JSC::Identifier::fromString(vm, specifier), JSC::jsString(vm, baseURL.string()), JSC::JSScriptFetchParameters::create(vm, parameters.releaseNonNull()), JSC::JSScriptFetcher::create(vm, WTFMove(scriptFetcher))));
 }
@@ -444,8 +442,7 @@ void ScriptModuleLoader::notifyFinished(ModuleScriptLoader& moduleScriptLoader, 
         return;
     moduleScriptLoader.clearClient();
 
-    RefPtr context = m_context.get();
-    if (!context)
+    if (!m_context)
         return;
 
     auto canonicalizeAndRegisterResponseURL = [&] (URL responseURL, bool hasRedirections, ResourceResponse::Source source) {
@@ -466,17 +463,17 @@ void ScriptModuleLoader::notifyFinished(ModuleScriptLoader& moduleScriptLoader, 
         auto& cachedScript = *loader.cachedScript();
 
         if (cachedScript.resourceError().isAccessControl()) {
-            rejectToPropagateNetworkError(*context, WTFMove(promise), ModuleFetchFailureKind::WasPropagatedError, "Cross-origin script load denied by Cross-Origin Resource Sharing policy."_s);
+            rejectToPropagateNetworkError(*m_context, WTFMove(promise), ModuleFetchFailureKind::WasPropagatedError, "Cross-origin script load denied by Cross-Origin Resource Sharing policy."_s);
             return;
         }
 
         if (cachedScript.errorOccurred()) {
-            rejectToPropagateNetworkError(*context, WTFMove(promise), ModuleFetchFailureKind::WasPropagatedError, "Importing a module script failed."_s);
+            rejectToPropagateNetworkError(*m_context, WTFMove(promise), ModuleFetchFailureKind::WasPropagatedError, "Importing a module script failed."_s);
             return;
         }
 
         if (cachedScript.wasCanceled()) {
-            rejectToPropagateNetworkError(*context, WTFMove(promise), ModuleFetchFailureKind::WasCanceled, "Importing a module script is canceled."_s);
+            rejectToPropagateNetworkError(*m_context, WTFMove(promise), ModuleFetchFailureKind::WasCanceled, "Importing a module script is canceled."_s);
             return;
         }
 
@@ -485,7 +482,7 @@ void ScriptModuleLoader::notifyFinished(ModuleScriptLoader& moduleScriptLoader, 
         if (MIMETypeRegistry::isSupportedJavaScriptMIMEType(mimeType))
             type = ModuleType::JavaScript;
 #if ENABLE(WEBASSEMBLY)
-        else if (context->settingsValues().webAssemblyESMIntegrationEnabled && MIMETypeRegistry::isSupportedWebAssemblyMIMEType(mimeType))
+        else if (m_context->settingsValues().webAssemblyESMIntegrationEnabled && MIMETypeRegistry::isSupportedWebAssemblyMIMEType(mimeType))
             type = ModuleType::WebAssembly;
 #endif
         else if (loader.parameters() && loader.parameters()->type() == JSC::ScriptFetchParameters::JSON && MIMETypeRegistry::isSupportedJSONMIMEType(mimeType))
@@ -494,22 +491,19 @@ void ScriptModuleLoader::notifyFinished(ModuleScriptLoader& moduleScriptLoader, 
             // https://html.spec.whatwg.org/multipage/webappapis.html#fetch-a-single-module-script
             // The result of extracting a MIME type from response's header list (ignoring parameters) is not a JavaScript MIME type.
             // For historical reasons, fetching a classic script does not include MIME type checking. In contrast, module scripts will fail to load if they are not of a correct MIME type.
-            rejectWithFetchError(*context, WTFMove(promise), ExceptionCode::TypeError, makeString('\'', cachedScript.response().mimeType(), "' is not a valid JavaScript MIME type."_s));
+            rejectWithFetchError(*m_context, WTFMove(promise), ExceptionCode::TypeError, makeString("'", cachedScript.response().mimeType(), "' is not a valid JavaScript MIME type."));
             return;
         }
 
-        auto* globalObject = context->globalObject();
-        String integrity = globalObject ? globalObject->importMap().integrityForURL(sourceURL) : String();
-
-        if (auto* parameters = loader.parameters())
-            integrity = parameters->integrity();
-
+        if (auto* parameters = loader.parameters()) {
+            String integrity = parameters->integrity();
             if (!integrity.isEmpty()) {
                 if (!matchIntegrityMetadata(cachedScript, integrity)) {
-                context->addConsoleMessage(MessageSource::Security, MessageLevel::Error, makeString("Cannot load script "_s, integrityMismatchDescription(cachedScript, integrity)));
-                rejectWithFetchError(*context, WTFMove(promise), ExceptionCode::TypeError, "Cannot load script due to integrity mismatch"_s);
+                    m_context->addConsoleMessage(MessageSource::Security, MessageLevel::Error, makeString("Cannot load script ", integrityMismatchDescription(cachedScript, integrity)));
+                    rejectWithFetchError(*m_context, WTFMove(promise), ExceptionCode::TypeError, "Cannot load script due to integrity mismatch"_s);
                 return;
             }
+        }
         }
 
         URL responseURL = canonicalizeAndRegisterResponseURL(cachedScript.response().url(), cachedScript.hasRedirections(), cachedScript.response().source());
@@ -537,16 +531,16 @@ void ScriptModuleLoader::notifyFinished(ModuleScriptLoader& moduleScriptLoader, 
             auto& workerScriptLoader = loader.scriptLoader();
             ASSERT(workerScriptLoader.failed());
             if (workerScriptLoader.error().isAccessControl()) {
-                rejectToPropagateNetworkError(*context, WTFMove(promise), ModuleFetchFailureKind::WasPropagatedError, "Cross-origin script load denied by Cross-Origin Resource Sharing policy."_s);
+                rejectToPropagateNetworkError(*m_context, WTFMove(promise), ModuleFetchFailureKind::WasPropagatedError, "Cross-origin script load denied by Cross-Origin Resource Sharing policy."_s);
                 return;
             }
 
             if (workerScriptLoader.error().isCancellation()) {
-                rejectToPropagateNetworkError(*context, WTFMove(promise), ModuleFetchFailureKind::WasCanceled, "Importing a module script is canceled."_s);
+                rejectToPropagateNetworkError(*m_context, WTFMove(promise), ModuleFetchFailureKind::WasCanceled, "Importing a module script is canceled."_s);
                 return;
             }
 
-            rejectToPropagateNetworkError(*context, WTFMove(promise), ModuleFetchFailureKind::WasPropagatedError, "Importing a module script failed."_s);
+            rejectToPropagateNetworkError(*m_context, WTFMove(promise), ModuleFetchFailureKind::WasPropagatedError, "Importing a module script failed."_s);
             return;
         }
 
@@ -555,7 +549,7 @@ void ScriptModuleLoader::notifyFinished(ModuleScriptLoader& moduleScriptLoader, 
         if (MIMETypeRegistry::isSupportedJavaScriptMIMEType(mimeType))
             type = ModuleType::JavaScript;
 #if ENABLE(WEBASSEMBLY)
-        else if (context->settingsValues().webAssemblyESMIntegrationEnabled && MIMETypeRegistry::isSupportedWebAssemblyMIMEType(mimeType))
+        else if (m_context->settingsValues().webAssemblyESMIntegrationEnabled && MIMETypeRegistry::isSupportedWebAssemblyMIMEType(mimeType))
             type = ModuleType::WebAssembly;
 #endif
         else if (loader.parameters() && loader.parameters()->type() == JSC::ScriptFetchParameters::JSON && MIMETypeRegistry::isSupportedJSONMIMEType(mimeType))
@@ -564,7 +558,7 @@ void ScriptModuleLoader::notifyFinished(ModuleScriptLoader& moduleScriptLoader, 
             // https://html.spec.whatwg.org/multipage/webappapis.html#fetch-a-single-module-script
             // The result of extracting a MIME type from response's header list (ignoring parameters) is not a JavaScript MIME type.
             // For historical reasons, fetching a classic script does not include MIME type checking. In contrast, module scripts will fail to load if they are not of a correct MIME type.
-            rejectWithFetchError(*context, WTFMove(promise), ExceptionCode::TypeError, makeString('\'', loader.responseMIMEType(), "' is not a valid JavaScript MIME type."_s));
+            rejectWithFetchError(*m_context, WTFMove(promise), ExceptionCode::TypeError, makeString("'", loader.responseMIMEType(), "' is not a valid JavaScript MIME type."));
             return;
         }
 
@@ -577,7 +571,7 @@ void ScriptModuleLoader::notifyFinished(ModuleScriptLoader& moduleScriptLoader, 
                     static_cast<WorkerScriptFetcher&>(loader.scriptFetcher()).setReferrerPolicy(loader.referrerPolicy());
             }
             responseURL = canonicalizeAndRegisterResponseURL(responseURL, workerScriptLoader.isRedirected(), workerScriptLoader.responseSource());
-            if (auto* globalScope = dynamicDowncast<ServiceWorkerGlobalScope>(*context))
+            if (auto* globalScope = dynamicDowncast<ServiceWorkerGlobalScope>(*m_context))
                 globalScope->setScriptResource(sourceURL, ServiceWorkerContextData::ImportedScript { loader.script(), responseURL, loader.responseMIMEType() });
         }
         m_requestURLToResponseURLMap.add(sourceURL.string(), responseURL);
@@ -599,7 +593,7 @@ void ScriptModuleLoader::notifyFinished(ModuleScriptLoader& moduleScriptLoader, 
             }
     }
 
-    context->checkedEventLoop()->queueTask(TaskSource::Networking, [promise = WTFMove(promise), sourceCode = WTFMove(sourceCode)]() {
+    m_context->eventLoop().queueTask(TaskSource::Networking, [promise = WTFMove(promise), sourceCode = WTFMove(sourceCode)]() {
         promise->resolveWithCallback([&, sourceCode](JSDOMGlobalObject& jsGlobalObject) {
             return JSC::JSSourceCode::create(jsGlobalObject.vm(), JSC::SourceCode { sourceCode });
         });

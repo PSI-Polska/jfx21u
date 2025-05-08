@@ -27,7 +27,6 @@
 
 #if ENABLE(WEBASSEMBLY)
 
-#include "WasmCallee.h"
 #include "WasmEntryPlan.h"
 #include "WasmIPIntGenerator.h"
 #include "WasmLLIntPlan.h"
@@ -50,6 +49,12 @@ public:
     JS_EXPORT_PRIVATE IPIntPlan(VM&, Vector<uint8_t>&&, CompilerMode, CompletionTask&&);
     IPIntPlan(VM&, Ref<ModuleInformation>, const Ref<IPIntCallee>*, CompletionTask&&);
     IPIntPlan(VM&, Ref<ModuleInformation>, CompilerMode, CompletionTask&&); // For StreamingCompiler.
+
+    MacroAssemblerCodeRef<JITCompilationPtrTag>&& takeEntryThunks()
+    {
+        RELEASE_ASSERT(!failed() && !hasWork());
+        return WTFMove(m_entryThunks);
+    }
 
     Vector<Ref<IPIntCallee>>&& takeCallees()
     {
@@ -87,14 +92,12 @@ private:
     void addTailCallEdge(uint32_t, uint32_t);
     void computeTransitiveTailCalls() const;
 
-    bool ensureEntrypoint(IPIntCallee&, unsigned functionIndex);
-
     Vector<std::unique_ptr<FunctionIPIntMetadataGenerator>> m_wasmInternalFunctions;
     const Ref<IPIntCallee>* m_callees { nullptr };
     Vector<Ref<IPIntCallee>> m_calleesVector;
-    Vector<RefPtr<JSEntrypointCallee>> m_entrypoints;
     JSEntrypointCalleeMap m_jsEntrypointCallees;
     TailCallGraph m_tailCallGraph;
+    MacroAssemblerCodeRef<JITCompilationPtrTag> m_entryThunks;
 };
 
 } } // namespace JSC::Wasm

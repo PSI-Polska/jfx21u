@@ -24,6 +24,7 @@
 #include "config.h"
 #include "HTMLHtmlElement.h"
 
+#include "ApplicationCacheHost.h"
 #include "Document.h"
 #include "DocumentLoader.h"
 #include "DocumentParser.h"
@@ -33,11 +34,11 @@
 #include "HTMLNames.h"
 #include "LocalFrame.h"
 #include "Logging.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLHtmlElement);
+WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLHtmlElement);
 
 using namespace HTMLNames;
 
@@ -57,4 +58,32 @@ Ref<HTMLHtmlElement> HTMLHtmlElement::create(const QualifiedName& tagName, Docum
     return adoptRef(*new HTMLHtmlElement(tagName, document));
 }
 
-} // namespace WebCore
+bool HTMLHtmlElement::isURLAttribute(const Attribute& attribute) const
+{
+    return attribute.name() == manifestAttr || HTMLElement::isURLAttribute(attribute);
+}
+
+void HTMLHtmlElement::insertedByParser()
+{
+    // When parsing a fragment, its dummy document has a null parser.
+    if (!document().parser() || !document().parser()->documentWasLoadedAsPartOfNavigation())
+        return;
+
+    if (!document().frame())
+        return;
+
+    RefPtr documentLoader = document().frame()->loader().documentLoader();
+    if (!documentLoader)
+        return;
+
+    auto& manifest = attributeWithoutSynchronization(manifestAttr);
+    if (manifest.isEmpty())
+        documentLoader->applicationCacheHost().selectCacheWithoutManifest();
+    else {
+        RELEASE_LOG_FAULT(Storage, "HTMLHtmlElement::insertedByParser: ApplicationCache is deprecated.");
+        document().addConsoleMessage(MessageSource::AppCache, MessageLevel::Warning, "ApplicationCache is deprecated. Please use ServiceWorkers instead."_s);
+        documentLoader->applicationCacheHost().selectCacheWithManifest(document().completeURL(manifest));
+    }
+}
+
+}

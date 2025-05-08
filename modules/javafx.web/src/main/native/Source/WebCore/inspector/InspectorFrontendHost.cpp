@@ -77,7 +77,6 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/persistence/PersistentDecoder.h>
 #include <wtf/text/Base64.h>
-#include <wtf/text/MakeString.h>
 
 #if PLATFORM(COCOA)
 #include <wtf/spi/darwin/OSVariantSPI.h>
@@ -443,11 +442,7 @@ void InspectorFrontendHost::killText(const String& text, bool shouldPrependToKil
     if (!m_frontendPage)
         return;
 
-    RefPtr focusedOrMainFrame = m_frontendPage->checkedFocusController()->focusedOrMainFrame();
-    if (!focusedOrMainFrame)
-        return;
-
-    Editor& editor = focusedOrMainFrame->editor();
+    Editor& editor = m_frontendPage->focusController().focusedOrMainFrame().editor();
     editor.setStartNewKillRingSequence(shouldStartNewSequence);
     Editor::KillRingInsertionMode insertionMode = shouldPrependToKillRing ? Editor::KillRingInsertionMode::PrependText : Editor::KillRingInsertionMode::AppendText;
     editor.addTextToKillRing(text, insertionMode);

@@ -58,7 +58,6 @@ enum UseKind : uint8_t {
     PromiseObjectUse,
     RegExpObjectUse,
     ProxyObjectUse,
-    GlobalProxyUse,
     DerivedArrayUse,
     ObjectOrOtherUse,
     StringIdentUse,
@@ -73,8 +72,6 @@ enum UseKind : uint8_t {
     DateObjectUse,
     MapObjectUse,
     SetObjectUse,
-    MapIteratorObjectUse,
-    SetIteratorObjectUse,
     WeakMapObjectUse,
     WeakSetObjectUse,
     DataViewObjectUse,
@@ -146,8 +143,6 @@ inline SpeculatedType typeFilterFor(UseKind useKind)
         return SpecRegExpObject;
     case ProxyObjectUse:
         return SpecProxyObject;
-    case GlobalProxyUse:
-        return SpecGlobalProxy;
     case DerivedArrayUse:
         return SpecDerivedArray;
     case ObjectOrOtherUse:
@@ -177,9 +172,6 @@ inline SpeculatedType typeFilterFor(UseKind useKind)
         return SpecMapObject;
     case SetObjectUse:
         return SpecSetObject;
-    case MapIteratorObjectUse:
-    case SetIteratorObjectUse:
-        return SpecObjectOther;
     case WeakMapObjectUse:
         return SpecWeakMapObject;
     case WeakSetObjectUse:
@@ -264,7 +256,6 @@ inline bool isCell(UseKind kind)
     case RegExpObjectUse:
     case PromiseObjectUse:
     case ProxyObjectUse:
-    case GlobalProxyUse:
     case DerivedArrayUse:
     case StringIdentUse:
     case StringUse:
@@ -276,8 +267,6 @@ inline bool isCell(UseKind kind)
     case DateObjectUse:
     case MapObjectUse:
     case SetObjectUse:
-    case MapIteratorObjectUse:
-    case SetIteratorObjectUse:
     case WeakMapObjectUse:
     case WeakSetObjectUse:
     case DataViewObjectUse:

@@ -31,12 +31,12 @@
 #include "ExceptionOr.h"
 #include <wtf/Algorithms.h>
 #include <wtf/FixedVector.h>
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CSSMathMax);
+WTF_MAKE_ISO_ALLOCATED_IMPL(CSSMathMax);
 
 ExceptionOr<Ref<CSSMathMax>> CSSMathMax::create(FixedVector<CSSNumberish>&& numberishes)
 {
@@ -70,10 +70,10 @@ void CSSMathMax::serialize(StringBuilder& builder, OptionSet<SerializationArgume
 {
     // https://drafts.css-houdini.org/css-typed-om/#calc-serialization
     if (!arguments.contains(SerializationArguments::WithoutParentheses))
-        builder.append("max("_s);
+        builder.append("max(");
     m_values->forEach([&](auto& numericValue, bool first) {
         if (!first)
-            builder.append(", "_s);
+            builder.append(", ");
         numericValue.serialize(builder, { SerializationArguments::Nested, SerializationArguments::WithoutParentheses });
     });
     if (!arguments.contains(SerializationArguments::WithoutParentheses))

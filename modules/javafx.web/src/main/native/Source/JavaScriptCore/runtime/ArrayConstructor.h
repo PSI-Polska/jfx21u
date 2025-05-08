@@ -37,10 +37,10 @@ public:
     typedef InternalFunction Base;
     static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
 
-    static ArrayConstructor* create(VM& vm, JSGlobalObject* globalObject, Structure* structure, ArrayPrototype* arrayPrototype)
+    static ArrayConstructor* create(VM& vm, JSGlobalObject* globalObject, Structure* structure, ArrayPrototype* arrayPrototype, GetterSetter* speciesSymbol)
     {
         ArrayConstructor* constructor = new (NotNull, allocateCell<ArrayConstructor>(vm)) ArrayConstructor(vm, structure);
-        constructor->finishCreation(vm, globalObject, arrayPrototype);
+        constructor->finishCreation(vm, globalObject, arrayPrototype, speciesSymbol);
         return constructor;
     }
 
@@ -50,7 +50,7 @@ public:
 
 private:
     ArrayConstructor(VM&, Structure*);
-    void finishCreation(VM&, JSGlobalObject*, ArrayPrototype*);
+    void finishCreation(VM&, JSGlobalObject*, ArrayPrototype*, GetterSetter* speciesSymbol);
 };
 STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(ArrayConstructor, InternalFunction);
 

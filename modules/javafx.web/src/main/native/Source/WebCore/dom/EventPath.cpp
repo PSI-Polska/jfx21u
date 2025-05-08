@@ -65,7 +65,7 @@ private:
 
     Ref<Node> m_relatedNode;
     RefPtr<Node> m_retargetedRelatedNode;
-    Vector<RefPtr<TreeScope>, 8> m_ancestorTreeScopes;
+    Vector<CheckedPtr<TreeScope>, 8> m_ancestorTreeScopes;
     unsigned m_lowestCommonAncestorIndex { 0 };
     bool m_hasDifferentTreeRoot { false };
 };
@@ -154,17 +154,17 @@ void EventPath::setRelatedTarget(Node& origin, Node& relatedNode)
 
     bool originIsRelatedTarget = &origin == &relatedNode;
     Ref rootNodeInOriginTreeScope = origin.treeScope().rootNode();
-    RefPtr<TreeScope> previousTreeScope;
+    CheckedPtr<TreeScope> previousTreeScope;
     size_t originalEventPathSize = m_path.size();
     for (unsigned contextIndex = 0; contextIndex < originalEventPathSize; contextIndex++) {
         auto& context = m_path[contextIndex];
-        if (!(context.isMouseOrFocusEventContext() || context.isWindowContext())) {
-            ASSERT(context.isTouchEventContext() || context.isNormalEventContext());
+        if (!context.isMouseOrFocusEventContext()) {
+            ASSERT(context.isWindowContext());
             continue;
         }
 
         Ref currentTarget = *context.node();
-        Ref currentTreeScope = currentTarget->treeScope();
+        CheckedRef currentTreeScope = currentTarget->treeScope();
         if (UNLIKELY(previousTreeScope && currentTreeScope.ptr() != previousTreeScope))
             retargeter.moveToNewTreeScope(previousTreeScope.get(), currentTreeScope);
 
@@ -205,10 +205,10 @@ void EventPath::retargetTouch(EventContext::TouchListType type, const Touch& tou
         return;
 
     RelatedNodeRetargeter retargeter(eventTarget.releaseNonNull(), Ref { *m_path[0].node() });
-    RefPtr<TreeScope> previousTreeScope;
+    CheckedPtr<TreeScope> previousTreeScope;
     for (auto& context : m_path) {
         Ref currentTarget = *context.node();
-        Ref currentTreeScope = currentTarget->treeScope();
+        CheckedRef currentTreeScope = currentTarget->treeScope();
         if (UNLIKELY(previousTreeScope && currentTreeScope.ptr() != previousTreeScope))
             retargeter.moveToNewTreeScope(previousTreeScope.get(), currentTreeScope);
 
@@ -306,7 +306,7 @@ RelatedNodeRetargeter::RelatedNodeRetargeter(Ref<Node>&& relatedNode, Node& targ
     , m_retargetedRelatedNode(m_relatedNode.copyRef())
 {
     auto& targetTreeScope = target.treeScope();
-    RefPtr currentTreeScope = &m_relatedNode->treeScope();
+    CheckedPtr currentTreeScope = &m_relatedNode->treeScope();
     if (LIKELY(currentTreeScope == &targetTreeScope && target.isConnected() && m_relatedNode->isConnected()))
         return;
 
@@ -325,15 +325,15 @@ RelatedNodeRetargeter::RelatedNodeRetargeter(Ref<Node>&& relatedNode, Node& targ
     collectTreeScopes();
 
     // FIXME: We should collect this while constructing the event path.
-    Vector<Ref<TreeScope>, 8> targetTreeScopeAncestors;
+    Vector<CheckedRef<TreeScope>, 8> targetTreeScopeAncestors;
     for (TreeScope* currentTreeScope = &targetTreeScope; currentTreeScope; currentTreeScope = currentTreeScope->parentTreeScope())
         targetTreeScopeAncestors.append(*currentTreeScope);
     ASSERT_WITH_SECURITY_IMPLICATION(!targetTreeScopeAncestors.isEmpty());
 
     unsigned i = m_ancestorTreeScopes.size();
     unsigned j = targetTreeScopeAncestors.size();
-    ASSERT_WITH_SECURITY_IMPLICATION(m_ancestorTreeScopes.last() == targetTreeScopeAncestors.last().ptr());
-    while (m_ancestorTreeScopes[i - 1] == targetTreeScopeAncestors[j - 1].ptr()) {
+    ASSERT_WITH_SECURITY_IMPLICATION(m_ancestorTreeScopes.last() == targetTreeScopeAncestors.last());
+    while (m_ancestorTreeScopes[i - 1] == targetTreeScopeAncestors[j - 1]) {
         i--;
         j--;
         if (!i || !j)

@@ -29,6 +29,7 @@
 #if ENABLE(RESOURCE_USAGE)
 
 #include "CommonVM.h"
+#include "JSLocalDOMWindow.h"
 #include <thread>
 #include <wtf/MainThread.h>
 #include <wtf/Vector.h>
@@ -117,7 +118,7 @@ void ResourceUsageThread::createThreadIfNeeded()
         return;
 
     m_vm = &commonVM();
-    m_thread = Thread::create("WebCore: ResourceUsage"_s, [this] {
+    m_thread = Thread::create("WebCore: ResourceUsage", [this] {
         threadBody();
     });
 }

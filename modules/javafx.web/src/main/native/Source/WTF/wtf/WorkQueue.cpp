@@ -40,7 +40,7 @@
 
 namespace WTF {
 
-WorkQueueBase::WorkQueueBase(ASCIILiteral name, Type type, QOS qos)
+WorkQueueBase::WorkQueueBase(const char* name, Type type, QOS qos)
 {
     platformInitialize(name, type, qos);
 }
@@ -50,7 +50,7 @@ WorkQueueBase::~WorkQueueBase()
     platformInvalidate();
 }
 
-Ref<ConcurrentWorkQueue> ConcurrentWorkQueue::create(ASCIILiteral name, QOS qos)
+Ref<ConcurrentWorkQueue> ConcurrentWorkQueue::create(const char* name, QOS qos)
 {
     return adoptRef(*new ConcurrentWorkQueue(name, qos));
 }
@@ -91,7 +91,7 @@ void ConcurrentWorkQueue::apply(size_t iterations, WTF::Function<void(size_t ind
         ThreadPool()
             // We don't need a thread for the current core.
             : m_workers(numberOfProcessorCores() - 1, [this](size_t) {
-                return Thread::create("ThreadPool Worker"_s, [this] {
+                return Thread::create("ThreadPool Worker", [this] {
                     threadBody();
                 });
             })
@@ -182,12 +182,12 @@ WorkQueue& WorkQueue::main()
     return *mainWorkQueue.get();
 }
 
-Ref<WorkQueue> WorkQueue::create(ASCIILiteral name, QOS qos)
+Ref<WorkQueue> WorkQueue::create(const char* name, QOS qos)
 {
     return adoptRef(*new WorkQueue(name, qos));
 }
 
-WorkQueue::WorkQueue(ASCIILiteral name, QOS qos)
+WorkQueue::WorkQueue(const char* name, QOS qos)
     : WorkQueueBase(name, Type::Serial, qos)
 {
 }
@@ -212,7 +212,7 @@ void WorkQueue::deref() const
     ThreadSafeRefCounted::deref();
 }
 
-ConcurrentWorkQueue::ConcurrentWorkQueue(ASCIILiteral name, QOS qos)
+ConcurrentWorkQueue::ConcurrentWorkQueue(const char* name, QOS qos)
     : WorkQueueBase(name, Type::Concurrent, qos)
 {
 }

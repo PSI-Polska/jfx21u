@@ -27,7 +27,6 @@ set(WTF_PUBLIC_HEADERS
     ButterflyArray.h
     ByteOrder.h
     CPUTime.h
-    CanMakeWeakPtr.h
     CagedPtr.h
     CagedUniquePtr.h
     CallbackAggregator.h
@@ -87,7 +86,6 @@ set(WTF_PUBLIC_HEADERS
     FixedVector.h
     FixedWidthDouble.h
     FlipBytes.h
-    Float16.h
     ForbidHeapAllocation.h
     Forward.h
     Function.h
@@ -158,7 +156,6 @@ set(WTF_PUBLIC_HEADERS
     MachSendRight.h
     MainThread.h
     MainThreadData.h
-    MainThreadDispatcher.h
     MallocPtr.h
     Markable.h
     MathExtras.h
@@ -209,7 +206,7 @@ set(WTF_PUBLIC_HEADERS
     PlatformEnableCocoa.h
     PlatformEnableGlib.h
     PlatformEnablePlayStation.h
-    PlatformEnableWin.h
+    PlatformEnableWinCairo.h
     PlatformHave.h
     PlatformLegacy.h
     PlatformOS.h
@@ -249,8 +246,6 @@ set(WTF_PUBLIC_HEADERS
     RobinHoodHashTable.h
     RunLoop.h
     SHA1.h
-    SIMDHelpers.h
-    SIMDUTF.h
     SafeStrerror.h
     SaturatedArithmetic.h
     SchedulePair.h
@@ -268,7 +263,6 @@ set(WTF_PUBLIC_HEADERS
     SinglyLinkedList.h
     SinglyLinkedListWithTail.h
     SixCharacterHash.h
-    SmallMap.h
     SmallSet.h
     SoftLinking.h
     SortedArrayMap.h
@@ -286,7 +280,6 @@ set(WTF_PUBLIC_HEADERS
     StdLibExtras.h
     StdList.h
     StdMap.h
-    StdMultimap.h
     StdSet.h
     StdUnorderedMap.h
     StdUnorderedSet.h
@@ -348,10 +341,7 @@ set(WTF_PUBLIC_HEADERS
     WeakHashMap.h
     WeakHashSet.h
     WeakListHashSet.h
-    WeakObjCPtr.h
     WeakPtr.h
-    WeakPtrFactory.h
-    WeakPtrImpl.h
     WeakRandom.h
     WeakRandomNumber.h
     WeakRef.h
@@ -400,12 +390,6 @@ set(WTF_PUBLIC_HEADERS
     persistence/PersistentDecoder.h
     persistence/PersistentEncoder.h
 
-    simde/simde.h
-    simde/arm/neon.h
-    simde/arm/sve.h
-
-    simdutf/simdutf_impl.h
-
     text/ASCIIFastPath.h
     text/ASCIILiteral.h
     text/AdaptiveStringSearcher.h
@@ -415,7 +399,6 @@ set(WTF_PUBLIC_HEADERS
     text/AtomStringTable.h
     text/Base64.h
     text/CString.h
-    text/CharacterProperties.h
     text/CodePointIterator.h
     text/ConversionMode.h
     text/EscapedFormsForJSON.h
@@ -424,7 +407,6 @@ set(WTF_PUBLIC_HEADERS
     text/IntegerToStringConversion.h
     text/LChar.h
     text/LineEnding.h
-    text/MakeString.h
     text/NullTextBreakIterator.h
     text/OrdinalNumber.h
     text/StringBuffer.h
@@ -439,6 +421,7 @@ set(WTF_PUBLIC_HEADERS
     text/SuperFastHash.h
     text/WYHash.h
     text/StringImpl.h
+    text/StringOperators.h
     text/StringParsingBuffer.h
     text/StringSearch.h
     text/StringToIntegerConversion.h
@@ -504,6 +487,7 @@ set(WTF_SOURCES
     HexNumber.cpp
     Int128.cpp
     JSONValues.cpp
+    JSValueMalloc.cpp
     Language.cpp
     LikelyDenseUnsignedIntegerSet.cpp
     Lock.cpp
@@ -513,7 +497,6 @@ set(WTF_SOURCES
     Logger.cpp
     Logging.cpp
     MainThread.cpp
-    MainThreadDispatcher.cpp
     MediaTime.cpp
     MemoryPressureHandler.cpp
     MetaAllocator.cpp
@@ -535,7 +518,6 @@ set(WTF_SOURCES
     RefCountedLeakCounter.cpp
     RunLoop.cpp
     SHA1.cpp
-    SIMDUTF.cpp
     SafeStrerror.cpp
     Seconds.cpp
     SegmentedVector.cpp
@@ -619,21 +601,15 @@ set(WTF_SOURCES
     unicode/icu/ICUHelpers.cpp
 )
 
-
 if (APPLE)
-
     list(APPEND WTF_PUBLIC_HEADERS
-
-
         darwin/OSLogPrintStream.h
-
-
-
-
-
     )
 endif ()
 
+if (MSVC AND WTF_CPU_X86_64)
+    list(APPEND WTF_SOURCES win/AsmStubsMSVC64.asm)
+endif ()
 
 set(WTF_PRIVATE_INCLUDE_DIRECTORIES
     "${CMAKE_BINARY_DIR}"
@@ -643,7 +619,6 @@ set(WTF_PRIVATE_INCLUDE_DIRECTORIES
     "${WTF_DIR}/wtf/dtoa"
     "${WTF_DIR}/wtf/fast_float"
     "${WTF_DIR}/wtf/persistence"
-    "${WTF_DIR}/wtf/simdutf"
     "${WTF_DIR}/wtf/text"
     "${WTF_DIR}/wtf/text/icu"
     "${WTF_DIR}/wtf/threads"
@@ -688,14 +663,6 @@ WEBKIT_FRAMEWORK(WTF)
 if (MSVC AND NOT PORT STREQUAL Java)
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /SUBSYSTEM:WINDOWS")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS")
-else ()
-    # Prior to GCC 13, GCC has a bug that warning suppression pragma cannot be effective on preprocessor itself.
-    # We need to disable preprocessor related warnings manually here.
-    # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=53431
-    set_source_files_properties(
-        SIMDUTF.cpp
-        text/Base64.cpp
-        PROPERTIES COMPILE_FLAGS "-Wno-error=undef -Wno-undef")
 endif ()
 
 file(MAKE_DIRECTORY ${WTF_SCRIPTS_DIR})

@@ -29,8 +29,7 @@ namespace WebCore {
 class SVGTRefTargetEventListener;
 
 class SVGTRefElement final : public SVGTextPositioningElement, public SVGURIReference {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGTRefElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGTRefElement);
+    WTF_MAKE_ISO_ALLOCATED(SVGTRefElement);
 public:
     static Ref<SVGTRefElement> create(const QualifiedName&, Document&);
 
@@ -41,8 +40,6 @@ private:
     virtual ~SVGTRefElement();
 
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGTRefElement, SVGTextPositioningElement, SVGURIReference>;
-
-    Ref<SVGTRefTargetEventListener> protectedTargetListener() const;
 
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
     void svgAttributeChanged(const QualifiedName&) override;

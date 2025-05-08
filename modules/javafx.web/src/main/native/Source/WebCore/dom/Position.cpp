@@ -60,7 +60,6 @@
 #include "VisibleUnits.h"
 #include <stdio.h>
 #include <wtf/text/CString.h>
-#include <wtf/text/MakeString.h>
 #include <wtf/text/TextStream.h>
 #include <wtf/unicode/CharacterNames.h>
 
@@ -934,7 +933,7 @@ bool Position::nodeIsUserSelectNone(Node* node)
 {
     if (!node)
         return false;
-    return node->renderer() && (node->renderer()->style().usedUserSelect() == UserSelect::None);
+    return node->renderer() && (node->renderer()->style().effectiveUserSelect() == UserSelect::None);
 }
 
 bool Position::nodeIsUserSelectAll(const Node* node)
@@ -942,7 +941,7 @@ bool Position::nodeIsUserSelectAll(const Node* node)
     if (!node)
         return false;
     CheckedPtr renderer = node->renderer();
-    return renderer && renderer->style().usedUserSelect() == UserSelect::All;
+    return renderer && renderer->style().effectiveUserSelect() == UserSelect::All;
 }
 
 RefPtr<Node> Position::rootUserSelectAllForNode(Node* node)
@@ -998,15 +997,14 @@ bool Position::isCandidate() const
     if (is<HTMLHtmlElement>(*m_anchorNode))
         return false;
 
-    if (auto* block = dynamicDowncast<RenderBlock>(*renderer)) {
-        if (is<RenderBlockFlow>(*block) || is<RenderGrid>(*block) || is<RenderFlexibleBox>(*block)) {
-            if (block->logicalHeight() || is<HTMLBodyElement>(*m_anchorNode) || m_anchorNode->isRootEditableElement()) {
-                if (!Position::hasRenderedNonAnonymousDescendantsWithHeight(*block))
+    if (is<RenderBlockFlow>(*renderer) || is<RenderGrid>(*renderer) || is<RenderFlexibleBox>(*renderer)) {
+        auto& block = downcast<RenderBlock>(*renderer);
+        if (block.logicalHeight() || is<HTMLBodyElement>(*m_anchorNode) || m_anchorNode->isRootEditableElement()) {
+            if (!Position::hasRenderedNonAnonymousDescendantsWithHeight(block))
                 return atFirstEditingPositionForNode() && !Position::nodeIsUserSelectNone(node.get());
             return m_anchorNode->hasEditableStyle() && !Position::nodeIsUserSelectNone(node.get()) && atEditingBoundary();
         }
         return false;
-    }
     }
 
     return m_anchorNode->hasEditableStyle() && !Position::nodeIsUserSelectNone(node.get()) && atEditingBoundary();
@@ -1209,9 +1207,10 @@ InlineBoxAndOffset Position::inlineBoxAndOffset(Affinity affinity, TextDirection
 
     InlineIterator::LeafBoxIterator box;
 
-    if (auto* lineBreakRenderer = dynamicDowncast<RenderLineBreak>(*renderer); lineBreakRenderer && lineBreakRenderer->isBR()) {
+    if (renderer->isBR()) {
+        auto& lineBreakRenderer = downcast<RenderLineBreak>(*renderer);
         if (!caretOffset)
-            box = InlineIterator::boxFor(*lineBreakRenderer);
+            box = InlineIterator::boxFor(lineBreakRenderer);
     } else if (CheckedPtr textRenderer = dynamicDowncast<RenderText>(*renderer)) {
         auto textBox = InlineIterator::firstTextBoxFor(*textRenderer);
         InlineIterator::TextBoxIterator candidate;
@@ -1396,7 +1395,7 @@ String Position::debugDescription() const
 {
     if (isNull())
         return "<null>"_s;
-    return makeString("offset "_s, m_offset, " of "_s, deprecatedNode()->debugDescription());
+    return makeString("offset ", m_offset, " of ", deprecatedNode()->debugDescription());
 }
 
 void Position::showAnchorTypeAndOffset() const

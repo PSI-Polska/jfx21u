@@ -26,11 +26,11 @@
 #include "FEBlend.h"
 #include "NodeName.h"
 #include "SVGNames.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGFEBlendElement);
+WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFEBlendElement);
 
 inline SVGFEBlendElement::SVGFEBlendElement(const QualifiedName& tagName, Document& document)
     : SVGFilterPrimitiveStandardAttributes(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -56,14 +56,14 @@ void SVGFEBlendElement::attributeChanged(const QualifiedName& name, const AtomSt
     case AttributeNames::modeAttr: {
         BlendMode mode = BlendMode::Normal;
         if (parseBlendMode(newValue, mode))
-        Ref { m_mode }->setBaseValInternal<BlendMode>(mode);
+            m_mode->setBaseValInternal<BlendMode>(mode);
         break;
     }
     case AttributeNames::inAttr:
-        Ref { m_in1 }->setBaseValInternal(newValue);
+        m_in1->setBaseValInternal(newValue);
         break;
     case AttributeNames::in2Attr:
-        Ref { m_in2 }->setBaseValInternal(newValue);
+        m_in2->setBaseValInternal(newValue);
         break;
     default:
         break;

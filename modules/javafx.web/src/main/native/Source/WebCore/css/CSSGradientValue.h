@@ -25,15 +25,13 @@
 
 #pragma once
 
-#include "CSSCalcValue.h"
 #include "CSSPrimitiveValue.h"
-#include "CSSPropertyParserConsumer+RawTypes.h"
-#include "CSSPropertyParserConsumer+UnevaluatedCalc.h"
 #include "ColorInterpolationMethod.h"
 #include "Gradient.h"
 
 namespace WebCore {
 
+struct StyleGradientImageStop;
 class StyleImage;
 
 namespace Style {
@@ -49,13 +47,11 @@ enum class CSSGradientRepeat : bool { NonRepeating, Repeating };
 struct CSSGradientColorStop {
     RefPtr<CSSPrimitiveValue> color;
     RefPtr<CSSPrimitiveValue> position; // percentage or length
-
-    bool operator==(const CSSGradientColorStop&) const;
 };
 
-inline bool CSSGradientColorStop::operator==(const CSSGradientColorStop& other) const
+inline bool operator==(const CSSGradientColorStop& a, const CSSGradientColorStop& b)
 {
-    return compareCSSValuePtr(color, other.color) && compareCSSValuePtr(position, other.position);
+    return compareCSSValuePtr(a.color, b.color) && compareCSSValuePtr(a.position, b.position);
 }
 
 using CSSGradientColorStopList = Vector<CSSGradientColorStop, 2>;
@@ -73,42 +69,33 @@ struct CSSGradientColorInterpolationMethod {
         return { { ColorInterpolationMethod::SRGB { }, alphaPremultiplication }, Default::SRGB };
     }
 
-    bool operator==(const CSSGradientColorInterpolationMethod&) const = default;
+    friend bool operator==(const CSSGradientColorInterpolationMethod&, const CSSGradientColorInterpolationMethod&) = default;
 };
 
 // MARK: Gradient Definitions.
 
-struct CSSGradientPosition {
-    Ref<CSSValue> x;
-    Ref<CSSValue> y;
+using CSSGradientPosition = std::pair<Ref<CSSValue>, Ref<CSSValue>>;
 
-    bool operator==(const CSSGradientPosition& other) const
-    {
-        return compareCSSValue(x, other.x) && compareCSSValue(y, other.y);
-    }
-};
-
-struct CSSGradientDeprecatedPoint {
-    Ref<CSSPrimitiveValue> x;
-    Ref<CSSPrimitiveValue> y;
-
-    bool operator==(const CSSGradientDeprecatedPoint& other) const
-    {
-        return compareCSSValue(x, other.x) && compareCSSValue(y, other.y);
-    }
-};
+inline bool operator==(const CSSGradientPosition& a, const CSSGradientPosition& b)
+{
+    return compareCSSValue(a.first, b.first) && compareCSSValue(a.second, b.second);
+}
 
 // MARK: - Linear.
 
 class CSSLinearGradientValue final : public CSSValue {
 public:
-    enum class Horizontal : bool { Left, Right };
-    enum class Vertical : bool { Top, Bottom };
-    using GradientLine = std::variant<std::monostate, AngleRaw, UnevaluatedCalc<AngleRaw>, Horizontal, Vertical, std::pair<Horizontal, Vertical>>;
+    enum class Horizontal { Left, Right };
+    enum class Vertical { Top, Bottom };
+    struct Angle {
+        Ref<CSSPrimitiveValue> value;
+        friend bool operator==(const Angle&, const Angle&);
+    };
+    using GradientLine = std::variant<std::monostate, Angle, Horizontal, Vertical, std::pair<Horizontal, Vertical>>;
 
     struct Data {
         GradientLine gradientLine;
-        bool operator==(const Data&) const = default;
+        friend bool operator==(const Data&, const Data&) = default;
     };
 
     static Ref<CSSLinearGradientValue> create(Data data, CSSGradientRepeat repeating, CSSGradientColorInterpolationMethod colorInterpolationMethod, CSSGradientColorStopList stops)
@@ -119,34 +106,6 @@ public:
     String customCSSText() const;
     bool equals(const CSSLinearGradientValue&) const;
     RefPtr<StyleImage> createStyleImage(Style::BuilderState&) const;
-
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
-    {
-        {
-            auto result = WTF::switchOn(m_data.gradientLine,
-                [&](UnevaluatedCalc<AngleRaw>& data) {
-                    if (func(data.calc.get()) == IterationStatus::Done)
-                        return IterationStatus::Done;
-                    return IterationStatus::Continue;
-                },
-                [&](const auto&) {
-                    return IterationStatus::Continue;
-                });
-            if (result == IterationStatus::Done)
-                return IterationStatus::Done;
-        }
-        for (auto& stop : m_stops) {
-            if (stop.color) {
-                if (func(*stop.color) == IterationStatus::Done)
-                    return IterationStatus::Done;
-            }
-            if (stop.position) {
-                if (func(*stop.position) == IterationStatus::Done)
-                    return IterationStatus::Done;
-            }
-        }
-        return IterationStatus::Continue;
-    }
 
 private:
     CSSLinearGradientValue(Data&& data, CSSGradientRepeat repeating, CSSGradientColorInterpolationMethod colorInterpolationMethod, CSSGradientColorStopList stops)
@@ -168,8 +127,6 @@ private:
     {
     }
 
-    bool styleImageIsUncacheable() const;
-
     Data m_data;
     CSSGradientColorStopList m_stops;
     CSSGradientRepeat m_repeating { CSSGradientRepeat::NonRepeating };
@@ -179,13 +136,17 @@ private:
 
 class CSSPrefixedLinearGradientValue final : public CSSValue {
 public:
-    enum class Horizontal : bool { Left, Right };
-    enum class Vertical : bool { Top, Bottom };
-    using GradientLine = std::variant<std::monostate, AngleRaw, UnevaluatedCalc<AngleRaw>, Horizontal, Vertical, std::pair<Horizontal, Vertical>>;
+    enum class Horizontal { Left, Right };
+    enum class Vertical { Top, Bottom };
+    struct Angle {
+        Ref<CSSPrimitiveValue> value;
+        friend bool operator==(const Angle&, const Angle&);
+    };
+    using GradientLine = std::variant<std::monostate, Angle, Horizontal, Vertical, std::pair<Horizontal, Vertical>>;
 
     struct Data {
         GradientLine gradientLine;
-        bool operator==(const Data&) const = default;
+        friend bool operator==(const Data&, const Data&) = default;
     };
 
     static Ref<CSSPrefixedLinearGradientValue> create(Data data, CSSGradientRepeat repeating, CSSGradientColorInterpolationMethod colorInterpolationMethod, CSSGradientColorStopList stops)
@@ -196,34 +157,6 @@ public:
     String customCSSText() const;
     bool equals(const CSSPrefixedLinearGradientValue&) const;
     RefPtr<StyleImage> createStyleImage(Style::BuilderState&) const;
-
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
-    {
-        {
-            auto result = WTF::switchOn(m_data.gradientLine,
-                [&](UnevaluatedCalc<AngleRaw>& data) {
-                    if (func(data.calc.get()) == IterationStatus::Done)
-                        return IterationStatus::Done;
-                    return IterationStatus::Continue;
-                },
-                [&](const auto&) {
-                    return IterationStatus::Continue;
-                });
-            if (result == IterationStatus::Done)
-                return IterationStatus::Done;
-        }
-        for (auto& stop : m_stops) {
-            if (stop.color) {
-                if (func(*stop.color) == IterationStatus::Done)
-                    return IterationStatus::Done;
-            }
-            if (stop.position) {
-                if (func(*stop.position) == IterationStatus::Done)
-                    return IterationStatus::Done;
-            }
-        }
-        return IterationStatus::Continue;
-    }
 
 private:
     CSSPrefixedLinearGradientValue(Data&& data, CSSGradientRepeat repeating, CSSGradientColorInterpolationMethod colorInterpolationMethod, CSSGradientColorStopList stops)
@@ -245,8 +178,6 @@ private:
     {
     }
 
-    bool styleImageIsUncacheable() const;
-
     Data m_data;
     CSSGradientColorStopList m_stops;
     CSSGradientRepeat m_repeating { CSSGradientRepeat::NonRepeating };
@@ -257,9 +188,10 @@ private:
 class CSSDeprecatedLinearGradientValue final : public CSSValue {
 public:
     struct Data {
-        CSSGradientDeprecatedPoint first;
-        CSSGradientDeprecatedPoint second;
-        bool operator==(const Data&) const = default;
+        Ref<CSSValue> firstX;
+        Ref<CSSValue> firstY;
+        Ref<CSSValue> secondX;
+        Ref<CSSValue> secondY;
     };
 
     static Ref<CSSDeprecatedLinearGradientValue> create(Data data, CSSGradientColorInterpolationMethod colorInterpolationMethod, CSSGradientColorStopList stops)
@@ -270,29 +202,6 @@ public:
     String customCSSText() const;
     bool equals(const CSSDeprecatedLinearGradientValue&) const;
     RefPtr<StyleImage> createStyleImage(Style::BuilderState&) const;
-
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
-    {
-        if (func(m_data.first.x.get()) == IterationStatus::Done)
-            return IterationStatus::Done;
-        if (func(m_data.first.y.get()) == IterationStatus::Done)
-            return IterationStatus::Done;
-        if (func(m_data.second.x.get()) == IterationStatus::Done)
-            return IterationStatus::Done;
-        if (func(m_data.second.y.get()) == IterationStatus::Done)
-            return IterationStatus::Done;
-        for (auto& stop : m_stops) {
-            if (stop.color) {
-                if (func(*stop.color) == IterationStatus::Done)
-                    return IterationStatus::Done;
-            }
-            if (stop.position) {
-                if (func(*stop.position) == IterationStatus::Done)
-                    return IterationStatus::Done;
-            }
-        }
-        return IterationStatus::Continue;
-    }
 
 private:
     CSSDeprecatedLinearGradientValue(Data&& data, CSSGradientColorInterpolationMethod colorInterpolationMethod, CSSGradientColorStopList stops)
@@ -312,65 +221,65 @@ private:
     {
     }
 
-    bool styleImageIsUncacheable() const;
-
     Data m_data;
     CSSGradientColorStopList m_stops;
     CSSGradientColorInterpolationMethod m_colorInterpolationMethod;
     mutable RefPtr<StyleImage> m_cachedStyleImage;
 };
 
+bool operator==(const CSSDeprecatedLinearGradientValue::Data&, const CSSDeprecatedLinearGradientValue::Data&);
+
 // MARK: - Radial.
 
 class CSSRadialGradientValue final : public CSSValue {
 public:
-    enum class ShapeKeyword : bool { Circle, Ellipse };
-    enum class ExtentKeyword : uint8_t { ClosestCorner, ClosestSide, FarthestCorner, FarthestSide };
+    enum class ShapeKeyword { Circle, Ellipse };
+    enum class ExtentKeyword { ClosestCorner, ClosestSide, FarthestCorner, FarthestSide };
     struct Shape {
         ShapeKeyword shape;
         std::optional<CSSGradientPosition> position;
-        bool operator==(const Shape&) const = default;
+        friend bool operator==(const Shape&, const Shape&) = default;
     };
     struct Extent {
         ExtentKeyword extent;
         std::optional<CSSGradientPosition> position;
-        bool operator==(const Extent&) const = default;
+        friend bool operator==(const Extent&, const Extent&) = default;
     };
     struct Length {
         Ref<CSSPrimitiveValue> length; // <length [0,∞]>
         std::optional<CSSGradientPosition> position;
-        bool operator==(const Length&) const;
+
+        friend bool operator==(const Length&, const Length&);
     };
     struct CircleOfLength {
         Ref<CSSPrimitiveValue> length; // <length [0,∞]>
         std::optional<CSSGradientPosition> position;
-        bool operator==(const CircleOfLength&) const;
+        friend bool operator==(const CircleOfLength&, const CircleOfLength&);
     };
     struct CircleOfExtent {
         ExtentKeyword extent;
         std::optional<CSSGradientPosition> position;
-        bool operator==(const CircleOfExtent&) const = default;
+        friend bool operator==(const CircleOfExtent&, const CircleOfExtent&) = default;
     };
     struct Size {
         std::pair<Ref<CSSPrimitiveValue>, Ref<CSSPrimitiveValue>> size; // <length-percentage [0,∞]>, <length-percentage [0,∞]>
         std::optional<CSSGradientPosition> position;
-        bool operator==(const Size&) const;
+        friend bool operator==(const Size&, const Size&);
     };
     struct EllipseOfSize {
         std::pair<Ref<CSSPrimitiveValue>, Ref<CSSPrimitiveValue>> size; // <length-percentage [0,∞]>, <length-percentage [0,∞]>
         std::optional<CSSGradientPosition> position;
-        bool operator==(const EllipseOfSize&) const;
+        friend bool operator==(const EllipseOfSize&, const EllipseOfSize&);
     };
     struct EllipseOfExtent {
         ExtentKeyword extent;
         std::optional<CSSGradientPosition> position;
-        bool operator==(const EllipseOfExtent&) const = default;
+        friend bool operator==(const EllipseOfExtent&, const EllipseOfExtent&) = default;
     };
     using GradientBox = std::variant<std::monostate, Shape, Extent, Length, Size, CircleOfLength, CircleOfExtent, EllipseOfSize, EllipseOfExtent, CSSGradientPosition>;
-
     struct Data {
         GradientBox gradientBox;
-        bool operator==(const Data&) const = default;
+        friend bool operator==(const Data&, const Data&) = default;
     };
 
     static Ref<CSSRadialGradientValue> create(Data data, CSSGradientRepeat repeating, CSSGradientColorInterpolationMethod colorInterpolationMethod, CSSGradientColorStopList stops)
@@ -381,120 +290,6 @@ public:
     String customCSSText() const;
     bool equals(const CSSRadialGradientValue&) const;
     RefPtr<StyleImage> createStyleImage(Style::BuilderState&) const;
-
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
-    {
-        {
-            auto result = WTF::switchOn(m_data.gradientBox,
-                [&](const Shape& data) {
-                    if (data.position) {
-                        if (func(data.position->x.get()) == IterationStatus::Done)
-                            return IterationStatus::Done;
-                        if (func(data.position->y.get()) == IterationStatus::Done)
-                            return IterationStatus::Done;
-                    }
-                    return IterationStatus::Continue;
-                },
-                [&](const Extent& data) {
-                    if (data.position) {
-                        if (func(data.position->x.get()) == IterationStatus::Done)
-                            return IterationStatus::Done;
-                        if (func(data.position->y.get()) == IterationStatus::Done)
-                            return IterationStatus::Done;
-                    }
-                    return IterationStatus::Continue;
-                },
-                [&](const Length& data) {
-                    if (func(data.length.get()) == IterationStatus::Done)
-                        return IterationStatus::Done;
-                    if (data.position) {
-                        if (func(data.position->x.get()) == IterationStatus::Done)
-                            return IterationStatus::Done;
-                        if (func(data.position->y.get()) == IterationStatus::Done)
-                            return IterationStatus::Done;
-                    }
-                    return IterationStatus::Continue;
-                },
-                [&](const Size& data) {
-                    if (func(data.size.first.get()) == IterationStatus::Done)
-                        return IterationStatus::Done;
-                    if (func(data.size.second.get()) == IterationStatus::Done)
-                        return IterationStatus::Done;
-                    if (data.position) {
-                        if (func(data.position->x.get()) == IterationStatus::Done)
-                            return IterationStatus::Done;
-                        if (func(data.position->y.get()) == IterationStatus::Done)
-                            return IterationStatus::Done;
-                    }
-                    return IterationStatus::Continue;
-                },
-                [&](const CircleOfLength& data) {
-                    if (func(data.length.get()) == IterationStatus::Done)
-                        return IterationStatus::Done;
-                    if (data.position) {
-                        if (func(data.position->x.get()) == IterationStatus::Done)
-                            return IterationStatus::Done;
-                        if (func(data.position->y.get()) == IterationStatus::Done)
-                            return IterationStatus::Done;
-                    }
-                    return IterationStatus::Continue;
-                },
-                [&](const CircleOfExtent& data) {
-                    if (data.position) {
-                        if (func(data.position->x.get()) == IterationStatus::Done)
-                            return IterationStatus::Done;
-                        if (func(data.position->y.get()) == IterationStatus::Done)
-                            return IterationStatus::Done;
-                    }
-                    return IterationStatus::Continue;
-                },
-                [&](const EllipseOfSize& data) {
-                    if (func(data.size.first.get()) == IterationStatus::Done)
-                        return IterationStatus::Done;
-                    if (func(data.size.second.get()) == IterationStatus::Done)
-                        return IterationStatus::Done;
-                    if (data.position) {
-                        if (func(data.position->x.get()) == IterationStatus::Done)
-                            return IterationStatus::Done;
-                        if (func(data.position->y.get()) == IterationStatus::Done)
-                            return IterationStatus::Done;
-                    }
-                    return IterationStatus::Continue;
-                },
-                [&](const EllipseOfExtent& data) {
-                    if (data.position) {
-                        if (func(data.position->x.get()) == IterationStatus::Done)
-                            return IterationStatus::Done;
-                        if (func(data.position->y.get()) == IterationStatus::Done)
-                            return IterationStatus::Done;
-                    }
-                    return IterationStatus::Continue;
-                },
-                [&](const CSSGradientPosition& data) {
-                    if (func(data.x.get()) == IterationStatus::Done)
-                        return IterationStatus::Done;
-                    if (func(data.y.get()) == IterationStatus::Done)
-                        return IterationStatus::Done;
-                    return IterationStatus::Continue;
-                },
-                [&](const auto&) {
-                    return IterationStatus::Continue;
-                });
-            if (result == IterationStatus::Done)
-                return IterationStatus::Done;
-        }
-        for (auto& stop : m_stops) {
-            if (stop.color) {
-                if (func(*stop.color) == IterationStatus::Done)
-                    return IterationStatus::Done;
-            }
-            if (stop.position) {
-                if (func(*stop.position) == IterationStatus::Done)
-                    return IterationStatus::Done;
-            }
-        }
-        return IterationStatus::Continue;
-    }
 
 private:
     CSSRadialGradientValue(Data&& data, CSSGradientRepeat repeating, CSSGradientColorInterpolationMethod colorInterpolationMethod, CSSGradientColorStopList stops)
@@ -516,8 +311,6 @@ private:
     {
     }
 
-    bool styleImageIsUncacheable() const;
-
     Data m_data;
     CSSGradientColorStopList m_stops;
     CSSGradientRepeat m_repeating { CSSGradientRepeat::NonRepeating };
@@ -527,16 +320,16 @@ private:
 
 class CSSPrefixedRadialGradientValue final : public CSSValue {
 public:
-    enum class ShapeKeyword : bool { Circle, Ellipse };
-    enum class ExtentKeyword : uint8_t { ClosestSide, ClosestCorner, FarthestSide, FarthestCorner, Contain, Cover };
+    enum class ShapeKeyword { Circle, Ellipse };
+    enum class ExtentKeyword { ClosestSide, ClosestCorner, FarthestSide, FarthestCorner, Contain, Cover };
     struct ShapeAndExtent {
         ShapeKeyword shape;
         ExtentKeyword extent;
-        bool operator==(const ShapeAndExtent&) const = default;
+        friend bool operator==(const ShapeAndExtent&, const ShapeAndExtent&) = default;
     };
     struct MeasuredSize {
         std::pair<Ref<CSSPrimitiveValue>, Ref<CSSPrimitiveValue>> size; // <length-percentage [0,∞]>, <length-percentage [0,∞]>
-        bool operator==(const MeasuredSize&) const;
+        friend bool operator==(const MeasuredSize&, const MeasuredSize&);
     };
 
     using GradientBox = std::variant<std::monostate, ShapeKeyword, ExtentKeyword, ShapeAndExtent, MeasuredSize>;
@@ -544,7 +337,8 @@ public:
     struct Data {
         GradientBox gradientBox;
         std::optional<CSSGradientPosition> position;
-        bool operator==(const Data&) const = default;
+
+        friend bool operator==(const Data&, const Data&) = default;
     };
 
     static Ref<CSSPrefixedRadialGradientValue> create(Data data, CSSGradientRepeat repeating, CSSGradientColorInterpolationMethod colorInterpolationMethod, CSSGradientColorStopList stops)
@@ -555,42 +349,6 @@ public:
     String customCSSText() const;
     bool equals(const CSSPrefixedRadialGradientValue&) const;
     RefPtr<StyleImage> createStyleImage(Style::BuilderState&) const;
-
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
-    {
-        {
-            auto result = WTF::switchOn(m_data.gradientBox,
-                [&](const MeasuredSize& data) {
-                    if (func(data.size.first.get()) == IterationStatus::Done)
-                        return IterationStatus::Done;
-                    if (func(data.size.second.get()) == IterationStatus::Done)
-                        return IterationStatus::Done;
-                    return IterationStatus::Continue;
-                },
-                [&](const auto&) {
-                    return IterationStatus::Continue;
-                });
-            if (result == IterationStatus::Done)
-                return IterationStatus::Done;
-        }
-        if (m_data.position) {
-            if (func(m_data.position->x.get()) == IterationStatus::Done)
-                return IterationStatus::Done;
-            if (func(m_data.position->y.get()) == IterationStatus::Done)
-                return IterationStatus::Done;
-        }
-        for (auto& stop : m_stops) {
-            if (stop.color) {
-                if (func(*stop.color) == IterationStatus::Done)
-                    return IterationStatus::Done;
-            }
-            if (stop.position) {
-                if (func(*stop.position) == IterationStatus::Done)
-                    return IterationStatus::Done;
-            }
-        }
-        return IterationStatus::Continue;
-    }
 
 private:
     CSSPrefixedRadialGradientValue(Data&& data, CSSGradientRepeat repeating, CSSGradientColorInterpolationMethod colorInterpolationMethod, CSSGradientColorStopList stops)
@@ -612,8 +370,6 @@ private:
     {
     }
 
-    bool styleImageIsUncacheable() const;
-
     Data m_data;
     CSSGradientColorStopList m_stops;
     CSSGradientRepeat m_repeating { CSSGradientRepeat::NonRepeating };
@@ -624,11 +380,12 @@ private:
 class CSSDeprecatedRadialGradientValue final : public CSSValue {
 public:
     struct Data {
-        CSSGradientDeprecatedPoint first;
-        CSSGradientDeprecatedPoint second;
-        std::variant<NumberRaw, UnevaluatedCalc<NumberRaw>> firstRadius; // <number [0,∞]>
-        std::variant<NumberRaw, UnevaluatedCalc<NumberRaw>> secondRadius; // <number [0,∞]>
-        bool operator==(const Data&) const = default;
+        Ref<CSSValue> firstX;
+        Ref<CSSValue> firstY;
+        Ref<CSSValue> secondX;
+        Ref<CSSValue> secondY;
+        Ref<CSSPrimitiveValue> firstRadius;
+        Ref<CSSPrimitiveValue> secondRadius;
     };
 
     static Ref<CSSDeprecatedRadialGradientValue> create(Data data, CSSGradientColorInterpolationMethod colorInterpolationMethod, CSSGradientColorStopList stops)
@@ -639,58 +396,6 @@ public:
     String customCSSText() const;
     bool equals(const CSSDeprecatedRadialGradientValue&) const;
     RefPtr<StyleImage> createStyleImage(Style::BuilderState&) const;
-
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
-    {
-        if (func(m_data.first.x.get()) == IterationStatus::Done)
-            return IterationStatus::Done;
-        if (func(m_data.first.y.get()) == IterationStatus::Done)
-            return IterationStatus::Done;
-        if (func(m_data.second.x.get()) == IterationStatus::Done)
-            return IterationStatus::Done;
-        if (func(m_data.second.y.get()) == IterationStatus::Done)
-            return IterationStatus::Done;
-
-        {
-            auto result = WTF::switchOn(m_data.firstRadius,
-                [&](const UnevaluatedCalc<NumberRaw>& data) {
-                    if (func(data.calc.get()) == IterationStatus::Done)
-                        return IterationStatus::Done;
-                    return IterationStatus::Continue;
-                },
-                [&](const auto&) {
-                    return IterationStatus::Continue;
-                });
-            if (result == IterationStatus::Done)
-                return IterationStatus::Done;
-        }
-
-        {
-            auto result = WTF::switchOn(m_data.secondRadius,
-                [&](const UnevaluatedCalc<NumberRaw>& data) {
-                    if (func(data.calc.get()) == IterationStatus::Done)
-                        return IterationStatus::Done;
-                    return IterationStatus::Continue;
-                },
-                [&](const auto&) {
-                    return IterationStatus::Continue;
-                });
-            if (result == IterationStatus::Done)
-                return IterationStatus::Done;
-        }
-
-        for (auto& stop : m_stops) {
-            if (stop.color) {
-                if (func(*stop.color) == IterationStatus::Done)
-                    return IterationStatus::Done;
-            }
-            if (stop.position) {
-                if (func(*stop.position) == IterationStatus::Done)
-                    return IterationStatus::Done;
-            }
-        }
-        return IterationStatus::Continue;
-    }
 
 private:
     CSSDeprecatedRadialGradientValue(Data&& data, CSSGradientColorInterpolationMethod colorInterpolationMethod, CSSGradientColorStopList stops)
@@ -710,24 +415,28 @@ private:
     {
     }
 
-    bool styleImageIsUncacheable() const;
-
     Data m_data;
     CSSGradientColorStopList m_stops;
     CSSGradientColorInterpolationMethod m_colorInterpolationMethod;
     mutable RefPtr<StyleImage> m_cachedStyleImage;
 };
 
+bool operator==(const CSSDeprecatedRadialGradientValue::Data&, const CSSDeprecatedRadialGradientValue::Data&);
+
 // MARK: - Conic.
 
 class CSSConicGradientValue final : public CSSValue {
 public:
-    using Angle = std::variant<std::monostate, AngleRaw, UnevaluatedCalc<AngleRaw>>;
+    struct Angle {
+        RefPtr<CSSPrimitiveValue> value;
+        friend bool operator==(const Angle&, const Angle&);
+    };
 
     struct Data {
         Angle angle;
         std::optional<CSSGradientPosition> position;
-        bool operator==(const Data&) const = default;
+
+        friend bool operator==(const Data&, const Data&) = default;
     };
 
     static Ref<CSSConicGradientValue> create(Data data, CSSGradientRepeat repeating, CSSGradientColorInterpolationMethod colorInterpolationMethod, CSSGradientColorStopList stops)
@@ -738,40 +447,6 @@ public:
     String customCSSText() const;
     bool equals(const CSSConicGradientValue&) const;
     RefPtr<StyleImage> createStyleImage(Style::BuilderState&) const;
-
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
-    {
-        {
-            auto result = WTF::switchOn(m_data.angle,
-                [&](UnevaluatedCalc<AngleRaw>& data) {
-                    if (func(data.calc.get()) == IterationStatus::Done)
-                        return IterationStatus::Done;
-                    return IterationStatus::Continue;
-                },
-                [&](const auto&) {
-                    return IterationStatus::Continue;
-                });
-            if (result == IterationStatus::Done)
-                return IterationStatus::Done;
-        }
-        if (m_data.position) {
-            if (func(m_data.position->x.get()) == IterationStatus::Done)
-                return IterationStatus::Done;
-            if (func(m_data.position->y.get()) == IterationStatus::Done)
-                return IterationStatus::Done;
-        }
-        for (auto& stop : m_stops) {
-            if (stop.color) {
-                if (func(*stop.color) == IterationStatus::Done)
-                    return IterationStatus::Done;
-            }
-            if (stop.position) {
-                if (func(*stop.position) == IterationStatus::Done)
-                    return IterationStatus::Done;
-            }
-        }
-        return IterationStatus::Continue;
-    }
 
 private:
     explicit CSSConicGradientValue(Data&& data, CSSGradientRepeat repeating, CSSGradientColorInterpolationMethod colorInterpolationMethod, CSSGradientColorStopList stops)
@@ -792,8 +467,6 @@ private:
         , m_cachedStyleImage(other.m_cachedStyleImage)
     {
     }
-
-    bool styleImageIsUncacheable() const;
 
     Data m_data;
     CSSGradientColorStopList m_stops;

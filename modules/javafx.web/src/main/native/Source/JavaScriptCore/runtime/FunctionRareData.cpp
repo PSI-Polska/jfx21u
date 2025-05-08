@@ -81,7 +81,9 @@ FunctionRareData::FunctionRareData(VM& vm, ExecutableBase* executable)
 {
 }
 
-FunctionRareData::~FunctionRareData() = default;
+FunctionRareData::~FunctionRareData()
+{
+}
 
 void FunctionRareData::initializeObjectAllocationProfile(VM& vm, JSGlobalObject* globalObject, JSObject* prototype, size_t inlineCapacity, JSFunction* constructor)
 {

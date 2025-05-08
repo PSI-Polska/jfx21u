@@ -47,7 +47,7 @@ class VarargsForwardingPhase : public Phase {
     static constexpr bool verbose = false;
 public:
     VarargsForwardingPhase(Graph& graph)
-        : Phase(graph, "varargs forwarding"_s)
+        : Phase(graph, "varargs forwarding")
     {
     }
 

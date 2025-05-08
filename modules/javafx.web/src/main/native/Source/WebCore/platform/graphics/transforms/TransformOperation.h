@@ -27,6 +27,7 @@
 #include "CompositeOperation.h"
 #include "FloatSize.h"
 #include "TransformationMatrix.h"
+#include <wtf/EnumTraits.h>
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
 #include <wtf/TypeCasts.h>

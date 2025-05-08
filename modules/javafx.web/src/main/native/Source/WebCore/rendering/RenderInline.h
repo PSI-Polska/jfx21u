@@ -31,12 +31,10 @@ class Position;
 class RenderFragmentContainer;
 
 class RenderInline : public RenderBoxModelObject {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderInline);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderInline);
+    WTF_MAKE_ISO_ALLOCATED(RenderInline);
 public:
     RenderInline(Type, Element&, RenderStyle&&);
     RenderInline(Type, Document&, RenderStyle&&);
-    virtual ~RenderInline();
 
     LayoutUnit marginLeft() const final;
     LayoutUnit marginRight() const final;
@@ -62,6 +60,7 @@ public:
 
     WEBCORE_EXPORT IntRect linesBoundingBox() const;
     LayoutRect linesVisualOverflowBoundingBox() const;
+    LayoutRect linesVisualOverflowBoundingBoxInFragment(const RenderFragmentContainer*) const;
 
     LegacyInlineFlowBox* createAndAppendInlineFlowBox();
 
@@ -71,8 +70,8 @@ public:
     RenderLineBoxList& lineBoxes() { return m_lineBoxes; }
     const RenderLineBoxList& lineBoxes() const { return m_lineBoxes; }
 
-    LegacyInlineFlowBox* firstLegacyInlineBox() const { return m_lineBoxes.firstLegacyLineBox(); }
-    LegacyInlineFlowBox* lastLegacyInlineBox() const { return m_lineBoxes.lastLegacyLineBox(); }
+    LegacyInlineFlowBox* firstLineBox() const { return m_lineBoxes.firstLineBox(); }
+    LegacyInlineFlowBox* lastLineBox() const { return m_lineBoxes.lastLineBox(); }
 
 #if PLATFORM(IOS_FAMILY)
     void absoluteQuadsForSelection(Vector<FloatQuad>& quads) const override;
@@ -86,8 +85,6 @@ public:
     bool mayAffectLayout() const;
 
     bool requiresLayer() const override;
-
-    LayoutPoint firstInlineBoxTopLeft() const;
 
 protected:
     void willBeDestroyed() override;
@@ -117,6 +114,7 @@ private:
     LayoutUnit offsetTop() const final;
     LayoutUnit offsetWidth() const final { return linesBoundingBox().width(); }
     LayoutUnit offsetHeight() const final { return linesBoundingBox().height(); }
+    LayoutPoint firstInlineBoxTopLeft() const;
 
 protected:
     LayoutRect clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext) const override;
@@ -130,13 +128,13 @@ protected:
     const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const override;
 
 private:
-    VisiblePosition positionForPoint(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*) final;
+    VisiblePosition positionForPoint(const LayoutPoint&, const RenderFragmentContainer*) final;
 
     LayoutRect frameRectForStickyPositioning() const final { return linesBoundingBox(); }
 
     virtual std::unique_ptr<LegacyInlineFlowBox> createInlineFlowBox(); // Subclassed by RenderSVGInline
 
-    void dirtyLineFromChangedChild() final { m_lineBoxes.dirtyLineFromChangedChild(*this); }
+    void dirtyLinesFromChangedChild(RenderObject& child) final { m_lineBoxes.dirtyLinesFromChangedChild(*this, child); }
 
     LayoutUnit lineHeight(bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const final;
     LayoutUnit baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const final;

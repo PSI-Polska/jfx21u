@@ -27,12 +27,12 @@
 #include "GraphicsContext.h"
 #include "LegacyRenderSVGResourceMarkerInlines.h"
 #include "LegacyRenderSVGRoot.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
-#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(LegacyRenderSVGResourceMarker);
+WTF_MAKE_ISO_ALLOCATED_IMPL(LegacyRenderSVGResourceMarker);
 
 LegacyRenderSVGResourceMarker::LegacyRenderSVGResourceMarker(SVGMarkerElement& element, RenderStyle&& style)
     : LegacyRenderSVGResourceContainer(Type::LegacySVGResourceMarker, element, WTFMove(style))
@@ -90,9 +90,8 @@ const AffineTransform& LegacyRenderSVGResourceMarker::localToParentTransform() c
 
 FloatPoint LegacyRenderSVGResourceMarker::referencePoint() const
 {
-    Ref markerElement = this->markerElement();
-    SVGLengthContext lengthContext(markerElement.ptr());
-    return FloatPoint(markerElement->refX().value(lengthContext), markerElement->refY().value(lengthContext));
+    SVGLengthContext lengthContext(&markerElement());
+    return FloatPoint(markerElement().refX().value(lengthContext), markerElement().refY().value(lengthContext));
 }
 
 std::optional<float> LegacyRenderSVGResourceMarker::angle() const
@@ -148,10 +147,9 @@ void LegacyRenderSVGResourceMarker::calcViewport()
     if (!selfNeedsLayout())
         return;
 
-    Ref markerElement = this->markerElement();
-    SVGLengthContext lengthContext(markerElement.ptr());
-    float w = markerElement->markerWidth().value(lengthContext);
-    float h = markerElement->markerHeight().value(lengthContext);
+    SVGLengthContext lengthContext(&markerElement());
+    float w = markerElement().markerWidth().value(lengthContext);
+    float h = markerElement().markerHeight().value(lengthContext);
     m_viewport = FloatRect(0, 0, w, h);
 }
 

@@ -76,7 +76,7 @@ int TypeAhead::handleEvent(KeyboardEvent* event, MatchModeFlags matchMode)
     if (matchMode & CycleFirstChar && c == m_repeatingChar) {
         // The user is likely trying to cycle through all the items starting
         // with this character, so just search on the character.
-        prefix = span(c);
+        prefix = String(&c, 1);
         m_repeatingChar = c;
     } else if (matchMode & MatchPrefix) {
         prefix = m_buffer.toString();

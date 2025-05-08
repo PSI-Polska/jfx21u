@@ -36,7 +36,6 @@
 #include "SyntheticModuleRecord.h"
 #include "VMTrapsInlines.h"
 #include "WebAssemblyModuleRecord.h"
-#include <wtf/text/MakeString.h>
 
 namespace JSC {
 namespace AbstractModuleRecordInternal {

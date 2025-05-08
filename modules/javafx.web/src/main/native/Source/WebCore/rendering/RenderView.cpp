@@ -35,7 +35,6 @@
 #include "ImageQualityController.h"
 #include "LayoutBoxGeometry.h"
 #include "LayoutInitialContainingBlock.h"
-#include "LayoutIntegrationFormattingContextLayout.h"
 #include "LayoutState.h"
 #include "LegacyRenderSVGRoot.h"
 #include "LocalFrame.h"
@@ -50,9 +49,9 @@
 #include "RenderGeometryMap.h"
 #include "RenderImage.h"
 #include "RenderIterator.h"
+#include "RenderLayer.h"
 #include "RenderLayerBacking.h"
 #include "RenderLayerCompositor.h"
-#include "RenderLayerInlines.h"
 #include "RenderLayoutState.h"
 #include "RenderMultiColumnFlow.h"
 #include "RenderMultiColumnSet.h"
@@ -68,19 +67,19 @@
 #include "Settings.h"
 #include "StyleInheritedData.h"
 #include "TransformState.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/SetForScope.h>
 #include <wtf/StackStats.h>
-#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderView);
+WTF_MAKE_ISO_ALLOCATED_IMPL(RenderView);
 
 RenderView::RenderView(Document& document, RenderStyle&& style)
     : RenderBlockFlow(Type::View, document, WTFMove(style))
     , m_frameView(*document.view())
     , m_initialContainingBlock(makeUniqueRef<Layout::InitialContainingBlock>(RenderStyle::clone(this->style())))
-    , m_layoutState(makeUniqueRef<Layout::LayoutState>(document, *m_initialContainingBlock, Layout::LayoutState::Type::Primary, LayoutIntegration::layoutWithFormattingContextForBox))
+    , m_layoutState(makeUniqueRef<Layout::LayoutState>(document, *m_initialContainingBlock))
     , m_selection(*this)
 {
     // FIXME: We should find a way to enforce this at compile time.
@@ -202,6 +201,7 @@ void RenderView::layout()
 #ifndef NDEBUG
     frameView().layoutContext().checkLayoutState();
 #endif
+    clearNeedsLayout();
 }
 
 void RenderView::updateQuirksMode()
@@ -274,7 +274,7 @@ void RenderView::mapLocalToContainer(const RenderLayerModelObject* ancestorConta
 
     if (!ancestorContainer && mode.contains(UseTransforms) && shouldUseTransformFromContainer(nullptr)) {
         TransformationMatrix t;
-        getTransformFromContainer(LayoutSize(), t);
+        getTransformFromContainer(nullptr, LayoutSize(), t);
         transformState.applyTransform(t);
     }
 }
@@ -289,7 +289,7 @@ const RenderObject* RenderView::pushMappingToContainer(const RenderLayerModelObj
 
     if (!ancestorToStopAt && shouldUseTransformFromContainer(nullptr)) {
         TransformationMatrix t;
-        getTransformFromContainer(LayoutSize(), t);
+        getTransformFromContainer(nullptr, LayoutSize(), t);
         geometryMap.pushView(this, toLayoutSize(scrollPosition), &t);
     } else
         geometryMap.pushView(this, toLayoutSize(scrollPosition));
@@ -301,7 +301,7 @@ void RenderView::mapAbsoluteToLocalPoint(OptionSet<MapCoordinatesMode> mode, Tra
 {
     if (mode & UseTransforms && shouldUseTransformFromContainer(nullptr)) {
         TransformationMatrix t;
-        getTransformFromContainer(LayoutSize(), t);
+        getTransformFromContainer(nullptr, LayoutSize(), t);
         transformState.applyTransform(t);
     }
 
@@ -367,7 +367,7 @@ RenderElement* RenderView::rendererForRootBackground() const
 static inline bool rendererObscuresBackground(const RenderElement& rootElement)
 {
     auto& style = rootElement.style();
-    if (style.usedVisibility() != Visibility::Visible || style.opacity() != 1 || style.hasTransform())
+    if (style.visibility() != Visibility::Visible || style.opacity() != 1 || style.hasTransform())
         return false;
 
     if (style.hasBorderRadius())
@@ -376,8 +376,10 @@ static inline bool rendererObscuresBackground(const RenderElement& rootElement)
     if (rootElement.isComposited())
         return false;
 
-    if (rootElement.hasClipPath() && rootElement.isRenderOrLegacyRenderSVGRoot())
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    if (rootElement.hasClipPath() && rootElement.isRenderSVGRoot())
         return false;
+#endif
 
     auto* rendererForBackground = rootElement.view().rendererForRootBackground();
     if (!rendererForBackground)
@@ -676,11 +678,8 @@ bool RenderView::rootElementShouldPaintBaseBackground() const
     if (RenderElement* rootRenderer = documentElement ? documentElement->renderer() : nullptr) {
         // The document element's renderer is currently forced to be a block, but may not always be.
         auto* rootBox = dynamicDowncast<RenderBox>(*rootRenderer);
-        if (rootBox && rootBox->hasLayer()) {
-            RenderLayer* layer = rootBox->layer();
-            if (layer->isolatesBlending() || layer->isBackdropRoot())
+        if (rootBox && rootBox->hasLayer() && rootBox->layer()->isolatesBlending())
             return false;
-    }
     }
     return shouldPaintBaseBackground();
 }
@@ -713,7 +712,7 @@ int RenderView::viewHeight() const
     int height = 0;
     if (!shouldUsePrintingLayout()) {
         height = frameView().layoutHeight();
-        height = frameView().useFixedLayout() ? ceilf(style().usedZoom() * float(height)) : height;
+        height = frameView().useFixedLayout() ? ceilf(style().effectiveZoom() * float(height)) : height;
     }
     return height;
 }
@@ -723,7 +722,7 @@ int RenderView::viewWidth() const
     int width = 0;
     if (!shouldUsePrintingLayout()) {
         width = frameView().layoutWidth();
-        width = frameView().useFixedLayout() ? ceilf(style().usedZoom() * float(width)) : width;
+        width = frameView().useFixedLayout() ? ceilf(style().effectiveZoom() * float(width)) : width;
     }
     return width;
 }
@@ -780,10 +779,10 @@ void RenderView::updateHitTestResult(HitTestResult& result, const LayoutPoint& p
     if (multiColumnFlow() && multiColumnFlow()->firstMultiColumnSet())
         return multiColumnFlow()->firstMultiColumnSet()->updateHitTestResult(result, point);
 
-    if (RefPtr node = nodeForHitTest()) {
-        result.setInnerNode(node.get());
+    if (auto* node = nodeForHitTest()) {
+        result.setInnerNode(node);
         if (!result.innerNonSharedNode())
-            result.setInnerNonSharedNode(node.get());
+            result.setInnerNonSharedNode(node);
 
         LayoutPoint adjustedPoint = point;
         offsetForContents(adjustedPoint);
@@ -930,8 +929,10 @@ static SVGSVGElement* svgSvgElementFrom(RenderElement& renderElement)
 {
     if (auto* svgSvgElement = dynamicDowncast<SVGSVGElement>(renderElement.element()))
         return svgSvgElement;
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (auto* svgRoot = dynamicDowncast<RenderSVGRoot>(renderElement))
         return &svgRoot->svgSVGElement();
+#endif
     if (auto* svgRoot = dynamicDowncast<LegacyRenderSVGRoot>(renderElement))
         return &svgRoot->svgSVGElement();
 

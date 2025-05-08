@@ -28,7 +28,6 @@
 #include "DictationContext.h"
 #include "FloatRect.h"
 #include <wtf/CheckedRef.h>
-#include <wtf/FastMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -54,9 +53,7 @@ enum class AutocorrectionResponse : uint8_t {
     Accepted
 };
 
-class AlternativeTextClient : public CanMakeCheckedPtr<AlternativeTextClient> {
-    WTF_MAKE_FAST_ALLOCATED;
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(AlternativeTextClient);
+class AlternativeTextClient : public CanMakeCheckedPtr {
 public:
     virtual ~AlternativeTextClient() = default;
 #if USE(AUTOCORRECTION_PANEL)

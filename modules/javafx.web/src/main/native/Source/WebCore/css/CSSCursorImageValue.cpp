@@ -31,7 +31,6 @@
 #include "StyleBuilderState.h"
 #include "StyleCursorImage.h"
 #include <wtf/MathExtras.h>
-#include <wtf/text/MakeString.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {

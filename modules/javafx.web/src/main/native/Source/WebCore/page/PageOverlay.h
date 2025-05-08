@@ -40,15 +40,18 @@ class GraphicsContext;
 class GraphicsLayer;
 class LocalFrame;
 class Page;
-class PageOverlay;
 class PageOverlayController;
 class PlatformMouseEvent;
 
-class PageOverlayClient {
-protected:
-    virtual ~PageOverlayClient() = default;
-
+class PageOverlay final : public RefCounted<PageOverlay>, public CanMakeWeakPtr<PageOverlay> {
+    WTF_MAKE_NONCOPYABLE(PageOverlay);
+    WTF_MAKE_FAST_ALLOCATED;
 public:
+    class Client {
+    protected:
+        virtual ~Client() = default;
+
+    public:
         virtual void willMoveToPage(PageOverlay&, Page*) = 0;
         virtual void didMoveToPage(PageOverlay&, Page*) = 0;
         virtual void drawRect(PageOverlay&, GraphicsContext&, const IntRect& dirtyRect) = 0;
@@ -58,13 +61,9 @@ public:
         virtual bool copyAccessibilityAttributeStringValueForPoint(PageOverlay&, String /* attribute */, FloatPoint, String&) { return false; }
         virtual bool copyAccessibilityAttributeBoolValueForPoint(PageOverlay&, String /* attribute */, FloatPoint, bool&)  { return false; }
         virtual Vector<String> copyAccessibilityAttributeNames(PageOverlay&, bool /* parameterizedNames */)  { return { }; }
-};
+    };
 
-class PageOverlay final : public RefCounted<PageOverlay>, public CanMakeWeakPtr<PageOverlay> {
-    WTF_MAKE_NONCOPYABLE(PageOverlay);
-    WTF_MAKE_FAST_ALLOCATED;
-public:
-    enum class OverlayType : bool {
+    enum class OverlayType {
         View, // Fixed to the view size; does not scale or scroll with the document, repaints on scroll.
         Document, // Scales and scrolls with the document.
     };
@@ -74,7 +73,7 @@ public:
         No,
     };
 
-    WEBCORE_EXPORT static Ref<PageOverlay> create(PageOverlayClient&, OverlayType = OverlayType::View, AlwaysTileOverlayLayer = AlwaysTileOverlayLayer::No);
+    WEBCORE_EXPORT static Ref<PageOverlay> create(Client&, OverlayType = OverlayType::View, AlwaysTileOverlayLayer = AlwaysTileOverlayLayer::No);
     WEBCORE_EXPORT virtual ~PageOverlay();
 
     WEBCORE_EXPORT PageOverlayController* controller() const;
@@ -101,9 +100,9 @@ public:
 
     WEBCORE_EXPORT void clear();
 
-    PageOverlayClient& client() const { return m_client; }
+    Client& client() const { return m_client; }
 
-    enum class FadeMode : bool { DoNotFade, Fade };
+    enum class FadeMode { DoNotFade, Fade };
 
     OverlayType overlayType() { return m_overlayType; }
     AlwaysTileOverlayLayer alwaysTileOverlayLayer() { return m_alwaysTileOverlayLayer; }
@@ -126,12 +125,12 @@ public:
     void setNeedsSynchronousScrolling(bool needsSynchronousScrolling) { m_needsSynchronousScrolling = needsSynchronousScrolling; }
 
 private:
-    explicit PageOverlay(PageOverlayClient&, OverlayType, AlwaysTileOverlayLayer);
+    explicit PageOverlay(Client&, OverlayType, AlwaysTileOverlayLayer);
 
     void startFadeAnimation();
     void fadeAnimationTimerFired();
 
-    PageOverlayClient& m_client;
+    Client& m_client;
     WeakPtr<Page> m_page;
 
     Timer m_fadeAnimationTimer;

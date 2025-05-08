@@ -54,15 +54,16 @@ AudioTrackPrivateMediaStream::~AudioTrackPrivateMediaStream()
 #if USE(LIBWEBRTC)
 static RefPtr<LibWebRTCAudioModule> audioModuleFromSource(RealtimeMediaSource& source)
 {
-    auto* audioSource = dynamicDowncast<RealtimeIncomingAudioSource>(source);
-    return audioSource ? audioSource->audioModule() : nullptr;
+    if (!is<RealtimeIncomingAudioSource>(source))
+        return nullptr;
+    return downcast<RealtimeIncomingAudioSource>(source).audioModule();
 }
 #endif
 
 std::unique_ptr<AudioMediaStreamTrackRenderer> AudioTrackPrivateMediaStream::createRenderer(AudioTrackPrivateMediaStream& stream)
 {
 #if !RELEASE_LOG_DISABLED
-    auto& track = stream.m_streamTrack;
+    auto& track = stream.m_streamTrack.get();
 #endif
     return AudioMediaStreamTrackRenderer::create(AudioMediaStreamTrackRenderer::Init {
         [stream = WeakPtr { stream }] {
@@ -73,8 +74,8 @@ std::unique_ptr<AudioMediaStreamTrackRenderer> AudioTrackPrivateMediaStream::cre
         , audioModuleFromSource(stream.m_audioSource.get())
 #endif
 #if !RELEASE_LOG_DISABLED
-        , track->logger()
-        , track->logIdentifier()
+        , track.logger()
+        , track.logIdentifier()
 #endif
     });
 }

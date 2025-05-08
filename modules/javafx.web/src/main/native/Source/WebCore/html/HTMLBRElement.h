@@ -28,8 +28,7 @@
 namespace WebCore {
 
 class HTMLBRElement final : public HTMLElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLBRElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLBRElement);
+    WTF_MAKE_ISO_ALLOCATED(HTMLBRElement);
 public:
     static Ref<HTMLBRElement> create(Document&);
     static Ref<HTMLBRElement> create(const QualifiedName&, Document&);

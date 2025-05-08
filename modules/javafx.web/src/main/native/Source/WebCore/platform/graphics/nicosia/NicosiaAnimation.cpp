@@ -46,35 +46,27 @@ static FilterOperations applyFilterAnimation(const FilterOperations& from, const
     if (!from.isEmpty() && !to.isEmpty() && !from.operationsMatch(to))
         return to;
 
-    size_t fromSize = from.size();
-    size_t toSize = to.size();
+    FilterOperations result;
+
+    size_t fromSize = from.operations().size();
+    size_t toSize = to.operations().size();
     size_t size = std::max(fromSize, toSize);
-
-    Vector<Ref<FilterOperation>> operations;
-    operations.reserveInitialCapacity(size);
-
     for (size_t i = 0; i < size; i++) {
-        RefPtr<FilterOperation> fromOp = (i < fromSize) ? from[i].ptr() : nullptr;
-        RefPtr<FilterOperation> toOp = (i < toSize) ? to[i].ptr() : nullptr;
+        RefPtr<FilterOperation> fromOp = (i < fromSize) ? from.operations()[i].get() : nullptr;
+        RefPtr<FilterOperation> toOp = (i < toSize) ? to.operations()[i].get() : nullptr;
         RefPtr<FilterOperation> blendedOp = toOp ? blendFunc(fromOp.get(), *toOp, progress, boxSize) : (fromOp ? blendFunc(nullptr, *fromOp, progress, boxSize, true) : nullptr);
         if (blendedOp)
-            operations.append(blendedOp.releaseNonNull());
+            result.operations().append(blendedOp);
         else {
-            if (progress > 0.5) {
-                if (toOp)
-                    operations.append(toOp.releaseNonNull());
+            auto identityOp = PassthroughFilterOperation::create();
+            if (progress > 0.5)
+                result.operations().append(toOp ? toOp : WTFMove(identityOp));
             else
-                    operations.append(PassthroughFilterOperation::create());
-            } else {
-                if (fromOp)
-                    operations.append(fromOp.releaseNonNull());
-                else
-                    operations.append(PassthroughFilterOperation::create());
-            }
+                result.operations().append(fromOp ? fromOp : WTFMove(identityOp));
         }
     }
 
-    return FilterOperations { WTFMove(operations) };
+    return result;
 }
 
 static bool shouldReverseAnimationValue(WebCore::Animation::Direction direction, int loopCount)
@@ -125,17 +117,17 @@ static TransformationMatrix applyTransformAnimation(const TransformOperations& f
 
     // First frame of an animation.
     if (!progress) {
-        from.apply(matrix, boxSize);
+        from.apply(boxSize, matrix);
         return matrix;
     }
 
     // Last frame of an animation.
     if (progress == 1) {
-        to.apply(matrix, boxSize);
+        to.apply(boxSize, matrix);
         return matrix;
     }
 
-    to.blend(from, progress, LayoutSize { boxSize }).apply(matrix, boxSize);
+    to.blend(from, progress, LayoutSize { boxSize }).apply(boxSize, matrix);
     return matrix;
 }
 
@@ -161,8 +153,9 @@ static KeyframeValueList createThreadsafeKeyFrames(const KeyframeValueList& orig
     KeyframeValueList keyframes = originalKeyframes;
     for (unsigned i = 0; i < keyframes.size(); i++) {
         const auto& transformValue = static_cast<const TransformAnimationValue&>(keyframes.at(i));
-        for (auto& operation : transformValue.value()) {
-            if (RefPtr translation = dynamicDowncast<TranslateTransformOperation>(operation)) {
+        for (auto& operation : transformValue.value().operations()) {
+            if (is<TranslateTransformOperation>(operation)) {
+                TranslateTransformOperation* translation = static_cast<TranslateTransformOperation*>(operation.get());
                 translation->setX(Length(translation->xAsFloat(boxSize), LengthType::Fixed));
                 translation->setY(Length(translation->yAsFloat(boxSize), LengthType::Fixed));
                 translation->setZ(Length(translation->zAsFloat(), LengthType::Fixed));

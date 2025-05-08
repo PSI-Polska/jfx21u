@@ -77,17 +77,16 @@ template <typename T> static const T* validateTable(const RefPtr<SharedBuffer>& 
 {
     if (!buffer || buffer->size() < sizeof(T) * count)
         return 0;
-    return reinterpret_cast<const T*>(buffer->span().data());
+    return reinterpret_cast<const T*>(buffer->data());
 }
 
 struct TableBase {
 protected:
     static bool isValidEnd(const SharedBuffer& buffer, const void* position)
     {
-        auto bufferSpan = buffer.span();
-        if (position < bufferSpan.data())
+        if (position < buffer.data())
             return false;
-        size_t offset = static_cast<const uint8_t*>(position) - bufferSpan.data();
+        size_t offset = static_cast<const uint8_t*>(position) - buffer.data();
         return offset <= buffer.size(); // "<=" because end is included as valid
     }
 

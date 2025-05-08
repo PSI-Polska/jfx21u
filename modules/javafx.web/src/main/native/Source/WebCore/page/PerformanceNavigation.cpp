@@ -66,11 +66,11 @@ unsigned short PerformanceNavigation::type() const
 
 unsigned short PerformanceNavigation::redirectCount() const
 {
-    RefPtr frame = this->frame();
+    auto* frame = this->frame();
     if (!frame)
         return 0;
 
-    RefPtr loader = frame->loader().documentLoader();
+    DocumentLoader* loader = frame->loader().documentLoader();
     if (!loader)
         return 0;
 

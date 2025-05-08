@@ -22,7 +22,6 @@
 #if ENABLE(WEBXR) && USE(OPENXR)
 
 #include "GraphicsTypesGL.h"
-#include "IntSize.h"
 #include "OpenXRUtils.h"
 
 #include <wtf/Noncopyable.h>
@@ -42,7 +41,6 @@ public:
     XrSwapchain swapchain() const { return m_swapchain; }
     int32_t width() const { return m_createInfo.width; }
     int32_t height() const { return m_createInfo.height; }
-    WebCore::IntSize size() const { return WebCore::IntSize(width(), height()); }
 
 private:
     OpenXRSwapchain(XrInstance, XrSwapchain, const XrSwapchainCreateInfo&, Vector<XrSwapchainImageOpenGLKHR>&&);

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2016 Canon Inc.
- * Copyright (C) 2020-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted, provided that the following conditions
@@ -109,7 +109,7 @@ void FetchBodyOwner::arrayBuffer(Ref<DeferredPromise>&& promise)
     }
 
     if (isBodyNullOrOpaque()) {
-        fulfillPromiseWithArrayBufferFromSpan(WTFMove(promise), { });
+        fulfillPromiseWithArrayBuffer(WTFMove(promise), nullptr, 0);
         return;
     }
     if (isDisturbedOrLocked()) {
@@ -139,25 +139,6 @@ void FetchBodyOwner::blob(Ref<DeferredPromise>&& promise)
     }
     m_isDisturbed = true;
     m_body->blob(*this, WTFMove(promise));
-}
-
-void FetchBodyOwner::bytes(Ref<DeferredPromise>&& promise)
-{
-    if (auto exception = loadingException()) {
-        promise->reject(*exception);
-        return;
-    }
-
-    if (isBodyNullOrOpaque()) {
-        fulfillPromiseWithUint8ArrayFromSpan(WTFMove(promise), { });
-        return;
-    }
-    if (isDisturbedOrLocked()) {
-        promise->reject(Exception { ExceptionCode::TypeError, "Body is disturbed or locked"_s });
-        return;
-    }
-    m_isDisturbed = true;
-    m_body->bytes(*this, WTFMove(promise));
 }
 
 void FetchBodyOwner::cloneBody(FetchBodyOwner& owner)
@@ -209,7 +190,7 @@ void FetchBodyOwner::formData(Ref<DeferredPromise>&& promise)
     if (isBodyNullOrOpaque()) {
         if (isBodyNull()) {
             // If the content-type is 'application/x-www-form-urlencoded', a body is not required and we should package an empty byte sequence as per the specification.
-            if (auto formData = FetchBodyConsumer::packageFormData(promise->scriptExecutionContext(), contentType(), { })) {
+            if (auto formData = FetchBodyConsumer::packageFormData(promise->scriptExecutionContext(), contentType(), nullptr, 0)) {
                 promise->resolve<IDLInterface<DOMFormData>>(*formData);
                 return;
             }

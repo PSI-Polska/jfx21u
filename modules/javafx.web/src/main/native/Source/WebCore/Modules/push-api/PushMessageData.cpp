@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,31 +32,23 @@
 #include <JavaScriptCore/JSCJSValueInlines.h>
 #include <JavaScriptCore/JSLock.h>
 #include <JavaScriptCore/JSONObject.h>
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(PushMessageData);
+WTF_MAKE_ISO_ALLOCATED_IMPL(PushMessageData);
 
-ExceptionOr<Ref<JSC::ArrayBuffer>> PushMessageData::arrayBuffer()
+ExceptionOr<RefPtr<JSC::ArrayBuffer>> PushMessageData::arrayBuffer()
 {
-    RefPtr buffer = ArrayBuffer::tryCreate(m_data.span());
+    auto buffer = ArrayBuffer::tryCreate(m_data.data(), m_data.size());
     if (!buffer)
         return Exception { ExceptionCode::OutOfMemoryError };
-    return buffer.releaseNonNull();
+    return buffer;
 }
 
-Ref<Blob> PushMessageData::blob(ScriptExecutionContext& context)
+RefPtr<Blob> PushMessageData::blob(ScriptExecutionContext& context)
 {
     return Blob::create(&context, Vector<uint8_t> { m_data }, { });
-}
-
-ExceptionOr<Ref<JSC::Uint8Array>> PushMessageData::bytes()
-{
-    RefPtr view = Uint8Array::tryCreate(m_data.span());
-    if (!view)
-        return Exception { ExceptionCode::OutOfMemoryError };
-    return view.releaseNonNull();
 }
 
 ExceptionOr<JSC::JSValue> PushMessageData::json(JSDOMGlobalObject& globalObject)
@@ -72,7 +64,7 @@ ExceptionOr<JSC::JSValue> PushMessageData::json(JSDOMGlobalObject& globalObject)
 
 String PushMessageData::text()
 {
-    return TextResourceDecoder::textFromUTF8(m_data.span());
+    return TextResourceDecoder::textFromUTF8(m_data.data(), m_data.size());
 }
 
 } // namespace WebCore

@@ -38,7 +38,6 @@ class Microtask;
 class RuntimeFlags;
 class SourceOrigin;
 
-enum class CompilationType;
 enum class ScriptExecutionStatus;
 
 enum class JSPromiseRejectionOperation : unsigned {
@@ -71,8 +70,6 @@ struct GlobalObjectMethodTable {
     JSPromise* (*compileStreaming)(JSGlobalObject*, JSValue);
     JSPromise* (*instantiateStreaming)(JSGlobalObject*, JSValue, JSObject*);
     JSGlobalObject* (*deriveShadowRealmGlobalObject)(JSGlobalObject*);
-    String (*codeForEval)(JSGlobalObject*, JSValue);
-    bool (*canCompileStrings)(JSGlobalObject*, CompilationType, String, JSValue);
 };
 
 } // namespace JSC

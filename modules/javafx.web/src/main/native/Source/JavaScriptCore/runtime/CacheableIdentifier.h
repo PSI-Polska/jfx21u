@@ -44,7 +44,6 @@ public:
     template <typename CodeBlockType>
     static inline CacheableIdentifier createFromIdentifierOwnedByCodeBlock(CodeBlockType*, UniquedStringImpl*);
     static inline CacheableIdentifier createFromImmortalIdentifier(UniquedStringImpl*);
-    static inline CacheableIdentifier createFromSharedStub(UniquedStringImpl*);
     static constexpr CacheableIdentifier createFromRawBits(uintptr_t rawBits) { return CacheableIdentifier(rawBits); }
 
     CacheableIdentifier(const CacheableIdentifier&) = default;

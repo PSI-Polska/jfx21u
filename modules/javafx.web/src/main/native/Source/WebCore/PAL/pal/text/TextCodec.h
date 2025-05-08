@@ -29,7 +29,6 @@
 #include "UnencodableHandling.h"
 #include <array>
 #include <memory>
-#include <span>
 #include <unicode/umachine.h>
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
@@ -47,7 +46,7 @@ public:
     virtual ~TextCodec() = default;
 
     virtual void stripByteOrderMark() { }
-    virtual String decode(std::span<const uint8_t> data, bool flush, bool stopOnError, bool& sawError) = 0;
+    virtual String decode(const char*, size_t length, bool flush, bool stopOnError, bool& sawError) = 0;
 
     virtual Vector<uint8_t> encode(StringView, UnencodableHandling) const = 0;
 

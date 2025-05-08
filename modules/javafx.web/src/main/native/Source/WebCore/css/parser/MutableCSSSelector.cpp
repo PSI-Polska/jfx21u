@@ -277,7 +277,10 @@ std::unique_ptr<MutableCSSSelector> MutableCSSSelector::releaseTagHistory()
     return WTFMove(m_tagHistory);
 }
 
-
+bool MutableCSSSelector::isHostPseudoSelector() const
+{
+    return match() == CSSSelector::Match::PseudoClass && pseudoClass() == CSSSelector::PseudoClass::Host;
+}
 
 bool MutableCSSSelector::startsWithExplicitCombinator() const
 {
@@ -286,3 +289,4 @@ bool MutableCSSSelector::startsWithExplicitCombinator() const
 }
 
 }
+

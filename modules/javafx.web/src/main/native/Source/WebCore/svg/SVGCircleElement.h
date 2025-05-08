@@ -27,8 +27,7 @@
 namespace WebCore {
 
 class SVGCircleElement final : public SVGGeometryElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGCircleElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGCircleElement);
+    WTF_MAKE_ISO_ALLOCATED(SVGCircleElement);
 public:
     static Ref<SVGCircleElement> create(const QualifiedName&, Document&);
 
@@ -44,9 +43,7 @@ private:
     SVGCircleElement(const QualifiedName&, Document&);
 
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGCircleElement, SVGGeometryElement>;
-    friend PropertyRegistry;
 
-    SVGAnimatedProperty* propertyForAttribute(const QualifiedName&) const;
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     void svgAttributeChanged(const QualifiedName&) final;
 

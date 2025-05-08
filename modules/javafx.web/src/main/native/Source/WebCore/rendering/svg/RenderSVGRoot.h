@@ -23,6 +23,7 @@
 
 #pragma once
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "FloatRect.h"
 #include "RenderReplaced.h"
 #include "SVGBoundingBoxComputation.h"
@@ -33,8 +34,7 @@ class RenderSVGViewportContainer;
 class SVGSVGElement;
 
 class RenderSVGRoot final : public RenderReplaced {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGRoot);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGRoot);
+    WTF_MAKE_ISO_ALLOCATED(RenderSVGRoot);
 public:
     RenderSVGRoot(SVGSVGElement&, RenderStyle&&);
     virtual ~RenderSVGRoot();
@@ -67,7 +67,6 @@ public:
     LayoutRect visualOverflowRectEquivalent() const { return SVGBoundingBoxComputation::computeVisualOverflowRect(*this); }
 
     RenderSVGViewportContainer* viewportContainer() const;
-    CheckedPtr<RenderSVGViewportContainer> checkedViewportContainer() const;
 
 private:
     void element() const = delete;
@@ -122,3 +121,5 @@ private:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGRoot, isRenderSVGRoot())
+
+#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

@@ -62,10 +62,6 @@ public:
         // eventually become registers.
         Tmp,
 
-#if USE(JSVALUE32_64)
-        TmpPair,
-#endif
-
         // This is an immediate that the instruction will materialize. Imm is the immediate that can be
         // inlined into most instructions, while BigImm indicates a constant materialization and is
         // usually only usable with Move. Specials may also admit it, for example for stackmaps used for
@@ -501,15 +497,6 @@ public:
         : Arg(Air::Tmp(reg))
     {
     }
-
-#if USE(JSVALUE32_64)
-    Arg(Air::Tmp tmpHi, Air::Tmp tmpLo)
-        : m_kind(TmpPair)
-        , m_baseHi(tmpHi)
-        , m_baseLo(tmpLo)
-    {
-    }
-#endif
 
     static Arg simdInfo(SIMDLane simdLane, SIMDSignMode signMode = SIMDSignMode::None)
     {
@@ -979,7 +966,7 @@ public:
     template<typename T>
     bool isRepresentableAs() const
     {
-        return WTF::isRepresentableAs<T>(value());
+        return B3::isRepresentableAs<T>(value());
     }
 
     static bool isRepresentableAs(Width width, Signedness signedness, int64_t value)
@@ -988,13 +975,13 @@ public:
         case Signed:
             switch (width) {
             case Width8:
-                return WTF::isRepresentableAs<int8_t>(value);
+                return B3::isRepresentableAs<int8_t>(value);
             case Width16:
-                return WTF::isRepresentableAs<int16_t>(value);
+                return B3::isRepresentableAs<int16_t>(value);
             case Width32:
-                return WTF::isRepresentableAs<int32_t>(value);
+                return B3::isRepresentableAs<int32_t>(value);
             case Width64:
-                return WTF::isRepresentableAs<int64_t>(value);
+                return B3::isRepresentableAs<int64_t>(value);
             case Width128:
                 break;
             }
@@ -1002,13 +989,13 @@ public:
         case Unsigned:
             switch (width) {
             case Width8:
-                return WTF::isRepresentableAs<uint8_t>(value);
+                return B3::isRepresentableAs<uint8_t>(value);
             case Width16:
-                return WTF::isRepresentableAs<uint16_t>(value);
+                return B3::isRepresentableAs<uint16_t>(value);
             case Width32:
-                return WTF::isRepresentableAs<uint32_t>(value);
+                return B3::isRepresentableAs<uint32_t>(value);
             case Width64:
-                return WTF::isRepresentableAs<uint64_t>(value);
+                return B3::isRepresentableAs<uint64_t>(value);
             case Width128:
                 break;
             }
@@ -1121,43 +1108,6 @@ public:
         return widthForBytes(m_offset);
     }
 
-#if USE(JSVALUE32_64)
-    bool isTmpPair() const
-    {
-        return kind() == TmpPair;
-    }
-
-    Air::Tmp tmpHi() const
-    {
-        ASSERT(kind() == TmpPair);
-        return m_baseHi;
-    }
-
-    Air::Tmp tmpLo() const
-    {
-        ASSERT(kind() == TmpPair);
-        return m_baseLo;
-    }
-
-    bool isGPTmpPair() const
-    {
-        // We only use TmpPair for GPs
-        ASSERT(tmpHi().isGP() && tmpLo().isGP());
-        return isTmpPair();
-    }
-
-    Reg regHi() const
-    {
-        return tmpHi().reg();
-    }
-
-    Reg regLo() const
-    {
-        return tmpLo().reg();
-    }
-
-#endif
-
     bool isGPTmp() const
     {
         return isTmp() && tmp().isGP();
@@ -1191,9 +1141,6 @@ public:
         case StatusCond:
         case Special:
         case WidthArg:
-#if USE(JSVALUE32_64)
-        case TmpPair:
-#endif
             return true;
         case Tmp:
             return isGPTmp();
@@ -1220,9 +1167,6 @@ public:
         case Invalid:
         case ZeroReg:
         case SIMDInfo:
-#if USE(JSVALUE32_64)
-        case TmpPair:
-#endif
             return false;
         case SimpleAddr:
         case Addr:
@@ -1248,9 +1192,6 @@ public:
         case BitImm64:
         case Special:
         case Tmp:
-#if USE(JSVALUE32_64)
-        case TmpPair:
-#endif
             return true;
         default:
             return false;
@@ -1327,7 +1268,7 @@ public:
     static bool isValidImmForm(int64_t value)
     {
         if (isX86())
-            return WTF::isRepresentableAs<int32_t>(value);
+            return B3::isRepresentableAs<int32_t>(value);
         if (isARM64()) {
             if (isUInt12(value) || isUInt12(toTwosComplement(value)))
                 return true;
@@ -1344,7 +1285,7 @@ public:
     static bool isValidBitImmForm(int64_t value)
     {
         if (isX86())
-            return WTF::isRepresentableAs<int32_t>(value);
+            return B3::isRepresentableAs<int32_t>(value);
         if (isARM64())
             return ARM64LogicalImmediate::create32(value).isValid();
         if (isARM_THUMB2())
@@ -1355,7 +1296,7 @@ public:
     static bool isValidBitImm64Form(int64_t value)
     {
         if (isX86())
-            return WTF::isRepresentableAs<int32_t>(value);
+            return B3::isRepresentableAs<int32_t>(value);
         if (isARM64())
             return ARM64LogicalImmediate::create64(value).isValid();
         return false;
@@ -1445,9 +1386,6 @@ public:
         switch (kind()) {
         case Invalid:
             return false;
-#if USE(JSVALUE32_64)
-        case TmpPair:
-#endif
         case Tmp:
             return true;
         case Imm:
@@ -1495,12 +1433,6 @@ public:
         case PostIndex:
             functor(m_base);
             break;
-#if USE(JSVALUE32_64)
-        case TmpPair:
-            functor(m_baseHi);
-            functor(m_baseLo);
-            break;
-#endif
         case Index:
             functor(m_base);
             functor(m_index);
@@ -1538,13 +1470,6 @@ public:
             ASSERT(isAnyUse(argRole) || isAnyDef(argRole));
             functor(m_base, argRole, argBank, argWidth);
             break;
-#if USE(JSVALUE32_64)
-        case TmpPair:
-            ASSERT(isAnyUse(argRole) || isAnyDef(argRole));
-            functor(m_baseHi, argRole, argBank, Width32);
-            functor(m_baseLo, argRole, argBank, Width32);
-            break;
-#endif
         case SimpleAddr:
         case Addr:
         case ExtendedOffsetAddr:
@@ -1748,11 +1673,6 @@ private:
     int32_t m_scale { 1 };
     Air::Tmp m_base;
     Air::Tmp m_index;
-#if USE(JSVALUE32_64)
-    // XXX: stick in union with m_base?
-    Air::Tmp m_baseHi;
-    Air::Tmp m_baseLo;
-#endif
     JSC::SIMDInfo m_simdInfo;
 };
 

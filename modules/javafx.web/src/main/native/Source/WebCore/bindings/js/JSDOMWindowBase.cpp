@@ -33,16 +33,13 @@
 #include "Event.h"
 #include "EventLoop.h"
 #include "FetchResponse.h"
-#include "HTMLFrameOwnerElement.h"
 #include "InspectorController.h"
 #include "JSDOMBindingSecurity.h"
-#include "JSDOMExceptionHandling.h"
-#include "JSDOMWindowCustom.h"
 #include "JSDocument.h"
 #include "JSFetchResponse.h"
+#include "JSLocalDOMWindowCustom.h"
 #include "JSMicrotaskCallback.h"
 #include "JSNode.h"
-#include "JSTrustedScript.h"
 #include "LocalFrame.h"
 #include "Logging.h"
 #include "Page.h"
@@ -53,7 +50,6 @@
 #include "ScriptModuleLoader.h"
 #include "SecurityOrigin.h"
 #include "Settings.h"
-#include "TrustedType.h"
 #include "WebCoreJSClientData.h"
 #include <JavaScriptCore/CodeBlock.h>
 #include <JavaScriptCore/DeferredWorkTimer.h>
@@ -106,14 +102,12 @@ const GlobalObjectMethodTable* JSDOMWindowBase::globalObjectMethodTable()
     nullptr,
     nullptr,
 #endif
-        deriveShadowRealmGlobalObject,
-        codeForEval,
-        canCompileStrings
+        deriveShadowRealmGlobalObject
     };
     return &table;
 };
 
-JSDOMWindowBase::JSDOMWindowBase(VM& vm, Structure* structure, RefPtr<DOMWindow>&& window, JSWindowProxy* proxy)
+JSDOMWindowBase::JSDOMWindowBase(VM& vm, Structure* structure, RefPtr<LocalDOMWindow>&& window, JSWindowProxy* proxy)
     : JSDOMGlobalObject(vm, structure, proxy->world(), globalObjectMethodTable())
     , m_wrapped(WTFMove(window))
 {
@@ -121,11 +115,6 @@ JSDOMWindowBase::JSDOMWindowBase(VM& vm, Structure* structure, RefPtr<DOMWindow>
 }
 
 JSDOMWindowBase::~JSDOMWindowBase() = default;
-
-DOMWindow& JSDOMWindowBase::wrapped() const
-{
-    return *m_wrapped;
-}
 
 SUPPRESS_ASAN inline void JSDOMWindowBase::initStaticGlobals(JSC::VM& vm)
 {
@@ -149,7 +138,7 @@ void JSDOMWindowBase::finishCreation(VM& vm, JSWindowProxy* proxy)
     if (m_wrapped && m_wrapped->frame() && m_wrapped->frame()->settings().needsSiteSpecificQuirks())
         setNeedsSiteSpecificQuirks(true);
 
-    if (m_wrapped && ((m_wrapped->frame() && m_wrapped->frame()->settings().showModalDialogEnabled()) || (m_wrapped->documentIfLocal() && m_wrapped->documentIfLocal()->quirks().shouldExposeShowModalDialog())))
+    if (m_wrapped && ((m_wrapped->frame() && m_wrapped->frame()->settings().showModalDialogEnabled()) || (m_wrapped->document() && m_wrapped->document()->quirks().shouldExposeShowModalDialog())))
         putDirectCustomAccessor(vm, builtinNames(vm).showModalDialogPublicName(), CustomGetterSetter::create(vm, showModalDialogGetter, nullptr), enumToUnderlyingType(PropertyAttribute::CustomValue));
 }
 
@@ -163,7 +152,7 @@ void JSDOMWindowBase::updateDocument()
     // Since "document" property is defined as { configurable: false, writable: false, enumerable: true },
     // users cannot change its attributes further.
     // Reaching here, the attributes of "document" property should be never changed.
-    ASSERT(m_wrapped->documentIfLocal());
+    ASSERT(m_wrapped->document());
     JSGlobalObject* lexicalGlobalObject = this;
     VM& vm = lexicalGlobalObject->vm();
     auto scope = DECLARE_CATCH_SCOPE(vm);
@@ -171,18 +160,18 @@ void JSDOMWindowBase::updateDocument()
     bool shouldThrowReadOnlyError = false;
     bool ignoreReadOnlyErrors = true;
     bool putResult = false;
-    symbolTablePutTouchWatchpointSet(this, lexicalGlobalObject, builtinNames(vm).documentPublicName(), toJS(lexicalGlobalObject, this, m_wrapped->documentIfLocal()), shouldThrowReadOnlyError, ignoreReadOnlyErrors, putResult);
+    symbolTablePutTouchWatchpointSet(this, lexicalGlobalObject, builtinNames(vm).documentPublicName(), toJS(lexicalGlobalObject, this, m_wrapped->document()), shouldThrowReadOnlyError, ignoreReadOnlyErrors, putResult);
     EXCEPTION_ASSERT_UNUSED(scope, !scope.exception());
 }
 
 Document* JSDOMWindowBase::scriptExecutionContext() const
 {
-    return m_wrapped->documentIfLocal();
+    return m_wrapped->document();
 }
 
 void JSDOMWindowBase::printErrorMessage(const String& message) const
 {
-    printErrorMessageForFrame(dynamicDowncast<LocalFrame>(wrapped().frame()), message);
+    printErrorMessageForFrame(wrapped().frame(), message);
 }
 
 bool JSDOMWindowBase::supportsRichSourceInfo(const JSGlobalObject* object)
@@ -272,7 +261,7 @@ void JSDOMWindowBase::queueMicrotaskToEventLoop(JSGlobalObject& object, Ref<JSC:
 JSC::JSObject* JSDOMWindowBase::currentScriptExecutionOwner(JSGlobalObject* object)
 {
     JSDOMWindowBase* thisObject = static_cast<JSDOMWindowBase*>(object);
-    return jsCast<JSObject*>(toJS(thisObject, thisObject, thisObject->wrapped().documentIfLocal()));
+    return jsCast<JSObject*>(toJS(thisObject, thisObject, thisObject->wrapped().document()));
 }
 
 JSC::ScriptExecutionStatus JSDOMWindowBase::scriptExecutionStatus(JSC::JSGlobalObject*, JSC::JSObject* owner)
@@ -284,12 +273,11 @@ void JSDOMWindowBase::reportViolationForUnsafeEval(JSGlobalObject* object, JSStr
 {
     const JSDOMWindowBase* thisObject = static_cast<const JSDOMWindowBase*>(object);
     CheckedPtr<ContentSecurityPolicy> contentSecurityPolicy;
-    RefPtr localWindow = dynamicDowncast<LocalDOMWindow>(thisObject->wrapped());
-    if (auto* element = localWindow ? localWindow->frameElement() : nullptr)
+    if (auto* element = thisObject->wrapped().frameElement())
         contentSecurityPolicy = element->document().contentSecurityPolicy();
 
     if (!contentSecurityPolicy) {
-        if (auto* document = localWindow ? localWindow->document() : nullptr)
+        if (auto* document = thisObject->wrapped().document())
             contentSecurityPolicy = document->contentSecurityPolicy();
     }
 
@@ -300,21 +288,6 @@ void JSDOMWindowBase::reportViolationForUnsafeEval(JSGlobalObject* object, JSStr
     if (source)
         sourceString = source->tryGetValue();
     contentSecurityPolicy->allowEval(object, LogToConsole::No, sourceString);
-}
-
-String JSDOMWindowBase::codeForEval(JSGlobalObject* globalObject, JSValue value)
-{
-    VM& vm = globalObject->vm();
-
-    if (auto* script = JSTrustedScript::toWrapped(vm, value))
-        return script->toString();
-
-    return nullString();
-}
-
-bool JSDOMWindowBase::canCompileStrings(JSGlobalObject* globalObject, CompilationType compilationType, String codeString, JSValue bodyArgument)
-{
-    return JSDOMGlobalObject::canCompileStrings(globalObject, compilationType, codeString, bodyArgument);
 }
 
 void JSDOMWindowBase::willRemoveFromWindowProxy()
@@ -337,7 +310,7 @@ JSWindowProxy& JSDOMWindowBase::proxy() const
     return *jsCast<JSWindowProxy*>(&JSDOMGlobalObject::proxy());
 }
 
-JSValue toJS(JSGlobalObject* lexicalGlobalObject, DOMWindow& domWindow)
+JSValue toJS(JSGlobalObject* lexicalGlobalObject, LocalDOMWindow& domWindow)
 {
     auto* frame = domWindow.frame();
     if (!frame)
@@ -345,40 +318,40 @@ JSValue toJS(JSGlobalObject* lexicalGlobalObject, DOMWindow& domWindow)
     return toJS(lexicalGlobalObject, frame->windowProxy());
 }
 
-JSDOMWindow* toJSDOMWindow(LocalFrame& frame, DOMWrapperWorld& world)
+JSLocalDOMWindow* toJSLocalDOMWindow(LocalFrame& frame, DOMWrapperWorld& world)
 {
-    return JSC::jsCast<JSDOMWindow*>(frame.script().globalObject(world));
+    return JSC::jsCast<JSLocalDOMWindow*>(frame.script().globalObject(world));
 }
 
 LocalDOMWindow& incumbentDOMWindow(JSGlobalObject& fallbackGlobalObject, CallFrame& callFrame)
 {
-    return downcast<LocalDOMWindow>(asJSDOMWindow(&callerGlobalObject(fallbackGlobalObject, &callFrame))->wrapped());
+    return asJSLocalDOMWindow(&callerGlobalObject(fallbackGlobalObject, &callFrame))->wrapped();
 }
 
 LocalDOMWindow& incumbentDOMWindow(JSGlobalObject& fallbackGlobalObject)
 {
-    return downcast<LocalDOMWindow>(asJSDOMWindow(&callerGlobalObject(fallbackGlobalObject, fallbackGlobalObject.vm().topCallFrame))->wrapped());
+    return asJSLocalDOMWindow(&callerGlobalObject(fallbackGlobalObject, fallbackGlobalObject.vm().topCallFrame))->wrapped();
 }
 
 LocalDOMWindow& activeDOMWindow(JSGlobalObject& lexicalGlobalObject)
 {
-    return downcast<LocalDOMWindow>(asJSDOMWindow(&lexicalGlobalObject)->wrapped());
+    return asJSLocalDOMWindow(&lexicalGlobalObject)->wrapped();
 }
 
 LocalDOMWindow& firstDOMWindow(JSGlobalObject& lexicalGlobalObject)
 {
     VM& vm = lexicalGlobalObject.vm();
-    return downcast<LocalDOMWindow>(asJSDOMWindow(vm.deprecatedVMEntryGlobalObject(&lexicalGlobalObject))->wrapped());
+    return asJSLocalDOMWindow(vm.deprecatedVMEntryGlobalObject(&lexicalGlobalObject))->wrapped();
 }
 
 LocalDOMWindow& legacyActiveDOMWindowForAccessor(JSGlobalObject& fallbackGlobalObject, CallFrame& callFrame)
 {
-    return downcast<LocalDOMWindow>(asJSDOMWindow(&legacyActiveGlobalObjectForAccessor(fallbackGlobalObject, &callFrame))->wrapped());
+    return asJSLocalDOMWindow(&legacyActiveGlobalObjectForAccessor(fallbackGlobalObject, &callFrame))->wrapped();
 }
 
 LocalDOMWindow& legacyActiveDOMWindowForAccessor(JSGlobalObject& fallbackGlobalObject)
 {
-    return downcast<LocalDOMWindow>(asJSDOMWindow(&legacyActiveGlobalObjectForAccessor(fallbackGlobalObject, fallbackGlobalObject.vm().topCallFrame))->wrapped());
+    return asJSLocalDOMWindow(&legacyActiveGlobalObjectForAccessor(fallbackGlobalObject, fallbackGlobalObject.vm().topCallFrame))->wrapped();
 }
 
 void JSDOMWindowBase::fireFrameClearedWatchpointsForWindow(LocalDOMWindow* window)

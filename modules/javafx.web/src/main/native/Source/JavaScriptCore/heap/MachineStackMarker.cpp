@@ -53,6 +53,7 @@ void MachineThreads::gatherFromCurrentThread(ConservativeRoots& conservativeRoot
 static inline int osRedZoneAdjustment()
 {
     int redZoneAdjustment = 0;
+#if !OS(WINDOWS)
 #if CPU(X86_64)
     // See http://people.freebsd.org/~obrien/amd64-elf-abi.pdf Section 3.2.2.
     redZoneAdjustment = -128;
@@ -60,6 +61,7 @@ static inline int osRedZoneAdjustment()
     // See https://developer.apple.com/library/ios/documentation/Xcode/Conceptual/iPhoneOSABIReference/Articles/ARM64FunctionCallingConventions.html#//apple_ref/doc/uid/TP40013702-SW7
     redZoneAdjustment = -128;
 #endif
+#endif // !OS(WINDOWS)
     return redZoneAdjustment;
 }
 

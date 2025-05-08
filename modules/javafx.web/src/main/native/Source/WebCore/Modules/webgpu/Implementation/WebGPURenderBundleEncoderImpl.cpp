@@ -115,7 +115,7 @@ void RenderBundleEncoderImpl::insertDebugMarker(String&& markerLabel)
     wgpuRenderBundleEncoderInsertDebugMarker(m_backing.get(), markerLabel.utf8().data());
 }
 
-RefPtr<RenderBundle> RenderBundleEncoderImpl::finish(const RenderBundleDescriptor& descriptor)
+Ref<RenderBundle> RenderBundleEncoderImpl::finish(const RenderBundleDescriptor& descriptor)
 {
     auto label = descriptor.label.utf8();
 

@@ -67,9 +67,8 @@ typedef struct {
         \
         switch (arguments.header_placement_mode) { \
         case pas_page_header_at_head_of_page: { \
-            uintptr_t ptr = (uintptr_t)boundary; \
-            PAS_PROFILE(PAGE_HEADER, ptr); \
-            return (pas_page_base*)ptr; \
+            PAS_PROFILE(boundary, PAGE_HEADER); \
+            return (pas_page_base*)boundary; \
         } \
         \
         case pas_page_header_in_table: { \

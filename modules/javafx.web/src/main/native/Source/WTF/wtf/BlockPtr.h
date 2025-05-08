@@ -129,7 +129,7 @@ public:
 
     BlockPtr(BlockType block)
 #if __has_feature(objc_arc)
-        : m_block(block)
+        : m_block(WTFMove(block))
 #else
         : m_block(Block_copy(block))
 #endif

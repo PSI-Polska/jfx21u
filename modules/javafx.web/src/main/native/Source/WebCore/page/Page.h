@@ -67,10 +67,6 @@
 #include "ApplicationManifest.h"
 #endif
 
-#if PLATFORM(VISION) && ENABLE(GAMEPAD)
-#include "ShouldRequireExplicitConsentForGamepadAccess.h"
-#endif
-
 namespace JSC {
 class Debugger;
 }
@@ -104,20 +100,15 @@ class BadgeClient;
 class BroadcastChannelRegistry;
 class CacheStorageProvider;
 class Chrome;
-class CompositeEditCommand;
 class ContextMenuController;
 class CookieJar;
-class CryptoClient;
 class DOMRectList;
 class DatabaseProvider;
 class DeviceOrientationUpdateProvider;
 class DiagnosticLoggingClient;
-class CredentialRequestCoordinator;
 class DragCaretController;
 class DragController;
 class EditorClient;
-class EditCommandComposition;
-class ElementTargetingController;
 class Element;
 class FocusController;
 class FormData;
@@ -181,30 +172,8 @@ class WheelEventDeltaFilter;
 class WheelEventTestMonitor;
 class WindowEventLoop;
 
-#if ENABLE(WRITING_TOOLS)
-class WritingToolsController;
-
-namespace WritingTools {
-enum class Action : uint8_t;
-enum class TextSuggestionState : uint8_t;
-
-struct Context;
-struct TextSuggestion;
-struct Session;
-
-using TextSuggestionID = WTF::UUID;
-using SessionID = WTF::UUID;
-}
-#endif
-
-#if ENABLE(WEBXR)
-class WebXRSession;
-#endif
-
 struct AXTreeData;
 struct ApplePayAMSUIRequest;
-struct AttributedString;
-struct CharacterRange;
 struct SimpleRange;
 struct TextRecognitionResult;
 
@@ -245,37 +214,34 @@ enum class FinalizeRenderingUpdateFlags : uint8_t {
 };
 
 enum class RenderingUpdateStep : uint32_t {
-    Reveal                          = 1 << 0,
-    Resize                          = 1 << 1,
-    Scroll                          = 1 << 2,
-    MediaQueryEvaluation            = 1 << 3,
-    Animations                      = 1 << 4,
-    Fullscreen                      = 1 << 5,
-    AnimationFrameCallbacks         = 1 << 6,
-    UpdateContentRelevancy          = 1 << 7,
-    PerformPendingViewTransitions   = 1 << 8,
-    IntersectionObservations        = 1 << 9,
-    ResizeObservations              = 1 << 10,
-    Images                          = 1 << 11,
-    WheelEventMonitorCallbacks      = 1 << 12,
-    CursorUpdate                    = 1 << 13,
-    EventRegionUpdate               = 1 << 14,
-    LayerFlush                      = 1 << 15,
+    Resize                          = 1 << 0,
+    Scroll                          = 1 << 1,
+    MediaQueryEvaluation            = 1 << 2,
+    Animations                      = 1 << 3,
+    Fullscreen                      = 1 << 4,
+    AnimationFrameCallbacks         = 1 << 5,
+    UpdateContentRelevancy          = 1 << 6,
+    PerformPendingViewTransitions   = 1 << 7,
+    IntersectionObservations        = 1 << 8,
+    ResizeObservations              = 1 << 9,
+    Images                          = 1 << 10,
+    WheelEventMonitorCallbacks      = 1 << 11,
+    CursorUpdate                    = 1 << 12,
+    EventRegionUpdate               = 1 << 13,
+    LayerFlush                      = 1 << 14,
 #if ENABLE(ASYNC_SCROLLING)
-    ScrollingTreeUpdate             = 1 << 16,
+    ScrollingTreeUpdate             = 1 << 15,
 #endif
-    FlushAutofocusCandidates        = 1 << 17,
-    VideoFrameCallbacks             = 1 << 18,
-    PrepareCanvasesForDisplayOrFlush = 1 << 19,
-    CaretAnimation                  = 1 << 20,
-    FocusFixup                      = 1 << 21,
-    UpdateValidationMessagePositions= 1 << 22,
+    FlushAutofocusCandidates        = 1 << 16,
+    VideoFrameCallbacks             = 1 << 17,
+    PrepareCanvasesForDisplayOrFlush = 1 << 18,
+    CaretAnimation                  = 1 << 19,
+    FocusFixup                      = 1 << 20,
+    UpdateValidationMessagePositions= 1 << 21,
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-    AccessibilityRegionUpdate       = 1 << 23,
+    AccessibilityRegionUpdate       = 1 << 22,
 #endif
-    RestoreScrollPositionAndViewState = 1 << 24,
-    AdjustVisibility                  = 1 << 25,
-
+    RestoreScrollPositionAndViewState = 1 << 23,
 };
 
 enum class LinkDecorationFilteringTrigger : uint8_t {
@@ -286,7 +252,6 @@ enum class LinkDecorationFilteringTrigger : uint8_t {
 };
 
 constexpr OptionSet<RenderingUpdateStep> updateRenderingSteps = {
-    RenderingUpdateStep::Reveal,
     RenderingUpdateStep::FlushAutofocusCandidates,
     RenderingUpdateStep::Resize,
     RenderingUpdateStep::Scroll,
@@ -307,7 +272,6 @@ constexpr OptionSet<RenderingUpdateStep> updateRenderingSteps = {
     RenderingUpdateStep::CaretAnimation,
     RenderingUpdateStep::UpdateContentRelevancy,
     RenderingUpdateStep::PerformPendingViewTransitions,
-    RenderingUpdateStep::AdjustVisibility,
 };
 
 constexpr auto allRenderingUpdateSteps = updateRenderingSteps | OptionSet<RenderingUpdateStep> {
@@ -363,10 +327,8 @@ public:
 
     Frame& mainFrame() { return m_mainFrame.get(); }
     const Frame& mainFrame() const { return m_mainFrame.get(); }
-    WEBCORE_EXPORT Ref<Frame> protectedMainFrame() const;
     WEBCORE_EXPORT void setMainFrame(Ref<Frame>&&);
     const URL& mainFrameURL() const { return m_mainFrameURL; }
-    SecurityOrigin& mainFrameOrigin() const;
     WEBCORE_EXPORT void setMainFrameURL(const URL&);
     WEBCORE_EXPORT void setMainFrameURLFragment(String&&);
     String mainFrameURLFragment() const { return m_mainFrameURLFragment; }
@@ -377,7 +339,7 @@ public:
     bool openedByDOMWithOpener() const { return m_openedByDOMWithOpener; }
     void setOpenedByDOMWithOpener(bool value) { m_openedByDOMWithOpener = value; }
 
-    WEBCORE_EXPORT void goToItem(Frame& mainFrame, HistoryItem&, FrameLoadType, ShouldTreatAsContinuingLoad);
+    WEBCORE_EXPORT void goToItem(HistoryItem&, FrameLoadType, ShouldTreatAsContinuingLoad);
 
     WEBCORE_EXPORT void setGroupName(const String&);
     WEBCORE_EXPORT const String& groupName() const;
@@ -408,8 +370,6 @@ public:
 
     Chrome& chrome() { return m_chrome.get(); }
     const Chrome& chrome() const { return m_chrome.get(); }
-    CryptoClient& cryptoClient() { return m_cryptoClient.get(); }
-    const CryptoClient& cryptoClient() const { return m_cryptoClient.get(); }
     DragCaretController& dragCaretController() { return m_dragCaretController.get(); }
     const DragCaretController& dragCaretController() const { return m_dragCaretController.get(); }
 #if ENABLE(DRAG_SUPPORT)
@@ -417,7 +377,7 @@ public:
     const DragController& dragController() const { return m_dragController.get(); }
 #endif
     FocusController& focusController() const { return *m_focusController; }
-    WEBCORE_EXPORT CheckedRef<FocusController> checkedFocusController() const;
+    CheckedRef<FocusController> checkedFocusController() const;
 #if ENABLE(CONTEXT_MENUS)
     ContextMenuController& contextMenuController() { return m_contextMenuController.get(); }
     const ContextMenuController& contextMenuController() const { return m_contextMenuController.get(); }
@@ -428,14 +388,12 @@ public:
     PointerLockController& pointerLockController() { return m_pointerLockController.get(); }
 #endif
     WebRTCProvider& webRTCProvider() { return m_webRTCProvider.get(); }
-    RTCController& rtcController() { return m_rtcController.get(); }
+    RTCController& rtcController() { return m_rtcController; }
     WEBCORE_EXPORT void disableICECandidateFiltering();
     WEBCORE_EXPORT void enableICECandidateFiltering();
     bool shouldEnableICECandidateFilteringByDefault() const { return m_shouldEnableICECandidateFilteringByDefault; }
 
-    WEBCORE_EXPORT CheckedRef<ElementTargetingController> checkedElementTargetingController();
-
-    void didChangeMainDocument(Document* newDocument);
+    void didChangeMainDocument();
     void mainFrameDidChangeToNonInitialEmptyDocument();
 
     PerformanceMonitor* performanceMonitor() { return m_performanceMonitor.get(); }
@@ -479,8 +437,6 @@ public:
     WEBCORE_EXPORT uint32_t replaceSelectionWithText(const String& replacementText);
 
     WEBCORE_EXPORT void revealCurrentSelection();
-
-    WEBCORE_EXPORT const URL fragmentDirectiveURLForSelectedText();
 
     WEBCORE_EXPORT std::optional<SimpleRange> rangeOfString(const String&, const std::optional<SimpleRange>& searchRange, FindOptions);
 
@@ -680,7 +636,6 @@ public:
 
 #if ENABLE(WEB_AUTHN)
     AuthenticatorCoordinator& authenticatorCoordinator() { return m_authenticatorCoordinator.get(); }
-    CredentialRequestCoordinator& credentialRequestCoordinator() { return m_credentialRequestCoordinator.get(); }
 #endif
 
 #if ENABLE(APPLICATION_MANIFEST)
@@ -756,15 +711,12 @@ public:
 #if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
     void updatePlayStateForAllAnimations();
     WEBCORE_EXPORT void setImageAnimationEnabled(bool);
+    WEBCORE_EXPORT void setSystemAllowsAnimationControls(bool isAllowed);
     void addIndividuallyPlayingAnimationElement(HTMLImageElement&);
     void removeIndividuallyPlayingAnimationElement(HTMLImageElement&);
 #endif
     bool imageAnimationEnabled() const { return m_imageAnimationEnabled; }
-
-#if ENABLE(ACCESSIBILITY_NON_BLINKING_CURSOR)
-    WEBCORE_EXPORT void setPrefersNonBlinkingCursor(bool);
-    bool prefersNonBlinkingCursor() const { return m_prefersNonBlinkingCursor; };
-#endif
+    bool systemAllowsAnimationControls() const { return m_systemAllowsAnimationControls; }
 
     void userStyleSheetLocationChanged();
     const String& userStyleSheet() const;
@@ -890,7 +842,7 @@ public:
     void setLastSpatialNavigationCandidateCount(unsigned count) { m_lastSpatialNavigationCandidatesCount = count; }
     unsigned lastSpatialNavigationCandidateCount() const { return m_lastSpatialNavigationCandidatesCount; }
 
-    ApplicationCacheStorage* applicationCacheStorage() { return m_applicationCacheStorage.get(); }
+    ApplicationCacheStorage& applicationCacheStorage() { return m_applicationCacheStorage; }
     DatabaseProvider& databaseProvider() { return m_databaseProvider; }
     CacheStorageProvider& cacheStorageProvider() { return m_cacheStorageProvider; }
     SocketProvider& socketProvider() { return m_socketProvider; }
@@ -899,7 +851,7 @@ public:
     Ref<CookieJar> protectedCookieJar() const;
 
     StorageNamespaceProvider& storageNamespaceProvider() { return m_storageNamespaceProvider.get(); }
-    WEBCORE_EXPORT Ref<StorageNamespaceProvider> protectedStorageNamespaceProvider() const;
+    Ref<StorageNamespaceProvider> protectedStorageNamespaceProvider() const;
 
     PluginInfoProvider& pluginInfoProvider();
     Ref<PluginInfoProvider> protectedPluginInfoProvider() const;
@@ -927,7 +879,7 @@ public:
     inline bool isMediaCaptureMuted() const;
     void schedulePlaybackControlsManagerUpdate();
 #if ENABLE(VIDEO)
-    void mediaEngineChanged(HTMLMediaElement&);
+    void playbackControlsMediaEngineChanged();
 #endif
     WEBCORE_EXPORT void setMuted(MediaProducerMutedStateFlags);
 
@@ -1051,14 +1003,12 @@ public:
 #endif
 
     WEBCORE_EXPORT void forEachDocument(const Function<void(Document&)>&) const;
-    void forEachRenderableDocument(const Function<void(Document&)>&) const;
     void forEachMediaElement(const Function<void(HTMLMediaElement&)>&);
     static void forEachDocumentFromMainFrame(const Frame&, const Function<void(Document&)>&);
     void forEachLocalFrame(const Function<void(LocalFrame&)>&);
     void forEachWindowEventLoop(const Function<void(WindowEventLoop&)>&);
 
     bool shouldDisableCorsForRequestTo(const URL&) const;
-    bool shouldAssumeSameSiteForRequestTo(const URL& url) const { return shouldDisableCorsForRequestTo(url); }
     const HashSet<String>& maskedURLSchemes() const { return m_maskedURLSchemes; }
 
     WEBCORE_EXPORT void injectUserStyleSheet(UserStyleSheet&);
@@ -1088,9 +1038,6 @@ public:
     void resetTextRecognitionResult(const HTMLElement&);
     void resetImageAnalysisQueue();
 #endif
-
-    bool hasEverSetVisibilityAdjustment() const { return m_hasEverSetVisibilityAdjustment; }
-    void didSetVisibilityAdjustment() { m_hasEverSetVisibilityAdjustment = true; }
 
     WEBCORE_EXPORT StorageConnection& storageConnection();
 
@@ -1143,65 +1090,9 @@ public:
 
     std::optional<std::pair<uint16_t, uint16_t>> portsForUpgradingInsecureSchemeForTesting() const;
     WEBCORE_EXPORT void setPortsForUpgradingInsecureSchemeForTesting(uint16_t upgradeFromInsecurePort, uint16_t upgradeToSecurePort);
-
-#if PLATFORM(IOS_FAMILY) && ENABLE(WEBXR)
-    WEBCORE_EXPORT bool hasActiveImmersiveSession() const;
-#endif
-
-    void setIsInSwipeAnimation(bool inSwipeAnimation) { m_inSwipeAnimation = inSwipeAnimation; }
-    bool isInSwipeAnimation() const { return m_inSwipeAnimation; }
-
-#if HAVE(SPATIAL_TRACKING_LABEL)
-    WEBCORE_EXPORT void setDefaultSpatialTrackingLabel(const String&);
-    const String& defaultSpatialTrackingLabel() const { return m_defaultSpatialTrackingLabel; }
-#endif
-
-#if ENABLE(GAMEPAD)
-    void gamepadsRecentlyAccessed();
-#if PLATFORM(VISION)
-    WEBCORE_EXPORT void allowGamepadAccess();
-    bool gamepadAccessGranted() const { return m_gamepadAccessGranted; }
-#endif
-#endif
-
-#if ENABLE(WRITING_TOOLS)
-    WEBCORE_EXPORT void willBeginWritingToolsSession(const std::optional<WritingTools::Session>&, CompletionHandler<void(const Vector<WritingTools::Context>&)>&&);
-
-    WEBCORE_EXPORT void didBeginWritingToolsSession(const WritingTools::Session&, const Vector<WritingTools::Context>&);
-
-    WEBCORE_EXPORT void proofreadingSessionDidReceiveSuggestions(const WritingTools::Session&, const Vector<WritingTools::TextSuggestion>&, const WritingTools::Context&, bool finished);
-
-    WEBCORE_EXPORT void proofreadingSessionDidUpdateStateForSuggestion(const WritingTools::Session&, WritingTools::TextSuggestionState, const WritingTools::TextSuggestion&, const WritingTools::Context&);
-
-    WEBCORE_EXPORT void didEndWritingToolsSession(const WritingTools::Session&, bool accepted);
-
-    WEBCORE_EXPORT void compositionSessionDidReceiveTextWithReplacementRange(const WritingTools::Session&, const AttributedString&, const CharacterRange&, const WritingTools::Context&, bool finished);
-
-    WEBCORE_EXPORT void writingToolsSessionDidReceiveAction(const WritingTools::Session&, WritingTools::Action);
-
-    WEBCORE_EXPORT void updateStateForSelectedSuggestionIfNeeded();
-
-    void respondToUnappliedWritingToolsEditing(EditCommandComposition*);
-    void respondToReappliedWritingToolsEditing(EditCommandComposition*);
-
-    WEBCORE_EXPORT std::optional<SimpleRange> contextRangeForActiveWritingToolsSession() const;
-    WEBCORE_EXPORT void showSelectionForActiveWritingToolsSession() const;
-#endif
-
-#if ENABLE(MEDIA_SESSION)
-    bool hasActiveNowPlayingSession() const { return m_hasActiveNowPlayingSession; }
-    void hasActiveNowPlayingSessionChanged();
-    void activeNowPlayingSessionUpdateTimerFired();
-#endif
-
-#if PLATFORM(IOS_FAMILY)
-    bool canShowWhileLocked() const { return m_canShowWhileLocked; }
-#endif
-
 #if PLATFORM(JAVA)
-     explicit Page(PageConfiguration&&);
+        explicit Page(PageConfiguration&&);
 #endif
-
 private:
 #if !PLATFORM(JAVA)
      explicit Page(PageConfiguration&&);
@@ -1230,7 +1121,7 @@ private:
 
     unsigned findMatchesForText(const String&, FindOptions, unsigned maxMatchCount, ShouldHighlightMatches, ShouldMarkMatches);
 
-    std::optional<std::pair<WeakRef<MediaCanStartListener>, WeakRef<Document, WeakPtrImplWithEventTargetData>>> takeAnyMediaCanStartListener();
+    std::optional<std::pair<MediaCanStartListener&, Document&>> takeAnyMediaCanStartListener();
 
 #if ENABLE(VIDEO)
     void playbackControlsManagerUpdateTimerFired();
@@ -1262,14 +1153,6 @@ private:
     void updateElementsWithTextRecognitionResults();
 #endif
 
-#if ENABLE(WEBXR)
-    RefPtr<WebXRSession> activeImmersiveXRSession() const;
-#endif
-
-#if PLATFORM(VISION) && ENABLE(GAMEPAD)
-    void initializeGamepadAccessForPageLoad();
-#endif
-
     std::optional<PageIdentifier> m_identifier;
     UniqueRef<Chrome> m_chrome;
     UniqueRef<DragCaretController> m_dragCaretController;
@@ -1286,11 +1169,9 @@ private:
 #if ENABLE(POINTER_LOCK)
     UniqueRef<PointerLockController> m_pointerLockController;
 #endif
-    UniqueRef<ElementTargetingController> m_elementTargetingController;
     RefPtr<ScrollingCoordinator> m_scrollingCoordinator;
 
     const RefPtr<Settings> m_settings;
-    UniqueRef<CryptoClient> m_cryptoClient;
     UniqueRef<ProgressTracker> m_progress;
 
     UniqueRef<BackForwardController> m_backForwardController;
@@ -1298,7 +1179,6 @@ private:
     UniqueRef<EditorClient> m_editorClient;
     Ref<Frame> m_mainFrame;
     URL m_mainFrameURL;
-    RefPtr<SecurityOrigin> m_mainFrameOrigin;
     String m_mainFrameURLFragment;
 
     RefPtr<PluginData> m_pluginData;
@@ -1316,7 +1196,7 @@ private:
 
     UniqueRef<MediaRecorderProvider> m_mediaRecorderProvider;
     UniqueRef<WebRTCProvider> m_webRTCProvider;
-    Ref<RTCController> m_rtcController;
+    RTCController m_rtcController;
 
     PlatformDisplayID m_displayID { 0 };
     std::optional<FramesPerSecond> m_displayNominalFramesPerSecond;
@@ -1349,7 +1229,6 @@ private:
 
 #if PLATFORM(IOS_FAMILY)
     bool m_enclosedInScrollableAncestorView { false };
-    bool m_canShowWhileLocked { false };
 #endif
 
     bool m_useSystemAppearance { false };
@@ -1383,11 +1262,9 @@ private:
 
     bool m_canStartMedia { true };
     bool m_imageAnimationEnabled { true };
+    bool m_systemAllowsAnimationControls { false };
     // Elements containing animations that are individually playing (potentially overriding the page-wide m_imageAnimationEnabled state).
     WeakHashSet<HTMLImageElement, WeakPtrImplWithEventTargetData> m_individuallyPlayingAnimationElements;
-#if ENABLE(ACCESSIBILITY_NON_BLINKING_CURSOR)
-    bool m_prefersNonBlinkingCursor { false };
-#endif
 
     TimerThrottlingState m_timerThrottlingState { TimerThrottlingState::Disabled };
     MonotonicTime m_timerThrottlingStateLastChangedTime;
@@ -1420,7 +1297,7 @@ private:
     UniqueRef<PageConsoleClient> m_consoleClient;
 
 #if ENABLE(REMOTE_INSPECTOR)
-    Ref<PageDebuggable> m_inspectorDebuggable;
+    UniqueRef<PageDebuggable> m_inspectorDebuggable;
 #endif
 
     RefPtr<IDBClient::IDBConnectionToServer> m_idbConnectionToServer;
@@ -1434,7 +1311,7 @@ private:
 
     Ref<SocketProvider> m_socketProvider;
     Ref<CookieJar> m_cookieJar;
-    RefPtr<ApplicationCacheStorage> m_applicationCacheStorage;
+    Ref<ApplicationCacheStorage> m_applicationCacheStorage;
     Ref<CacheStorageProvider> m_cacheStorageProvider;
     Ref<DatabaseProvider> m_databaseProvider;
     Ref<PluginInfoProvider> m_pluginInfoProvider;
@@ -1448,7 +1325,7 @@ private:
     WeakPtr<ServiceWorkerGlobalScope, WeakPtrImplWithEventTargetData> m_serviceWorkerGlobalScope;
 
 #if ENABLE(RESOURCE_USAGE)
-    RefPtr<ResourceUsageOverlay> m_resourceUsageOverlay;
+    std::unique_ptr<ResourceUsageOverlay> m_resourceUsageOverlay;
 #endif
 
     PAL::SessionID m_sessionID;
@@ -1477,13 +1354,10 @@ private:
     bool m_hasResourceLoadClient { false };
     bool m_delegatesScaling { false };
 
-    bool m_hasEverSetVisibilityAdjustment { false };
 
 #if ENABLE(EDITABLE_REGION)
     bool m_isEditableRegionEnabled { false };
 #endif
-
-    bool m_inSwipeAnimation { false };
 
     Vector<OptionSet<RenderingUpdateStep>, 2> m_renderingUpdateRemainingSteps;
     OptionSet<RenderingUpdateStep> m_unfulfilledRequestedSteps;
@@ -1528,7 +1402,6 @@ private:
 
 #if ENABLE(WEB_AUTHN)
     UniqueRef<AuthenticatorCoordinator> m_authenticatorCoordinator;
-    UniqueRef<CredentialRequestCoordinator> m_credentialRequestCoordinator;
 #endif
 
 #if ENABLE(APPLICATION_MANIFEST)
@@ -1605,28 +1478,7 @@ private:
 #if HAVE(APP_ACCENT_COLORS) && PLATFORM(MAC)
     bool m_appUsesCustomAccentColor { false };
 #endif
-
-#if HAVE(SPATIAL_TRACKING_LABEL)
-    String m_defaultSpatialTrackingLabel;
-#endif
-
-#if ENABLE(GAMEPAD)
-    MonotonicTime m_lastAccessNotificationTime;
-#if PLATFORM(VISION)
-    bool m_gamepadAccessGranted { true };
-    ShouldRequireExplicitConsentForGamepadAccess m_gamepadAccessRequiresExplicitConsent { ShouldRequireExplicitConsentForGamepadAccess::No };
-#endif
-#endif
-
-#if ENABLE(WRITING_TOOLS)
-    UniqueRef<WritingToolsController> m_writingToolsController;
-#endif
-
-#if ENABLE(MEDIA_SESSION)
-    bool m_hasActiveNowPlayingSession { false };
-    Timer m_activeNowPlayingSessionUpdateTimer;
-#endif
-}; // class Page
+};
 
 inline Page* Frame::page() const
 {

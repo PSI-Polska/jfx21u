@@ -78,7 +78,7 @@ FillLayer::FillLayer(FillLayerType type)
     , m_backgroundYOriginSet(false)
     , m_backgroundXOrigin(static_cast<unsigned>(Edge::Left))
     , m_backgroundYOrigin(static_cast<unsigned>(Edge::Top))
-    , m_compositeSet(false)
+    , m_compositeSet(type == FillLayerType::Mask)
     , m_blendModeSet(false)
     , m_maskModeSet(false)
     , m_type(static_cast<unsigned>(type))
@@ -287,17 +287,6 @@ void FillLayer::fillUnsetProperties()
                 pattern = this;
         }
     }
-
-    for (curr = this; curr && curr->isMaskModeSet(); curr = curr->next()) { }
-    if (curr && curr != this) {
-        // We need to fill in the remaining values with the pattern specified.
-        for (FillLayer* pattern = this; curr; curr = curr->next()) {
-            curr->m_maskMode = pattern->m_maskMode;
-            pattern = pattern->next();
-            if (pattern == curr || !pattern)
-                pattern = this;
-        }
-    }
 }
 
 void FillLayer::cullEmptyLayers()
@@ -312,12 +301,12 @@ void FillLayer::cullEmptyLayers()
 
 static inline FillBox clipMax(FillBox clipA, FillBox clipB)
 {
-    if (clipA == FillBox::BorderBox || clipB == FillBox::BorderBox)
-        return FillBox::BorderBox;
-    if (clipA == FillBox::PaddingBox || clipB == FillBox::PaddingBox)
-        return FillBox::PaddingBox;
-    if (clipA == FillBox::ContentBox || clipB == FillBox::ContentBox)
-        return FillBox::ContentBox;
+    if (clipA == FillBox::Border || clipB == FillBox::Border)
+        return FillBox::Border;
+    if (clipA == FillBox::Padding || clipB == FillBox::Padding)
+        return FillBox::Padding;
+    if (clipA == FillBox::Content || clipB == FillBox::Content)
+        return FillBox::Content;
     return FillBox::NoClip;
 }
 

@@ -85,7 +85,7 @@ public:
 
     // For one-shot tasks callbacks.
     unsigned prepareForAsyncTask(JSValueRef taskCallback, CallbackType);
-    void asyncTaskComplete(unsigned taskCallbackID, std::initializer_list<JSValueRef> arguments = { });
+    void asyncTaskComplete(unsigned taskCallbackID);
 
     // For persistent callbacks.
     unsigned registerCallback(JSValueRef taskCallback, CallbackType);

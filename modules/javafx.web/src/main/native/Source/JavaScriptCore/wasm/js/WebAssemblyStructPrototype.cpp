@@ -32,9 +32,16 @@
 #include "JSCInlines.h"
 #include "JSWebAssemblyStruct.h"
 
+#include "WebAssemblyStructPrototype.lut.h"
+
 namespace JSC {
 
-const ClassInfo WebAssemblyStructPrototype::s_info = { "WebAssembly.Struct"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(WebAssemblyStructPrototype) };
+const ClassInfo WebAssemblyStructPrototype::s_info = { "WebAssembly.Struct"_s, &Base::s_info, &prototypeTableWebAssemblyStruct, nullptr, CREATE_METHOD_TABLE(WebAssemblyStructPrototype) };
+
+/* Source for WebAssemblyStructPrototype.lut.h
+ @begin prototypeTableWebAssemblyStruct
+ @end
+ */
 
 WebAssemblyStructPrototype* WebAssemblyStructPrototype::create(VM& vm, JSGlobalObject*, Structure* structure)
 {

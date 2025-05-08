@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,32 +24,17 @@
 
 #pragma once
 
-#include "EventTarget.h"
 #include "SecurityOrigin.h"
-#include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
-#include <wtf/WeakHashSet.h>
-
-namespace WebCore {
-class RTCController;
-}
 
 namespace WebCore {
 
 class Document;
 class RTCPeerConnection;
-class WeakPtrImplWithEventTargetData;
 
-#if USE(LIBWEBRTC)
-class LibWebRTCLogSink;
-#endif
-
-#if USE(GSTREAMER_WEBRTC)
-class GStreamerWebRTCLogSink;
-#endif
-class RTCController : public RefCounted<RTCController>, public CanMakeWeakPtr<RTCController> {
+class RTCController {
 public:
-    static Ref<RTCController> create() { return adoptRef(*new RTCController); }
+    RTCController() = default;
 
 #if ENABLE(WEB_RTC)
     ~RTCController();
@@ -63,37 +48,18 @@ public:
     WEBCORE_EXPORT void disableICECandidateFilteringForDocument(Document&);
     WEBCORE_EXPORT void enableICECandidateFiltering();
 
-    using LogCallback = Function<void(String&& logType, String&& logMessage, String&& logLevel, RefPtr<RTCPeerConnection>&&)>;
-    void startGatheringLogs(Document&, LogCallback&&);
-    void stopGatheringLogs();
-#endif
-
 private:
-    RTCController();
 
-#if ENABLE(WEB_RTC)
-    void startGatheringStatLogs(RTCPeerConnection&);
     bool shouldDisableICECandidateFiltering(Document&);
-
-    void stopLoggingWebRTCLogs();
 
     struct PeerConnectionOrigin {
         Ref<SecurityOrigin> topOrigin;
         Ref<SecurityOrigin> clientOrigin;
     };
     Vector<PeerConnectionOrigin> m_filteringDisabledOrigins;
-    WeakHashSet<RTCPeerConnection, WeakPtrImplWithEventTargetData> m_peerConnections;
+    Vector<std::reference_wrapper<RTCPeerConnection>> m_peerConnections;
     bool m_shouldFilterICECandidates { true };
-
-    LogCallback m_callback;
-    WeakPtr<Document, WeakPtrImplWithEventTargetData> m_gatheringLogsDocument;
-#if USE(LIBWEBRTC)
-    std::unique_ptr<LibWebRTCLogSink> m_logSink;
 #endif
-#if USE(GSTREAMER_WEBRTC)
-    std::unique_ptr<GStreamerWebRTCLogSink> m_logSink;
-#endif
-#endif // ENABLE(WEB_RTC)
 };
 
 } // namespace WebCore

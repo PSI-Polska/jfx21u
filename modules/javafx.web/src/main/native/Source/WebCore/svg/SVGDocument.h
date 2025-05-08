@@ -28,8 +28,7 @@ namespace WebCore {
 class SVGSVGElement;
 
 class SVGDocument final : public XMLDocument {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGDocument);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGDocument);
+    WTF_MAKE_ISO_ALLOCATED(SVGDocument);
 public:
     static Ref<SVGDocument> create(LocalFrame*, const Settings&, const URL&);
 
@@ -47,7 +46,7 @@ private:
 
 inline Ref<SVGDocument> SVGDocument::create(LocalFrame* frame, const Settings& settings, const URL& url)
 {
-    Ref document = adoptRef(*new SVGDocument(frame, settings, url));
+    auto document = adoptRef(*new SVGDocument(frame, settings, url));
     document->addToContextsMap();
     return document;
 }

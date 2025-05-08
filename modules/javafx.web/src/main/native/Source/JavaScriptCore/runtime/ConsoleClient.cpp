@@ -179,7 +179,7 @@ static void appendMessagePrefix(StringBuilder& builder, MessageSource source, Me
         break;
     }
 
-    builder.append("CONSOLE"_s);
+    builder.append("CONSOLE");
     if (!sourceString.isEmpty())
         builder.append(' ', sourceString);
     if (!typeString.isEmpty())
@@ -194,7 +194,7 @@ void ConsoleClient::printConsoleMessage(MessageSource source, MessageType type, 
 
     if (!url.isEmpty()) {
         appendURLAndPosition(builder, url, lineNumber, columnNumber);
-        builder.append(": "_s);
+        builder.append(": ");
     }
 
     appendMessagePrefix(builder, source, type, level);
@@ -214,7 +214,7 @@ void ConsoleClient::printConsoleMessageWithArguments(MessageSource source, Messa
 
     if (!lastCaller.sourceURL().isEmpty()) {
         appendURLAndPosition(builder, lastCaller.sourceURL(), lastCaller.lineNumber(), lastCaller.columnNumber());
-        builder.append(": "_s);
+        builder.append(": ");
     }
 
     appendMessagePrefix(builder, source, type, level);
@@ -239,7 +239,7 @@ void ConsoleClient::printConsoleMessageWithArguments(MessageSource source, Messa
                 functionName = "(unknown)"_s;
 
             StringBuilder callFrameBuilder;
-            callFrameBuilder.append(i, ": "_s, functionName, '(');
+            callFrameBuilder.append(i, ": ", functionName, '(');
             appendURLAndPosition(callFrameBuilder, callFrame.sourceURL(), callFrame.lineNumber(), callFrame.columnNumber());
             callFrameBuilder.append(')');
 

@@ -41,7 +41,7 @@ class ValueRepReductionPhase : public Phase {
 
 public:
     ValueRepReductionPhase(Graph& graph)
-        : Phase(graph, "ValueRep reduction"_s)
+        : Phase(graph, "ValueRep reduction")
         , m_insertionSet(graph)
     {
     }

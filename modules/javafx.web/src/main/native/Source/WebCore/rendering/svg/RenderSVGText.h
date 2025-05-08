@@ -33,14 +33,12 @@ class SVGTextElement;
 class RenderSVGInlineText;
 
 class RenderSVGText final : public RenderSVGBlock {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGText);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGText);
+    WTF_MAKE_ISO_ALLOCATED(RenderSVGText);
 public:
     RenderSVGText(SVGTextElement&, RenderStyle&&);
     virtual ~RenderSVGText();
 
     SVGTextElement& textElement() const;
-    Ref<SVGTextElement> protectedTextElement() const;
 
     bool isChildAllowed(const RenderObject&, const RenderStyle&) const override;
 
@@ -59,14 +57,16 @@ public:
     void subtreeChildWasAdded(RenderObject*);
     void subtreeChildWillBeRemoved(RenderObject*, Vector<SVGTextLayoutAttributes*, 2>& affectedAttributes);
     void subtreeChildWasRemoved(const Vector<SVGTextLayoutAttributes*, 2>& affectedAttributes);
+    void willLayout();
     void subtreeTextDidChange(RenderSVGInlineText*);
 
     FloatRect objectBoundingBox() const final { return m_objectBoundingBox; }
     FloatRect strokeBoundingBox() const final;
     FloatRect repaintRectInLocalCoordinates(RepaintRectCalculation = RepaintRectCalculation::Fast) const final;
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
     LayoutRect visualOverflowRectEquivalent() const { return SVGBoundingBoxComputation::computeVisualOverflowRect(*this); }
-
+#endif
     void updatePositionAndOverflow(const FloatRect&);
 
 private:
@@ -75,15 +75,19 @@ private:
     ASCIILiteral renderName() const override { return "RenderSVGText"_s; }
 
     void paint(PaintInfo&, const LayoutPoint&) override;
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
     bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) override;
 
     void applyTransform(TransformationMatrix&, const RenderStyle&, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption>) const final;
-    VisiblePosition positionForPoint(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*) override;
+#endif
+    VisiblePosition positionForPoint(const LayoutPoint&, const RenderFragmentContainer*) override;
 
     bool requiresLayer() const override
     {
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
         if (document().settings().layerBasedSVGEngineEnabled())
             return true;
+#endif
         return false;
     }
 

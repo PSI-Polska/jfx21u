@@ -26,8 +26,6 @@
 #include "config.h"
 #include "VisualViewport.h"
 
-#include "Chrome.h"
-#include "ChromeClient.h"
 #include "ContextDestructionObserver.h"
 #include "Document.h"
 #include "Event.h"
@@ -36,26 +34,28 @@
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
 #include "Page.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(VisualViewport);
+WTF_MAKE_ISO_ALLOCATED_IMPL(VisualViewport);
 
 VisualViewport::VisualViewport(LocalDOMWindow& window)
     : LocalDOMWindowProperty(&window)
 {
 }
 
-enum EventTargetInterfaceType VisualViewport::eventTargetInterface() const
+EventTargetInterface VisualViewport::eventTargetInterface() const
 {
-    return EventTargetInterfaceType::VisualViewport;
+    return VisualViewportEventTargetInterfaceType;
 }
 
 ScriptExecutionContext* VisualViewport::scriptExecutionContext() const
 {
-    RefPtr window = this->window();
-    return window ? window->document() : nullptr;
+    auto window = this->window();
+    if (!window)
+        return nullptr;
+    return static_cast<ContextDestructionObserver*>(window)->scriptExecutionContext();
 }
 
 bool VisualViewport::addEventListener(const AtomString& eventType, Ref<EventListener>&& listener, const AddEventListenerOptions& options)
@@ -163,8 +163,8 @@ void VisualViewport::update()
             width = visualViewportRect.width() / pageZoomFactor;
             height = visualViewportRect.height() / pageZoomFactor;
         }
-        if (RefPtr page = frame->page())
-            scale = page->pageScaleFactor() / page->chrome().client().baseViewportLayoutSizeScaleFactor();
+        if (auto* page = frame->page())
+            scale = page->pageScaleFactor();
     }
 
     RefPtr<Document> document = frame ? frame->document() : nullptr;

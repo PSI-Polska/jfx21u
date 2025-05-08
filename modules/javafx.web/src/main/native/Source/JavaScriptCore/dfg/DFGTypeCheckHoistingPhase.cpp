@@ -80,7 +80,7 @@ struct CheckData {
 class TypeCheckHoistingPhase : public Phase {
 public:
     TypeCheckHoistingPhase(Graph& graph)
-        : Phase(graph, "structure check hoisting"_s)
+        : Phase(graph, "structure check hoisting")
     {
     }
 
@@ -281,7 +281,6 @@ private:
                 case PutByValMegamorphic:
                 case EnumeratorPutByVal:
                 case GetArrayLength:
-                case GetUndetachedTypeArrayLength:
                 case GetTypedArrayLengthAsInt52:
                 case CheckArray:
                 case CheckDetached:
@@ -367,7 +366,6 @@ private:
                 case PutByValMegamorphic:
                 case EnumeratorPutByVal:
                 case GetArrayLength:
-                case GetUndetachedTypeArrayLength:
                 case GetTypedArrayLengthAsInt52:
                 case GetIndexedPropertyStorage:
                 case ResolveRope:

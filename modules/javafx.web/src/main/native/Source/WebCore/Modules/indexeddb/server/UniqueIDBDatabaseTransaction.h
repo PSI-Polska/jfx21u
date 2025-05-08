@@ -26,7 +26,6 @@
 #pragma once
 
 #include "IDBError.h"
-#include "IDBObjectStoreIdentifier.h"
 #include "IDBTransactionInfo.h"
 #include <wtf/Deque.h>
 #include <wtf/Ref.h>
@@ -69,16 +68,15 @@ public:
 
     WEBCORE_EXPORT void abort();
     WEBCORE_EXPORT void abortWithoutCallback();
-    bool shouldAbortDueToUnhandledRequestError(uint64_t handledRequestResultsCount) const;
-    WEBCORE_EXPORT void commit(uint64_t handledRequestResultsCount);
+    WEBCORE_EXPORT void commit(uint64_t pendingRequestCount);
 
     WEBCORE_EXPORT void createObjectStore(const IDBRequestData&, const IDBObjectStoreInfo&);
     WEBCORE_EXPORT void deleteObjectStore(const IDBRequestData&, const String& objectStoreName);
-    WEBCORE_EXPORT void renameObjectStore(const IDBRequestData&, IDBObjectStoreIdentifier, const String& newName);
-    WEBCORE_EXPORT void clearObjectStore(const IDBRequestData&, IDBObjectStoreIdentifier);
+    WEBCORE_EXPORT void renameObjectStore(const IDBRequestData&, uint64_t objectStoreIdentifier, const String& newName);
+    WEBCORE_EXPORT void clearObjectStore(const IDBRequestData&, uint64_t objectStoreIdentifier);
     WEBCORE_EXPORT void createIndex(const IDBRequestData&, const IDBIndexInfo&);
-    WEBCORE_EXPORT void deleteIndex(const IDBRequestData&, IDBObjectStoreIdentifier, const String& indexName);
-    WEBCORE_EXPORT void renameIndex(const IDBRequestData&, IDBObjectStoreIdentifier, uint64_t indexIdentifier, const String& newName);
+    WEBCORE_EXPORT void deleteIndex(const IDBRequestData&, uint64_t objectStoreIdentifier, const String& indexName);
+    WEBCORE_EXPORT void renameIndex(const IDBRequestData&, uint64_t objectStoreIdentifier, uint64_t indexIdentifier, const String& newName);
     WEBCORE_EXPORT void putOrAdd(const IDBRequestData&, const IDBKeyData&, const IDBValue&, IndexedDB::ObjectStoreOverwriteMode);
     WEBCORE_EXPORT void getRecord(const IDBRequestData&, const IDBGetRecordData&);
     WEBCORE_EXPORT void getAllRecords(const IDBRequestData&, const IDBGetAllRecordsData&);
@@ -89,7 +87,7 @@ public:
 
     void didActivateInBackingStore(const IDBError&);
 
-    const Vector<IDBObjectStoreIdentifier>& objectStoreIdentifiers();
+    const Vector<uint64_t>& objectStoreIdentifiers();
 
     void setSuspensionAbortResult(const IDBError& error) { m_suspensionAbortResult = { error }; }
     const std::optional<IDBError>& suspensionAbortResult() const { return m_suspensionAbortResult; }
@@ -102,10 +100,10 @@ private:
 
     std::unique_ptr<IDBDatabaseInfo> m_originalDatabaseInfo;
 
-    Vector<IDBObjectStoreIdentifier> m_objectStoreIdentifiers;
+    Vector<uint64_t> m_objectStoreIdentifiers;
 
     std::optional<IDBError> m_suspensionAbortResult;
-    Vector<IDBError> m_requestResults;
+    Deque<IDBError> m_requestResults;
 };
 
 } // namespace IDBServer

@@ -67,7 +67,7 @@ String CSSPropertyRule::initialValue() const
     if (!m_propertyRule->descriptor().initialValue)
         return nullString();
 
-    return m_propertyRule->descriptor().initialValue->serialize();
+    return m_propertyRule->descriptor().initialValue->tokenRange().serialize();
 }
 
 String CSSPropertyRule::cssText() const
@@ -76,23 +76,23 @@ String CSSPropertyRule::cssText() const
 
     auto& descriptor = m_propertyRule->descriptor();
 
-    builder.append("@property "_s);
+    builder.append("@property ");
     serializeIdentifier(descriptor.name, builder);
-    builder.append(" { "_s);
+    builder.append(" { ");
 
     if (!descriptor.syntax.isNull()) {
-        builder.append("syntax: "_s);
+        builder.append("syntax: ");
         serializeString(syntax(), builder);
-        builder.append("; "_s);
+        builder.append("; ");
     }
 
     if (descriptor.inherits)
-        builder.append("inherits: "_s, *descriptor.inherits ? "true"_s : "false"_s, "; "_s);
+        builder.append("inherits: ", *descriptor.inherits ? "true" : "false", "; ");
 
     if (descriptor.initialValue)
-        builder.append("initial-value: "_s, initialValue(), "; "_s);
+        builder.append("initial-value: ", initialValue(), "; ");
 
-    builder.append('}');
+    builder.append("}");
 
     return builder.toString();
 }

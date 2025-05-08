@@ -59,7 +59,7 @@ public:
 
     RefPtr<NativeImage> nativeImage(const DestinationColorSpace& = DestinationColorSpace::SRGB()) override;
 
-    RefPtr<NativeImage> currentNativeImage() override;       //revisit
+    RefPtr<NativeImage> nativeImageForCurrentFrame() override;
 
 private:
     BufferImage(PlatformImagePtr);

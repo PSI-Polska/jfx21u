@@ -26,6 +26,8 @@
 #include "config.h"
 #include "JSPaintRenderingContext2D.h"
 
+#if ENABLE(CSS_PAINTING_API)
+
 #include "WebCoreOpaqueRootInlines.h"
 #include <JavaScriptCore/AbstractSlotVisitorInlines.h>
 #include <JavaScriptCore/JSCJSValueInlines.h>
@@ -38,10 +40,10 @@ inline WebCoreOpaqueRoot root(CustomPaintCanvas* canvas)
     return WebCoreOpaqueRoot { canvas };
 }
 
-bool JSPaintRenderingContext2DOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, AbstractSlotVisitor& visitor, ASCIILiteral* reason)
+bool JSPaintRenderingContext2DOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, AbstractSlotVisitor& visitor, const char** reason)
 {
     if (UNLIKELY(reason))
-        *reason = "Canvas is opaque root"_s;
+        *reason = "Canvas is opaque root";
 
     auto* jsPaintRenderingContext = jsCast<JSPaintRenderingContext2D*>(handle.slot()->asCell());
     return containsWebCoreOpaqueRoot(visitor, jsPaintRenderingContext->wrapped().canvas());
@@ -56,3 +58,5 @@ void JSPaintRenderingContext2D::visitAdditionalChildren(Visitor& visitor)
 DEFINE_VISIT_ADDITIONAL_CHILDREN(JSPaintRenderingContext2D);
 
 } // namespace WebCore
+#endif
+

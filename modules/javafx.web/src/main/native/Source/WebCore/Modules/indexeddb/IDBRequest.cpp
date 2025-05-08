@@ -47,13 +47,13 @@
 #include "WebCoreOpaqueRoot.h"
 #include <JavaScriptCore/StrongInlines.h>
 #include <variant>
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/Scope.h>
-#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 using namespace JSC;
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(IDBRequest);
+WTF_MAKE_ISO_ALLOCATED_IMPL(IDBRequest);
 
 Ref<IDBRequest> IDBRequest::create(ScriptExecutionContext& context, IDBObjectStore& objectStore, IDBTransaction& transaction)
 {
@@ -202,17 +202,17 @@ RefPtr<WebCore::IDBTransaction> IDBRequest::transaction() const
     return m_shouldExposeTransactionToDOM ? m_transaction : nullptr;
 }
 
-std::optional<IDBObjectStoreIdentifier> IDBRequest::sourceObjectStoreIdentifier() const
+uint64_t IDBRequest::sourceObjectStoreIdentifier() const
 {
     ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
     if (!m_source)
-        return std::nullopt;
+        return 0;
 
     return WTF::switchOn(m_source.value(),
-        [] (const RefPtr<IDBObjectStore>& objectStore) -> std::optional<IDBObjectStoreIdentifier> { return objectStore->info().identifier(); },
-        [] (const RefPtr<IDBIndex>& index) -> std::optional<IDBObjectStoreIdentifier> { return index->info().objectStoreIdentifier(); },
-        [] (const RefPtr<IDBCursor>&) -> std::optional<IDBObjectStoreIdentifier> { return std::nullopt; }
+        [] (const RefPtr<IDBObjectStore>& objectStore) -> uint64_t { return objectStore->info().identifier(); },
+        [] (const RefPtr<IDBIndex>& index) -> uint64_t { return index->info().objectStoreIdentifier(); },
+        [] (const RefPtr<IDBCursor>&) -> uint64_t { return 0; }
     );
 }
 
@@ -246,11 +246,18 @@ IndexedDB::IndexRecordType IDBRequest::requestedIndexRecordType() const
     return m_requestedIndexRecordType;
 }
 
-enum EventTargetInterfaceType IDBRequest::eventTargetInterface() const
+EventTargetInterface IDBRequest::eventTargetInterface() const
 {
     ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
-    return EventTargetInterfaceType::IDBRequest;
+    return IDBRequestEventTargetInterfaceType;
+}
+
+const char* IDBRequest::activeDOMObjectName() const
+{
+    ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
+
+    return "IDBRequest";
 }
 
 bool IDBRequest::virtualHasPendingActivity() const

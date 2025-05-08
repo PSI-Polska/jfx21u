@@ -47,7 +47,6 @@ public:
 
     NodeKind kind() const final;
     Identifier& name() { return m_name; }
-    Identifier& originalName() { return m_originalName; }
     Expression& type() { return m_type; }
     Attribute::List& attributes() { return m_attributes; }
 
@@ -66,13 +65,11 @@ private:
     StructureMember(SourceSpan span, Identifier&& name, Expression::Ref&& type, Attribute::List&& attributes)
         : Node(span)
         , m_name(WTFMove(name))
-        , m_originalName(m_name)
         , m_attributes(WTFMove(attributes))
         , m_type(WTFMove(type))
     { }
 
     Identifier m_name;
-    Identifier m_originalName;
     Attribute::List m_attributes;
     Expression::Ref m_type;
 

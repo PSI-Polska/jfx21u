@@ -32,8 +32,7 @@ namespace WTF {
 
 RetainPtr<NSString> ASCIILiteral::createNSString() const
 {
-    auto span = span8();
-    return adoptNS([[NSString alloc] initWithBytesNoCopy:const_cast<LChar*>(span.data()) length:span.size() encoding:NSISOLatin1StringEncoding freeWhenDone:NO]);
+    return adoptNS([[NSString alloc] initWithBytesNoCopy:const_cast<LChar*>(characters8()) length:length() encoding:NSISOLatin1StringEncoding freeWhenDone:NO]);
 }
 
 } // namespace WTF

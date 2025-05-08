@@ -35,7 +35,7 @@ class FinalizationRegistryConstructor final : public InternalFunction {
 public:
     using Base = InternalFunction;
 
-    static FinalizationRegistryConstructor* create(VM& vm, Structure* structure, FinalizationRegistryPrototype* prototype)
+    static FinalizationRegistryConstructor* create(VM& vm, Structure* structure, FinalizationRegistryPrototype* prototype, GetterSetter*)
     {
         FinalizationRegistryConstructor* constructor = new (NotNull, allocateCell<FinalizationRegistryConstructor>(vm)) FinalizationRegistryConstructor(vm, structure);
         constructor->finishCreation(vm, prototype);

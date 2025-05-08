@@ -60,8 +60,7 @@ enum class SelectionRenderingBehavior : bool;
 #endif
 
 class HTMLElement : public StyledElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLElement);
+    WTF_MAKE_ISO_ALLOCATED(HTMLElement);
 public:
     static Ref<HTMLElement> create(const QualifiedName& tagName, Document&);
 
@@ -85,9 +84,6 @@ public:
     WEBCORE_EXPORT bool spellcheck() const;
     WEBCORE_EXPORT void setSpellcheck(bool);
 
-    WEBCORE_EXPORT bool writingsuggestions() const;
-    WEBCORE_EXPORT void setWritingsuggestions(bool);
-
     WEBCORE_EXPORT bool translate() const;
     WEBCORE_EXPORT void setTranslate(bool);
 
@@ -97,8 +93,14 @@ public:
 
     String accessKeyLabel() const;
 
+    bool rendererIsEverNeeded() final;
+
     WEBCORE_EXPORT const AtomString& dir() const;
     WEBCORE_EXPORT void setDir(const AtomString&);
+
+    bool hasDirectionAuto() const;
+
+    std::optional<TextDirection> directionalityIfDirIsAuto() const;
 
     virtual bool isTextControlInnerTextElement() const { return false; }
     virtual bool isSearchFieldResultsButtonElement() const { return false; }
@@ -157,8 +159,7 @@ public:
     void setPopover(const AtomString& value) { setAttributeWithoutSynchronization(HTMLNames::popoverAttr, value); };
     void popoverAttributeChanged(const AtomString& value);
 
-    bool isValidCommandType(const CommandType) override;
-    bool handleCommandInternal(const HTMLFormControlElement& invoker, const CommandType&) override;
+    virtual void handleInvokeInternal(const AtomString&) { }
 
 #if PLATFORM(IOS_FAMILY)
     static SelectionRenderingBehavior selectionRenderingBehavior(const Node*);
@@ -191,6 +192,10 @@ protected:
     void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) override;
     unsigned parseBorderWidthAttribute(const AtomString&) const;
 
+    void childrenChanged(const ChildChange&) override;
+    void updateTextDirectionalityAfterInputTypeChange();
+    void updateEffectiveDirectionalityOfDirAuto();
+
     virtual void effectiveSpellcheckAttributeChanged(bool);
 
     using EventHandlerNameMap = HashMap<AtomString, AtomString>;
@@ -200,6 +205,17 @@ private:
     String nodeName() const final;
 
     void mapLanguageAttributeToLocale(const AtomString&, MutableStyleProperties&);
+
+    void dirAttributeChanged(const AtomString&);
+    void updateEffectiveDirectionality(std::optional<TextDirection>);
+    void adjustDirectionalityIfNeededAfterChildAttributeChanged(Element* child);
+    void adjustDirectionalityIfNeededAfterChildrenChanged(Element* beforeChange, ChildChange::Type);
+
+    struct TextDirectionWithStrongDirectionalityNode {
+        TextDirection direction;
+        RefPtr<Node> strongDirectionalityNode;
+    };
+    TextDirectionWithStrongDirectionalityNode computeDirectionalityFromText() const;
 
     enum class AllowPercentage : bool { No, Yes };
     enum class UseCSSPXAsUnitType : bool { No, Yes };

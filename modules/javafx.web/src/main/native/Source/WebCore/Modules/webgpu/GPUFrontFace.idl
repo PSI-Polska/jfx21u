@@ -27,7 +27,8 @@
 
 [
     EnabledBySetting=WebGPUEnabled
-] enum GPUFrontFace {
+]
+enum GPUFrontFace {
     "ccw",
     "cw"
 };

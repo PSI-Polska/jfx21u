@@ -26,20 +26,13 @@
 
 #if ENABLE(POINTER_LOCK)
 
-#include "ExceptionCode.h"
-#include "PointerLockOptions.h"
-
-#include <optional>
-#include <wtf/Ref.h>
 #include <wtf/RefPtr.h>
-#include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/AtomString.h>
 
 namespace WebCore {
 
 class Element;
-class DeferredPromise;
 class Document;
 class Page;
 class PlatformMouseEvent;
@@ -52,8 +45,7 @@ class PointerLockController {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit PointerLockController(Page&);
-    ~PointerLockController();
-    void requestPointerLock(Element* target, std::optional<PointerLockOptions>&& = std::nullopt, RefPtr<DeferredPromise> = nullptr);
+    void requestPointerLock(Element* target);
 
     void requestPointerUnlock();
     void requestPointerUnlockAndForceCursorVisible();
@@ -69,23 +61,17 @@ public:
     void dispatchLockedMouseEvent(const PlatformMouseEvent&, const AtomString& eventType);
     void dispatchLockedWheelEvent(const PlatformWheelEvent&);
 
-    static bool supportsUnadjustedMovement();
-
 private:
     void clearElement();
     void enqueueEvent(const AtomString& type, Element*);
     void enqueueEvent(const AtomString& type, Document*);
-    void resolvePromises();
-    void rejectPromises(ExceptionCode, const String&);
     void elementWasRemovedInternal();
 
     Page& m_page;
     bool m_lockPending { false };
     bool m_unlockPending { false };
     bool m_forceCursorVisibleUponUnlock { false };
-    std::optional<PointerLockOptions> m_options;
     RefPtr<Element> m_element;
-    Vector<Ref<DeferredPromise>> m_promises;
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_documentOfRemovedElementWhileWaitingForUnlock;
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_documentAllowedToRelockWithoutUserGesture;
 };

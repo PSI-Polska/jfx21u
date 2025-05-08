@@ -34,15 +34,12 @@
 #include <wtf/SharedTask.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/Vector.h>
-#include <wtf/text/MakeString.h>
 
 namespace JSC {
 
 class CallLinkInfo;
 
 namespace Wasm {
-
-enum class BindingFailure;
 
 class EntryPlan : public Plan, public StreamingParserClient {
 public:
@@ -76,12 +73,6 @@ public:
         return WTFMove(m_unlinkedWasmToWasmCalls);
     }
 
-    Vector<MacroAssemblerCodeRef<WasmEntryPtrTag>> takeWasmToJSExitStubs()
-    {
-        RELEASE_ASSERT(!failed() && !hasWork());
-        return WTFMove(m_wasmToJSExitStubs);
-    }
-
     enum class State : uint8_t {
         Initial,
         Validated,
@@ -92,8 +83,6 @@ public:
 
     bool multiThreaded() const override { return m_state >= State::Prepared; }
 
-    bool completeSyncIfPossible();
-
 private:
     class ThreadCountHolder;
     friend class ThreadCountHolder;
@@ -102,7 +91,7 @@ protected:
     // For some reason friendship doesn't extend to parent classes...
     using Base::m_lock;
 
-    bool parseAndValidateModule(std::span<const uint8_t>);
+    bool parseAndValidateModule(const uint8_t*, size_t);
 
     const char* stateString(State);
     void moveToState(State);
@@ -114,7 +103,7 @@ protected:
     virtual void didCompleteCompilation() WTF_REQUIRES_LOCK(m_lock) = 0;
 
     template<typename T>
-    bool tryReserveCapacity(Vector<T>& vector, size_t size, ASCIILiteral what)
+    bool tryReserveCapacity(Vector<T>& vector, size_t size, const char* what)
     {
         if (UNLIKELY(!vector.tryReserveCapacity(size))) {
             Locker locker { m_lock };
@@ -124,22 +113,14 @@ protected:
         return true;
     }
 
-    bool generateWasmToJSStubs();
-    bool generateWasmToWasmStubs();
-
-    void generateStubsIfNecessary() WTF_REQUIRES_LOCK(m_lock);
-
     Vector<uint8_t> m_source;
     Vector<MacroAssemblerCodeRef<WasmEntryPtrTag>> m_wasmToWasmExitStubs;
-    Vector<MacroAssemblerCodeRef<WasmEntryPtrTag>> m_wasmToJSExitStubs;
     HashSet<uint32_t, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_exportedFunctionIndices;
 
     Vector<Vector<UnlinkedWasmToWasmCall>> m_unlinkedWasmToWasmCalls;
     StreamingParser m_streamingParser;
     State m_state;
 
-    bool m_areWasmToWasmStubsCompiled { false };
-    bool m_areWasmToJSStubsCompiled { false };
     const CompilerMode m_compilerMode;
     uint8_t m_numberOfActiveThreads { 0 };
     uint32_t m_currentIndex { 0 };

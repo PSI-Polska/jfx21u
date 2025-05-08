@@ -93,28 +93,28 @@ std::optional<AuxiliaryProcessType> processType()
     return auxiliaryProcessType();
 }
 
-ASCIILiteral processTypeDescription(std::optional<AuxiliaryProcessType> type)
+const char* processTypeDescription(std::optional<AuxiliaryProcessType> type)
 {
     if (!type)
-        return "UI"_s;
+        return "UI";
 
     switch (*type) {
     case AuxiliaryProcessType::WebContent:
-        return "Web"_s;
+        return "Web";
     case AuxiliaryProcessType::Network:
-        return "Network"_s;
+        return "Network";
     case AuxiliaryProcessType::Plugin:
-        return "Plugin"_s;
+        return "Plugin";
 #if ENABLE(GPU_PROCESS)
     case AuxiliaryProcessType::GPU:
-        return "GPU"_s;
+        return "GPU";
 #endif
 #if ENABLE(MODEL_PROCESS)
     case AuxiliaryProcessType::Model:
-        return "Model"_s;
+        return "Model";
 #endif
     }
-    return "Unknown"_s;
+    return "Unknown";
 }
 
 } // namespace WebCore

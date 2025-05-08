@@ -217,12 +217,16 @@ bool GIFImageDecoder::haveDecodedRow(unsigned frameIndex, const Vector<unsigned 
         return true;
 
     // Get the colormap.
-    std::span<const uint8_t> colorMap;
-    if (frameContext->isLocalColormapDefined)
+    const unsigned char* colorMap;
+    unsigned colorMapSize;
+    if (frameContext->isLocalColormapDefined) {
         colorMap = m_reader->localColormap(frameContext);
-    else
+        colorMapSize = m_reader->localColormapSize(frameContext);
+    } else {
         colorMap = m_reader->globalColormap();
-    if (colorMap.empty())
+        colorMapSize = m_reader->globalColormapSize();
+    }
+    if (!colorMap)
         return true;
 
     // Initialize the frame if necessary.
@@ -234,8 +238,8 @@ bool GIFImageDecoder::haveDecodedRow(unsigned frameIndex, const Vector<unsigned 
     // Write one row's worth of data into the frame.
     for (int x = xBegin; x < xEnd; ++x) {
         const unsigned char sourceValue = rowBuffer[x - frameContext->xOffset];
+        if ((!frameContext->isTransparent || (sourceValue != frameContext->tpixel)) && (sourceValue < colorMapSize)) {
             const size_t colorIndex = static_cast<size_t>(sourceValue) * 3;
-        if ((!frameContext->isTransparent || (sourceValue != frameContext->tpixel)) && (colorIndex + 2 < colorMap.size())) {
             buffer.backingStore()->setPixel(currentAddress, colorMap[colorIndex], colorMap[colorIndex + 1], colorMap[colorIndex + 2], 255);
         } else {
             m_currentBufferSawAlpha = true;

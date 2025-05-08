@@ -100,9 +100,6 @@ public:
     bool removeAll(iterator);
     bool removeAll(const ValueType&);
 
-    template<typename Functor>
-    bool removeAllIf(const Functor&);
-
     // Clears the whole set.
     void clear();
 
@@ -120,7 +117,7 @@ public:
     template<typename V = ValueType> typename std::enable_if<IsSmartPtr<V>::value && !IsSmartPtr<V>::isNullable, unsigned>::type count(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>&) const;
     template<typename V = ValueType> typename std::enable_if<IsSmartPtr<V>::value && !IsSmartPtr<V>::isNullable, bool>::type remove(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>&);
 
-    static bool isValidValue(const ValueType&);
+    static bool isValidValue(const ValueType& value) { return ImplType::isValidValue(value); }
 
 private:
     ImplType m_impl;
@@ -284,32 +281,9 @@ inline bool HashCountedSet<Value, HashFunctions, Traits>::removeAll(iterator it)
 }
 
 template<typename Value, typename HashFunctions, typename Traits>
-inline bool HashCountedSet<Value, HashFunctions, Traits>::removeAllIf(const auto& functor)
-{
-    return m_impl.removeIf(functor);
-}
-
-template<typename Value, typename HashFunctions, typename Traits>
 inline void HashCountedSet<Value, HashFunctions, Traits>::clear()
 {
     m_impl.clear();
-}
-
-template<typename Value, typename HashFunctions, typename Traits>
-inline bool HashCountedSet<Value, HashFunctions, Traits>::isValidValue(const ValueType& value)
-{
-    if (Traits::isDeletedValue(value))
-        return false;
-
-    if (HashFunctions::safeToCompareToEmptyOrDeleted) {
-        if (value == Traits::emptyValue())
-            return false;
-    } else {
-        if (isHashTraitsEmptyValue<Traits>(value))
-            return false;
-    }
-
-    return true;
 }
 
 template<typename Value, typename HashFunctions, typename Traits>

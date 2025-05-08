@@ -34,7 +34,7 @@ namespace JSC {
 class JSObject;
 class JSFunction;
 
-using CustomAccessorValueFunc = FunctionPtr<CustomAccessorPtrTag, bool(JSGlobalObject*, EncodedJSValue, EncodedJSValue, PropertyName), FunctionAttributes::JITOperation>;
+using CustomAccessorValueFunc = FunctionPtr<CustomAccessorPtrTag, bool(JSGlobalObject*, EncodedJSValue, EncodedJSValue, PropertyName)>;
 
 class PutPropertySlot {
 public:

@@ -26,6 +26,7 @@
 #pragma once
 
 #include "Color.h"
+#include <wtf/EnumTraits.h>
 
 namespace WebCore {
 

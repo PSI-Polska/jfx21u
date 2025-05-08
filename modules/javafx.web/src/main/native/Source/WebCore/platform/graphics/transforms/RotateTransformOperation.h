@@ -40,7 +40,7 @@ public:
 
     WEBCORE_EXPORT static Ref<RotateTransformOperation> create(double, double, double, double, TransformOperation::Type);
 
-    Ref<TransformOperation> clone() const final
+    Ref<TransformOperation> clone() const override
     {
         return adoptRef(*new RotateTransformOperation(m_x, m_y, m_z, m_angle, type()));
     }
@@ -53,7 +53,7 @@ public:
     TransformOperation::Type primitiveType() const final { return type() == Type::Rotate ? Type::Rotate : Type::Rotate3D; }
 
     bool operator==(const RotateTransformOperation& other) const { return operator==(static_cast<const TransformOperation&>(other)); }
-    bool operator==(const TransformOperation&) const final;
+    bool operator==(const TransformOperation&) const override;
 
     Ref<TransformOperation> blend(const TransformOperation* from, const BlendingContext&, bool blendToIdentity = false) final;
 
@@ -61,9 +61,10 @@ public:
 
     bool isRepresentableIn2D() const final { return (!m_x && !m_y) || !m_angle; }
 
-    bool isAffectedByTransformOrigin() const final { return !isIdentity(); }
+private:
+    bool isAffectedByTransformOrigin() const override { return !isIdentity(); }
 
-    bool apply(TransformationMatrix& transform, const FloatSize& /*borderBoxSize*/) const final
+    bool apply(TransformationMatrix& transform, const FloatSize& /*borderBoxSize*/) const override
     {
         if (type() == TransformOperation::Type::Rotate)
             transform.rotate(m_angle);
@@ -72,7 +73,7 @@ public:
         return false;
     }
 
-    bool applyUnrounded(TransformationMatrix& transform, const FloatSize& /*borderBoxSize*/) const final
+    bool applyUnrounded(TransformationMatrix& transform, const FloatSize& /*borderBoxSize*/) const override
     {
         if (type() == TransformOperation::Type::Rotate)
             transform.rotate(m_angle, TransformationMatrix::RotationSnapping::None);
@@ -84,7 +85,6 @@ public:
 
     void dump(WTF::TextStream&) const final;
 
-private:
     RotateTransformOperation(double, double, double, double, TransformOperation::Type);
 
     double m_x;

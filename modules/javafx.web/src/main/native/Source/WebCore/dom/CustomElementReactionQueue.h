@@ -26,7 +26,6 @@
 #pragma once
 
 #include "CustomElementFormValue.h"
-#include "Element.h"
 #include "GCReachableRef.h"
 #include "QualifiedName.h"
 #include <wtf/CheckedRef.h>
@@ -100,25 +99,23 @@ class CustomElementQueue {
     WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(CustomElementQueue);
 public:
-    CustomElementQueue() = default;
-    ~CustomElementQueue() { ASSERT(isEmpty()); }
+    CustomElementQueue();
+    WEBCORE_EXPORT ~CustomElementQueue();
 
-    bool isEmpty() const { return m_elements.isEmpty(); }
     void add(Element&);
-    WEBCORE_EXPORT void processQueue(JSC::JSGlobalObject*);
+    void processQueue(JSC::JSGlobalObject*);
 
-    Vector<Ref<Element>, 4> takeElements();
+    Vector<GCReachableRef<Element>, 4> takeElements();
 
 private:
     void invokeAll();
 
-    Vector<Ref<Element>, 4> m_elements;
+    Vector<GCReachableRef<Element>, 4> m_elements;
     bool m_invoking { false };
 };
 
-class CustomElementReactionQueue final : public CanMakeCheckedPtr<CustomElementReactionQueue> {
+class CustomElementReactionQueue : public CanMakeCheckedPtr {
     WTF_MAKE_FAST_ALLOCATED;
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(CustomElementReactionQueue);
     WTF_MAKE_NONCOPYABLE(CustomElementReactionQueue);
 public:
     CustomElementReactionQueue(JSCustomElementInterface&);
@@ -227,15 +224,17 @@ public:
 
     ALWAYS_INLINE ~CustomElementReactionStack()
     {
-        if (UNLIKELY(!m_queue.isEmpty()))
-            m_queue.processQueue(m_state);
+        if (UNLIKELY(m_queue))
+            processQueue(m_state);
         s_currentProcessingStack = m_previousProcessingStack;
     }
 
-    Vector<Ref<Element>, 4> takeElements() { return m_queue.takeElements(); }
+    Vector<GCReachableRef<Element>, 4> takeElements();
 
 private:
-    CustomElementQueue m_queue;
+    WEBCORE_EXPORT void processQueue(JSC::JSGlobalObject*);
+
+    std::unique_ptr<CustomElementQueue> m_queue;
     CustomElementReactionStack* const m_previousProcessingStack;
     JSC::JSGlobalObject* const m_state;
 

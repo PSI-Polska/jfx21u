@@ -73,7 +73,7 @@ Decimal parseToDecimalForNumberType(StringView string, const Decimal& fallbackVa
         return fallbackValue;
 
     // Numbers are considered finite IEEE 754 Double-precision floating point values.
-    const Decimal doubleMax = Decimal::doubleMax();
+    const Decimal doubleMax = Decimal::fromDouble(std::numeric_limits<double>::max());
     if (value < -doubleMax || value > doubleMax)
         return fallbackValue;
 
@@ -128,22 +128,22 @@ double parseToDoubleForNumberType(StringView string)
 }
 
 template <typename CharacterType>
-static Expected<int, HTMLIntegerParsingError> parseHTMLIntegerInternal(std::span<const CharacterType> data)
+static Expected<int, HTMLIntegerParsingError> parseHTMLIntegerInternal(const CharacterType* position, const CharacterType* end)
 {
-    while (!data.empty() && isASCIIWhitespace(data.front()))
-        data = data.subspan(1);
+    while (position < end && isASCIIWhitespace(*position))
+        ++position;
 
-    if (data.empty())
+    if (position == end)
         return makeUnexpected(HTMLIntegerParsingError::Other);
 
     bool isNegative = false;
-    if (data.front() == '-') {
+    if (*position == '-') {
         isNegative = true;
-        data = data.subspan(1);
-    } else if (data.front() == '+')
-        data = data.subspan(1);
+        ++position;
+    } else if (*position == '+')
+        ++position;
 
-    if (data.empty() || !isASCIIDigit(data.front()))
+    if (position == end || !isASCIIDigit(*position))
         return makeUnexpected(HTMLIntegerParsingError::Other);
 
     constexpr int intMax = std::numeric_limits<int>::max();
@@ -152,14 +152,14 @@ static Expected<int, HTMLIntegerParsingError> parseHTMLIntegerInternal(std::span
 
     unsigned result = 0;
     do {
-        int digitValue = data.front() - '0';
+        int digitValue = *position - '0';
 
         if (result > maxMultiplier || (result == maxMultiplier && digitValue > (intMax % base) + isNegative))
             return makeUnexpected(isNegative ? HTMLIntegerParsingError::NegativeOverflow : HTMLIntegerParsingError::PositiveOverflow);
 
         result = base * result + digitValue;
-        data = data.subspan(1);
-    } while (!data.empty() && isASCIIDigit(data.front()));
+        ++position;
+    } while (position < end && isASCIIDigit(*position));
 
     return isNegative ? -result : result;
 }
@@ -167,13 +167,17 @@ static Expected<int, HTMLIntegerParsingError> parseHTMLIntegerInternal(std::span
 // https://html.spec.whatwg.org/multipage/infrastructure.html#rules-for-parsing-integers
 Expected<int, HTMLIntegerParsingError> parseHTMLInteger(StringView input)
 {
-    if (input.isEmpty())
+    unsigned length = input.length();
+    if (!length)
         return makeUnexpected(HTMLIntegerParsingError::Other);
 
-    if (LIKELY(input.is8Bit()))
-        return parseHTMLIntegerInternal(input.span8());
+    if (LIKELY(input.is8Bit())) {
+        auto* start = input.characters8();
+        return parseHTMLIntegerInternal(start, start + length);
+    }
 
-    return parseHTMLIntegerInternal(input.span16());
+    auto* start = input.characters16();
+    return parseHTMLIntegerInternal(start, start + length);
 }
 
 // https://html.spec.whatwg.org/multipage/infrastructure.html#rules-for-parsing-non-negative-integers
@@ -190,15 +194,15 @@ Expected<unsigned, HTMLIntegerParsingError> parseHTMLNonNegativeInteger(StringVi
 }
 
 template <typename CharacterType>
-static std::optional<int> parseValidHTMLNonNegativeIntegerInternal(std::span<const CharacterType> data)
+static std::optional<int> parseValidHTMLNonNegativeIntegerInternal(const CharacterType* position, const CharacterType* end)
 {
     // A string is a valid non-negative integer if it consists of one or more ASCII digits.
-    for (auto character : data) {
-        if (!isASCIIDigit(character))
+    for (auto* c = position; c < end; ++c) {
+        if (!isASCIIDigit(*c))
             return std::nullopt;
     }
 
-    auto optionalSignedValue = parseHTMLIntegerInternal(data);
+    auto optionalSignedValue = parseHTMLIntegerInternal(position, end);
     if (!optionalSignedValue || optionalSignedValue.value() < 0)
         return std::nullopt;
 
@@ -211,24 +215,28 @@ std::optional<int> parseValidHTMLNonNegativeInteger(StringView input)
     if (input.isEmpty())
         return std::nullopt;
 
-    if (LIKELY(input.is8Bit()))
-        return parseValidHTMLNonNegativeIntegerInternal(input.span8());
-    return parseValidHTMLNonNegativeIntegerInternal(input.span16());
+    if (LIKELY(input.is8Bit())) {
+        auto* start = input.characters8();
+        return parseValidHTMLNonNegativeIntegerInternal(start, start + input.length());
+    }
+
+    auto* start = input.characters16();
+    return parseValidHTMLNonNegativeIntegerInternal(start, start + input.length());
 }
 
 template <typename CharacterType>
-static std::optional<double> parseValidHTMLFloatingPointNumberInternal(std::span<const CharacterType> characters)
+static std::optional<double> parseValidHTMLFloatingPointNumberInternal(const CharacterType* position, size_t length)
 {
-    ASSERT(!characters.empty());
+    ASSERT(length > 0);
 
     // parseDouble() allows the string to start with a '+' or to end with a '.' but those
     // are not valid floating point numbers as per HTML.
-    if (characters.front() == '+' || characters.back() == '.')
+    if (*position == '+' || *(position + length - 1) == '.')
         return std::nullopt;
 
     size_t parsedLength = 0;
-    double number = parseDouble(characters, parsedLength);
-    return parsedLength == characters.size() && std::isfinite(number) ? number : std::optional<double>();
+    double number = parseDouble(position, length, parsedLength);
+    return parsedLength == length && std::isfinite(number) ? number : std::optional<double>();
 }
 
 // https://html.spec.whatwg.org/#valid-floating-point-number
@@ -236,37 +244,14 @@ std::optional<double> parseValidHTMLFloatingPointNumber(StringView input)
 {
     if (input.isEmpty())
         return std::nullopt;
-    if (LIKELY(input.is8Bit()))
-        return parseValidHTMLFloatingPointNumberInternal(input.span8());
-    return parseValidHTMLFloatingPointNumberInternal(input.span16());
-}
 
-template <typename CharacterType>
-static double parseHTMLFloatingPointNumberValueInternal(std::span<const CharacterType> data, size_t length, double fallbackValue)
-{
-    auto position = data.data();
-    size_t leadingSpacesLength = 0;
-    while (leadingSpacesLength < length && isASCIIWhitespace(position[leadingSpacesLength]))
-        ++leadingSpacesLength;
+    if (LIKELY(input.is8Bit())) {
+        auto* start = input.characters8();
+        return parseValidHTMLFloatingPointNumberInternal(start, input.length());
+    }
 
-    position += leadingSpacesLength;
-    if (leadingSpacesLength == length || (*position != '+' && *position != '-' && *position != '.' && !isASCIIDigit(*position)))
-        return fallbackValue;
-
-    size_t parsedLength;
-    double number = parseDouble(std::span { position, length - leadingSpacesLength }, parsedLength);
-
-    // The following expression converts -0 to +0.
-    return number ? number : 0;
-}
-
-// https://html.spec.whatwg.org/#rules-for-parsing-floating-point-number-values
-double parseHTMLFloatingPointNumberValue(StringView input, double fallbackValue)
-{
-    if (LIKELY(input.is8Bit()))
-        return parseHTMLFloatingPointNumberValueInternal(input.span8(), input.length(), fallbackValue);
-
-    return parseHTMLFloatingPointNumberValueInternal(input.span16(), input.length(), fallbackValue);
+    auto* start = input.characters16();
+    return parseValidHTMLFloatingPointNumberInternal(start, input.length());
 }
 
 static inline bool isHTMLSpaceOrDelimiter(UChar character)
@@ -281,30 +266,30 @@ static inline bool isNumberStart(UChar character)
 
 // https://html.spec.whatwg.org/multipage/infrastructure.html#rules-for-parsing-floating-point-number-values
 template <typename CharacterType>
-static Vector<double> parseHTMLListOfOfFloatingPointNumberValuesInternal(std::span<const CharacterType> data)
+static Vector<double> parseHTMLListOfOfFloatingPointNumberValuesInternal(const CharacterType* position, const CharacterType* end)
 {
     Vector<double> numbers;
 
     // This skips past any leading delimiters.
-    while (!data.empty() && isHTMLSpaceOrDelimiter(data.front()))
-        data = data.subspan(1);
+    while (position < end && isHTMLSpaceOrDelimiter(*position))
+        ++position;
 
-    while (!data.empty()) {
+    while (position < end) {
         // This skips past leading garbage.
-        while (!data.empty() && !(isHTMLSpaceOrDelimiter(data.front()) || isNumberStart(data.front())))
-            data = data.subspan(1);
+        while (position < end && !(isHTMLSpaceOrDelimiter(*position) || isNumberStart(*position)))
+            ++position;
 
-        auto* numberStart = data.data();
-        while (!data.empty() && !isHTMLSpaceOrDelimiter(data.front()))
-            data = data.subspan(1);
+        const CharacterType* numberStart = position;
+        while (position < end && !isHTMLSpaceOrDelimiter(*position))
+            ++position;
 
         size_t parsedLength = 0;
-        double number = parseDouble(std::span { numberStart, data.data() }, parsedLength);
+        double number = parseDouble(numberStart, position - numberStart, parsedLength);
         numbers.append(parsedLength > 0 && std::isfinite(number) ? number : 0);
 
         // This skips past the delimiter.
-        while (!data.empty() && isHTMLSpaceOrDelimiter(data.front()))
-            data = data.subspan(1);
+        while (position < end && isHTMLSpaceOrDelimiter(*position))
+            ++position;
     }
 
     return numbers;
@@ -312,9 +297,13 @@ static Vector<double> parseHTMLListOfOfFloatingPointNumberValuesInternal(std::sp
 
 Vector<double> parseHTMLListOfOfFloatingPointNumberValues(StringView input)
 {
-    if (LIKELY(input.is8Bit()))
-        return parseHTMLListOfOfFloatingPointNumberValuesInternal(input.span8());
-    return parseHTMLListOfOfFloatingPointNumberValuesInternal(input.span16());
+    if (LIKELY(input.is8Bit())) {
+        auto* start = input.characters8();
+        return parseHTMLListOfOfFloatingPointNumberValuesInternal(start, start + input.length());
+    }
+
+    auto* start = input.characters16();
+    return parseHTMLListOfOfFloatingPointNumberValuesInternal(start, start + input.length());
 }
 
 static bool threadSafeEqual(const StringImpl& a, const StringImpl& b)
@@ -342,20 +331,20 @@ String parseCORSSettingsAttribute(const AtomString& value)
 
 // https://html.spec.whatwg.org/multipage/semantics.html#attr-meta-http-equiv-refresh
 template <typename CharacterType>
-static bool parseHTTPRefreshInternal(std::span<const CharacterType> data, double& parsedDelay, String& parsedURL)
+static bool parseHTTPRefreshInternal(const CharacterType* position, const CharacterType* end, double& parsedDelay, String& parsedURL)
 {
-    while (!data.empty() && isASCIIWhitespace(data.front()))
-        data = data.subspan(1);
+    while (position < end && isASCIIWhitespace(*position))
+        ++position;
 
     unsigned time = 0;
 
-    auto* numberStart = data.data();
-    while (!data.empty() && isASCIIDigit(data.front()))
-        data = data.subspan(1);
+    const CharacterType* numberStart = position;
+    while (position < end && isASCIIDigit(*position))
+        ++position;
 
-    StringView timeString(std::span(numberStart, data.data()));
+    StringView timeString(numberStart, position - numberStart);
     if (timeString.isEmpty()) {
-        if (data.empty() || data.front() != '.')
+        if (position >= end || *position != '.')
             return false;
     } else {
         auto optionalNumber = parseHTMLNonNegativeInteger(timeString);
@@ -364,72 +353,72 @@ static bool parseHTTPRefreshInternal(std::span<const CharacterType> data, double
         time = optionalNumber.value();
     }
 
-    while (!data.empty() && (isASCIIDigit(data.front()) || data.front() == '.'))
-        data = data.subspan(1);
+    while (position < end && (isASCIIDigit(*position) || *position == '.'))
+        ++position;
 
-    if (data.empty()) {
+    if (position == end) {
         parsedDelay = time;
         return true;
     }
 
-    if (data.front() != ';' && data.front() != ',' && !isASCIIWhitespace(data.front()))
+    if (*position != ';' && *position != ',' && !isASCIIWhitespace(*position))
         return false;
 
     parsedDelay = time;
 
-    while (!data.empty() && isASCIIWhitespace(data.front()))
-        data = data.subspan(1);
+    while (position < end && isASCIIWhitespace(*position))
+        ++position;
 
-    if (!data.empty() && (data.front() == ';' || data.front() == ','))
-        data = data.subspan(1);
+    if (position < end && (*position == ';' || *position == ','))
+        ++position;
 
-    while (!data.empty() && isASCIIWhitespace(data.front()))
-        data = data.subspan(1);
+    while (position < end && isASCIIWhitespace(*position))
+        ++position;
 
-    if (data.empty())
+    if (position == end)
         return true;
 
-    if (data.front() == 'U' || data.front() == 'u') {
-        StringView url(data);
+    if (*position == 'U' || *position == 'u') {
+        StringView url(position, end - position);
 
-        data = data.subspan(1);
+        ++position;
 
-        if (!data.empty() && (data.front() == 'R' || data.front() == 'r'))
-            data = data.subspan(1);
+        if (position < end && (*position == 'R' || *position == 'r'))
+            ++position;
         else {
             parsedURL = url.toString();
             return true;
         }
 
-        if (!data.empty() && (data.front() == 'L' || data.front() == 'l'))
-            data = data.subspan(1);
+        if (position < end && (*position == 'L' || *position == 'l'))
+            ++position;
         else {
             parsedURL = url.toString();
             return true;
         }
 
-        while (!data.empty() && isASCIIWhitespace(data.front()))
-            data = data.subspan(1);
+        while (position < end && isASCIIWhitespace(*position))
+            ++position;
 
-        if (!data.empty() && data.front() == '=')
-            data = data.subspan(1);
+        if (position < end && *position == '=')
+            ++position;
         else {
             parsedURL = url.toString();
             return true;
         }
 
-        while (!data.empty() && isASCIIWhitespace(data.front()))
-            data = data.subspan(1);
+        while (position < end && isASCIIWhitespace(*position))
+            ++position;
     }
 
     CharacterType quote;
-    if (!data.empty() && (data.front() == '\'' || data.front() == '"')) {
-        quote = data.front();
-        data = data.subspan(1);
+    if (position < end && (*position == '\'' || *position == '"')) {
+        quote = *position;
+        ++position;
     } else
         quote = '\0';
 
-    StringView url(data);
+    StringView url(position, end - position);
 
     if (quote != '\0') {
         size_t index = url.find(quote);
@@ -443,9 +432,13 @@ static bool parseHTTPRefreshInternal(std::span<const CharacterType> data, double
 
 bool parseMetaHTTPEquivRefresh(StringView input, double& delay, String& url)
 {
-    if (LIKELY(input.is8Bit()))
-        return parseHTTPRefreshInternal(input.span8(), delay, url);
-    return parseHTTPRefreshInternal(input.span16(), delay, url);
+    if (LIKELY(input.is8Bit())) {
+        auto* start = input.characters8();
+        return parseHTTPRefreshInternal(start, start + input.length(), delay, url);
+    }
+
+    auto* start = input.characters16();
+    return parseHTTPRefreshInternal(start, start + input.length(), delay, url);
 }
 
 // https://html.spec.whatwg.org/#rules-for-parsing-a-hash-name-reference
@@ -463,32 +456,33 @@ struct HTMLDimensionParsingResult {
 };
 
 template <typename CharacterType>
-static std::optional<HTMLDimensionParsingResult> parseHTMLDimensionNumber(std::span<const CharacterType> data)
+static std::optional<HTMLDimensionParsingResult> parseHTMLDimensionNumber(const CharacterType* position, unsigned length)
 {
-    if (data.empty() || !data.data())
+    if (!length || !position)
         return std::nullopt;
 
-    const auto* begin = data.data();
-    skipWhile<isASCIIWhitespace>(data);
-    if (data.empty())
+    const auto* begin = position;
+    const auto* end = position + length;
+    skipWhile<isASCIIWhitespace>(position, end);
+    if (position == end)
         return std::nullopt;
 
-    auto* start = data.data();
-    skipWhile<isASCIIDigit>(data);
-    if (start == data.data())
+    auto* start = position;
+    skipWhile<isASCIIDigit>(position, end);
+    if (start == position)
         return std::nullopt;
 
-    if (skipExactly(data, '.'))
-        skipWhile<isASCIIDigit>(data);
+    if (skipExactly(position, end, '.'))
+        skipWhile<isASCIIDigit>(position, end);
 
     size_t parsedLength = 0;
-    double number = parseDouble(std::span { start, data.data() }, parsedLength);
+    double number = parseDouble(start, position - start, parsedLength);
     if (!(parsedLength && std::isfinite(number)))
         return std::nullopt;
 
     HTMLDimensionParsingResult result;
     result.number = number;
-    result.parsedLength = data.data() - begin;
+    result.parsedLength = position - begin;
     return result;
 }
 
@@ -496,15 +490,16 @@ enum class IsMultiLength : bool { No, Yes };
 static std::optional<HTMLDimension> parseHTMLDimensionInternal(StringView dimensionString, IsMultiLength isMultiLength)
 {
     std::optional<HTMLDimensionParsingResult> result;
+    auto length = dimensionString.length();
     if (dimensionString.is8Bit())
-        result = parseHTMLDimensionNumber(dimensionString.span8());
+        result = parseHTMLDimensionNumber(dimensionString.characters8(), length);
     else
-        result = parseHTMLDimensionNumber(dimensionString.span16());
+        result = parseHTMLDimensionNumber(dimensionString.characters16(), length);
     if (!result)
         return std::nullopt;
 
     // The relative_length is not supported, here to make sure number + * does not map to number
-    if (isMultiLength == IsMultiLength::Yes && result->parsedLength < dimensionString.length() && dimensionString[result->parsedLength] == '*')
+    if (isMultiLength == IsMultiLength::Yes && result->parsedLength < length && dimensionString[result->parsedLength] == '*')
         return std::nullopt;
 
     HTMLDimension dimension;

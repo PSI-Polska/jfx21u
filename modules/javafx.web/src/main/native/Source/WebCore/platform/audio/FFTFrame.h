@@ -32,7 +32,7 @@
 #include "AudioArray.h"
 
 #if USE(GSTREAMER)
-#include "GUniquePtrGStreamer.h"
+#include <gst/fft/gstfftf32.h>
 #endif // USE(GSTREAMER)
 
 #if USE(ACCELERATE)
@@ -105,8 +105,8 @@ private:
 #endif
 
 #if USE(GSTREAMER)
-    GUniquePtr<GstFFTF32> m_fft;
-    GUniquePtr<GstFFTF32> m_inverseFft;
+    GstFFTF32* m_fft;
+    GstFFTF32* m_inverseFft;
     UniqueArray<GstFFTF32Complex> m_complexData;
 #endif // USE(GSTREAMER)
 

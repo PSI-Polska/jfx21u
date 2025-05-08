@@ -26,8 +26,7 @@
 [
     Conditional=MODEL_ELEMENT,
     EnabledBySetting=ModelElementEnabled,
-    JSGenerateToJSObject,
-    JSGenerateToNativeObject
+    JSGenerateToJSObject
 ] dictionary HTMLModelElementCamera {
     required double pitch;
     required double yaw;

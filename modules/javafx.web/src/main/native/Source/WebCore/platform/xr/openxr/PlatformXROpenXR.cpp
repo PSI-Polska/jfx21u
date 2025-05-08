@@ -232,10 +232,8 @@ void OpenXRDevice::requestFrame(RequestFrameCallback&& callback)
 
             for (auto& layer : m_layers) {
                 auto layerData = layer.value->startFrame();
-                if (layerData) {
-                    auto layerDataRef = makeUniqueRef<PlatformXR::FrameData::LayerData>(*layerData);
-                    frameData.layers.add(layer.key, WTFMove(layerDataRef));
-                }
+                if (layerData)
+                    frameData.layers.add(layer.key, *layerData);
             }
 
             if (m_input)

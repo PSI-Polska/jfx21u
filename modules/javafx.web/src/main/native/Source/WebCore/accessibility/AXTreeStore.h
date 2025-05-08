@@ -151,16 +151,13 @@ inline bool AXTreeStore<T>::contains(AXID axID)
 template<typename T>
 inline WeakPtr<AXObjectCache> AXTreeStore<T>::axObjectCacheForID(AXID axID)
 {
-    return axID.isValid() ? liveTreeMap().get(axID) : nullptr;
+    return liveTreeMap().get(axID);
 }
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
 template<typename T>
 inline RefPtr<AXIsolatedTree> AXTreeStore<T>::isolatedTreeForID(AXID axID)
 {
-    if (!axID.isValid())
-        return nullptr;
-
     Locker locker { s_storeLock };
     return isolatedTreeMap().get(axID).get();
 }

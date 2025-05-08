@@ -256,9 +256,9 @@ public:
         });
     }
 
-    ASCIILiteral name() const final
+    const char* name() const final
     {
-        return "JSC VMTraps Signal Sender Thread"_s;
+        return "JSC VMTraps Signal Sender Thread";
     }
 
     VMTraps& traps() { return m_vm.traps(); }

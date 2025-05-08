@@ -36,10 +36,10 @@ class MapConstructor final : public InternalFunction {
 public:
     typedef InternalFunction Base;
 
-    static MapConstructor* create(VM& vm, Structure* structure, MapPrototype* mapPrototype)
+    static MapConstructor* create(VM& vm, Structure* structure, MapPrototype* mapPrototype, GetterSetter* speciesSymbol)
     {
         MapConstructor* constructor = new (NotNull, allocateCell<MapConstructor>(vm)) MapConstructor(vm, structure);
-        constructor->finishCreation(vm, mapPrototype);
+        constructor->finishCreation(vm, mapPrototype, speciesSymbol);
         return constructor;
     }
 
@@ -50,14 +50,13 @@ public:
 private:
     MapConstructor(VM&, Structure*);
 
-    void finishCreation(VM&, MapPrototype*);
+    void finishCreation(VM&, MapPrototype*, GetterSetter* speciesSymbol);
 };
 STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(MapConstructor, InternalFunction);
 
-JSC_DECLARE_HOST_FUNCTION(mapPrivateFuncMapIterationNext);
-JSC_DECLARE_HOST_FUNCTION(mapPrivateFuncMapIterationEntry);
-JSC_DECLARE_HOST_FUNCTION(mapPrivateFuncMapIterationEntryKey);
-JSC_DECLARE_HOST_FUNCTION(mapPrivateFuncMapIterationEntryValue);
-JSC_DECLARE_HOST_FUNCTION(mapPrivateFuncMapStorage);
+JSC_DECLARE_HOST_FUNCTION(mapPrivateFuncMapBucketHead);
+JSC_DECLARE_HOST_FUNCTION(mapPrivateFuncMapBucketNext);
+JSC_DECLARE_HOST_FUNCTION(mapPrivateFuncMapBucketKey);
+JSC_DECLARE_HOST_FUNCTION(mapPrivateFuncMapBucketValue);
 
 } // namespace JSC

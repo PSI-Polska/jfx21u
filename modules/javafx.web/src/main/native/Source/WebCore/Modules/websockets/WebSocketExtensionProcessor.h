@@ -31,7 +31,6 @@
 #pragma once
 
 #include <wtf/HashMap.h>
-#include <wtf/text/MakeString.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -53,7 +52,7 @@ public:
     virtual bool processResponse(const HashMap<String, String>&) = 0;
 
     // If procecssResponse() returns false, this should provide the reason.
-    virtual String failureReason() { return makeString("Extension "_s, m_extensionToken, " failed"_s); }
+    virtual String failureReason() { return "Extension " + m_extensionToken + " failed"; }
 
 protected:
     explicit WebSocketExtensionProcessor(const String& extensionToken)

@@ -62,7 +62,7 @@ SVGElement* SVGLocatable::nearestViewportElement(const SVGElement* element)
 SVGElement* SVGLocatable::farthestViewportElement(const SVGElement* element)
 {
     ASSERT(element);
-    SUPPRESS_UNCOUNTED_LOCAL SVGElement* farthest = nullptr;
+    SVGElement* farthest = nullptr;
     for (Element* current = element->parentOrShadowHostElement(); current; current = current->parentOrShadowHostElement()) {
         auto* svgElement = dynamicDowncast<SVGElement>(*current);
         if (isViewportElement(svgElement))
@@ -75,7 +75,7 @@ FloatRect SVGLocatable::getBBox(SVGElement* element, StyleUpdateStrategy styleUp
 {
     ASSERT(element);
     if (styleUpdateStrategy == AllowStyleUpdate)
-        element->protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, element);
+        element->document().updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, element);
 
     // FIXME: Eventually we should support getBBox for detached elements.
     if (!element->renderer())
@@ -88,25 +88,27 @@ AffineTransform SVGLocatable::computeCTM(SVGElement* element, CTMScope mode, Sty
 {
     ASSERT(element);
     if (styleUpdateStrategy == AllowStyleUpdate)
-        element->protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, element);
+        element->document().updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, element);
 
-    RefPtr stopAtElement = mode == NearestViewportScope ? nearestViewportElement(element) : nullptr;
+    SVGElement* stopAtElement = mode == NearestViewportScope ? nearestViewportElement(element) : nullptr;
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (element->document().settings().layerBasedSVGEngineEnabled()) {
         // Rudimentary support for operations on "detached" elements.
-        CheckedPtr renderer = dynamicDowncast<RenderLayerModelObject>(element->renderer());
+        auto* renderer = dynamicDowncast<RenderLayerModelObject>(element->renderer());
         if (!renderer)
             return element->localCoordinateSpaceTransform(mode);
 
         auto trackingMode { mode == SVGLocatable::ScreenScope ? TransformState::TrackSVGScreenCTMMatrix : TransformState::TrackSVGCTMMatrix };
-        CheckedPtr stopAtRenderer = dynamicDowncast<RenderLayerModelObject>(stopAtElement ? stopAtElement->renderer() : nullptr);
-        return SVGLayerTransformComputation(*renderer).computeAccumulatedTransform(stopAtRenderer.get(), trackingMode);
+        auto* stopAtRenderer = dynamicDowncast<RenderLayerModelObject>(stopAtElement ? stopAtElement->renderer() : nullptr);
+        return SVGLayerTransformComputation(*renderer).computeAccumulatedTransform(stopAtRenderer, trackingMode);
     }
+#endif
 
     AffineTransform ctm;
 
     for (Element* currentElement = element; currentElement; currentElement = currentElement->parentOrShadowHostElement()) {
-        RefPtr svgElement = dynamicDowncast<SVGElement>(*currentElement);
+        auto* svgElement = dynamicDowncast<SVGElement>(*currentElement);
         if (!svgElement)
             break;
 
@@ -118,6 +120,21 @@ AffineTransform SVGLocatable::computeCTM(SVGElement* element, CTMScope mode, Sty
     }
 
     return ctm;
+}
+
+ExceptionOr<Ref<SVGMatrix>> SVGLocatable::getTransformToElement(SVGElement* target, StyleUpdateStrategy styleUpdateStrategy)
+{
+    AffineTransform ctm = getCTM(styleUpdateStrategy);
+
+    if (auto* graphicsElement = dynamicDowncast<SVGGraphicsElement>(target)) {
+        AffineTransform targetCTM = graphicsElement->getCTM(styleUpdateStrategy);
+        if (auto inverse = targetCTM.inverse())
+            ctm = inverse.value() * ctm;
+        else
+            return Exception { ExceptionCode::InvalidStateError, "Matrix is not invertible"_s };
+    }
+
+    return SVGMatrix::create(ctm);
 }
 
 }

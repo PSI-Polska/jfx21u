@@ -32,7 +32,6 @@
 
 #include "NetworkLoadMetrics.h"
 #include "ResourceLoaderIdentifier.h"
-#include "ScriptExecutionContextIdentifier.h"
 #include "ThreadableLoader.h"
 #include "ThreadableLoaderClient.h"
 #include "ThreadableLoaderClientWrapper.h"
@@ -91,14 +90,10 @@ private:
     //    go through it. All tasks posted from the worker object's thread to the worker context's
     //    thread contain the RefPtr<ThreadableLoaderClientWrapper> object, so the
     //    ThreadableLoaderClientWrapper instance is there until all tasks are executed.
-    class MainThreadBridge final : public ThreadableLoaderClient {
-        WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
-        WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(MainThreadBridge);
+    class MainThreadBridge : public ThreadableLoaderClient {
     public:
         // All executed on the worker context's thread.
         MainThreadBridge(ThreadableLoaderClientWrapper&, WorkerLoaderProxy*, ScriptExecutionContextIdentifier, const String& taskMode, ResourceRequest&&, const ThreadableLoaderOptions&, const String& outgoingReferrer, WorkerOrWorkletGlobalScope&);
-        virtual ~MainThreadBridge();
-
         void cancel();
         void destroy();
         void computeIsDone();
@@ -110,10 +105,10 @@ private:
 
         // All executed on the main thread.
         void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent) override;
-        void didReceiveResponse(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const ResourceResponse&) override;
+        void didReceiveResponse(ResourceLoaderIdentifier, const ResourceResponse&) override;
         void didReceiveData(const SharedBuffer&) override;
-        void didFinishLoading(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const NetworkLoadMetrics&) override;
-        void didFail(ScriptExecutionContextIdentifier, const ResourceError&) override;
+        void didFinishLoading(ResourceLoaderIdentifier, const NetworkLoadMetrics&) override;
+        void didFail(const ResourceError&) override;
         void didFinishTiming(const ResourceTiming&) override;
         void notifyIsDone(bool isDone) final;
 

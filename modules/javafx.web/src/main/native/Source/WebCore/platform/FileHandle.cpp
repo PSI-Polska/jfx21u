@@ -106,15 +106,15 @@ int FileHandle::read(void* data, int length)
     if (!open())
         return -1;
 
-    return FileSystem::readFromFile(m_fileHandle, { static_cast<uint8_t*>(data), static_cast<size_t>(length) });
+    return FileSystem::readFromFile(m_fileHandle, data, length);
 }
 
-int FileHandle::write(std::span<const uint8_t> data)
+int FileHandle::write(const void* data, int length)
 {
     if (!open())
         return -1;
 
-    return FileSystem::writeToFile(m_fileHandle, data);
+    return FileSystem::writeToFile(m_fileHandle, data, length);
 }
 
 bool FileHandle::printf(const char* format, ...)
@@ -132,7 +132,7 @@ bool FileHandle::printf(const char* format, ...)
 
     va_end(args);
 
-    return write({ reinterpret_cast<const uint8_t*>(buffer.data()), stringLength }) >= 0;
+    return write(buffer.data(), stringLength) >= 0;
 }
 
 void FileHandle::close()

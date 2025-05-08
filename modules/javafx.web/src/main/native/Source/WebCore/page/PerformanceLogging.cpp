@@ -30,6 +30,7 @@
 #include "CommonVM.h"
 #include "Document.h"
 #include "FrameLoader.h"
+#include "JSLocalDOMWindow.h"
 #include "LocalDOMWindow.h"
 #include "LocalFrame.h"
 #include "LocalFrameLoaderClient.h"
@@ -39,38 +40,39 @@
 namespace WebCore {
 
 #if !RELEASE_LOG_DISABLED
-static ASCIILiteral toString(PerformanceLogging::PointOfInterest poi)
+static const char* toString(PerformanceLogging::PointOfInterest poi)
 {
     switch (poi) {
     case PerformanceLogging::MainFrameLoadStarted:
-        return "MainFrameLoadStarted"_s;
+        return "MainFrameLoadStarted";
     case PerformanceLogging::MainFrameLoadCompleted:
-        return "MainFrameLoadCompleted"_s;
+        return "MainFrameLoadCompleted";
     }
     RELEASE_ASSERT_NOT_REACHED();
-    return ""_s;
+    return "";
 }
 #endif
 
-Vector<std::pair<ASCIILiteral, size_t>> PerformanceLogging::memoryUsageStatistics(ShouldIncludeExpensiveComputations includeExpensive)
+HashMap<const char*, size_t> PerformanceLogging::memoryUsageStatistics(ShouldIncludeExpensiveComputations includeExpensive)
 {
-    Vector<std::pair<ASCIILiteral, size_t>> stats;
+    HashMap<const char*, size_t> stats;
     stats.reserveInitialCapacity(32);
 
-    stats.append(std::pair { "page_count"_s, Page::nonUtilityPageCount() });
-    stats.append(std::pair { "backforward_cache_page_count"_s, BackForwardCache::singleton().pageCount() });
-    stats.append(std::pair { "document_count"_s, Document::allDocuments().size() });
+    stats.add("page_count", Page::nonUtilityPageCount());
+    stats.add("backforward_cache_page_count", BackForwardCache::singleton().pageCount());
+    stats.add("document_count", Document::allDocuments().size());
 
-    Ref vm = commonVM();
+    auto& vm = commonVM();
     JSC::JSLockHolder locker(vm);
-    stats.append(std::pair { "javascript_gc_heap_capacity_mb"_s, vm->heap.capacity() >> 20 });
-    stats.append(std::pair { "javascript_gc_heap_extra_memory_size_mb"_s, vm->heap.extraMemorySize() >> 20 });
+    stats.add("javascript_gc_heap_capacity_mb", vm.heap.capacity() >> 20);
+    stats.add("javascript_gc_heap_extra_memory_size_mb", vm.heap.extraMemorySize() >> 20);
 
     if (includeExpensive == ShouldIncludeExpensiveComputations::Yes) {
-        stats.append(std::pair { "javascript_gc_heap_size_mb"_s, vm->heap.size() >> 20 });
-        stats.append(std::pair { "javascript_gc_object_count"_s, vm->heap.objectCount() });
-        stats.append(std::pair { "javascript_gc_protected_object_count"_s, vm->heap.protectedObjectCount() });
-        stats.append(std::pair { "javascript_gc_protected_global_object_count"_s, vm->heap.protectedGlobalObjectCount() });
+        stats.add("javascript_gc_heap_size_mb", vm.heap.size() >> 20);
+        stats.add("javascript_gc_object_count", vm.heap.objectCount());
+        stats.add("javascript_gc_protected_object_count", vm.heap.protectedObjectCount());
+        stats.add("javascript_gc_global_object_count", vm.heap.globalObjectCount());
+        stats.add("javascript_gc_protected_global_object_count", vm.heap.protectedGlobalObjectCount());
     }
 
     getPlatformMemoryUsageStatistics(stats);
@@ -100,14 +102,14 @@ void PerformanceLogging::didReachPointOfInterest(PointOfInterest poi)
         return;
     }
 
-    RELEASE_LOG(PerformanceLogging, "Memory usage info dump at %s:", toString(poi).characters());
-    for (auto& [key, value] : memoryUsageStatistics(ShouldIncludeExpensiveComputations::No))
-        RELEASE_LOG(PerformanceLogging, "  %s: %zu", key.characters(), value);
+    RELEASE_LOG(PerformanceLogging, "Memory usage info dump at %s:", toString(poi));
+    for (auto& it : memoryUsageStatistics(ShouldIncludeExpensiveComputations::No))
+        RELEASE_LOG(PerformanceLogging, "  %s: %zu", it.key, it.value);
 #endif
 }
 
 #if !PLATFORM(COCOA)
-void PerformanceLogging::getPlatformMemoryUsageStatistics(Vector<std::pair<ASCIILiteral, size_t>>&) { }
+void PerformanceLogging::getPlatformMemoryUsageStatistics(HashMap<const char*, size_t>&) { }
 std::optional<uint64_t> PerformanceLogging::physicalFootprint() { return std::nullopt; }
 #endif
 

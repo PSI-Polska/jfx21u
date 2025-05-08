@@ -29,7 +29,6 @@
 #include "IDBIndexInfo.h"
 #include "IDBKeyData.h"
 #include "IDBKeyRangeData.h"
-#include "IDBObjectStoreIdentifier.h"
 #include "IDBResourceIdentifier.h"
 #include "IDBValue.h"
 #include "SQLiteStatement.h"
@@ -50,17 +49,17 @@ class SQLiteIDBCursor {
     WTF_MAKE_NONCOPYABLE(SQLiteIDBCursor);
 public:
     static std::unique_ptr<SQLiteIDBCursor> maybeCreate(SQLiteIDBTransaction&, const IDBCursorInfo&);
-    static std::unique_ptr<SQLiteIDBCursor> maybeCreateBackingStoreCursor(SQLiteIDBTransaction&, IDBObjectStoreIdentifier, const uint64_t indexIdentifier, const IDBKeyRangeData&);
+    static std::unique_ptr<SQLiteIDBCursor> maybeCreateBackingStoreCursor(SQLiteIDBTransaction&, const uint64_t objectStoreIdentifier, const uint64_t indexIdentifier, const IDBKeyRangeData&);
 
     SQLiteIDBCursor(SQLiteIDBTransaction&, const IDBCursorInfo&);
-    SQLiteIDBCursor(SQLiteIDBTransaction&, IDBObjectStoreIdentifier, uint64_t indexID, const IDBKeyRangeData&);
+    SQLiteIDBCursor(SQLiteIDBTransaction&, uint64_t objectStoreID, uint64_t indexID, const IDBKeyRangeData&);
 
     ~SQLiteIDBCursor();
 
     const IDBResourceIdentifier& identifier() const { return m_cursorIdentifier; }
     SQLiteIDBTransaction* transaction() const { return m_transaction; }
 
-    IDBObjectStoreIdentifier objectStoreID() const { return m_objectStoreID; }
+    int64_t objectStoreID() const { return m_objectStoreID; }
     int64_t currentRecordRowID() const;
 
     const IDBKeyData& currentKey() const;
@@ -114,7 +113,7 @@ private:
 
     SQLiteIDBTransaction* m_transaction;
     IDBResourceIdentifier m_cursorIdentifier;
-    IDBObjectStoreIdentifier m_objectStoreID;
+    int64_t m_objectStoreID;
     int64_t m_indexID { IDBIndexInfo::InvalidId };
     IndexedDB::CursorDirection m_cursorDirection { IndexedDB::CursorDirection::Next };
     IndexedDB::CursorType m_cursorType;

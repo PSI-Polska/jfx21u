@@ -40,10 +40,6 @@
 typedef struct CGAffineTransform CGAffineTransform;
 #endif
 
-#if USE(SKIA)
-class SkMatrix;
-#endif
-
 namespace WTF {
 class TextStream;
 }
@@ -68,10 +64,6 @@ public:
 
 #if USE(CG)
     WEBCORE_EXPORT AffineTransform(const CGAffineTransform&);
-#endif
-
-#if USE(SKIA)
-    AffineTransform(const SkMatrix&);
 #endif
 
     void setMatrix(double a, double b, double c, double d, double e, double f);
@@ -191,10 +183,6 @@ public:
 
 #if USE(CG)
     WEBCORE_EXPORT operator CGAffineTransform() const;
-#endif
-
-#if USE(SKIA)
-    operator SkMatrix() const;
 #endif
 
     static AffineTransform makeTranslation(FloatSize delta)

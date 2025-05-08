@@ -31,8 +31,7 @@
 namespace WebCore {
 
 class HTMLTableRowElement final : public HTMLTablePartElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLTableRowElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLTableRowElement);
+    WTF_MAKE_ISO_ALLOCATED(HTMLTableRowElement);
 public:
     static Ref<HTMLTableRowElement> create(Document&);
     static Ref<HTMLTableRowElement> create(const QualifiedName&, Document&);

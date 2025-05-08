@@ -154,9 +154,9 @@ private:
     // FIXME: We don't currently require type-specific information about
     // these elements so we haven't yet bothered to plumb the types all the
     // way down through createElement, etc.
-    CheckedPtr<ContainerNode> m_rootNode;
-    CheckedPtr<Element> m_headElement;
-    CheckedPtr<Element> m_bodyElement;
+    ContainerNode* m_rootNode { nullptr };
+    Element* m_headElement { nullptr };
+    Element* m_bodyElement { nullptr };
     unsigned m_stackDepth { 0 };
 };
 

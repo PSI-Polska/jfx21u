@@ -62,9 +62,7 @@ void UIScriptContext::runUIScript(const String& script, unsigned scriptCallbackI
 
     if (!hasOutstandingAsyncTasks()) {
         requestUIScriptCompletion(createJSString(m_context.get(), result).get());
-#if !PLATFORM(JAVA) || !OS(LINUX) || !CPU(X86)
         tryToCompleteUIScriptForCurrentParentCallback();
-#endif
     }
 }
 
@@ -91,7 +89,7 @@ unsigned UIScriptContext::prepareForAsyncTask(JSValueRef callback, CallbackType 
     return callbackID;
 }
 
-void UIScriptContext::asyncTaskComplete(unsigned callbackID, std::initializer_list<JSValueRef> arguments)
+void UIScriptContext::asyncTaskComplete(unsigned callbackID)
 {
     Task task = m_callbacks.take(callbackID);
     ASSERT(task.callback);
@@ -102,11 +100,10 @@ void UIScriptContext::asyncTaskComplete(unsigned callbackID, std::initializer_li
     m_currentScriptCallbackID = task.parentScriptCallbackID;
 
     exception = nullptr;
-    JSObjectCallAsFunction(m_context.get(), callbackObject, JSContextGetGlobalObject(m_context.get()), arguments.size(), arguments.size() ? arguments.begin() : nullptr, &exception);
+    JSObjectCallAsFunction(m_context.get(), callbackObject, JSContextGetGlobalObject(m_context.get()), 0, nullptr, &exception);
     JSValueUnprotect(m_context.get(), task.callback);
-#if !PLATFORM(JAVA) || !OS(LINUX) || !CPU(X86)
+
     tryToCompleteUIScriptForCurrentParentCallback();
-#endif
     m_currentScriptCallbackID = 0;
 }
 
@@ -146,10 +143,8 @@ void UIScriptContext::fireCallback(unsigned callbackID)
 
     exception = nullptr;
     JSObjectCallAsFunction(m_context.get(), callbackObject, JSContextGetGlobalObject(m_context.get()), 0, nullptr, &exception);
-    // hode this function becuase of link issue
-#if !PLATFORM(JAVA) || !OS(LINUX) || !CPU(X86)
+
     tryToCompleteUIScriptForCurrentParentCallback();
-#endif
     m_currentScriptCallbackID = 0;
 }
 
@@ -162,21 +157,14 @@ void UIScriptContext::requestUIScriptCompletion(JSStringRef result)
     // This request for the UI script to complete is not fulfilled until the last non-persistent task for the parent callback is finished.
     m_uiScriptResultsPendingCompletion.add(m_currentScriptCallbackID, result ? JSStringRetain(result) : nullptr);
 }
-#if !PLATFORM(JAVA) || !OS(LINUX) || !CPU(X86)
+
 void UIScriptContext::tryToCompleteUIScriptForCurrentParentCallback()
 {
-     if (!currentParentCallbackIsPendingCompletion() || currentParentCallbackHasOutstandingAsyncTasks())
+    if (!currentParentCallbackIsPendingCompletion() || currentParentCallbackHasOutstandingAsyncTasks())
         return;
 
     JSStringRef result = m_uiScriptResultsPendingCompletion.take(m_currentScriptCallbackID);
-#if !PLATFORM(JAVA)
-    String scriptResult({ reinterpret_cast<const UChar*>(JSStringGetCharactersPtr(result)), JSStringGetLength(result) });
-#else
-    auto charactersSpan = std::span<const UChar>(reinterpret_cast<const UChar*>(JSStringGetCharactersPtr(result)), JSStringGetLength(result));
-    String scriptResult(charactersSpan);
-#endif
-    if (result)
-        JSStringRelease(result);
+    String scriptResult(reinterpret_cast<const UChar*>(JSStringGetCharactersPtr(result)), JSStringGetLength(result));
 
     m_delegate.uiScriptDidComplete(scriptResult, m_currentScriptCallbackID);
 
@@ -186,8 +174,10 @@ void UIScriptContext::tryToCompleteUIScriptForCurrentParentCallback()
     });
 
     m_currentScriptCallbackID = 0;
+    if (result)
+        JSStringRelease(result);
 }
-#endif
+
 JSObjectRef UIScriptContext::objectFromRect(const WebCore::FloatRect& rect) const
 {
     JSObjectRef object = JSObjectMake(m_context.get(), nullptr, nullptr);

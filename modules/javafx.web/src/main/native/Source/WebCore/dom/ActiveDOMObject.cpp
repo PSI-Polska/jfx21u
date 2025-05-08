@@ -102,6 +102,8 @@ void ActiveDOMObject::suspendIfNeeded()
 
 void ActiveDOMObject::assertSuspendIfNeededWasCalled() const
 {
+    if (!m_suspendIfNeededWasCalled)
+        WTFLogAlways("Failed to call suspendIfNeeded() for %s", activeDOMObjectName());
     ASSERT(m_suspendIfNeededWasCalled);
 }
 
@@ -140,7 +142,7 @@ bool ActiveDOMObject::isAllowedToRunScript() const
 
 void ActiveDOMObject::queueTaskInEventLoop(TaskSource source, Function<void ()>&& function)
 {
-    RefPtrAllowingPartiallyDestroyed<ScriptExecutionContext> context = scriptExecutionContext();
+    auto* context = scriptExecutionContext();
     if (!context)
         return;
     context->eventLoop().queueTask(source, WTFMove(function));

@@ -57,8 +57,10 @@ private:
 
     GetterSetterAccessCase(const GetterSetterAccessCase&);
 
-    JSObject* tryGetAlternateBaseImpl() const;
+    bool hasAlternateBaseImpl() const;
+    JSObject* alternateBaseImpl() const;
     void dumpImpl(PrintStream&, CommaPrinter&, Indenter&) const;
+    Ref<AccessCase> cloneImpl() const;
 
     WriteBarrier<JSObject> m_customSlotBase;
     CodePtr<CustomAccessorPtrTag> m_customAccessor;

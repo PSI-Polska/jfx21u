@@ -124,8 +124,7 @@ private:
 
     RefPtr<Element> tryToConstructCustomElement(Document&, const AtomString&, ParserConstructElementWithEmptyStack);
 
-    template<typename Function>
-    void invokeCallback(Element&, JSC::JSObject* callback, const Function& addArguments);
+    void invokeCallback(Element&, JSC::JSObject* callback, const Function<void(JSC::JSGlobalObject*, JSDOMGlobalObject*, JSC::MarkedArgumentBuffer&)>& addArguments = [](JSC::JSGlobalObject*, JSDOMGlobalObject*, JSC::MarkedArgumentBuffer&) { });
 
     QualifiedName m_name;
     JSC::Weak<JSC::JSObject> m_constructor;

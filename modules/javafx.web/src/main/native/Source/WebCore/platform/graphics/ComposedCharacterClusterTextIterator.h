@@ -33,9 +33,10 @@ namespace WebCore {
 class ComposedCharacterClusterTextIterator {
 public:
     // The passed in UChar pointer starts at 'currentIndex'. The iterator operates on the range [currentIndex, lastIndex].
-    ComposedCharacterClusterTextIterator(std::span<const UChar> characters, unsigned currentIndex, unsigned lastIndex)
-        : m_iterator(characters, { }, TextBreakIterator::CaretMode { }, nullAtom())
-        , m_characters(characters.data())
+    // 'endIndex' denotes the maximum length of the UChar array, which might exceed 'lastIndex'.
+    ComposedCharacterClusterTextIterator(const UChar* characters, unsigned currentIndex, unsigned lastIndex, unsigned endIndex)
+        : m_iterator(StringView(characters, endIndex - currentIndex), nullptr, 0, TextBreakIterator::CaretMode { }, nullAtom())
+        , m_characters(characters)
         , m_originalIndex(currentIndex)
         , m_currentIndex(currentIndex)
         , m_lastIndex(lastIndex)

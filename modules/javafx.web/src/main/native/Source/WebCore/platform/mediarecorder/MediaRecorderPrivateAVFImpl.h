@@ -29,7 +29,6 @@
 #include "CAAudioStreamDescription.h"
 #include "MediaRecorderPrivate.h"
 #include "MediaRecorderPrivateWriterCocoa.h"
-#include <wtf/CheckedRef.h>
 
 using CVPixelBufferRef = struct __CVBuffer*;
 typedef const struct opaqueCMFormatDescription* CMFormatDescriptionRef;
@@ -42,9 +41,8 @@ class WebAudioBufferList;
 class MediaRecorderPrivateAVFImpl final
     : public MediaRecorderPrivate {
     WTF_MAKE_FAST_ALLOCATED;
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(MediaRecorderPrivateAVFImpl);
 public:
-    static std::unique_ptr<MediaRecorderPrivateAVFImpl> create(MediaStreamPrivate&, const MediaRecorderPrivateOptions&);
+    static RefPtr<MediaRecorderPrivateAVFImpl> create(MediaStreamPrivate&, const MediaRecorderPrivateOptions&);
     ~MediaRecorderPrivateAVFImpl();
 
 private:

@@ -60,7 +60,7 @@ void ImageBufferBackend::convertToLuminanceMask()
         return;
     getPixelBuffer(sourceRect, *pixelBuffer);
 
-    unsigned pixelArrayLength = pixelBuffer->bytes().size();
+    unsigned pixelArrayLength = pixelBuffer->sizeInBytes();
     for (unsigned pixelOffset = 0; pixelOffset < pixelArrayLength; pixelOffset += 4) {
         uint8_t a = pixelBuffer->item(pixelOffset + 3);
         if (!a)
@@ -76,7 +76,7 @@ void ImageBufferBackend::convertToLuminanceMask()
     putPixelBuffer(*pixelBuffer, sourceRect, IntPoint::zero(), AlphaPremultiplication::Premultiplied);
 }
 
-void ImageBufferBackend::getPixelBuffer(const IntRect& sourceRect, const uint8_t* sourceData, PixelBuffer& destinationPixelBuffer)
+void ImageBufferBackend::getPixelBuffer(const IntRect& sourceRect, void* sourceData, PixelBuffer& destinationPixelBuffer)
 {
     IntRect backendRect { { }, size() };
     auto sourceRectClipped = intersection(backendRect, sourceRect);
@@ -93,21 +93,21 @@ void ImageBufferBackend::getPixelBuffer(const IntRect& sourceRect, const uint8_t
 
     unsigned sourceBytesPerRow = bytesPerRow();
     ConstPixelBufferConversionView source {
-        { AlphaPremultiplication::Premultiplied, convertToPixelFormat(pixelFormat()), colorSpace() },
+        { AlphaPremultiplication::Premultiplied, pixelFormat(), colorSpace() },
         sourceBytesPerRow,
-        sourceData + sourceRectClipped.y() * sourceBytesPerRow + sourceRectClipped.x() * 4
+        static_cast<uint8_t*>(sourceData) + sourceRectClipped.y() * sourceBytesPerRow + sourceRectClipped.x() * 4
     };
     unsigned destinationBytesPerRow = static_cast<unsigned>(4u * sourceRect.width());
     PixelBufferConversionView destination {
         destinationPixelBuffer.format(),
         destinationBytesPerRow,
-        destinationPixelBuffer.bytes().data() + destinationRect.y() * destinationBytesPerRow + destinationRect.x() * 4
+        destinationPixelBuffer.bytes() + destinationRect.y() * destinationBytesPerRow + destinationRect.x() * 4
     };
 
     convertImagePixels(source, destination, destinationRect.size());
 }
 
-void ImageBufferBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer, const IntRect& sourceRect, const IntPoint& destinationPoint, AlphaPremultiplication destinationAlphaFormat, uint8_t* destinationData)
+void ImageBufferBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer, const IntRect& sourceRect, const IntPoint& destinationPoint, AlphaPremultiplication destinationAlphaFormat, void* destinationData)
 {
     IntRect backendRect { { }, size() };
     auto sourceRectClipped = intersection({ IntPoint::zero(), sourcePixelBuffer.size() }, sourceRect);
@@ -127,28 +127,29 @@ void ImageBufferBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer, co
     ConstPixelBufferConversionView source {
         sourcePixelBuffer.format(),
         sourceBytesPerRow,
-        sourcePixelBuffer.bytes().data() + sourceRectClipped.y() * sourceBytesPerRow + sourceRectClipped.x() * 4
+        sourcePixelBuffer.bytes() + sourceRectClipped.y() * sourceBytesPerRow + sourceRectClipped.x() * 4
     };
     unsigned destinationBytesPerRow = bytesPerRow();
     PixelBufferConversionView destination {
-        { destinationAlphaFormat, convertToPixelFormat(pixelFormat()), colorSpace() },
+        { destinationAlphaFormat, pixelFormat(), colorSpace() },
         destinationBytesPerRow,
-        destinationData + destinationRect.y() * destinationBytesPerRow + destinationRect.x() * 4
+        static_cast<uint8_t*>(destinationData) + destinationRect.y() * destinationBytesPerRow + destinationRect.x() * 4
     };
 
     convertImagePixels(source, destination, destinationRect.size());
 }
 
-AffineTransform ImageBufferBackend::calculateBaseTransform(const Parameters& parameters)
+AffineTransform ImageBufferBackend::calculateBaseTransform(const Parameters& parameters, bool originAtBottomLeftCorner)
 {
     AffineTransform baseTransform;
-#if USE(CG)
-    // CoreGraphics origin is at bottom left corner. GraphicsContext origin is at top left corner. Flip the drawing with GraphicsContext base
-    // transform.
+
+    if (originAtBottomLeftCorner) {
         baseTransform.scale(1, -1);
         baseTransform.translate(0, -parameters.backendSize.height());
-#endif
+    }
+
     baseTransform.scale(parameters.resolutionScale);
+
     return baseTransform;
 }
 

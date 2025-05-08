@@ -32,7 +32,6 @@
 #include "ServiceWorkerTypes.h"
 #include "Timer.h"
 #include <wtf/HashCountedSet.h>
-#include <wtf/Identified.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/WallTime.h>
 #include <wtf/WeakPtr.h>
@@ -48,13 +47,14 @@ struct ServiceWorkerContextData;
 
 enum class IsAppInitiated : bool { No, Yes };
 
-class SWServerRegistration : public RefCounted<SWServerRegistration>, public CanMakeWeakPtr<SWServerRegistration>, public Identified<ServiceWorkerRegistrationIdentifier> {
+class SWServerRegistration : public RefCounted<SWServerRegistration>, public CanMakeWeakPtr<SWServerRegistration> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     static Ref<SWServerRegistration> create(SWServer&, const ServiceWorkerRegistrationKey&, ServiceWorkerUpdateViaCache, const URL& scopeURL, const URL& scriptURL, std::optional<ScriptExecutionContextIdentifier> serviceWorkerPageIdentifier, NavigationPreloadState&&);
     WEBCORE_EXPORT ~SWServerRegistration();
 
     const ServiceWorkerRegistrationKey& key() const { return m_registrationKey; }
+    ServiceWorkerRegistrationIdentifier identifier() const { return m_identifier; }
 
     SWServerWorker* getNewestWorker();
     WEBCORE_EXPORT ServiceWorkerRegistrationData data() const;
@@ -122,6 +122,7 @@ private:
 
     RefPtr<SWServer> protectedServer() const { return m_server.get(); }
 
+    ServiceWorkerRegistrationIdentifier m_identifier;
     ServiceWorkerRegistrationKey m_registrationKey;
     ServiceWorkerUpdateViaCache m_updateViaCache;
     URL m_scopeURL;

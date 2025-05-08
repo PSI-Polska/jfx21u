@@ -175,9 +175,9 @@ std::optional<MediaQuery> MediaQueryParser::consumeMediaQuery(CSSParserTokenRang
     return MediaQuery { prefix, mediaType, condition };
 }
 
-const FeatureSchema* MediaQueryParser::schemaForFeatureName(const AtomString& name, const MediaQueryParserContext& context, State& state)
+const FeatureSchema* MediaQueryParser::schemaForFeatureName(const AtomString& name, const MediaQueryParserContext& context)
 {
-    auto* schema = GenericMediaQueryParser<MediaQueryParser>::schemaForFeatureName(name, context, state);
+    auto* schema = GenericMediaQueryParser<MediaQueryParser>::schemaForFeatureName(name, context);
 
     if (schema == &Features::prefersDarkInterface()) {
         if (!context.useSystemAppearance && !isUASheetBehavior(context.mode))
@@ -189,7 +189,11 @@ const FeatureSchema* MediaQueryParser::schemaForFeatureName(const AtomString& na
 
 void serialize(StringBuilder& builder, const MediaQueryList& list)
 {
-    builder.append(interleave(list, serialize, ", "_s));
+    for (auto& query : list) {
+        if (&query != &list.first())
+            builder.append(", ");
+        serialize(builder, query);
+    }
 }
 
 void serialize(StringBuilder& builder, const MediaQuery& query)
@@ -197,10 +201,10 @@ void serialize(StringBuilder& builder, const MediaQuery& query)
     if (query.prefix) {
         switch (*query.prefix) {
         case Prefix::Not:
-            builder.append("not "_s);
+            builder.append("not ");
             break;
         case Prefix::Only:
-            builder.append("only "_s);
+            builder.append("only ");
             break;
         }
     }
@@ -208,7 +212,7 @@ void serialize(StringBuilder& builder, const MediaQuery& query)
     if (!query.mediaType.isEmpty() && (!query.condition || query.prefix || query.mediaType != allAtom())) {
         serializeIdentifier(query.mediaType, builder);
         if (query.condition)
-            builder.append(" and "_s);
+            builder.append(" and ");
     }
 
     if (query.condition)

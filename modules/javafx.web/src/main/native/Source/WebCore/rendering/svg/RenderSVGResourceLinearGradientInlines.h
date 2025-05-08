@@ -25,6 +25,7 @@
 
 #pragma once
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "RenderSVGResourceLinearGradient.h"
 #include "SVGLinearGradientElement.h"
 
@@ -35,9 +36,6 @@ inline SVGLinearGradientElement& RenderSVGResourceLinearGradient::linearGradient
     return downcast<SVGLinearGradientElement>(RenderSVGResourceContainer::element());
 }
 
-inline Ref<SVGLinearGradientElement> RenderSVGResourceLinearGradient::protectedLinearGradientElement() const
-{
-    return linearGradientElement();
 }
 
-} // namespace WebCore
+#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

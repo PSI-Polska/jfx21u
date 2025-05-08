@@ -460,7 +460,7 @@ public:
         return arithRound->canSpeculateInt32(pass) && !hasExitSite(arithRound->origin.semantic, Overflow) && !hasExitSite(arithRound->origin.semantic, NegativeZero);
     }
 
-    static ASCIILiteral opName(NodeType);
+    static const char* opName(NodeType);
 
     RegisteredStructureSet* addStructureSet(const StructureSet& structureSet)
     {
@@ -839,13 +839,6 @@ public:
         return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::MasqueradesAsUndefinedWatchpointSet);
     }
 
-    bool isWatchingArrayBufferDetachWatchpoint(Node* node)
-    {
-        JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
-        WatchpointSet& set = globalObject->arrayBufferDetachWatchpointSet();
-        return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::ArrayBufferDetachWatchpointSet);
-    }
-
     bool isWatchingArrayIteratorProtocolWatchpoint(Node* node)
     {
         JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
@@ -1160,8 +1153,6 @@ public:
 
     const BoyerMooreHorspoolTable<uint8_t>* tryAddStringSearchTable8(const String&);
 
-    bool afterFixup() { return m_planStage >= PlanStage::AfterFixup; }
-
     StackCheck m_stackChecker;
     VM& m_vm;
     Plan& m_plan;
@@ -1241,7 +1232,6 @@ public:
     Bag<LazyJSValue> m_lazyJSValues;
     Bag<CallDOMGetterData> m_callDOMGetterData;
     Bag<CallCustomAccessorData> m_callCustomAccessorData;
-    Bag<GetByIdData> m_getByIdData;
     Bag<BitVector> m_bitVectors;
     Vector<InlineVariableData, 4> m_inlineVariableData;
     HashMap<CodeBlock*, std::unique_ptr<FullBytecodeLiveness>> m_bytecodeLiveness;
@@ -1312,7 +1302,7 @@ private:
 
     void handleSuccessor(Vector<BasicBlock*, 16>& worklist, BasicBlock*, BasicBlock* successor);
 
-    AddSpeculationMode addImmediateShouldSpeculateInt32(Node* add, bool variableShouldSpeculateInt32, Node* operand, Node* immediate, RareCaseProfilingSource source)
+    AddSpeculationMode addImmediateShouldSpeculateInt32(Node* add, bool variableShouldSpeculateInt32, Node* operand, Node*immediate, RareCaseProfilingSource source)
     {
         ASSERT(immediate->hasConstant());
 
@@ -1332,8 +1322,6 @@ private:
         if (immediateValue.isBoolean() || jsNumber(immediateValue.asNumber()).isInt32())
             return add->canSpeculateInt32(source) ? SpeculateInt32 : DontSpeculateInt32;
 
-        // At this point {immediateValue} must be a double and {operandResultType} must be NodeResultInt32.
-        ASSERT(immediateValue.isDouble() && operandResultType == NodeResultInt32);
         double doubleImmediate = immediateValue.asDouble();
         if (std::isnan(doubleImmediate))
             return DontSpeculateInt32;
@@ -1343,12 +1331,13 @@ private:
             return DontSpeculateInt32;
 
         if (bytecodeCanTruncateInteger(add->arithNodeFlags())) {
-            // This function is called from attemptToMakeIntegerAdd. If we return SpeculateInt32AndTruncateConstants
-            // both operands will be truncated to integers. If int32 + double, then we should not speculate this add
-            // node with int32 type. Because ToInt32(int32 + double) is not always equivalent to int32 + ToInt32(double).
+            // If int32 + const double, then we should not speculate this add node with int32 type.
+            // Because ToInt32(int32 + const double) is not always equivalent to int32 + ToInt32(const double).
             // For example:
-            //     let the int32 be -1 and double be 0.1, then ToInt32(-1 + 0.1) is 0 but -1 + ToInt32(0.1) is -1.
-            return isInteger(doubleImmediate) ? SpeculateInt32AndTruncateConstants : DontSpeculateInt32;
+            // let the int32 = -1 and const double = 0.1, then ToInt32(-1 + 0.1) = 0 but -1 + ToInt32(0.1) = -1.
+            if (operandResultType == NodeResultInt32 && !isInteger(doubleImmediate))
+                return DontSpeculateInt32;
+            return SpeculateInt32AndTruncateConstants;
         }
 
         return DontSpeculateInt32;

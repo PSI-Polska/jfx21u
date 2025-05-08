@@ -135,7 +135,7 @@ void fixPartialRegisterStalls(Code& code)
     if (!isX86())
         return;
 
-    PhaseScope phaseScope(code, "fixPartialRegisterStalls"_s);
+    PhaseScope phaseScope(code, "fixPartialRegisterStalls");
 
     Vector<BasicBlock*> candidates;
 

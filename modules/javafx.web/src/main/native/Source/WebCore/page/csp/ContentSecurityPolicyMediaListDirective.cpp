@@ -72,7 +72,7 @@ void ContentSecurityPolicyMediaListDirective::parse(const String& value)
             auto begin = buffer.position();
             if (!skipExactly<isMediaTypeCharacter>(buffer)) {
                 skipWhile<isNotASCIISpace>(buffer);
-                directiveList().policy().reportInvalidPluginTypes(String({ begin, buffer.position() }));
+                directiveList().policy().reportInvalidPluginTypes(String(begin, buffer.position() - begin));
                 continue;
             }
             skipWhile<isMediaTypeCharacter>(buffer);
@@ -81,7 +81,7 @@ void ContentSecurityPolicyMediaListDirective::parse(const String& value)
             //      ^
             if (!skipExactly(buffer, '/')) {
                 skipWhile<isNotASCIISpace>(buffer);
-                directiveList().policy().reportInvalidPluginTypes(String({ begin, buffer.position() }));
+                directiveList().policy().reportInvalidPluginTypes(String(begin, buffer.position() - begin));
                 continue;
             }
 
@@ -89,7 +89,7 @@ void ContentSecurityPolicyMediaListDirective::parse(const String& value)
             //       ^
             if (!skipExactly<isMediaTypeCharacter>(buffer)) {
                 skipWhile<isNotASCIISpace>(buffer);
-                directiveList().policy().reportInvalidPluginTypes(String({ begin, buffer.position() }));
+                directiveList().policy().reportInvalidPluginTypes(String(begin, buffer.position() - begin));
                 continue;
             }
             skipWhile<isMediaTypeCharacter>(buffer);
@@ -98,10 +98,10 @@ void ContentSecurityPolicyMediaListDirective::parse(const String& value)
             //            ^                          ^               ^
             if (buffer.hasCharactersRemaining() && isNotASCIISpace(*buffer)) {
                 skipWhile<isNotASCIISpace>(buffer);
-                directiveList().policy().reportInvalidPluginTypes(String({ begin, buffer.position() }));
+                directiveList().policy().reportInvalidPluginTypes(String(begin, buffer.position() - begin));
                 continue;
             }
-            m_pluginTypes.add(String({ begin, buffer.position() }));
+            m_pluginTypes.add(String(begin, buffer.position() - begin));
 
             ASSERT(buffer.atEnd() || isUnicodeCompatibleASCIIWhitespace(*buffer));
         }

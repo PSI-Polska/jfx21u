@@ -34,15 +34,6 @@
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
-class CSSParserObserverWrapper;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::CSSParserObserverWrapper> : std::true_type { };
-}
-
-namespace WebCore {
 
 class CSSParserObserverWrapper : public CanMakeWeakPtr<CSSParserObserverWrapper> {
 public:

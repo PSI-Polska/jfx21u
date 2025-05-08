@@ -41,7 +41,7 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-AccessibilityList::AccessibilityList(RenderObject& renderer)
+AccessibilityList::AccessibilityList(RenderObject* renderer)
     : AccessibilityRenderObject(renderer)
 {
 }
@@ -53,7 +53,7 @@ AccessibilityList::AccessibilityList(Node& node)
 
 AccessibilityList::~AccessibilityList() = default;
 
-Ref<AccessibilityList> AccessibilityList::create(RenderObject& renderer)
+Ref<AccessibilityList> AccessibilityList::create(RenderObject* renderer)
 {
     return adoptRef(*new AccessibilityList(renderer));
 }
@@ -100,7 +100,7 @@ bool AccessibilityList::childHasPseudoVisibleListItemMarkers(Node* node)
 {
     // Check if the list item has a pseudo-element that should be accessible (e.g. an image or text)
     auto* element = dynamicDowncast<Element>(node);
-    RefPtr beforePseudo = element ? element->beforePseudoElement() : nullptr;
+    auto* beforePseudo = element ? element->beforePseudoElement() : nullptr;
     if (!beforePseudo)
         return false;
 
@@ -157,7 +157,6 @@ AccessibilityRole AccessibilityList::determineAccessibilityRole()
         return AccessibilityRole::DescriptionList;
 
     for (const auto& child : children) {
-        RefPtr node = child->node();
         auto* axChild = dynamicDowncast<AccessibilityObject>(child.get());
         if (axChild && axChild->ariaRoleAttribute() == AccessibilityRole::ListItem)
             listItemCount++;
@@ -167,12 +166,12 @@ AccessibilityRole AccessibilityList::determineAccessibilityRole()
                 if (!hasVisibleMarkers && (childRenderer->style().listStyleType().type != ListStyleType::Type::None || childRenderer->style().listStyleImage() || childHasPseudoVisibleListItemMarkers(childRenderer->node())))
                     hasVisibleMarkers = true;
                 listItemCount++;
-            } else if (node && node->hasTagName(liTag)) {
+            } else if (child->node() && child->node()->hasTagName(liTag)) {
                 // Inline elements that are in a list with an explicit role should also count.
                 if (m_ariaRole == AccessibilityRole::List)
                     listItemCount++;
 
-                if (childHasPseudoVisibleListItemMarkers(node.get())) {
+                if (childHasPseudoVisibleListItemMarkers(child->node())) {
                     hasVisibleMarkers = true;
                     listItemCount++;
                 }
@@ -184,7 +183,7 @@ AccessibilityRole AccessibilityList::determineAccessibilityRole()
     // <ul>, <ol> lists need to have visible markers.
     if (ariaRoleAttribute() != AccessibilityRole::Unknown) {
         if (!listItemCount)
-            role = AccessibilityRole::Group;
+            role = AccessibilityRole::ApplicationGroup;
     } else if (!hasVisibleMarkers) {
         // http://webkit.org/b/193382 lists inside of navigation hierarchies should still be considered lists.
         if (Accessibility::findAncestor<AccessibilityObject>(*this, false, [] (auto& object) { return object.roleValue() == AccessibilityRole::LandmarkNavigation; }))

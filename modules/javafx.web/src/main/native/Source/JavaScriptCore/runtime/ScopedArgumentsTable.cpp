@@ -41,7 +41,9 @@ ScopedArgumentsTable::ScopedArgumentsTable(VM& vm)
 {
 }
 
-ScopedArgumentsTable::~ScopedArgumentsTable() = default;
+ScopedArgumentsTable::~ScopedArgumentsTable()
+{
+}
 
 void ScopedArgumentsTable::destroy(JSCell* cell)
 {

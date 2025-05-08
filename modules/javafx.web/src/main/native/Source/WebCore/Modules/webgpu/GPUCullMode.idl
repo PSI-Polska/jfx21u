@@ -27,7 +27,8 @@
 
 [
     EnabledBySetting=WebGPUEnabled
-] enum GPUCullMode {
+]
+enum GPUCullMode {
     "none",
     "front",
     "back"

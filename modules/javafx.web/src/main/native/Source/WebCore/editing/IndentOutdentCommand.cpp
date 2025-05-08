@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2006-2024 Apple Inc. All rights reserved.
- * Copyright (C) 2013 Google Inc. All rights reserved.
+ * Copyright (C) 2006, 2008 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -105,6 +104,7 @@ void IndentOutdentCommand::indentIntoBlockquote(const Position& start, const Pos
     if (!nodeToSplitTo)
         return;
 
+    RefPtr<Node> nodeAfterStart = start.computeNodeAfterPosition();
     RefPtr<Node> outerBlock = (start.containerNode() == nodeToSplitTo) ? start.containerNode() : splitTreeToNode(*start.containerNode(), *nodeToSplitTo);
     if (!outerBlock)
         return;
@@ -210,16 +210,16 @@ void IndentOutdentCommand::outdentParagraph()
 // FIXME: We should merge this function with ApplyBlockElementCommand::formatSelection
 void IndentOutdentCommand::outdentRegion(const VisiblePosition& startOfSelection, const VisiblePosition& endOfSelection)
 {
-    VisiblePosition endOfCurrentParagraph = endOfParagraph(startOfSelection);
     VisiblePosition endOfLastParagraph = endOfParagraph(endOfSelection);
 
-    if (endOfCurrentParagraph == endOfLastParagraph) {
+    if (endOfParagraph(startOfSelection) == endOfLastParagraph) {
         outdentParagraph();
         return;
     }
 
     Position originalSelectionEnd = endingSelection().end();
-    VisiblePosition endAfterSelection = endOfParagraph(endOfLastParagraph.next());
+    VisiblePosition endOfCurrentParagraph = endOfParagraph(startOfSelection);
+    VisiblePosition endAfterSelection = endOfParagraph(endOfParagraph(endOfSelection).next());
 
     while (endOfCurrentParagraph != endAfterSelection) {
         VisiblePosition endOfNextParagraph = endOfParagraph(endOfCurrentParagraph.next());

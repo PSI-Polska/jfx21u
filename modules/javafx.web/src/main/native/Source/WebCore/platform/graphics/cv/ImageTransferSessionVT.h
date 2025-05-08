@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "FloatRect.h"
 #include "IntSize.h"
 #include <wtf/RetainPtr.h>
 
@@ -35,7 +34,6 @@ typedef struct __CVBuffer *CVPixelBufferRef;
 typedef struct __CVPixelBufferPool *CVPixelBufferPoolRef;
 typedef struct __IOSurface *IOSurfaceRef;
 typedef struct opaqueCMSampleBuffer *CMSampleBufferRef;
-OBJC_CLASS NSDictionary;
 
 namespace WTF {
 class MediaTime;
@@ -43,7 +41,6 @@ class MediaTime;
 
 namespace WebCore {
 
-class FloatRect;
 class VideoFrame;
 enum class VideoFrameRotation : uint16_t;
 
@@ -68,9 +65,6 @@ public:
     uint32_t pixelFormat() const { return m_pixelFormat; }
     void setMaximumBufferPoolSize(size_t maxBufferPoolSize) { m_maxBufferPoolSize = maxBufferPoolSize; }
 
-    RetainPtr<CMSampleBufferRef> convertCMSampleBuffer(CMSampleBufferRef, const IntSize&, const WTF::MediaTime* = nullptr);
-    void setCroppingRectangle(std::optional<FloatRect>);
-
 private:
     WEBCORE_EXPORT ImageTransferSessionVT(uint32_t pixelFormat, bool shouldUseIOSurface);
 
@@ -78,6 +72,7 @@ private:
     RetainPtr<CMSampleBufferRef> createCMSampleBuffer(IOSurfaceRef, const WTF::MediaTime&, const IntSize&);
 #endif
 
+    RetainPtr<CMSampleBufferRef> convertCMSampleBuffer(CMSampleBufferRef, const IntSize&, const WTF::MediaTime* = nullptr);
     RetainPtr<CMSampleBufferRef> createCMSampleBuffer(CVPixelBufferRef, const WTF::MediaTime&, const IntSize&);
     RetainPtr<CMSampleBufferRef> createCMSampleBuffer(CGImageRef, const WTF::MediaTime&, const IntSize&);
 
@@ -90,8 +85,6 @@ private:
     RetainPtr<VTPixelTransferSessionRef> m_transferSession;
     RetainPtr<CVPixelBufferPoolRef> m_outputBufferPool;
     bool m_shouldUseIOSurface { true };
-    std::optional<FloatRect> m_croppingRectangle;
-    RetainPtr<NSDictionary> m_sourceCroppingDictionary;
     uint32_t m_pixelFormat;
     IntSize m_size;
     size_t m_maxBufferPoolSize { 0 };

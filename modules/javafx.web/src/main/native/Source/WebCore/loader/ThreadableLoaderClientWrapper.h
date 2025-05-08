@@ -60,10 +60,10 @@ public:
             m_client->didSendData(bytesSent, totalBytesToBeSent);
     }
 
-    void didReceiveResponse(ScriptExecutionContextIdentifier mainContext, ResourceLoaderIdentifier identifier, const ResourceResponse& response)
+    void didReceiveResponse(ResourceLoaderIdentifier identifier, const ResourceResponse& response)
     {
         if (m_client)
-            m_client->didReceiveResponse(mainContext, identifier, response);
+            m_client->didReceiveResponse(identifier, response);
     }
 
     void didReceiveData(const SharedBuffer& buffer)
@@ -72,11 +72,11 @@ public:
             m_client->didReceiveData(buffer);
     }
 
-    void didFinishLoading(ScriptExecutionContextIdentifier mainContext, ResourceLoaderIdentifier identifier, const NetworkLoadMetrics& metrics)
+    void didFinishLoading(ResourceLoaderIdentifier identifier, const NetworkLoadMetrics& metrics)
     {
         m_done = true;
         if (m_client)
-            m_client->didFinishLoading(mainContext, identifier, metrics);
+            m_client->didFinishLoading(identifier, metrics);
     }
 
     void notifyIsDone(bool isDone)
@@ -85,11 +85,17 @@ public:
             m_client->notifyIsDone(isDone);
     }
 
-    void didFail(ScriptExecutionContextIdentifier mainContext, const ResourceError& error)
+    void didFail(const ResourceError& error)
     {
         m_done = true;
         if (m_client)
-            m_client->didFail(mainContext, error);
+            m_client->didFail(error);
+    }
+
+    void didReceiveAuthenticationCancellation(ResourceLoaderIdentifier identifier, const ResourceResponse& response)
+    {
+        if (m_client)
+            m_client->didReceiveResponse(identifier, response);
     }
 
     const String& initiator() const { return m_initiator; }

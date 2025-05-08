@@ -64,7 +64,9 @@ BasicBlock::BasicBlock(BytecodeIndex bytecodeBegin, unsigned numArguments, unsig
 {
 }
 
-BasicBlock::~BasicBlock() = default;
+BasicBlock::~BasicBlock()
+{
+}
 
 void BasicBlock::ensureLocals(unsigned newNumLocals)
 {

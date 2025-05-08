@@ -27,7 +27,8 @@
 
 [
     EnabledBySetting=WebGPUEnabled
-] enum GPUFilterMode {
+]
+enum GPUFilterMode {
     "nearest",
     "linear"
 };

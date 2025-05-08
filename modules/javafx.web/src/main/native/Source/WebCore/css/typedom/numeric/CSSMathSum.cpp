@@ -32,11 +32,11 @@
 #include "ExceptionOr.h"
 #include <wtf/Algorithms.h>
 #include <wtf/FixedVector.h>
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CSSMathSum);
+WTF_MAKE_ISO_ALLOCATED_IMPL(CSSMathSum);
 
 ExceptionOr<Ref<CSSMathSum>> CSSMathSum::create(FixedVector<CSSNumberish> numberishes)
 {
@@ -65,17 +65,17 @@ void CSSMathSum::serialize(StringBuilder& builder, OptionSet<SerializationArgume
 {
     // https://drafts.css-houdini.org/css-typed-om/#calc-serialization
     if (!arguments.contains(SerializationArguments::WithoutParentheses))
-        builder.append(arguments.contains(SerializationArguments::Nested) ? "("_s : "calc("_s);
+        builder.append(arguments.contains(SerializationArguments::Nested) ? "(" : "calc(");
     m_values->forEach([&](auto& numericValue, bool first) {
         OptionSet<SerializationArguments> operandSerializationArguments { SerializationArguments::Nested };
         operandSerializationArguments.set(SerializationArguments::WithoutParentheses, arguments.contains(SerializationArguments::WithoutParentheses));
         if (!first) {
             if (auto* mathNegate = dynamicDowncast<CSSMathNegate>(numericValue)) {
-                builder.append(" - "_s);
+                builder.append(" - ");
                 mathNegate->value().serialize(builder, operandSerializationArguments);
                 return;
             }
-            builder.append(" + "_s);
+            builder.append(" + ");
         }
         numericValue.serialize(builder, operandSerializationArguments);
     });

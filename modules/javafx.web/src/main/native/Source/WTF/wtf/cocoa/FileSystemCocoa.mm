@@ -74,7 +74,7 @@ String createTemporaryZipArchive(const String& path)
     RetainPtr<NSFileCoordinator> coordinator = adoptNS([[NSFileCoordinator alloc] initWithFilePresenter:nil]);
     [coordinator coordinateReadingItemAtURL:[NSURL fileURLWithPath:path] options:NSFileCoordinatorReadingWithoutChanges error:nullptr byAccessor:[&](NSURL *newURL) mutable {
         CString archivePath([NSTemporaryDirectory() stringByAppendingPathComponent:@"WebKitGeneratedFileXXXXXX"].fileSystemRepresentation);
-        if (mkostemp(archivePath.mutableData(), O_CLOEXEC) == -1)
+        if (mkstemp(archivePath.mutableData()) == -1)
             return;
 
         NSDictionary *options = @{
@@ -86,20 +86,20 @@ String createTemporaryZipArchive(const String& path)
 
         BOMCopier copier = BOMCopierNew();
         if (!BOMCopierCopyWithOptions(copier, newURL.path.fileSystemRepresentation, archivePath.data(), (__bridge CFDictionaryRef)options))
-            temporaryFile = String::fromUTF8(archivePath.span());
+            temporaryFile = String::fromUTF8(archivePath);
         BOMCopierFree(copier);
     }];
 
     return temporaryFile;
 }
 
-std::pair<String, PlatformFileHandle> openTemporaryFile(StringView prefix, StringView suffix)
+String openTemporaryFile(StringView prefix, PlatformFileHandle& platformFileHandle, StringView suffix)
 {
-    PlatformFileHandle platformFileHandle = invalidPlatformFileHandle;
+    platformFileHandle = invalidPlatformFileHandle;
 
     Vector<char> temporaryFilePath(PATH_MAX);
     if (!confstr(_CS_DARWIN_USER_TEMP_DIR, temporaryFilePath.data(), temporaryFilePath.size()))
-        return { String(), invalidPlatformFileHandle };
+        return String();
 
     // Shrink the vector.
     temporaryFilePath.shrink(strlen(temporaryFilePath.data()));
@@ -107,18 +107,20 @@ std::pair<String, PlatformFileHandle> openTemporaryFile(StringView prefix, Strin
     ASSERT(temporaryFilePath.last() == '/');
 
     // Append the file name.
-    temporaryFilePath.append(prefix.utf8().span());
-    temporaryFilePath.append("XXXXXX"_span);
+    CString prefixUTF8 = prefix.utf8();
+    temporaryFilePath.append(prefixUTF8.data(), prefixUTF8.length());
+    temporaryFilePath.append("XXXXXX", 6);
 
     // Append the file name suffix.
     CString suffixUTF8 = suffix.utf8();
-    temporaryFilePath.append(suffixUTF8.spanIncludingNullTerminator());
+    temporaryFilePath.append(suffixUTF8.data(), suffixUTF8.length());
+    temporaryFilePath.append('\0');
 
-    platformFileHandle = mkostemps(temporaryFilePath.data(), suffixUTF8.length(), O_CLOEXEC);
+    platformFileHandle = mkstemps(temporaryFilePath.data(), suffixUTF8.length());
     if (platformFileHandle == invalidPlatformFileHandle)
-        return { nullString(), invalidPlatformFileHandle };
+        return String();
 
-    return { String::fromUTF8(temporaryFilePath.data()), platformFileHandle };
+    return String::fromUTF8(temporaryFilePath.data());
 }
 
 NSString *createTemporaryDirectory(NSString *directoryPrefix)

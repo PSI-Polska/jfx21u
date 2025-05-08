@@ -28,8 +28,7 @@
 namespace WebCore {
 
 class HTMLFontElement final : public HTMLElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLFontElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLFontElement);
+    WTF_MAKE_ISO_ALLOCATED(HTMLFontElement);
 public:
     static Ref<HTMLFontElement> create(const QualifiedName&, Document&);
 

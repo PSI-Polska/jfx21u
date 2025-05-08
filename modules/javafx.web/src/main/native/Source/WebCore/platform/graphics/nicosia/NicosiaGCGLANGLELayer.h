@@ -28,7 +28,7 @@
 
 #pragma once
 
-#if ENABLE(WEBGL) && USE(TEXTURE_MAPPER) && USE(NICOSIA)
+#if USE(NICOSIA) && USE(TEXTURE_MAPPER)
 
 #include "NicosiaContentLayer.h"
 
@@ -62,4 +62,4 @@ private:
 
 } // namespace Nicosia
 
-#endif // ENABLE(WEBGL) && USE(TEXTURE_MAPPER) && USE(NICOSIA)
+#endif // USE(NICOSIA) && USE(TEXTURE_MAPPER)

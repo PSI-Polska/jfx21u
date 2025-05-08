@@ -161,17 +161,17 @@ public:
             Node node = this->node(i);
             if (!node)
                 continue;
-            out.print(dump(node), ":\n"_s);
-            out.print("    Preds: "_s);
+            out.print(dump(node), ":\n");
+            out.print("    Preds: ");
             CommaPrinter comma;
             for (Node predecessor : predecessors(node))
                 out.print(comma, dump(predecessor));
-            out.print("\n"_s);
-            out.print("    Succs: "_s);
+            out.print("\n");
+            out.print("    Succs: ");
             comma = CommaPrinter();
             for (Node successor : successors(node))
                 out.print(comma, dump(successor));
-            out.print("\n"_s);
+            out.print("\n");
         }
     }
 

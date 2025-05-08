@@ -19,9 +19,10 @@
 
 #pragma once
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+
 #include "RenderElementInlines.h"
 #include "RenderLayerModelObject.h"
-#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -31,28 +32,28 @@ public:
     SVGLayerTransformUpdater(RenderLayerModelObject& renderer)
         : m_renderer(renderer)
     {
-        if (!m_renderer->hasLayer())
+        if (!m_renderer.hasLayer())
             return;
 
-        m_transformReferenceBox = m_renderer->transformReferenceBoxRect();
-        m_layerTransform = m_renderer->layerTransform();
+        m_transformReferenceBox = m_renderer.transformReferenceBoxRect();
+        m_layerTransform = m_renderer.layerTransform();
 
-        m_renderer->updateLayerTransform();
+        m_renderer.updateLayerTransform();
     }
 
     ~SVGLayerTransformUpdater()
     {
-        if (!m_renderer->hasLayer())
+        if (!m_renderer.hasLayer())
             return;
-        if (m_renderer->transformReferenceBoxRect() == m_transformReferenceBox)
+        if (m_renderer.transformReferenceBoxRect() == m_transformReferenceBox)
             return;
 
-        m_renderer->updateLayerTransform();
+        m_renderer.updateLayerTransform();
     }
 
     bool layerTransformChanged() const
     {
-        auto* layerTransform = m_renderer->layerTransform();
+        auto* layerTransform = m_renderer.layerTransform();
 
         bool hasTransform = !!layerTransform;
         bool hadTransform = !!m_layerTransform;
@@ -63,10 +64,11 @@ public:
     }
 
 private:
-    SingleThreadWeakRef<RenderLayerModelObject> m_renderer;
+    RenderLayerModelObject& m_renderer;
     FloatRect m_transformReferenceBox;
     TransformationMatrix* m_layerTransform { nullptr };
 };
 
 } // namespace WebCore
 
+#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

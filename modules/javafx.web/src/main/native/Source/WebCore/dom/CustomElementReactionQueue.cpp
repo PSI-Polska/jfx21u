@@ -319,6 +319,9 @@ void CustomElementReactionQueue::invokeAll(Element& element)
     }
 }
 
+CustomElementQueue::CustomElementQueue() = default;
+CustomElementQueue::~CustomElementQueue() = default;
+
 inline void CustomElementQueue::add(Element& element)
 {
     ASSERT(!m_invoking);
@@ -335,7 +338,6 @@ inline void CustomElementQueue::invokeAll()
     // Invoke callbacks slightly later here instead of crashing / ignoring those cases.
     for (unsigned i = 0; i < m_elements.size(); ++i) {
         Ref element = m_elements[i].get();
-        element->clearIsInCustomElementReactionQueue();
         auto* queue = element->reactionQueue();
         ASSERT(queue);
         queue->invokeAll(element);
@@ -344,7 +346,7 @@ inline void CustomElementQueue::invokeAll()
     m_elements.clear();
 }
 
-void CustomElementQueue::processQueue(JSC::JSGlobalObject* state)
+inline void CustomElementQueue::processQueue(JSC::JSGlobalObject* state)
 {
     if (!state) {
         invokeAll();
@@ -370,7 +372,7 @@ void CustomElementQueue::processQueue(JSC::JSGlobalObject* state)
     }
 }
 
-Vector<Ref<Element>, 4> CustomElementQueue::takeElements()
+Vector<GCReachableRef<Element>, 4> CustomElementQueue::takeElements()
 {
     RELEASE_ASSERT(!m_invoking);
     return std::exchange(m_elements, { });
@@ -386,13 +388,15 @@ void CustomElementReactionQueue::enqueueElementsOnAppropriateElementQueue(const 
 void CustomElementReactionQueue::enqueueElementOnAppropriateElementQueue(Element& element)
 {
     ASSERT(element.reactionQueue());
-    element.setIsInCustomElementReactionQueue();
     if (!CustomElementReactionStack::s_currentProcessingStack) {
         element.document().windowEventLoop().backupElementQueue().add(element);
         return;
     }
 
-    CustomElementReactionStack::s_currentProcessingStack->m_queue.add(element);
+    auto& queue = CustomElementReactionStack::s_currentProcessingStack->m_queue;
+    if (!queue)
+        queue = makeUnique<CustomElementQueue>();
+    queue->add(element);
 }
 
 #if ASSERT_ENABLED
@@ -400,6 +404,22 @@ unsigned CustomElementReactionDisallowedScope::s_customElementReactionDisallowed
 #endif
 
 CustomElementReactionStack* CustomElementReactionStack::s_currentProcessingStack = nullptr;
+
+void CustomElementReactionStack::processQueue(JSC::JSGlobalObject* state)
+{
+    ASSERT(m_queue);
+    m_queue->processQueue(state);
+    m_queue = nullptr;
+}
+
+Vector<GCReachableRef<Element>, 4> CustomElementReactionStack::takeElements()
+{
+    if (!m_queue)
+        return { };
+    auto elements = m_queue->takeElements();
+    m_queue = nullptr;
+    return elements;
+}
 
 void CustomElementReactionQueue::processBackupQueue(CustomElementQueue& backupElementQueue)
 {

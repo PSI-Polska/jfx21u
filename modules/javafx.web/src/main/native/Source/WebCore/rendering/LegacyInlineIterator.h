@@ -281,8 +281,7 @@ inline void LegacyInlineIterator::incrementByCodePointInTextNode()
         return;
     }
     char32_t character;
-    auto characters = text.span16();
-    U16_NEXT(characters, m_pos, text.length(), character);
+    U16_NEXT(text.characters16(), m_pos, text.length(), character);
 }
 
 inline void LegacyInlineIterator::setOffset(unsigned position)

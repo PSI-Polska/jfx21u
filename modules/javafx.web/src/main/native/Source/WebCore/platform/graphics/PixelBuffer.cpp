@@ -59,43 +59,44 @@ CheckedUint32 PixelBuffer::computeBufferSize(PixelFormat pixelFormat, const IntS
 
 }
 
-PixelBuffer::PixelBuffer(const PixelBufferFormat& format, const IntSize& size, std::span<uint8_t> bytes)
+PixelBuffer::PixelBuffer(const PixelBufferFormat& format, const IntSize& size, uint8_t* bytes, size_t sizeInBytes)
     : m_format(format)
     , m_size(size)
     , m_bytes(bytes)
+    , m_sizeInBytes(sizeInBytes)
 {
-    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION((m_size.area() * 4) <= m_bytes.size());
+    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION((m_size.area() * 4) <= m_sizeInBytes);
 }
 
 PixelBuffer::~PixelBuffer() = default;
 
-bool PixelBuffer::setRange(std::span<const uint8_t> data, size_t byteOffset)
+bool PixelBuffer::setRange(const uint8_t* data, size_t dataByteLength, size_t byteOffset)
 {
-    if (!isSumSmallerThanOrEqual(byteOffset, data.size(), m_bytes.size()))
+    if (!isSumSmallerThanOrEqual(byteOffset, dataByteLength, m_sizeInBytes))
         return false;
 
-    memmove(m_bytes.data() + byteOffset, data.data(), data.size());
+    memmove(m_bytes + byteOffset, data, dataByteLength);
     return true;
 }
 
 bool PixelBuffer::zeroRange(size_t byteOffset, size_t rangeByteLength)
 {
-    if (!isSumSmallerThanOrEqual(byteOffset, rangeByteLength, m_bytes.size()))
+    if (!isSumSmallerThanOrEqual(byteOffset, rangeByteLength, m_sizeInBytes))
         return false;
 
-    memset(m_bytes.data() + byteOffset, 0, rangeByteLength);
+    memset(m_bytes + byteOffset, 0, rangeByteLength);
     return true;
 }
 
 uint8_t PixelBuffer::item(size_t index) const
 {
-    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(index < m_bytes.size());
+    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(index < m_sizeInBytes);
     return m_bytes[index];
 }
 
 void PixelBuffer::set(size_t index, double value)
 {
-    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(index < m_bytes.size());
+    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(index < m_sizeInBytes);
     m_bytes[index] = JSC::Uint8ClampedAdaptor::toNativeFromDouble(value);
 }
 

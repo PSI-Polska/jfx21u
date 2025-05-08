@@ -159,7 +159,7 @@ private:
 
 void duplicateTails(Procedure& proc)
 {
-    PhaseScope phaseScope(proc, "duplicateTails"_s);
+    PhaseScope phaseScope(proc, "duplicateTails");
     DuplicateTails duplicateTails(proc);
     duplicateTails.run();
 }

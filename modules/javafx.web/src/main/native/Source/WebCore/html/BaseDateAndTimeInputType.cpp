@@ -143,29 +143,6 @@ ExceptionOr<void> BaseDateAndTimeInputType::setValueAsDate(WallTime value) const
     return { };
 }
 
-WallTime BaseDateAndTimeInputType::accessibilityValueAsDate() const
-{
-    double dateAsDouble = valueAsDouble();
-    if (std::isnan(dateAsDouble) && m_dateTimeEditElement) {
-        // The value for this element has not been set. Try to get a value from
-        // m_dateTimeEditElement if exists. That value may have been indirectly
-        // set as placeholder values for the field elements.
-        String value = m_dateTimeEditElement->value();
-        if (value.isEmpty())
-            value = m_dateTimeEditElement->placeholderValue();
-        if (value.isEmpty())
-            return { };
-
-        auto decimal = parseToNumber(value, Decimal::nan());
-        if (decimal.isFinite())
-            dateAsDouble = decimal.toDouble();
-    }
-
-    if (std::isnan(dateAsDouble))
-        return { };
-    return WallTime::fromRawSeconds(Seconds::fromMilliseconds(dateAsDouble).value());
-}
-
 double BaseDateAndTimeInputType::valueAsDouble() const
 {
     ASSERT(element());
@@ -353,19 +330,17 @@ void BaseDateAndTimeInputType::createShadowSubtree()
     ASSERT(needsShadowSubtree());
     ASSERT(element());
 
-    Ref element = *this->element();
-    Ref document = element->document();
+    auto& element = *this->element();
+    auto& document = element.document();
 
-    Ref shadowRoot = *element->userAgentShadowRoot();
-    ScriptDisallowedScope::EventAllowedScope eventAllowedScope { shadowRoot };
+    ScriptDisallowedScope::EventAllowedScope eventAllowedScope { *element.userAgentShadowRoot() };
 
-    if (document->settings().dateTimeInputsEditableComponentsEnabled()) {
-        Ref dateTimeEditElement = DateTimeEditElement::create(document, *this);
-        m_dateTimeEditElement = dateTimeEditElement.copyRef();
-        shadowRoot->appendChild(ContainerNode::ChildChange::Source::Parser, dateTimeEditElement);
+    if (document.settings().dateTimeInputsEditableComponentsEnabled()) {
+        m_dateTimeEditElement = DateTimeEditElement::create(document, *this);
+        element.userAgentShadowRoot()->appendChild(ContainerNode::ChildChange::Source::Parser, *m_dateTimeEditElement);
     } else {
-        Ref valueContainer = HTMLDivElement::create(document);
-        shadowRoot->appendChild(ContainerNode::ChildChange::Source::Parser, valueContainer);
+        auto valueContainer = HTMLDivElement::create(document);
+        element.userAgentShadowRoot()->appendChild(ContainerNode::ChildChange::Source::Parser, valueContainer);
         valueContainer->setUserAgentPart(UserAgentParts::webkitDateAndTimeValue());
     }
     updateInnerTextValue();
@@ -502,7 +477,7 @@ void BaseDateAndTimeInputType::handleFocusEvent(Node* oldFocusedNode, FocusDirec
         // so that this element no longer has focus. In this case, one of the children should
         // not be focused as the element is losing focus entirely.
         if (auto* page = element()->document().page())
-            page->checkedFocusController()->advanceFocus(direction, 0);
+            CheckedRef(page->focusController())->advanceFocus(direction, 0);
 
     } else {
         // If the element received focus in any other direction, transfer focus to the first focusable child.
@@ -536,8 +511,8 @@ void BaseDateAndTimeInputType::didChangeValueFromControl()
     if (!valueChanged)
         return;
 
-    Ref input = *element();
-    if (input->protectedUserAgentShadowRoot()->containsFocusedElement())
+    Ref<HTMLInputElement> input(*element());
+    if (input->userAgentShadowRoot()->containsFocusedElement())
         input->dispatchFormControlInputEvent();
     else
         input->dispatchFormControlChangeEvent();
@@ -619,6 +594,7 @@ bool BaseDateAndTimeInputType::setupDateTimeChooserParameters(DateTimeChooserPar
     auto* computedStyle = element.computedStyle();
     parameters.isAnchorElementRTL = computedStyle->direction() == TextDirection::RTL;
     parameters.useDarkAppearance = document.useDarkAppearance(computedStyle);
+
     auto date = valueOrDefault(parseToDateComponents(element.value()));
     parameters.hasSecondField = shouldHaveSecondField(date);
     parameters.hasMillisecondField = shouldHaveMillisecondField(date);

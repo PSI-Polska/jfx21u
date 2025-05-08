@@ -39,10 +39,6 @@ public:
     static Ref<DOMCacheStorage> create(ScriptExecutionContext&, Ref<CacheStorageConnection>&&);
     ~DOMCacheStorage();
 
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
-
     using KeysPromise = DOMPromiseDeferred<IDLSequence<IDLDOMString>>;
 
     void match(DOMCache::RequestInfo&&, MultiCacheQueryOptions&&, Ref<DeferredPromise>&&);
@@ -56,6 +52,7 @@ private:
 
     // ActiveDOMObject
     void stop() final;
+    const char* activeDOMObjectName() const final;
 
     void doOpen(const String& name, DOMPromiseDeferred<IDLInterface<DOMCache>>&&);
     void doRemove(const String&, DOMPromiseDeferred<IDLBoolean>&&);

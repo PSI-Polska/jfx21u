@@ -38,7 +38,7 @@ class PageDebuggable final : public Inspector::RemoteInspectionTarget {
     WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(PageDebuggable);
 public:
-    static Ref<PageDebuggable> create(Page&);
+    PageDebuggable(Page&);
     ~PageDebuggable() = default;
 
     Inspector::RemoteControllableTarget::Type type() const final { return Inspector::RemoteControllableTarget::Type::Page; }
@@ -55,12 +55,8 @@ public:
     const String& nameOverride() const { return m_nameOverride; }
     void setNameOverride(const String&);
 
-    void detachFromPage();
-
 private:
-    explicit PageDebuggable(Page&);
-
-    Page* m_page;
+    Page& m_page;
     String m_nameOverride;
 };
 

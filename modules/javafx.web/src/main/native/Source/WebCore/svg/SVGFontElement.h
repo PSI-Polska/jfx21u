@@ -40,8 +40,7 @@ struct SVGKerningPair {
 };
 
 class SVGFontElement final : public SVGElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGFontElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGFontElement);
+    WTF_MAKE_ISO_ALLOCATED(SVGFontElement);
 public:
     static Ref<SVGFontElement> create(const QualifiedName&, Document&);
 

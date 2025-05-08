@@ -31,7 +31,6 @@
 
 #pragma once
 
-#include "CSSProperty.h"
 #include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
 #include "WritingDirection.h"
@@ -110,7 +109,6 @@ public:
     WEBCORE_EXPORT ~EditingStyle();
 
     MutableStyleProperties* style() { return m_mutableStyle.get(); }
-    RefPtr<MutableStyleProperties> protectedStyle();
     Ref<MutableStyleProperties> styleWithResolvedTextDecorations() const;
     std::optional<WritingDirection> textDirection() const;
     bool isEmpty() const;
@@ -181,7 +179,7 @@ private:
     EditingStyle(CSSPropertyID, CSSValueID);
     void init(Node*, PropertiesToInclude);
     void removeTextFillAndStrokeColorsIfNeeded(const RenderStyle*);
-    void setProperty(CSSPropertyID, const String& value, IsImportant = IsImportant::No);
+    void setProperty(CSSPropertyID, const String& value, bool important = false);
     void extractFontSizeDelta();
     template<typename T> TriState triStateOfStyle(T& styleToCompare, ShouldIgnoreTextOnlyProperties) const;
     bool conflictsWithInlineStyleOfElement(StyledElement&, RefPtr<MutableStyleProperties>* newInlineStyle, EditingStyle* extractedStyle) const;

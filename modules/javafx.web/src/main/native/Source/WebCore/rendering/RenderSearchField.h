@@ -31,8 +31,7 @@ namespace WebCore {
 class HTMLInputElement;
 
 class RenderSearchField final : public RenderTextControlSingleLine, private PopupMenuClient {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSearchField);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSearchField);
+    WTF_MAKE_ISO_ALLOCATED(RenderSearchField);
 public:
     RenderSearchField(HTMLInputElement&, RenderStyle&&);
     virtual ~RenderSearchField();
@@ -80,7 +79,6 @@ private:
     FontSelector* fontSelector() const override;
     HostWindow* hostWindow() const override;
     Ref<Scrollbar> createScrollbar(ScrollableArea&, ScrollbarOrientation, ScrollbarWidth) override;
-    RefPtr<SearchPopupMenu> protectedSearchPopup() const { return m_searchPopup; };
 
     HTMLElement* resultsButtonElement() const;
     HTMLElement* cancelButtonElement() const;

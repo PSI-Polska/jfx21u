@@ -321,14 +321,14 @@ void CachedResource::setBodyDataFrom(const CachedResource& resource)
     setEncodedSize(resource.encodedSize());
 }
 
-void CachedResource::checkNotify(const NetworkLoadMetrics& metrics, LoadWillContinueInAnotherProcess loadWillContinueInAnotherProcess)
+void CachedResource::checkNotify(const NetworkLoadMetrics& metrics)
 {
     if (isLoading() || stillNeedsLoad())
         return;
 
     CachedResourceClientWalker<CachedResourceClient> walker(*this);
     while (CachedResourceClient* client = walker.next())
-        client->notifyFinished(*this, metrics, loadWillContinueInAnotherProcess);
+        client->notifyFinished(*this, metrics);
 }
 
 void CachedResource::updateBuffer(const FragmentedSharedBuffer&)
@@ -364,7 +364,7 @@ void CachedResource::clearCachedCryptographicDigests()
     m_cryptographicDigests.fill(std::nullopt);
 }
 
-void CachedResource::cancelLoad(LoadWillContinueInAnotherProcess loadWillContinueInAnotherProcess)
+void CachedResource::cancelLoad()
 {
     if (!isLoading() && !stillNeedsLoad())
         return;
@@ -377,7 +377,7 @@ void CachedResource::cancelLoad(LoadWillContinueInAnotherProcess loadWillContinu
         setStatus(LoadError);
 
     setLoading(false);
-    checkNotify({ }, loadWillContinueInAnotherProcess);
+    checkNotify({ });
 }
 
 void CachedResource::finish()
@@ -737,7 +737,10 @@ void CachedResource::didAccessDecodedData(MonotonicTime timeStamp)
 
     if (allowsCaching() && inCache()) {
         auto& memoryCache = MemoryCache::singleton();
-        memoryCache.moveToEndOfLiveDecodedResourcesListIfPresent(*this);
+        if (memoryCache.inLiveDecodedResourcesList(*this)) {
+            memoryCache.removeFromLiveDecodedResourcesList(*this);
+            memoryCache.insertInLiveDecodedResourcesList(*this);
+        }
         memoryCache.pruneSoon();
     }
 }

@@ -217,11 +217,6 @@ void RecorderImpl::recordBeginTransparencyLayer(float opacity)
     append(BeginTransparencyLayer(opacity));
 }
 
-void RecorderImpl::recordBeginTransparencyLayer(CompositeOperator compositeOperator, BlendMode blendMode)
-{
-    append(BeginTransparencyLayerWithCompositeMode({ compositeOperator, blendMode }));
-}
-
 void RecorderImpl::recordEndTransparencyLayer()
 {
     append(EndTransparencyLayer());
@@ -267,9 +262,9 @@ void RecorderImpl::recordDrawFocusRingRects(const Vector<FloatRect>& rects, floa
     append(DrawFocusRingRects(rects, outlineOffset, outlineWidth, color));
 }
 
-void RecorderImpl::recordFillRect(const FloatRect& rect, RequiresClipToRect requiresClipToRect)
+void RecorderImpl::recordFillRect(const FloatRect& rect)
 {
-    append(FillRect(rect, requiresClipToRect));
+    append(FillRect(rect));
 }
 
 void RecorderImpl::recordFillRectWithColor(const FloatRect& rect, const Color& color)
@@ -282,9 +277,9 @@ void RecorderImpl::recordFillRectWithGradient(const FloatRect& rect, Gradient& g
     append(FillRectWithGradient(rect, gradient));
 }
 
-void RecorderImpl::recordFillRectWithGradientAndSpaceTransform(const FloatRect& rect, Gradient& gradient, const AffineTransform& gradientSpaceTransform, RequiresClipToRect requiresClipToRect)
+void RecorderImpl::recordFillRectWithGradientAndSpaceTransform(const FloatRect& rect, Gradient& gradient, const AffineTransform& gradientSpaceTransform)
 {
-    append(FillRectWithGradientAndSpaceTransform(rect, gradient, gradientSpaceTransform, requiresClipToRect));
+    append(FillRectWithGradientAndSpaceTransform(rect, gradient, gradientSpaceTransform));
 }
 
 void RecorderImpl::recordFillCompositedRect(const FloatRect& rect, const Color& color, CompositeOperator op, BlendMode mode)

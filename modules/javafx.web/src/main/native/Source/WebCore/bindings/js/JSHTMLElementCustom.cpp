@@ -54,7 +54,7 @@ EncodedJSValue constructJSHTMLElement(JSGlobalObject* lexicalGlobalObject, CallF
 
     auto* context = jsConstructor->scriptExecutionContext();
     if (!context)
-        return throwConstructorScriptExecutionContextUnavailableError(*lexicalGlobalObject, scope, "HTMLElement"_s);
+        return throwConstructorScriptExecutionContextUnavailableError(*lexicalGlobalObject, scope, "HTMLElement");
     ASSERT(context->isDocument());
 
     auto* newTarget = callFrame.newTarget().getObject();

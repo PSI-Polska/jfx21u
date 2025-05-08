@@ -28,7 +28,6 @@
 
 #include "Credential.h"
 #include <wtf/text/Base64.h>
-#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -99,7 +98,7 @@ bool CredentialBase::compare(const Credential& a, const Credential& b)
 String CredentialBase::serializationForBasicAuthorizationHeader() const
 {
     auto credentialStringData = makeString(m_user, ':', m_password).utf8();
-    return makeString("Basic "_s, base64Encoded(credentialStringData.span()));
+    return makeString("Basic ", base64Encoded(credentialStringData));
 }
 
 auto CredentialBase::nonPlatformData() const -> NonPlatformData

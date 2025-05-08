@@ -1011,7 +1011,7 @@ typedef HashMap<NodeFlowProjection, Vector<Relationship>> RelationshipMap;
 class IntegerRangeOptimizationPhase : public Phase {
 public:
     IntegerRangeOptimizationPhase(Graph& graph)
-        : Phase(graph, "integer range optimization"_s)
+        : Phase(graph, "integer range optimization")
         , m_zero(nullptr)
         , m_relationshipsAtHead(graph)
         , m_insertionSet(graph)
@@ -1527,8 +1527,7 @@ private:
         }
 
         case GetArrayLength:
-        case GetVectorLength:
-        case GetUndetachedTypeArrayLength: {
+        case GetVectorLength: {
             setRelationship(Relationship(node, m_zero, Relationship::GreaterThan, -1));
             break;
         }

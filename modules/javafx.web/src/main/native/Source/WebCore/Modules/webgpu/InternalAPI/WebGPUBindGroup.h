@@ -31,14 +31,11 @@
 
 namespace WebCore::WebGPU {
 
-class ExternalTexture;
-
 class BindGroup : public RefCounted<BindGroup> {
 public:
     virtual ~BindGroup() = default;
 
     String label() const { return m_label; }
-    virtual void updateExternalTextures(const ExternalTexture&) = 0;
 
     void setLabel(String&& label)
     {

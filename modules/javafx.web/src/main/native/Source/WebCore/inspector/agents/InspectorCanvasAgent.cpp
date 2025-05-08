@@ -116,7 +116,7 @@ void InspectorCanvasAgent::discardAgent()
     reset();
 }
 
-Inspector::Protocol::ErrorStringOr<void> InspectorCanvasAgent::enable()
+Protocol::ErrorStringOr<void> InspectorCanvasAgent::enable()
 {
     if (enabled())
         return makeUnexpected("Canvas domain already enabled"_s);
@@ -126,7 +126,7 @@ Inspector::Protocol::ErrorStringOr<void> InspectorCanvasAgent::enable()
         return { };
 }
 
-Inspector::Protocol::ErrorStringOr<void> InspectorCanvasAgent::disable()
+Protocol::ErrorStringOr<void> InspectorCanvasAgent::disable()
 {
     internalDisable();
 
@@ -184,18 +184,18 @@ void InspectorCanvasAgent::internalDisable()
     m_recordingAutoCaptureFrameCount = std::nullopt;
 }
 
-Inspector::Protocol::ErrorStringOr<String> InspectorCanvasAgent::requestContent(const Inspector::Protocol::Canvas::CanvasId& canvasId)
+Protocol::ErrorStringOr<String> InspectorCanvasAgent::requestContent(const Protocol::Canvas::CanvasId& canvasId)
 {
-    Inspector::Protocol::ErrorString errorString;
+    Protocol::ErrorString errorString;
     auto inspectorCanvas = assertInspectorCanvas(errorString, canvasId);
     if (!inspectorCanvas)
         return makeUnexpected(errorString);
     return inspectorCanvas->getContentAsDataURL();
 }
 
-Inspector::Protocol::ErrorStringOr<Ref<Inspector::Protocol::Runtime::RemoteObject>> InspectorCanvasAgent::resolveContext(const Inspector::Protocol::Canvas::CanvasId& canvasId, const String& objectGroup)
+Protocol::ErrorStringOr<Ref<Protocol::Runtime::RemoteObject>> InspectorCanvasAgent::resolveContext(const Protocol::Canvas::CanvasId& canvasId, const String& objectGroup)
 {
-    Inspector::Protocol::ErrorString errorString;
+    Protocol::ErrorString errorString;
 
     auto inspectorCanvas = assertInspectorCanvas(errorString, canvasId);
     if (!inspectorCanvas)
@@ -219,7 +219,7 @@ Inspector::Protocol::ErrorStringOr<Ref<Inspector::Protocol::Runtime::RemoteObjec
     return result.releaseNonNull();
 }
 
-Inspector::Protocol::ErrorStringOr<void> InspectorCanvasAgent::setRecordingAutoCaptureFrameCount(int count)
+Protocol::ErrorStringOr<void> InspectorCanvasAgent::setRecordingAutoCaptureFrameCount(int count)
 {
     if (count > 0)
         m_recordingAutoCaptureFrameCount = count;
@@ -228,9 +228,9 @@ Inspector::Protocol::ErrorStringOr<void> InspectorCanvasAgent::setRecordingAutoC
     return { };
 }
 
-Inspector::Protocol::ErrorStringOr<void> InspectorCanvasAgent::startRecording(const Inspector::Protocol::Canvas::CanvasId& canvasId, std::optional<int>&& frameCount, std::optional<int>&& memoryLimit)
+Protocol::ErrorStringOr<void> InspectorCanvasAgent::startRecording(const Protocol::Canvas::CanvasId& canvasId, std::optional<int>&& frameCount, std::optional<int>&& memoryLimit)
 {
-    Inspector::Protocol::ErrorString errorString;
+    Protocol::ErrorString errorString;
 
     auto inspectorCanvas = assertInspectorCanvas(errorString, canvasId);
     if (!inspectorCanvas)
@@ -248,14 +248,14 @@ Inspector::Protocol::ErrorStringOr<void> InspectorCanvasAgent::startRecording(co
         recordingOptions.frameCount = *frameCount;
     if (memoryLimit)
         recordingOptions.memoryLimit = *memoryLimit;
-    startRecording(*inspectorCanvas, Inspector::Protocol::Recording::Initiator::Frontend, WTFMove(recordingOptions));
+    startRecording(*inspectorCanvas, Protocol::Recording::Initiator::Frontend, WTFMove(recordingOptions));
 
     return { };
 }
 
-Inspector::Protocol::ErrorStringOr<void> InspectorCanvasAgent::stopRecording(const Inspector::Protocol::Canvas::CanvasId& canvasId)
+Protocol::ErrorStringOr<void> InspectorCanvasAgent::stopRecording(const Protocol::Canvas::CanvasId& canvasId)
 {
-    Inspector::Protocol::ErrorString errorString;
+    Protocol::ErrorString errorString;
 
     auto inspectorCanvas = assertInspectorCanvas(errorString, canvasId);
     if (!inspectorCanvas)
@@ -275,9 +275,9 @@ Inspector::Protocol::ErrorStringOr<void> InspectorCanvasAgent::stopRecording(con
 
 #if ENABLE(WEBGL)
 
-Inspector::Protocol::ErrorStringOr<String> InspectorCanvasAgent::requestShaderSource(const Inspector::Protocol::Canvas::ProgramId& programId, Inspector::Protocol::Canvas::ShaderType shaderType)
+Protocol::ErrorStringOr<String> InspectorCanvasAgent::requestShaderSource(const Protocol::Canvas::ProgramId& programId, Protocol::Canvas::ShaderType shaderType)
 {
-    Inspector::Protocol::ErrorString errorString;
+    Protocol::ErrorString errorString;
 
     auto inspectorProgram = assertInspectorProgram(errorString, programId);
     if (!inspectorProgram)
@@ -290,9 +290,9 @@ Inspector::Protocol::ErrorStringOr<String> InspectorCanvasAgent::requestShaderSo
     return source;
 }
 
-Inspector::Protocol::ErrorStringOr<void> InspectorCanvasAgent::updateShader(const Inspector::Protocol::Canvas::ProgramId& programId, Inspector::Protocol::Canvas::ShaderType shaderType, const String& source)
+Protocol::ErrorStringOr<void> InspectorCanvasAgent::updateShader(const Protocol::Canvas::ProgramId& programId, Protocol::Canvas::ShaderType shaderType, const String& source)
 {
-    Inspector::Protocol::ErrorString errorString;
+    Protocol::ErrorString errorString;
 
     auto inspectorProgram = assertInspectorProgram(errorString, programId);
     if (!inspectorProgram)
@@ -304,9 +304,9 @@ Inspector::Protocol::ErrorStringOr<void> InspectorCanvasAgent::updateShader(cons
     return { };
 }
 
-Inspector::Protocol::ErrorStringOr<void> InspectorCanvasAgent::setShaderProgramDisabled(const Inspector::Protocol::Canvas::ProgramId& programId, bool disabled)
+Protocol::ErrorStringOr<void> InspectorCanvasAgent::setShaderProgramDisabled(const Protocol::Canvas::ProgramId& programId, bool disabled)
 {
-    Inspector::Protocol::ErrorString errorString;
+    Protocol::ErrorString errorString;
 
     auto inspectorProgram = assertInspectorProgram(errorString, programId);
     if (!inspectorProgram)
@@ -317,9 +317,9 @@ Inspector::Protocol::ErrorStringOr<void> InspectorCanvasAgent::setShaderProgramD
     return { };
 }
 
-Inspector::Protocol::ErrorStringOr<void> InspectorCanvasAgent::setShaderProgramHighlighted(const Inspector::Protocol::Canvas::ProgramId& programId, bool highlighted)
+Protocol::ErrorStringOr<void> InspectorCanvasAgent::setShaderProgramHighlighted(const Protocol::Canvas::ProgramId& programId, bool highlighted)
 {
-    Inspector::Protocol::ErrorString errorString;
+    Protocol::ErrorString errorString;
 
     auto inspectorProgram = assertInspectorProgram(errorString, programId);
     if (!inspectorProgram)
@@ -344,7 +344,7 @@ void InspectorCanvasAgent::didCreateCanvasRenderingContext(CanvasRenderingContex
     if (m_recordingAutoCaptureFrameCount) {
         RecordingOptions recordingOptions;
         recordingOptions.frameCount = m_recordingAutoCaptureFrameCount.value();
-        startRecording(inspectorCanvas, Inspector::Protocol::Recording::Initiator::AutoCapture, WTFMove(recordingOptions));
+        startRecording(inspectorCanvas, Protocol::Recording::Initiator::AutoCapture, WTFMove(recordingOptions));
     }
 }
 
@@ -458,7 +458,7 @@ void InspectorCanvasAgent::consoleStartRecordingCanvas(CanvasRenderingContext& c
         if (JSC::JSValue optionName = options->get(&exec, JSC::Identifier::fromString(vm, "name"_s)))
             recordingOptions.name = optionName.toWTFString(&exec);
     }
-    startRecording(*inspectorCanvas, Inspector::Protocol::Recording::Initiator::Console, WTFMove(recordingOptions));
+    startRecording(*inspectorCanvas, Protocol::Recording::Initiator::Console, WTFMove(recordingOptions));
 }
 
 void InspectorCanvasAgent::consoleStopRecordingCanvas(CanvasRenderingContext& context)
@@ -575,7 +575,7 @@ void InspectorCanvasAgent::recordAction(CanvasRenderingContext& canvasRenderingC
         didFinishRecordingCanvasFrame(canvasRenderingContext, true);
 }
 
-void InspectorCanvasAgent::startRecording(InspectorCanvas& inspectorCanvas, Inspector::Protocol::Recording::Initiator initiator, RecordingOptions&& recordingOptions)
+void InspectorCanvasAgent::startRecording(InspectorCanvas& inspectorCanvas, Protocol::Recording::Initiator initiator, RecordingOptions&& recordingOptions)
 {
     auto& context = inspectorCanvas.canvasContext();
     // FIXME: <https://webkit.org/b/201651> Web Inspector: Canvas: support canvas recordings for WebGPUDevice
@@ -705,7 +705,7 @@ void InspectorCanvasAgent::unbindCanvas(InspectorCanvas& inspectorCanvas)
         m_canvasDestroyedTimer.startOneShot(0_s);
 }
 
-RefPtr<InspectorCanvas> InspectorCanvasAgent::assertInspectorCanvas(Inspector::Protocol::ErrorString& errorString, const String& canvasId)
+RefPtr<InspectorCanvas> InspectorCanvasAgent::assertInspectorCanvas(Protocol::ErrorString& errorString, const String& canvasId)
 {
     auto inspectorCanvas = m_identifierToInspectorCanvas.get(canvasId);
     if (!inspectorCanvas) {
@@ -740,7 +740,7 @@ void InspectorCanvasAgent::unbindProgram(InspectorShaderProgram& inspectorProgra
         m_programDestroyedTimer.startOneShot(0_s);
 }
 
-RefPtr<InspectorShaderProgram> InspectorCanvasAgent::assertInspectorProgram(Inspector::Protocol::ErrorString& errorString, const String& programId)
+RefPtr<InspectorShaderProgram> InspectorCanvasAgent::assertInspectorProgram(Protocol::ErrorString& errorString, const String& programId)
 {
     auto inspectorProgram = m_identifierToInspectorProgram.get(programId);
     if (!inspectorProgram) {

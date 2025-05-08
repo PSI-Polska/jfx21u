@@ -19,6 +19,12 @@ if (WIN32)
         win/ThreadingWin.cpp
         win/Win32Handle.cpp
     )
+    list(APPEND WTF_PUBLIC_HEADERS
+        text/win/WCharStringExtras.h
+
+        win/DbgHelperWin.h
+        win/PathWalker.h
+    )
     list(APPEND WTF_LIBRARIES
         DbgHelp
         shlwapi
@@ -65,6 +71,9 @@ if (WIN32)
         win/MemoryFootprintWin.cpp
         win/MemoryPressureHandlerWin.cpp
     )
+    list(APPEND WTF_PUBLIC_HEADERS
+        win/Win32Handle.h
+    )
 elseif (APPLE)
     file(COPY mac/MachExceptions.defs DESTINATION ${WTF_DERIVED_SOURCES_DIR})
     add_custom_command(
@@ -75,7 +84,7 @@ elseif (APPLE)
             ${WTF_DERIVED_SOURCES_DIR}/mach_excUser.c
         MAIN_DEPENDENCY mac/MachExceptions.defs
         WORKING_DIRECTORY ${WTF_DERIVED_SOURCES_DIR}
-        COMMAND mig -DMACH_EXC_SERVER_TASKIDTOKEN_STATE -sheader MachExceptionsServer.h MachExceptions.defs
+        COMMAND mig -sheader MachExceptionsServer.h MachExceptions.defs
         VERBATIM)
     list(APPEND WTF_SOURCES
         cocoa/MemoryFootprintCocoa.cpp
@@ -85,6 +94,10 @@ elseif (APPLE)
         ${WTF_DERIVED_SOURCES_DIR}/mach_excServer.c
         ${WTF_DERIVED_SOURCES_DIR}/mach_excUser.c
     )
+    list(APPEND WTF_PUBLIC_HEADERS
+        spi/darwin/AbortWithReasonSPI.h
+        spi/darwin/ProcessMemoryFootprint.h
+    )
 elseif (CMAKE_SYSTEM_NAME MATCHES "Linux")
     list(APPEND WTF_SOURCES
         linux/CurrentProcessMemoryStatus.cpp
@@ -92,6 +105,10 @@ elseif (CMAKE_SYSTEM_NAME MATCHES "Linux")
         linux/RealTimeThreads.cpp
 
         unix/MemoryPressureHandlerUnix.cpp
+    )
+    list(APPEND WTF_PUBLIC_HEADERS
+        linux/ProcessMemoryFootprint.h
+        linux/CurrentProcessMemoryStatus.h
     )
 elseif (CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
     list(APPEND WTF_SOURCES
@@ -111,10 +128,21 @@ if (LOWERCASE_EVENT_LOOP_TYPE STREQUAL "glib")
         glib/GRefPtr.cpp
         glib/RunLoopGLib.cpp
     )
+    list(APPEND WTF_PUBLIC_HEADERS
+        glib/GRefPtr.h
+        glib/GTypedefs.h
+        glib/RunLoopSourcePriority.h
+    )
+
     if (ENABLE_REMOTE_INSPECTOR)
         list(APPEND WTF_SOURCES
             glib/GSocketMonitor.cpp
             glib/SocketConnection.cpp
+        )
+        list(APPEND WTF_PUBLIC_HEADERS
+            glib/GSocketMonitor.h
+            glib/GUniquePtr.h
+            glib/SocketConnection.h
         )
     endif ()
 
@@ -137,9 +165,3 @@ endif ()
 list(APPEND WTF_LIBRARIES
     Threads::Threads
 )
-
-if (USE_LIBBACKTRACE)
-    list(APPEND WTF_LIBRARIES
-        LIBBACKTRACE::LIBBACKTRACE
-    )
-endif ()

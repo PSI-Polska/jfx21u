@@ -36,30 +36,30 @@ namespace JSC { namespace DFG {
 void dumpNodeFlags(PrintStream& actualOut, NodeFlags flags)
 {
     StringPrintStream out;
-    CommaPrinter comma("|"_s);
+    CommaPrinter comma("|");
 
     if (flags & NodeResultMask) {
         switch (flags & NodeResultMask) {
         case NodeResultJS:
-            out.print(comma, "JS"_s);
+            out.print(comma, "JS");
             break;
         case NodeResultNumber:
-            out.print(comma, "Number"_s);
+            out.print(comma, "Number");
             break;
         case NodeResultDouble:
-            out.print(comma, "Double"_s);
+            out.print(comma, "Double");
             break;
         case NodeResultInt32:
-            out.print(comma, "Int32"_s);
+            out.print(comma, "Int32");
             break;
         case NodeResultInt52:
-            out.print(comma, "Int52"_s);
+            out.print(comma, "Int52");
             break;
         case NodeResultBoolean:
-            out.print(comma, "Boolean"_s);
+            out.print(comma, "Boolean");
             break;
         case NodeResultStorage:
-            out.print(comma, "Storage"_s);
+            out.print(comma, "Storage");
             break;
         default:
             RELEASE_ASSERT_NOT_REACHED();
@@ -68,63 +68,63 @@ void dumpNodeFlags(PrintStream& actualOut, NodeFlags flags)
     }
 
     if (flags & NodeMustGenerate)
-        out.print(comma, "MustGen"_s);
+        out.print(comma, "MustGen");
 
     if (flags & NodeHasVarArgs)
-        out.print(comma, "VarArgs"_s);
+        out.print(comma, "VarArgs");
 
     if (flags & NodeResultMask) {
         if (!(flags & NodeBytecodeUsesAsNumber))
-            out.print(comma, "PureInt"_s);
+            out.print(comma, "PureInt");
         else
-            out.print(comma, "PureNum"_s);
+            out.print(comma, "PureNum");
         if (flags & NodeBytecodeNeedsNegZero)
-            out.print(comma, "NeedsNegZero"_s);
+            out.print(comma, "NeedsNegZero");
         if (flags & NodeBytecodeNeedsNaNOrInfinity)
-            out.print(comma, "NeedsNaNOrInfinity"_s);
+            out.print(comma, "NeedsNaNOrInfinity");
         if (flags & NodeBytecodeUsesAsOther)
-            out.print(comma, "UseAsOther"_s);
+            out.print(comma, "UseAsOther");
     }
 
     if (flags & NodeMayHaveDoubleResult)
-        out.print(comma, "MayHaveDoubleResult"_s);
+        out.print(comma, "MayHaveDoubleResult");
 
     if (flags & NodeMayHaveBigInt32Result)
-        out.print(comma, "MayHaveBigInt32Result"_s);
+        out.print(comma, "MayHaveBigInt32Result");
 
     if (flags & NodeMayHaveHeapBigIntResult)
-        out.print(comma, "MayHaveHeapBigIntResult"_s);
+        out.print(comma, "MayHaveHeapBigIntResult");
 
     if (flags & NodeMayHaveNonNumericResult)
-        out.print(comma, "MayHaveNonNumericResult"_s);
+        out.print(comma, "MayHaveNonNumericResult");
 
     if (flags & NodeMayOverflowInt52)
-        out.print(comma, "MayOverflowInt52"_s);
+        out.print(comma, "MayOverflowInt52");
 
     if (flags & NodeMayOverflowInt32InBaseline)
-        out.print(comma, "MayOverflowInt32InBaseline"_s);
+        out.print(comma, "MayOverflowInt32InBaseline");
 
     if (flags & NodeMayOverflowInt32InDFG)
-        out.print(comma, "MayOverflowInt32InDFG"_s);
+        out.print(comma, "MayOverflowInt32InDFG");
 
     if (flags & NodeMayNegZeroInBaseline)
-        out.print(comma, "MayNegZeroInBaseline"_s);
+        out.print(comma, "MayNegZeroInBaseline");
 
     if (flags & NodeMayNegZeroInDFG)
-        out.print(comma, "MayNegZeroInDFG"_s);
+        out.print(comma, "MayNegZeroInDFG");
 
     if (flags & NodeBytecodeUsesAsInt)
-        out.print(comma, "UseAsInt"_s);
+        out.print(comma, "UseAsInt");
 
     if (flags & NodeBytecodePrefersArrayIndex)
-        out.print(comma, "ReallyWantsInt"_s);
+        out.print(comma, "ReallyWantsInt");
 
     if (flags & NodeIsFlushed)
-        out.print(comma, "IsFlushed"_s);
+        out.print(comma, "IsFlushed");
 
     CString string = out.toCString();
     if (!string.length())
-        actualOut.print("<empty>"_s);
+        actualOut.print("<empty>");
     else
         actualOut.print(string);
 }

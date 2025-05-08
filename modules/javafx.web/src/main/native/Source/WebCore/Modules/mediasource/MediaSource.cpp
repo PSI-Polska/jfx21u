@@ -34,9 +34,7 @@
 
 #if ENABLE(MEDIA_SOURCE)
 
-#include "AudioTrack.h"
 #include "AudioTrackList.h"
-#include "AudioTrackPrivate.h"
 #include "ContentType.h"
 #include "ContentTypeUtilities.h"
 #include "DeprecatedGlobalSettings.h"
@@ -44,20 +42,12 @@
 #include "Event.h"
 #include "EventNames.h"
 #include "HTMLMediaElement.h"
-#include "InbandTextTrack.h"
-#include "InbandTextTrackPrivate.h"
 #include "Logging.h"
 #include "ManagedMediaSource.h"
 #include "ManagedSourceBuffer.h"
-#if ENABLE(MEDIA_SOURCE_IN_WORKERS)
-#include "MediaSourceHandle.h"
-#endif
 #include "MediaSourcePrivate.h"
 #include "MediaSourceRegistry.h"
-#include "MediaStrategy.h"
-#include "PlatformStrategies.h"
 #include "Quirks.h"
-#include "ScriptExecutionContext.h"
 #include "Settings.h"
 #include "SourceBuffer.h"
 #include "SourceBufferList.h"
@@ -66,16 +56,14 @@
 #include "TimeRanges.h"
 #include "VideoTrack.h"
 #include "VideoTrackList.h"
-#include "VideoTrackPrivate.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/NativePromise.h>
 #include <wtf/RunLoop.h>
 #include <wtf/Scope.h>
-#include <wtf/TZoneMallocInlines.h>
-#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MediaSource);
+WTF_MAKE_ISO_ALLOCATED_IMPL(MediaSource);
 
 String convertEnumerationToString(MediaSourcePrivate::AddStatus enumerationValue)
 {
@@ -105,88 +93,10 @@ String convertEnumerationToString(MediaSourcePrivate::EndOfStreamStatus enumerat
     return values[static_cast<size_t>(enumerationValue)];
 }
 
-class MediaSourceClientImpl final : public MediaSourcePrivateClient {
-public:
-    static Ref<MediaSourceClientImpl> create(MediaSource& parent) { return adoptRef(*new MediaSourceClientImpl(parent)); }
-
-    void ensureWeakOnDispatcher(Function<void(MediaSource&)>&& function, bool forceRun = false) const
-    {
-        auto weakWrapper = [function = WTFMove(function), weakParent = m_parent, forceRun] {
-            if (RefPtr parent = weakParent.get(); parent && (!parent->isClosed() || forceRun))
-                function(*parent);
-        };
-        ScriptExecutionContext::ensureOnContextThread(m_identifier, [wrapper = WTFMove(weakWrapper)](auto&) {
-            wrapper();
-        });
-    }
-
-private:
-    explicit MediaSourceClientImpl(MediaSource& parent)
-        : m_parent(parent)
-        , m_identifier(parent.scriptExecutionContext()->identifier())
-#if !RELEASE_LOG_DISABLED
-        , m_logger(parent.logger())
-#endif
-        {
-        }
-
-    void setPrivateAndOpen(Ref<MediaSourcePrivate>&& mediaSourcePrivate) final
-    {
-        ensureWeakOnDispatcher([mediaSourcePrivate = WTFMove(mediaSourcePrivate)](MediaSource& parent) mutable {
-            parent.setPrivateAndOpen(WTFMove(mediaSourcePrivate));
-        }, true);
-    }
-
-    Ref<MediaTimePromise> waitForTarget(const SeekTarget& target) final
-    {
-        MediaTimePromise::AutoRejectProducer producer(PlatformMediaError::SourceRemoved);
-        auto promise = producer.promise();
-
-        ensureWeakOnDispatcher([producer = WTFMove(producer), target](MediaSource& parent) mutable {
-            parent.waitForTarget(target)->chainTo(WTFMove(producer));
-        });
-        return promise;
-    }
-
-    Ref<MediaPromise> seekToTime(const MediaTime& time) final
-    {
-        MediaPromise::AutoRejectProducer producer(PlatformMediaError::SourceRemoved);
-        auto promise = producer.promise();
-
-        ensureWeakOnDispatcher([producer = WTFMove(producer), time](MediaSource& parent) mutable {
-            parent.seekToTime(time)->chainTo(WTFMove(producer));
-        });
-        return promise;
-    }
-
-    void failedToCreateRenderer(RendererType type)
-    {
-        ensureWeakOnDispatcher([type](MediaSource& parent) {
-            parent.failedToCreateRenderer(type);
-        });
-    }
-
-#if !RELEASE_LOG_DISABLED
-    void setLogIdentifier(const void* identifier)
-    {
-        ensureWeakOnDispatcher([identifier](MediaSource& parent) {
-            parent.setLogIdentifier(identifier);
-        });
-    }
-#endif
-
-    WeakPtr<MediaSource> m_parent;
-    const ScriptExecutionContextIdentifier m_identifier;
-#if !RELEASE_LOG_DISABLED
-    Ref<const Logger> m_logger;
-#endif
-};
-
 URLRegistry* MediaSource::s_registry;
 
 void MediaSource::setRegistry(URLRegistry* registry)
 {
-    ASSERT(isMainThread());
     ASSERT(!s_registry);
     s_registry = registry;
 }
@@ -203,51 +113,22 @@ MediaSource::MediaSource(ScriptExecutionContext& context)
     , m_sourceBuffers(SourceBufferList::create(scriptExecutionContext()))
     , m_activeSourceBuffers(SourceBufferList::create(scriptExecutionContext()))
 #if !RELEASE_LOG_DISABLED
-    , m_logger(logger(context))
+    , m_logger(downcast<Document>(context).logger())
 #endif
-    , m_client(MediaSourceClientImpl::create(*this))
 {
 }
 
 MediaSource::~MediaSource()
 {
     ALWAYS_LOG(LOGIDENTIFIER);
-#if ENABLE(MEDIA_SOURCE_IN_WORKERS)
-    if (!isMainThread()) {
-        // When deleted on a worker; the HTMLMediaElement wouldn't have started the deletion.
-        // We need to manually detach ourselves and notify the HTMLMediaElement.
-        ensureWeakOnHTMLMediaElementContext([](auto& mediaElement) {
-            mediaElement.mediaSourceWasDetached();
-        });
-        detachFromElement();
-    }
-#endif
     ASSERT(isClosed());
 }
-
-#if !RELEASE_LOG_DISABLED
-
-Ref<Logger> MediaSource::logger(ScriptExecutionContext& context)
-{
-    if (RefPtr document = dynamicDowncast<Document>(context))
-        return document->logger();
-
-    Ref logger = Logger::create(this);
-    logger->addObserver(*this);
-    return logger;
-}
-
-void MediaSource::didLogMessage(const WTFLogChannel&, WTFLogLevel, Vector<JSONLogValue>&&)
-{
-    // FIXME: Add logging for when MediaSource is running in worker.
-}
-
-#endif
 
 void MediaSource::setPrivateAndOpen(Ref<MediaSourcePrivate>&& mediaSourcePrivate)
 {
     DEBUG_LOG(LOGIDENTIFIER);
     ASSERT(!m_private);
+    ASSERT(m_mediaElement);
     m_private = WTFMove(mediaSourcePrivate);
     m_private->setTimeFudgeFactor(currentTimeFudgeFactor());
 
@@ -258,38 +139,23 @@ void MediaSource::setPrivateAndOpen(Ref<MediaSourcePrivate>&& mediaSourcePrivate
     //    Run the "If the media data cannot be fetched at all, due to network errors, causing the user agent to give up trying
     //    to fetch the resource" steps of the resource fetch algorithm's media data processing steps list.
     if (!isClosed()) {
-        ensureWeakOnHTMLMediaElementContext([](auto& mediaElement) {
-            mediaElement.mediaLoadingFailedFatally(MediaPlayer::NetworkState::NetworkError);
-        });
+        m_mediaElement->mediaLoadingFailedFatally(MediaPlayer::NetworkState::NetworkError);
         return;
     }
 
     // ↳ Otherwise
-    // 1. Set the MediaSource's [[has ever been attached]] internal slot to true.
-#if ENABLE(MEDIA_SOURCE_IN_WORKERS)
-    if (m_handle) {
-        m_handle->setHasEverBeenAssignedAsSrcObject();
-        m_handle->mediaSourceDidOpen(*m_private);
-    }
-#endif
-
-    // 2. Set the media element's delaying-the-load-event-flag to false.
-    ensureWeakOnHTMLMediaElementContext([](auto& mediaElement) {
-        mediaElement.setShouldDelayLoadEvent(false);
-    });
-
-    if (isManaged())
-        m_openDeferred = true;
+    // 1. Set the media element's delaying-the-load-event-flag to false.
+    m_mediaElement->setShouldDelayLoadEvent(false);
 
     // 2. Set the readyState attribute to "open".
     // 3. Queue a task to fire a simple event named sourceopen at the MediaSource.
     setReadyState(ReadyState::Open);
+    if (!isOpen())
+        m_openDeferred = true;
 
     // 4. Continue the resource fetch algorithm by running the remaining "Otherwise (mode is local)" steps,
     // with these clarifications:
     // NOTE: This is handled in HTMLMediaElement.
-
-    openIfDeferredOpen();
 }
 
 void MediaSource::addedToRegistry()
@@ -317,17 +183,19 @@ MediaTime MediaSource::currentTime() const
 {
     if (m_pendingSeekTarget)
         return m_pendingSeekTarget->time;
-
-    return m_private ? m_private->currentTime() : MediaTime::zeroTime();
+    return m_mediaElement ? m_mediaElement->currentMediaTime() : MediaTime::zeroTime();
 }
 
-PlatformTimeRanges MediaSource::buffered() const
+const PlatformTimeRanges& MediaSource::buffered() const
 {
     return isClosed() ? PlatformTimeRanges::emptyRanges() : m_private->buffered();
 }
 
 Ref<MediaTimePromise> MediaSource::waitForTarget(const SeekTarget& target)
 {
+    if (isClosed())
+        return MediaTimePromise::createAndReject(PlatformMediaError::SourceRemoved);
+
     ALWAYS_LOG(LOGIDENTIFIER, target.time);
 
     // 2.4.3 Seeking
@@ -337,7 +205,7 @@ Ref<MediaTimePromise> MediaSource::waitForTarget(const SeekTarget& target)
         ALWAYS_LOG(LOGIDENTIFIER, "Previous seeking to ", m_pendingSeekTarget->time, "pending, cancelling it");
         m_seekTargetPromise->reject(PlatformMediaError::Cancelled);
     }
-    m_seekTargetPromise.emplace(PlatformMediaError::SourceRemoved);
+    m_seekTargetPromise.emplace();
     m_pendingSeekTarget = target;
 
     // Run the following steps as part of the "Wait until the user agent has established whether or not the
@@ -355,11 +223,11 @@ Ref<MediaTimePromise> MediaSource::waitForTarget(const SeekTarget& target)
         // than HAVE_METADATA.
         monitorSourceBuffers();
 
-        return m_seekTargetPromise->promise();
+        return *m_seekTargetPromise;
     }
     // ↳ Otherwise
     // Continue
-    auto promise = m_seekTargetPromise->promise();
+    auto promise = static_cast<Ref<MediaTimePromise>>(*m_seekTargetPromise);
     completeSeek();
     return promise;
 }
@@ -382,19 +250,11 @@ void MediaSource::completeSeek()
     auto seekTarget = *m_pendingSeekTarget;
     m_pendingSeekTarget.reset();
 
-    MediaTimePromise::AutoRejectProducer producer(PlatformMediaError::SourceRemoved);
-    Ref promise = producer.promise();
-
-    scriptExecutionContext()->enqueueTaskWhenSettled(SourceBuffer::ComputeSeekPromise::all(WTF::map(*m_activeSourceBuffers, [&](auto&& sourceBuffer) {
+    Ref<MediaTimePromise> promise = SourceBuffer::ComputeSeekPromise::all(WTF::map(*m_activeSourceBuffers, [&](auto&& sourceBuffer) {
         return sourceBuffer->computeSeekTime(seekTarget);
-    })), TaskSource::MediaElement, [producer = WTFMove(producer), weakThis = WeakPtr { *this }, this, time = seekTarget.time](auto&& results) {
-        RefPtr protectedThis = weakThis.get();
-        if (!protectedThis || isClosed())
-            return;
-
+    }))->whenSettled(RunLoop::current(), [time = seekTarget.time, protectedThis = Ref { *this }] (auto&& results) mutable {
         if (!results)
-            return producer.reject(results.error());
-
+            return MediaTimePromise::createAndReject(results.error());
         auto seekTime = time;
         for (auto& result : *results) {
             if (abs(time - result) > abs(time - seekTime))
@@ -402,9 +262,9 @@ void MediaSource::completeSeek()
         }
 
     // 4. Resume the seek algorithm at the "Await a stable state" step.
-        monitorSourceBuffers();
+        protectedThis->monitorSourceBuffers();
 
-        producer.resolve(seekTime);
+        return MediaTimePromise::createAndResolve(seekTime);
     });
     promise->chainTo(WTFMove(*m_seekTargetPromise));
     m_seekTargetPromise.reset();
@@ -412,6 +272,8 @@ void MediaSource::completeSeek()
 
 Ref<MediaPromise> MediaSource::seekToTime(const MediaTime& time)
 {
+    if (isClosed())
+        return MediaPromise::createAndReject(PlatformMediaError::SourceRemoved);
     for (auto& sourceBuffer : *m_activeSourceBuffers)
         sourceBuffer->seekToTime(time);
     return MediaPromise::createAndResolve();
@@ -419,7 +281,41 @@ Ref<MediaPromise> MediaSource::seekToTime(const MediaTime& time)
 
 Ref<TimeRanges> MediaSource::seekable()
 {
-    return m_private ? TimeRanges::create(m_private->seekable()) : TimeRanges::create();
+    // 6. HTMLMediaElement Extensions, seekable
+    // W3C Editor's Draft 16 September 2016
+    // https://rawgit.com/w3c/media-source/45627646344eea0170dd1cbc5a3d508ca751abb8/media-source-respec.html#htmlmediaelement-extensions
+
+    // ↳ If duration equals NaN:
+    // Return an empty TimeRanges object.
+    if (duration().isInvalid())
+        return TimeRanges::create();
+
+    // ↳ If duration equals positive Infinity:
+    if (duration().isPositiveInfinite()) {
+        auto buffered = m_private->buffered();
+        // If live seekable range is not empty:
+        if (m_liveSeekable.length()) {
+            // Let union ranges be the union of live seekable range and the HTMLMediaElement.buffered attribute.
+            buffered.unionWith(m_liveSeekable);
+            // Return a single range with a start time equal to the earliest start time in union ranges
+            // and an end time equal to the highest end time in union ranges and abort these steps.
+            buffered.add(buffered.start(0), buffered.maximumBufferedTime());
+            return TimeRanges::create(buffered);
+        }
+
+        // If the HTMLMediaElement.buffered attribute returns an empty TimeRanges object, then return
+        // an empty TimeRanges object and abort these steps.
+        if (!buffered.length())
+            return TimeRanges::create();
+
+        // Return a single range with a start time of 0 and an end time equal to the highest end time
+        // reported by the HTMLMediaElement.buffered attribute.
+        return TimeRanges::create({ MediaTime::zeroTime(), buffered.maximumBufferedTime() });
+    }
+
+    // ↳ Otherwise:
+    // Return a single range with a start time of 0 and an end time equal to duration.
+    return TimeRanges::create({ MediaTime::zeroTime(), duration() });
 }
 
 ExceptionOr<void> MediaSource::setLiveSeekableRange(double start, double end)
@@ -439,7 +335,7 @@ ExceptionOr<void> MediaSource::setLiveSeekableRange(double start, double end)
 
     // Set live seekable range to be a new normalized TimeRanges object containing a single range
     // whose start position is start and end position is end.
-    m_private->setLiveSeekableRange({ MediaTime::createWithDouble(start), MediaTime::createWithDouble(end) });
+    m_liveSeekable = { MediaTime::createWithDouble(start), MediaTime::createWithDouble(end) };
 
     return { };
 }
@@ -454,7 +350,7 @@ ExceptionOr<void> MediaSource::clearLiveSeekableRange()
     // If the readyState attribute is not "open" then throw an InvalidStateError exception and abort these steps.
     if (!isOpen())
         return Exception { ExceptionCode::InvalidStateError };
-    m_private->clearLiveSeekableRange();
+    m_liveSeekable.clear();
     return { };
 }
 
@@ -475,13 +371,10 @@ bool MediaSource::hasBufferedTime(const MediaTime& time)
     if (isClosed())
         return false;
 
-    if (time.isInvalid())
-        return false;
-
     if (time > duration())
         return false;
 
-    auto ranges = m_private->buffered();
+    auto& ranges = m_private->buffered();
     if (!ranges.length())
         return false;
 
@@ -498,48 +391,14 @@ bool MediaSource::hasFutureTime()
     if (isClosed())
         return false;
 
-    return m_private->hasFutureTime(currentTime(), m_private->timeIsProgressing() ? MediaTime::zeroTime() : MediaSourcePrivate::futureDataThreshold());
-}
-
-bool MediaSource::isBuffered(const PlatformTimeRanges& ranges) const
-{
-    if (ranges.length() < 1 || isClosed())
-        return true;
-
-    ASSERT(ranges.length() == 1);
-
-    auto bufferedRanges = m_private->buffered();
-    if (!bufferedRanges.length())
-        return false;
-    bufferedRanges.intersectWith(ranges);
-
-    if (!bufferedRanges.length())
-        return false;
-
-    auto hasBufferedTime = [&] (const MediaTime& time) {
-        return abs(bufferedRanges.nearest(time) - time) <= m_private->timeFudgeFactor();
-    };
-
-    if (!hasBufferedTime(ranges.minimumBufferedTime()) || !hasBufferedTime(ranges.maximumBufferedTime()))
-        return false;
-
-    if (bufferedRanges.length() == 1)
-        return true;
-
-    // Ensure that if we have a gap in the buffered range, it is smaller than the fudge factor;
-    for (unsigned i = 1; i < bufferedRanges.length(); i++) {
-        if (bufferedRanges.end(i) - bufferedRanges.start(i-1) > m_private->timeFudgeFactor())
-            return false;
-    }
-
-    return true;
+    return m_private->hasFutureTime(currentTime());
 }
 
 void MediaSource::monitorSourceBuffers()
 {
     if (isClosed())
         return;
-    ASSERT(m_private);
+
     // 2.4.4 SourceBuffer Monitoring
     // https://rawgit.com/w3c/media-source/45627646344eea0170dd1cbc5a3d508ca751abb8/media-source-respec.html#buffer-monitoring
 
@@ -550,7 +409,7 @@ void MediaSource::monitorSourceBuffers()
     }
 
     // ↳ If the HTMLMediaElement.readyState attribute equals HAVE_NOTHING:
-    if (m_private->mediaPlayerReadyState() == MediaPlayer::ReadyState::HaveNothing) {
+    if (mediaElement()->readyState() == HTMLMediaElement::HAVE_NOTHING) {
         // 1. Abort these steps.
         return;
     }
@@ -568,17 +427,9 @@ void MediaSource::monitorSourceBuffers()
 
     // ↳ If HTMLMediaElement.buffered contains a TimeRange that includes the current
     //  playback position and enough data to ensure uninterrupted playback:
-
-    // If we have data up to 3s ahead, we can assume that we can play without interruption.
-    constexpr double kHaveEnoughDataThreshold = 3;
-    auto currentTime = this->currentTime();
-    auto limitAhead = [&] (double upper) {
-        MediaTime aheadTime = currentTime + MediaTime::createWithDouble(upper);
-        return isEnded() ? std::min(duration(), aheadTime) : aheadTime;
-    };
-    PlatformTimeRanges neededBufferedRange { currentTime, std::max(currentTime, limitAhead(kHaveEnoughDataThreshold)) };
-
-    if (isBuffered(neededBufferedRange)) {
+    if (std::all_of(m_activeSourceBuffers->begin(), m_activeSourceBuffers->end(), [&](auto& sourceBuffer) {
+        return sourceBuffer->canPlayThroughRange(m_private->buffered());
+    })) {
         // 1. Set the HTMLMediaElement.readyState attribute to HAVE_ENOUGH_DATA.
         // 2. Queue a task to fire a simple event named canplaythrough at the media element.
         // 3. Playback may resume at this point if it was previously suspended by a transition to HAVE_CURRENT_DATA.
@@ -694,8 +545,7 @@ void MediaSource::setReadyState(ReadyState state)
     if (oldState == state)
         return;
 
-    if (m_private)
-        m_private->setReadyState(state);
+    m_readyState = state;
 
     onReadyStateChange(oldState, state);
 }
@@ -753,55 +603,42 @@ void MediaSource::streamEndedWithError(std::optional<EndOfStreamError> error)
 
         // 2. Notify the media element that it now has all of the media data.
         m_private->markEndOfStream(MediaSourcePrivate::EndOfStreamStatus::NoError);
-        return;
-    }
-
-    bool failedFatally = false;
-    MediaPlayer::NetworkState mediaElementNextState = MediaPlayer::NetworkState::NetworkError;
-
-    if (error == EndOfStreamError::Network) {
+    } else if (error == EndOfStreamError::Network) {
         m_private->markEndOfStream(MediaSourcePrivate::EndOfStreamStatus::NetworkError);
         // ↳ If error is set to "network"
-        if (m_private->mediaPlayerReadyState() == MediaPlayerReadyState::HaveNothing) {
+        ASSERT(m_mediaElement);
+        if (m_mediaElement->readyState() == HTMLMediaElement::HAVE_NOTHING) {
             //  ↳ If the HTMLMediaElement.readyState attribute equals HAVE_NOTHING
             //    Run the "If the media data cannot be fetched at all, due to network errors, causing
             //    the user agent to give up trying to fetch the resource" steps of the resource fetch algorithm.
             //    NOTE: This step is handled by HTMLMediaElement::mediaLoadingFailed().
-            mediaElementNextState = MediaPlayer::NetworkState::NetworkError;
+            m_mediaElement->mediaLoadingFailed(MediaPlayer::NetworkState::NetworkError);
         } else {
             //  ↳ If the HTMLMediaElement.readyState attribute is greater than HAVE_NOTHING
             //    Run the "If the connection is interrupted after some media data has been received, causing the
             //    user agent to give up trying to fetch the resource" steps of the resource fetch algorithm.
             //    NOTE: This step is handled by HTMLMediaElement::mediaLoadingFailedFatally().
-            mediaElementNextState = MediaPlayer::NetworkState::NetworkError;
-            failedFatally = true;
+            m_mediaElement->mediaLoadingFailedFatally(MediaPlayer::NetworkState::NetworkError);
         }
     } else {
         // ↳ If error is set to "decode"
         ASSERT(error == EndOfStreamError::Decode);
         m_private->markEndOfStream(MediaSourcePrivate::EndOfStreamStatus::DecodeError);
 
-        if (m_private->mediaPlayerReadyState() == MediaPlayerReadyState::HaveNothing) {
+        ASSERT(m_mediaElement);
+        if (m_mediaElement->readyState() == HTMLMediaElement::HAVE_NOTHING) {
             //  ↳ If the HTMLMediaElement.readyState attribute equals HAVE_NOTHING
             //    Run the "If the media data can be fetched but is found by inspection to be in an unsupported
             //    format, or can otherwise not be rendered at all" steps of the resource fetch algorithm.
             //    NOTE: This step is handled by HTMLMediaElement::mediaLoadingFailed().
-            mediaElementNextState = MediaPlayer::NetworkState::FormatError;
+            m_mediaElement->mediaLoadingFailed(MediaPlayer::NetworkState::FormatError);
         } else {
             //  ↳ If the HTMLMediaElement.readyState attribute is greater than HAVE_NOTHING
             //    Run the media data is corrupted steps of the resource fetch algorithm.
             //    NOTE: This step is handled by HTMLMediaElement::mediaLoadingFailedFatally().
-            mediaElementNextState = MediaPlayer::NetworkState::DecodeError;
-            failedFatally = true;
+            m_mediaElement->mediaLoadingFailedFatally(MediaPlayer::NetworkState::DecodeError);
         }
     }
-
-    ensureWeakOnHTMLMediaElementContext([mediaElementNextState, failedFatally](auto& mediaElement) {
-        if (failedFatally)
-            mediaElement.mediaLoadingFailedFatally(mediaElementNextState);
-        else
-            mediaElement.mediaLoadingFailed(mediaElementNextState);
-    });
 }
 
 static ContentType addVP9FullRangeVideoFlagToContentType(const ContentType& type)
@@ -844,15 +681,15 @@ ExceptionOr<Ref<SourceBuffer>> MediaSource::addSourceBuffer(const String& type)
     if (type.isEmpty())
         return Exception { ExceptionCode::TypeError };
 
-    auto context = scriptExecutionContext();
-    if (!context)
-        return Exception { ExceptionCode::NotAllowedError };
-
     // 2. If type contains a MIME type that is not supported ..., then throw a
     // NotSupportedError exception and abort these steps.
     Vector<ContentType> mediaContentTypesRequiringHardwareSupport;
-    if (RefPtr document = dynamicDowncast<Document>(context))
-        mediaContentTypesRequiringHardwareSupport.appendVector(document->settings().mediaContentTypesRequiringHardwareSupport());
+    if (m_mediaElement)
+        mediaContentTypesRequiringHardwareSupport.appendVector(m_mediaElement->document().settings().mediaContentTypesRequiringHardwareSupport());
+
+    auto context = scriptExecutionContext();
+    if (!context)
+        return Exception { ExceptionCode::NotAllowedError };
 
     if (!isTypeSupported(*context, type, WTFMove(mediaContentTypesRequiringHardwareSupport)))
         return Exception { ExceptionCode::NotSupportedError };
@@ -943,16 +780,8 @@ ExceptionOr<void> MediaSource::removeSourceBuffer(SourceBuffer& buffer)
                 // 5.3.3 Remove the AudioTrack object from the HTMLMediaElement audioTracks list.
                 // 5.3.4 Queue a task to fire a trusted event named removetrack, that does not bubble and is not
                 // cancelable, and that uses the TrackEvent interface, at the HTMLMediaElement audioTracks list.
-                if (isMainThread()) {
-                    ensureWeakOnHTMLMediaElementContext([track = Ref { track }](auto& mediaElement) mutable {
-                        // FIXME: Need to send a mirror when we are in a worker.
-                        mediaElement.removeAudioTrack(WTFMove(track));
-                    });
-                } else {
-                    ensureWeakOnHTMLMediaElementContext([trackID = track.trackId()](auto& mediaElement) mutable {
-                        mediaElement.removeAudioTrack(trackID);
-                    });
-                }
+                if (mediaElement())
+                    mediaElement()->removeAudioTrack(track);
 
                 // 5.3.5 Remove the AudioTrack object from the SourceBuffer audioTracks list.
                 // 5.3.6 Queue a task to fire a trusted event named removetrack, that does not bubble and is not
@@ -962,11 +791,8 @@ ExceptionOr<void> MediaSource::removeSourceBuffer(SourceBuffer& buffer)
 
             // 5.4 If the removed enabled audio track flag equals true, then queue a task to fire a simple event
             // named change at the HTMLMediaElement audioTracks list.
-            if (removedEnabledAudioTrack) {
-                ensureWeakOnHTMLMediaElementContext([](auto& mediaElement) {
-                    mediaElement.ensureAudioTracks().scheduleChangeEvent();
-                });
-            }
+            if (removedEnabledAudioTrack)
+                mediaElement()->ensureAudioTracks().scheduleChangeEvent();
         }
 
         // 6. Let SourceBuffer videoTracks list equal the VideoTrackList object returned by sourceBuffer.videoTracks.
@@ -994,16 +820,8 @@ ExceptionOr<void> MediaSource::removeSourceBuffer(SourceBuffer& buffer)
                 // 7.3.3 Remove the VideoTrack object from the HTMLMediaElement videoTracks list.
                 // 7.3.4 Queue a task to fire a trusted event named removetrack, that does not bubble and is not
                 // cancelable, and that uses the TrackEvent interface, at the HTMLMediaElement videoTracks list.
-                if (isMainThread()) {
-                    ensureWeakOnHTMLMediaElementContext([track = Ref { track }](auto& mediaElement) mutable {
-                        // FIXME: Need to send a mirror when we are in a worker.
-                        mediaElement.removeVideoTrack(WTFMove(track));
-                    });
-                } else {
-                    ensureWeakOnHTMLMediaElementContext([trackID = track.trackId()](auto& mediaElement) mutable {
-                        mediaElement.removeVideoTrack(trackID);
-                    });
-                }
+                if (mediaElement())
+                    mediaElement()->removeVideoTrack(track);
 
                 // 7.3.5 Remove the VideoTrack object from the SourceBuffer videoTracks list.
                 // 7.3.6 Queue a task to fire a trusted event named removetrack, that does not bubble and is not
@@ -1013,11 +831,8 @@ ExceptionOr<void> MediaSource::removeSourceBuffer(SourceBuffer& buffer)
 
             // 7.4 If the removed selected video track flag equals true, then queue a task to fire a simple event
             // named change at the HTMLMediaElement videoTracks list.
-            if (removedSelectedVideoTrack) {
-                ensureWeakOnHTMLMediaElementContext([](auto& mediaElement) {
-                    mediaElement.ensureVideoTracks().scheduleChangeEvent();
-                });
-            }
+            if (removedSelectedVideoTrack)
+                mediaElement()->ensureVideoTracks().scheduleChangeEvent();
         }
 
         // 8. Let SourceBuffer textTracks list equal the TextTrackList object returned by sourceBuffer.textTracks.
@@ -1045,15 +860,9 @@ ExceptionOr<void> MediaSource::removeSourceBuffer(SourceBuffer& buffer)
                 // 9.3.3 Remove the TextTrack object from the HTMLMediaElement textTracks list.
                 // 9.3.4 Queue a task to fire a trusted event named removetrack, that does not bubble and is not
                 // cancelable, and that uses the TrackEvent interface, at the HTMLMediaElement textTracks list.
-                if (isMainThread()) {
-                    ensureWeakOnHTMLMediaElementContext([track = Ref { track }](HTMLMediaElement& mediaElement) mutable {
-                        mediaElement.removeTextTrack(WTFMove(track));
-                    });
-                } else {
-                    ensureWeakOnHTMLMediaElementContext([trackID = track.trackId()](auto& mediaElement) mutable {
-                        mediaElement.removeTextTrack(trackID);
-                    });
-                }
+                if (mediaElement())
+                    mediaElement()->removeTextTrack(track);
+
                 // 9.3.5 Remove the TextTrack object from the SourceBuffer textTracks list.
                 // 9.3.6 Queue a task to fire a trusted event named removetrack, that does not bubble and is not
                 // cancelable, and that uses the TrackEvent interface, at the SourceBuffer textTracks list.
@@ -1062,11 +871,8 @@ ExceptionOr<void> MediaSource::removeSourceBuffer(SourceBuffer& buffer)
 
             // 9.4 If the removed enabled text track flag equals true, then queue a task to fire a simple event
             // named change at the HTMLMediaElement textTracks list.
-            if (removedEnabledTextTrack) {
-                ensureWeakOnHTMLMediaElementContext([](auto& mediaElement) {
-                    mediaElement.ensureTextTracks().scheduleChangeEvent();
-                });
-            }
+            if (removedEnabledTextTrack)
+                mediaElement()->ensureTextTracks().scheduleChangeEvent();
         }
     }
 
@@ -1123,19 +929,17 @@ bool MediaSource::isTypeSupported(ScriptExecutionContext& context, const String&
     parameters.contentTypesRequiringHardwareSupport = WTFMove(contentTypesRequiringHardwareSupport);
 
     if (RefPtr document = dynamicDowncast<Document>(context)) {
-        if (!contentTypeMeetsContainerAndCodecTypeRequirements(contentType, document->settings().allowedMediaContainerTypes(), document->settings().allowedMediaCodecTypes()))
+        auto& settings = document->settings();
+        if (!contentTypeMeetsContainerAndCodecTypeRequirements(contentType, settings.allowedMediaContainerTypes(), settings.allowedMediaCodecTypes()))
             return false;
 
-        parameters.allowedMediaContainerTypes = document->settings().allowedMediaContainerTypes();
-        parameters.allowedMediaVideoCodecIDs = document->settings().allowedMediaVideoCodecIDs();
-        parameters.allowedMediaAudioCodecIDs = document->settings().allowedMediaAudioCodecIDs();
-        parameters.allowedMediaCaptionFormatTypes = document->settings().allowedMediaCaptionFormatTypes();
+        parameters.allowedMediaContainerTypes = settings.allowedMediaContainerTypes();
+        parameters.allowedMediaVideoCodecIDs = settings.allowedMediaVideoCodecIDs();
+        parameters.allowedMediaAudioCodecIDs = settings.allowedMediaAudioCodecIDs();
+        parameters.allowedMediaCaptionFormatTypes = settings.allowedMediaCaptionFormatTypes();
     }
 
-    MediaPlayer::SupportsType supported;
-    callOnMainThreadAndWait([&] {
-        supported = MediaPlayer::supportsType(parameters);
-    });
+    MediaPlayer::SupportsType supported = MediaPlayer::supportsType(parameters);
 
     if (codecs.isEmpty())
         return supported != MediaPlayer::SupportsType::IsNotSupported;
@@ -1145,29 +949,24 @@ bool MediaSource::isTypeSupported(ScriptExecutionContext& context, const String&
 
 bool MediaSource::isOpen() const
 {
-    return readyState() == ReadyState::Open;
+    return m_readyState == ReadyState::Open;
 }
 
 bool MediaSource::isClosed() const
 {
-    return readyState() == ReadyState::Closed;
+    return m_readyState == ReadyState::Closed || m_openDeferred;
 }
 
 bool MediaSource::isEnded() const
 {
-    return readyState() == ReadyState::Ended;
+    return m_readyState == ReadyState::Ended;
 }
 
-void MediaSource::elementIsShuttingDown()
+void MediaSource::detachFromElement(HTMLMediaElement& element)
 {
     ALWAYS_LOG(LOGIDENTIFIER);
-    m_mediaElement = nullptr;
-    m_sourceopenPending = false;
-    detachFromElement();
-}
-void MediaSource::detachFromElement()
-{
-    ALWAYS_LOG(LOGIDENTIFIER);
+
+    ASSERT_UNUSED(element, m_mediaElement == &element);
 
     // 2.4.2 Detaching from a media element
     // https://rawgit.com/w3c/media-source/45627646344eea0170dd1cbc5a3d508ca751abb8/media-source-respec.html#mediasource-detach
@@ -1175,7 +974,6 @@ void MediaSource::detachFromElement()
     // 1. Set the readyState attribute to "closed".
     // 7. Queue a task to fire a simple event named sourceclose at the MediaSource.
     setReadyState(ReadyState::Closed);
-    elementDetached();
 
     // 2. Update duration to NaN.
     // Step is done in duration() method which will now always return invalidTime()
@@ -1192,7 +990,6 @@ void MediaSource::detachFromElement()
 
     m_private = nullptr;
     m_mediaElement = nullptr;
-    m_isAttached = false;
 
     if (m_seekTargetPromise) {
         m_seekTargetPromise->reject(PlatformMediaError::Cancelled);
@@ -1205,22 +1002,20 @@ void MediaSource::sourceBufferDidChangeActiveState(SourceBuffer&, bool)
     regenerateActiveSourceBuffers();
 }
 
-bool MediaSource::attachToElement(WeakPtr<HTMLMediaElement>&& element)
+bool MediaSource::attachToElement(HTMLMediaElement& element)
 {
-    if (m_isAttached || !scriptExecutionContext())
+    if (m_mediaElement)
         return false;
 
     ASSERT(isClosed());
 
-    m_mediaElement = WTFMove(element);
-    m_isAttached = true;
-
+    m_mediaElement = element;
     return true;
 }
 
 void MediaSource::openIfInEndedState()
 {
-    if (readyState() != ReadyState::Ended)
+    if (m_readyState != ReadyState::Ended)
         return;
 
     ALWAYS_LOG(LOGIDENTIFIER);
@@ -1233,18 +1028,15 @@ void MediaSource::openIfInEndedState()
 
 void MediaSource::openIfDeferredOpen()
 {
+    if (!m_openDeferred)
+        return;
+
     ALWAYS_LOG(LOGIDENTIFIER);
 
-    ensureWeakOnHTMLMediaElementContext([client = m_client, this](auto& mediaElement) {
-        if (!mediaElement.deferredMediaSourceOpenCanProgress())
-            return;
-        client->ensureWeakOnDispatcher([this](MediaSource&) {
-            if (!m_openDeferred)
+    if (!isOpen())
         return;
     m_openDeferred = false;
     onReadyStateChange(ReadyState::Closed, ReadyState::Open);
-        }, true);
-    });
 }
 
 void MediaSource::setAsSrcObject(bool set)
@@ -1266,16 +1058,23 @@ void MediaSource::stop()
 {
     ALWAYS_LOG(LOGIDENTIFIER);
 
-    ensureWeakOnHTMLMediaElementContext([](auto& mediaElement) {
-        mediaElement.detachMediaSource();
-    });
+    if (m_mediaElement)
+        m_mediaElement->detachMediaSource();
+    if (m_seekTargetPromise)
+        m_seekTargetPromise->reject(PlatformMediaError::Cancelled);
     m_seekTargetPromise.reset();
+    m_readyState = ReadyState::Closed;
     m_private = nullptr;
+}
+
+const char* MediaSource::activeDOMObjectName() const
+{
+    return "MediaSource";
 }
 
 MediaSource::ReadyState MediaSource::readyState() const
 {
-    return (m_openDeferred || !m_private) ? ReadyState::Closed : m_private->readyState();
+    return m_openDeferred ? ReadyState::Closed : m_readyState;
 }
 
 void MediaSource::onReadyStateChange(ReadyState oldState, ReadyState newState)
@@ -1363,9 +1162,9 @@ ScriptExecutionContext* MediaSource::scriptExecutionContext() const
     return ActiveDOMObject::scriptExecutionContext();
 }
 
-enum EventTargetInterfaceType MediaSource::eventTargetInterface() const
+EventTargetInterface MediaSource::eventTargetInterface() const
 {
-    return EventTargetInterfaceType::MediaSource;
+    return MediaSourceEventTargetInterfaceType;
 }
 
 URLRegistry& MediaSource::registry() const
@@ -1391,17 +1190,9 @@ void MediaSource::regenerateActiveSourceBuffers()
 
 void MediaSource::notifyElementUpdateMediaState() const
 {
-    ensureWeakOnHTMLMediaElementContext([](auto& mediaElement) {
-        mediaElement.updateMediaState();
-    });
-}
-
-void MediaSource::ensureWeakOnHTMLMediaElementContext(Function<void(HTMLMediaElement&)>&& task) const
-{
-    ensureOnMainThread([weakMediaElement = m_mediaElement, task = WTFMove(task)]() mutable {
-        if (RefPtrAllowingPartiallyDestroyed<HTMLMediaElement> mediaElement = weakMediaElement.get())
-            task(*mediaElement);
-    });
+    if (!mediaElement())
+        return;
+    mediaElement()->updateMediaState();
 }
 
 void MediaSource::sourceBufferBufferedChanged()
@@ -1482,7 +1273,7 @@ WTFLogChannel& MediaSource::logChannel() const
 void MediaSource::failedToCreateRenderer(RendererType type)
 {
     if (auto context = scriptExecutionContext())
-        context->addConsoleMessage(MessageSource::JS, MessageLevel::Error, makeString("MediaSource "_s, type == RendererType::Video ? "video"_s : "audio"_s, " renderer creation failed."_s));
+        context->addConsoleMessage(MessageSource::JS, MessageLevel::Error, makeString("MediaSource ", type == RendererType::Video ? "video" : "audio", " renderer creation failed."));
 }
 
 void MediaSource::sourceBufferReceivedFirstInitializationSegmentChanged()
@@ -1514,61 +1305,6 @@ void MediaSource::setMediaPlayerReadyState(MediaPlayer::ReadyState readyState)
     m_private->setMediaPlayerReadyState(readyState);
 }
 
-void MediaSource::incrementDroppedFrameCount()
-{
-    ensureWeakOnHTMLMediaElementContext([](auto& mediaElement) {
-        mediaElement.incrementDroppedFrameCount();
-    });
-}
-
-void MediaSource::addAudioTrackToElement(Ref<AudioTrack>&& track)
-{
-    ensureWeakOnHTMLMediaElementContext([track = WTFMove(track)](auto& mediaElement) mutable {
-        mediaElement.addAudioTrack(WTFMove(track));
-    });
-}
-
-void MediaSource::addTextTrackToElement(Ref<TextTrack>&& track)
-{
-    ensureWeakOnHTMLMediaElementContext([track = WTFMove(track)](auto& mediaElement) mutable {
-        mediaElement.addTextTrack(WTFMove(track));
-    });
-}
-
-void MediaSource::addVideoTrackToElement(Ref<VideoTrack>&& track)
-{
-    ensureWeakOnHTMLMediaElementContext([track = WTFMove(track)](auto& mediaElement) mutable {
-        mediaElement.addVideoTrack(WTFMove(track));
-    });
-}
-
-void MediaSource::addAudioTrackMirrorToElement(Ref<AudioTrackPrivate>&& track, bool enabled)
-{
-    ensureWeakOnHTMLMediaElementContext([track = WTFMove(track), enabled](auto& mediaElement) mutable {
-        auto audioTrack = AudioTrack::create(mediaElement.scriptExecutionContext(), track);
-        audioTrack->setEnabled(enabled);
-        mediaElement.addAudioTrack(WTFMove(audioTrack));
-    });
-}
-
-void MediaSource::addTextTrackMirrorToElement(Ref<InbandTextTrackPrivate>&& track)
-{
-    ensureWeakOnHTMLMediaElementContext([track = WTFMove(track)](auto& mediaElement) mutable {
-        if (!mediaElement.scriptExecutionContext())
-            return;
-        mediaElement.addTextTrack(InbandTextTrack::create(*mediaElement.scriptExecutionContext(), track));
-    });
-}
-
-void MediaSource::addVideoTrackMirrorToElement(Ref<VideoTrackPrivate>&& track, bool selected)
-{
-    ensureWeakOnHTMLMediaElementContext([track = WTFMove(track), selected](auto& mediaElement) mutable {
-        auto videoTrack = VideoTrack::create(mediaElement.scriptExecutionContext(), track);
-        videoTrack->setSelected(selected);
-        mediaElement.addVideoTrack(WTFMove(videoTrack));
-    });
-}
-
 void MediaSource::memoryPressure()
 {
     if (!isManaged())
@@ -1576,43 +1312,6 @@ void MediaSource::memoryPressure()
     for (auto& sourceBuffer : *m_sourceBuffers)
         sourceBuffer->memoryPressure();
 }
-
-Ref<MediaSourcePrivateClient> MediaSource::client() const
-{
-    return m_client;
-}
-
-bool MediaSource::enabledForContext(ScriptExecutionContext& context)
-{
-    UNUSED_PARAM(context);
-#if ENABLE(MEDIA_SOURCE_IN_WORKERS)
-    if (context.isWorkerGlobalScope())
-        return context.settingsValues().mediaSourceInWorkerEnabled && platformStrategies()->mediaStrategy().hasThreadSafeMediaSourceSupport();
-#endif
-
-    ASSERT(context.isDocument());
-    return true;
-}
-
-#if ENABLE(MEDIA_SOURCE_IN_WORKERS)
-
-Ref<MediaSourceHandle> MediaSource::handle()
-{
-    if (!m_handle) {
-        m_handle = MediaSourceHandle::create(*this, [weakClient = ThreadSafeWeakPtr { m_client.get() }](MediaSourceHandle::TaskType&& task, bool forceRunInWorker) {
-            if (RefPtr protectedClient = weakClient.get())
-                protectedClient->ensureWeakOnDispatcher(WTFMove(task), forceRunInWorker);
-        });
-    }
-    return *m_handle;
-}
-
-bool MediaSource::canConstructInDedicatedWorker(ScriptExecutionContext& context)
-{
-    return context.settingsValues().mediaSourceInWorkerEnabled && platformStrategies()->mediaStrategy().hasThreadSafeMediaSourceSupport();
-}
-
-#endif
 
 } // namespace WebCore
 

@@ -28,7 +28,7 @@
 typedef [EnforceRange] unsigned long GPUMapModeFlags;
 [
     EnabledBySetting=WebGPUEnabled,
-    Exposed=(Window,Worker),
+    Exposed=(Window,DedicatedWorker),
     SecureContext
 ]
 interface GPUMapMode {

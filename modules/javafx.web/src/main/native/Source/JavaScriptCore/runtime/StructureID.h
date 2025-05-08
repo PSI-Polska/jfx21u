@@ -27,7 +27,6 @@
 
 #include "JSCConfig.h"
 #include "MarkedBlock.h"
-#include <compare>
 #include <wtf/HashTraits.h>
 #include <wtf/StdIntExtras.h>
 
@@ -73,9 +72,9 @@ public:
     static constexpr CPURegister structureIDMask = structureHeapAddressSize - 1;
 #endif
 
-    constexpr StructureID() = default;
-    constexpr StructureID(StructureID const&) = default;
-    constexpr StructureID& operator=(StructureID const&) = default;
+    StructureID() = default;
+    StructureID(StructureID const&) = default;
+    StructureID& operator=(StructureID const&) = default;
 
     StructureID nuke() const { return StructureID(m_bits | nukedStructureIDBit); }
     bool isNuked() const { return m_bits & nukedStructureIDBit; }
@@ -86,14 +85,14 @@ public:
     static StructureID encode(const Structure*);
 
     explicit operator bool() const { return !!m_bits; }
-    friend auto operator<=>(const StructureID&, const StructureID&) = default;
+    friend bool operator==(const StructureID&, const StructureID&) = default;
     constexpr uint32_t bits() const { return m_bits; }
 
-    constexpr StructureID(WTF::HashTableDeletedValueType) : m_bits(nukedStructureIDBit) { }
+    StructureID(WTF::HashTableDeletedValueType) : m_bits(nukedStructureIDBit) { }
     bool isHashTableDeletedValue() const { return *this == StructureID(WTF::HashTableDeletedValue); }
 
 private:
-    explicit constexpr StructureID(uint32_t bits) : m_bits(bits) { }
+    explicit StructureID(uint32_t bits) : m_bits(bits) { }
 
     uint32_t m_bits { 0 };
 };

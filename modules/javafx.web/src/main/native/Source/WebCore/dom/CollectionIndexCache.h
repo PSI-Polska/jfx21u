@@ -29,8 +29,6 @@
 
 namespace WebCore {
 
-class WeakPtrImplWithEventTargetData;
-
 WEBCORE_EXPORT void reportExtraMemoryAllocatedForCollectionIndexCache(size_t);
 
 template <class Collection, class Iterator>
@@ -61,7 +59,7 @@ private:
     Iterator m_current { };
     unsigned m_currentIndex { 0 };
     unsigned m_nodeCount { 0 };
-    Vector<WeakPtr<NodeType, WeakPtrImplWithEventTargetData>> m_cachedList;
+    Vector<NodeType*> m_cachedList;
     bool m_nodeCountValid : 1;
     bool m_listValid : 1;
 };

@@ -44,13 +44,11 @@
 #include <wtf/LoggerHelper.h>
 #include <wtf/NativePromise.h>
 #include <wtf/Observer.h>
-#include <wtf/Ref.h>
 
 namespace WebCore {
 
 class AudioTrackList;
 class BufferSource;
-class SourceBufferClientImpl;
 class MediaSource;
 class PlatformTimeRanges;
 class SourceBufferPrivate;
@@ -60,8 +58,7 @@ class VideoTrackList;
 class WebCoreOpaqueRoot;
 
 class SourceBuffer
-    : public RefCounted<SourceBuffer>
-    , public CanMakeWeakPtr<SourceBuffer>
+    : public SourceBufferPrivateClient
     , public ActiveDOMObject
     , public EventTarget
     , private AudioTrackClient
@@ -71,20 +68,14 @@ class SourceBuffer
     , private LoggerHelper
 #endif
 {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SourceBuffer);
+    WTF_MAKE_ISO_ALLOCATED(SourceBuffer);
 public:
+    using EventTarget::weakPtrFactory;
+    using EventTarget::WeakValueType;
+    using EventTarget::WeakPtrImplType;
+
     static Ref<SourceBuffer> create(Ref<SourceBufferPrivate>&&, MediaSource&);
     virtual ~SourceBuffer();
-
-    using CanMakeWeakPtr<SourceBuffer>::weakPtrFactory;
-    using CanMakeWeakPtr<SourceBuffer>::WeakValueType;
-    using CanMakeWeakPtr<SourceBuffer>::WeakPtrImplType;
-
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
-
-    static bool enabledForContext(ScriptExecutionContext&);
 
     bool updating() const { return m_updating; }
     ExceptionOr<Ref<TimeRanges>> buffered();
@@ -117,6 +108,8 @@ public:
     Ref<ComputeSeekPromise> computeSeekTime(const SeekTarget&);
     void seekToTime(const MediaTime&);
 
+    bool canPlayThroughRange(const PlatformTimeRanges&);
+
     bool hasVideo() const;
 
     bool active() const { return m_active; }
@@ -124,6 +117,10 @@ public:
     // EventTarget
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
 
+    using SourceBufferPrivateClient::ref;
+    using SourceBufferPrivateClient::deref;
+
+    Document& document() const;
     enum class AppendMode { Segments, Sequence };
     AppendMode mode() const { return m_mode; }
     ExceptionOr<void> setMode(AppendMode);
@@ -143,7 +140,7 @@ public:
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger.get(); }
     const void* logIdentifier() const final { return m_logIdentifier; }
-    ASCIILiteral logClassName() const final { return "SourceBuffer"_s; }
+    const char* logClassName() const final { return "SourceBuffer"; }
     WTFLogChannel& logChannel() const final;
 #endif
 
@@ -156,20 +153,20 @@ protected:
     SourceBuffer(Ref<SourceBufferPrivate>&&, MediaSource&);
 
 private:
-    friend class SourceBufferClientImpl;
-
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
     // ActiveDOMObject.
+    const char* activeDOMObjectName() const final;
     bool virtualHasPendingActivity() const final;
 
-    Ref<MediaPromise> sourceBufferPrivateDidReceiveInitializationSegment(SourceBufferPrivateClient::InitializationSegment&&);
-    Ref<MediaPromise> sourceBufferPrivateBufferedChanged(Vector<PlatformTimeRanges>&&);
-    void sourceBufferPrivateHighestPresentationTimestampChanged(const MediaTime&);
-    Ref<MediaPromise> sourceBufferPrivateDurationChanged(const MediaTime& duration);
-    void sourceBufferPrivateDidDropSample();
-    void sourceBufferPrivateDidReceiveRenderingError(int64_t errorCode);
+    // SourceBufferPrivateClient
+    Ref<MediaPromise> sourceBufferPrivateDidReceiveInitializationSegment(InitializationSegment&&) final;
+    Ref<MediaPromise> sourceBufferPrivateBufferedChanged(const Vector<PlatformTimeRanges>&, uint64_t) final;
+    void sourceBufferPrivateHighestPresentationTimestampChanged(const MediaTime&) final;
+    Ref<MediaPromise> sourceBufferPrivateDurationChanged(const MediaTime& duration) final;
+    void sourceBufferPrivateDidDropSample() final;
+    void sourceBufferPrivateDidReceiveRenderingError(int64_t errorCode) final;
 
     // AudioTrackClient
     void audioTrackEnabledChanged(AudioTrack&) final;
@@ -189,18 +186,18 @@ private:
     void videoTrackSelectedChanged(VideoTrack&) final;
 
     // EventTarget
-    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::SourceBuffer; }
+    EventTargetInterface eventTargetInterface() const final { return SourceBufferEventTargetInterfaceType; }
 
     bool isRemoved() const;
     void scheduleEvent(const AtomString& eventName);
 
-    ExceptionOr<void> appendBufferInternal(std::span<const uint8_t>);
+    ExceptionOr<void> appendBufferInternal(const unsigned char*, unsigned);
     void sourceBufferPrivateAppendComplete(MediaPromise::Result&&);
     void resetParserState();
 
     void setActive(bool);
 
-    bool validateInitializationSegment(const SourceBufferPrivateClient::InitializationSegment&);
+    bool validateInitializationSegment(const InitializationSegment&);
 
     uint64_t maximumBufferSize() const;
 
@@ -213,19 +210,15 @@ private:
     void rangeRemoval(const MediaTime&, const MediaTime&);
 
     friend class Internals;
-    using SamplesPromise = NativePromise<Vector<String>, PlatformMediaError>;
+    using SamplesPromise = NativePromise<Vector<String>, int>;
     WEBCORE_EXPORT Ref<SamplesPromise> bufferedSamplesForTrackId(TrackID);
     WEBCORE_EXPORT Ref<SamplesPromise> enqueuedSamplesForTrackID(TrackID);
     WEBCORE_EXPORT MediaTime minimumUpcomingPresentationTimeForTrackID(TrackID);
     WEBCORE_EXPORT void setMaximumQueueDepthForTrackID(TrackID, uint64_t);
-    WEBCORE_EXPORT Ref<GenericPromise> setMaximumSourceBufferSize(uint64_t);
-    WEBCORE_EXPORT size_t evictableSize() const;
 
     void updateBuffered();
 
     Ref<SourceBufferPrivate> m_private;
-    Ref<SourceBufferClientImpl> m_client;
-
     MediaSource* m_source;
     AppendMode m_mode { AppendMode::Segments };
 
@@ -263,10 +256,8 @@ private:
     bool m_mediaSourceEnded { false };
     Ref<TimeRanges> m_buffered;
     Vector<PlatformTimeRanges> m_trackBuffers;
-    bool m_appendBufferPending { false };
-    uint32_t m_appendBufferOperationId { 0 };
-    bool m_removeCodedFramesPending { false };
-    std::optional<uint64_t> m_maximumBufferSize;
+    NativePromiseRequest m_appendBufferPromise;
+    NativePromiseRequest m_removeCodedFramesPromise;
 
 #if !RELEASE_LOG_DISABLED
     Ref<const Logger> m_logger;

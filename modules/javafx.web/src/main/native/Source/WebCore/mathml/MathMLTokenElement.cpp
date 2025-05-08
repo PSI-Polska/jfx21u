@@ -33,11 +33,11 @@
 #include "HTTPParsers.h"
 #include "MathMLNames.h"
 #include "RenderMathMLToken.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MathMLTokenElement);
+WTF_MAKE_ISO_ALLOCATED_IMPL(MathMLTokenElement);
 
 using namespace MathMLNames;
 
@@ -54,15 +54,17 @@ Ref<MathMLTokenElement> MathMLTokenElement::create(const QualifiedName& tagName,
 void MathMLTokenElement::didAttachRenderers()
 {
     MathMLPresentationElement::didAttachRenderers();
-    if (CheckedPtr mathmlRenderer = dynamicDowncast<RenderMathMLToken>(renderer()))
-        mathmlRenderer->updateTokenContent();
+    auto* mathmlRenderer = renderer();
+    if (is<RenderMathMLToken>(mathmlRenderer))
+        downcast<RenderMathMLToken>(*mathmlRenderer).updateTokenContent();
 }
 
 void MathMLTokenElement::childrenChanged(const ChildChange& change)
 {
     MathMLPresentationElement::childrenChanged(change);
-    if (CheckedPtr mathmlRenderer = dynamicDowncast<RenderMathMLToken>(renderer()))
-        mathmlRenderer->updateTokenContent();
+    auto* mathmlRenderer = renderer();
+    if (is<RenderMathMLToken>(mathmlRenderer))
+        downcast<RenderMathMLToken>(*mathmlRenderer).updateTokenContent();
 }
 
 RenderPtr<RenderElement> MathMLTokenElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)

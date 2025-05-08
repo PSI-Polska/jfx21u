@@ -56,7 +56,7 @@ void Phase::beginPhase()
 
 void Phase::endPhase()
 {
-    if (!Options::validateGraphAtEachPhase() || m_disableGraphValidation)
+    if (!Options::validateGraphAtEachPhase())
         return;
     validate();
 }

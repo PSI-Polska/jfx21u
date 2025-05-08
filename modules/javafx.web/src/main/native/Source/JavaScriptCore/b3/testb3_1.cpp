@@ -780,7 +780,7 @@ void run(const TestConfig* config)
     RUN(testTrappingStoreElimination());
     RUN(testMoveConstants());
     RUN(testMoveConstantsWithLargeOffsets());
-    if (Options::useWasmSIMD())
+    if (Options::useWebAssemblySIMD())
         RUN(testMoveConstantsSIMD());
     RUN(testPCOriginMapDoesntInsertNops());
     RUN(testPinRegisters());
@@ -908,7 +908,7 @@ void run(const TestConfig* config)
     for (unsigned i = config->workerThreadCount; i--;) {
         threads.append(
             Thread::create(
-                "testb3 thread"_s,
+                "testb3 thread",
                 [&] () {
                     for (;;) {
                         RefPtr<SharedTask<void()>> task;

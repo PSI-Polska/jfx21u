@@ -31,8 +31,6 @@
 IGNORE_RETURN_TYPE_WARNINGS_BEGIN
 #endif
 
-#include <wtf/text/ASCIILiteral.h>
-
 namespace JSC { namespace Wasm {
 
 // macro(Name, ID, OrderingNumber, Description).
@@ -106,14 +104,14 @@ inline bool validateOrder(Section previousKnown, Section next)
     return orderingNumber(previousKnown) < orderingNumber(next);
 }
 
-inline ASCIILiteral makeString(Section section)
+inline const char* makeString(Section section)
 {
     switch (section) {
     case Section::Begin:
-        return "Begin"_s;
+        return "Begin";
     case Section::Custom:
-        return "Custom"_s;
-#define STRINGIFY_SECTION_NAME(NAME, ID, ORDERING, DESCRIPTION) case Section::NAME: return #NAME ## _s;
+        return "Custom";
+#define STRINGIFY_SECTION_NAME(NAME, ID, ORDERING, DESCRIPTION) case Section::NAME: return #NAME;
         FOR_EACH_KNOWN_WASM_SECTION(STRINGIFY_SECTION_NAME)
 #undef STRINGIFY_SECTION_NAME
     }

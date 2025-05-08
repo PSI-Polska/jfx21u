@@ -36,12 +36,14 @@ FormDataConsumer::FormDataConsumer(const FormData& formData, ScriptExecutionCont
     : m_formData(formData.copy())
     , m_context(&context)
     , m_callback(WTFMove(callback))
-    , m_fileQueue(WorkQueue::create("FormDataConsumer file queue"_s))
+    , m_fileQueue(WorkQueue::create("FormDataConsumer file queue"))
 {
     read();
 }
 
-FormDataConsumer::~FormDataConsumer() = default;
+FormDataConsumer::~FormDataConsumer()
+{
+}
 
 void FormDataConsumer::read()
 {
@@ -103,7 +105,7 @@ void FormDataConsumer::consumeBlob(const URL& blobURL)
         }
 
         if (auto data = loader->arrayBufferResult())
-            weakThis->consume(data->span());
+            weakThis->consume(std::span<const uint8_t> { static_cast<const uint8_t*>(data->data()), data->byteLength() });
     });
 
     m_blobLoader->start(blobURL, m_context.get(), FileReaderLoader::ReadAsArrayBuffer);
@@ -117,11 +119,9 @@ void FormDataConsumer::consume(std::span<const uint8_t> content)
     if (!m_callback)
         return;
 
-    if (!content.empty()) {
     m_callback(WTFMove(content));
     if (!m_callback)
         return;
-    }
 
     read();
 }

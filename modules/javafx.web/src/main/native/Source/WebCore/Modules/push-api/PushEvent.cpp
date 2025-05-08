@@ -30,24 +30,25 @@
 #include <JavaScriptCore/JSArrayBuffer.h>
 #include <JavaScriptCore/JSArrayBufferView.h>
 #include <JavaScriptCore/JSCInlines.h>
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(PushEvent);
+WTF_MAKE_ISO_ALLOCATED_IMPL(PushEvent);
 
 static Vector<uint8_t> dataFromPushMessageDataInit(PushMessageDataInit& data)
 {
     return WTF::switchOn(data, [](RefPtr<JSC::ArrayBuffer>& value) -> Vector<uint8_t> {
         if (!value)
             return { };
-        return value->span();
+        return { reinterpret_cast<const uint8_t*>(value->data()), value->byteLength() };
     }, [](RefPtr<JSC::ArrayBufferView>& value) -> Vector<uint8_t> {
         if (!value)
             return { };
-        return value->span();
+        return { reinterpret_cast<const uint8_t*>(value->baseAddress()), value->byteLength() };
     }, [](String& value) -> Vector<uint8_t> {
-        return value.utf8().span();
+        auto utf8 = value.utf8();
+        return Vector<uint8_t> { reinterpret_cast<const uint8_t*>(utf8.data()), utf8.length() };
     });
 }
 
@@ -72,11 +73,13 @@ static inline RefPtr<PushMessageData> pushMessageDataFromOptionalVector(std::opt
 }
 
 PushEvent::PushEvent(const AtomString& type, ExtendableEventInit&& eventInit, std::optional<Vector<uint8_t>>&& data, IsTrusted isTrusted)
-    : ExtendableEvent(EventInterfaceType::PushEvent, type, WTFMove(eventInit), isTrusted)
+    : ExtendableEvent(type, WTFMove(eventInit), isTrusted)
     , m_data(pushMessageDataFromOptionalVector(WTFMove(data)))
 {
 }
 
-PushEvent::~PushEvent() = default;
+PushEvent::~PushEvent()
+{
+}
 
 } // namespace WebCore

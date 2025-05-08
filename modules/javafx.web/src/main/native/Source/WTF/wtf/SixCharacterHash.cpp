@@ -30,12 +30,13 @@
 
 namespace WTF {
 
-unsigned sixCharacterHashStringToInteger(std::span<const char, 6> string)
+unsigned sixCharacterHashStringToInteger(const char* string)
 {
     unsigned hash = 0;
 
-    for (auto c : string) {
+    for (unsigned i = 0; i < 6; ++i) {
         hash *= 62;
+        unsigned c = string[i];
         RELEASE_ASSERT(c); // FIXME: Why does this need to be a RELEASE_ASSERT?
         if (isASCIIUpper(c)) {
             hash += c - 'A';
@@ -49,18 +50,21 @@ unsigned sixCharacterHashStringToInteger(std::span<const char, 6> string)
         hash += c - '0' + 26 * 2;
     }
 
+    RELEASE_ASSERT(!string[6]); // FIXME: Why does this need to be a RELEASE_ASSERT?
+
     return hash;
 }
 
-std::array<char, 6> integerToSixCharacterHashString(unsigned hash)
+std::array<char, 7> integerToSixCharacterHashString(unsigned hash)
 {
     static const char table[63] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    std::array<char, 6> buffer;
+    std::array<char, 7> buffer;
     unsigned accumulator = hash;
     for (unsigned i = 6; i--;) {
         buffer[i] = table[accumulator % 62];
         accumulator /= 62;
     }
+    buffer[6] = 0;
     return buffer;
 }
 

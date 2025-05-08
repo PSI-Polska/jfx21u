@@ -32,11 +32,11 @@
 #include "InspectorInstrumentation.h"
 #include "KeyframeEffect.h"
 #include "StyleResolver.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CSSTransition);
+WTF_MAKE_ISO_ALLOCATED_IMPL(CSSTransition);
 
 Ref<CSSTransition> CSSTransition::create(const Styleable& owningElement, const AnimatableCSSProperty& property, MonotonicTime generationTime, const Animation& backingAnimation, const RenderStyle& oldStyle, const RenderStyle& newStyle, Seconds delay, Seconds duration, const RenderStyle& reversingAdjustedStartStyle, double reversingShorteningFactor)
 {
@@ -63,11 +63,10 @@ CSSTransition::CSSTransition(const Styleable& styleable, const AnimatableCSSProp
 
 CSSTransition::~CSSTransition() = default;
 
-OptionSet<AnimationImpact> CSSTransition::resolve(RenderStyle& targetStyle, const Style::ResolutionContext& resolutionContext, std::optional<Seconds> startTime)
+void CSSTransition::resolve(RenderStyle& targetStyle, const Style::ResolutionContext& resolutionContext, std::optional<Seconds> startTime)
 {
-    auto impact = StyleOriginatedAnimation::resolve(targetStyle, resolutionContext, startTime);
+    StyleOriginatedAnimation::resolve(targetStyle, resolutionContext, startTime);
     m_currentStyle = RenderStyle::clonePtr(targetStyle);
-    return impact;
 }
 
 void CSSTransition::animationDidFinish()
@@ -98,9 +97,9 @@ void CSSTransition::setTimingProperties(Seconds delay, Seconds duration)
     unsuspendEffectInvalidation();
 }
 
-Ref<StyleOriginatedAnimationEvent> CSSTransition::createEvent(const AtomString& eventType, std::optional<Seconds> scheduledTime, double elapsedTime, const std::optional<Style::PseudoElementIdentifier>& pseudoElementIdentifier)
+Ref<StyleOriginatedAnimationEvent> CSSTransition::createEvent(const AtomString& eventType, std::optional<Seconds> scheduledTime, double elapsedTime, PseudoId pseudoId)
 {
-    return CSSTransitionEvent::create(eventType, this, scheduledTime, elapsedTime, pseudoElementIdentifier, transitionProperty());
+    return CSSTransitionEvent::create(eventType, this, scheduledTime, elapsedTime, pseudoId, transitionProperty());
 }
 
 const AtomString CSSTransition::transitionProperty() const

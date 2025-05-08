@@ -107,25 +107,14 @@ bool ObjectPropertyCondition::structureEnsuresValidity(Concurrency concurrency) 
     return structureEnsuresValidity(concurrency, m_object->structure());
 }
 
-bool ObjectPropertyCondition::isWatchableAssumingImpurePropertyWatchpoint(Structure* structure, PropertyCondition::WatchabilityEffort effort, Concurrency concurrency) const
-{
-    return m_condition.isWatchableAssumingImpurePropertyWatchpoint(structure, m_object, effort, concurrency);
-}
-
-bool ObjectPropertyCondition::isWatchableAssumingImpurePropertyWatchpoint(Structure* structure, PropertyCondition::WatchabilityEffort effort) const
+bool ObjectPropertyCondition::isWatchableAssumingImpurePropertyWatchpoint(
+    Structure* structure, PropertyCondition::WatchabilityEffort effort) const
 {
     return m_condition.isWatchableAssumingImpurePropertyWatchpoint(structure, m_object, effort);
 }
 
-bool ObjectPropertyCondition::isWatchableAssumingImpurePropertyWatchpoint(PropertyCondition::WatchabilityEffort effort, Concurrency concurrency) const
-{
-    if (!*this)
-        return false;
-
-    return isWatchableAssumingImpurePropertyWatchpoint(m_object->structure(), effort, concurrency);
-}
-
-bool ObjectPropertyCondition::isWatchableAssumingImpurePropertyWatchpoint(PropertyCondition::WatchabilityEffort effort) const
+bool ObjectPropertyCondition::isWatchableAssumingImpurePropertyWatchpoint(
+    PropertyCondition::WatchabilityEffort effort) const
 {
     if (!*this)
         return false;
@@ -133,7 +122,8 @@ bool ObjectPropertyCondition::isWatchableAssumingImpurePropertyWatchpoint(Proper
     return isWatchableAssumingImpurePropertyWatchpoint(m_object->structure(), effort);
 }
 
-bool ObjectPropertyCondition::isWatchable(Structure* structure, PropertyCondition::WatchabilityEffort effort) const
+bool ObjectPropertyCondition::isWatchable(
+    Structure* structure, PropertyCondition::WatchabilityEffort effort) const
 {
     return m_condition.isWatchable(structure, m_object, effort);
 }
@@ -142,14 +132,8 @@ bool ObjectPropertyCondition::isWatchable(PropertyCondition::WatchabilityEffort 
 {
     if (!*this)
         return false;
-    return isWatchable(m_object->structure(), effort);
-}
 
-bool ObjectPropertyCondition::isWatchable(PropertyCondition::WatchabilityEffort effort, Concurrency concurrency) const
-{
-    if (!*this)
-        return false;
-    return m_condition.isWatchable(m_object->structure(), m_object, effort, concurrency);
+    return isWatchable(m_object->structure(), effort);
 }
 
 bool ObjectPropertyCondition::isStillLive(VM& vm) const

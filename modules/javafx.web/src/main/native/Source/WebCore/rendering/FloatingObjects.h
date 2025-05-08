@@ -90,6 +90,11 @@ public:
     bool isDescendant() const { return m_isDescendant; }
     void setIsDescendant(bool isDescendant) { m_isDescendant = isDescendant; }
 
+    // FIXME: Callers of these methods are dangerous and should be allowed explicitly or removed.
+    LegacyRootInlineBox* originatingLine() const { return m_originatingLine.get(); }
+    void clearOriginatingLine() { m_originatingLine = nullptr; }
+    void setOriginatingLine(LegacyRootInlineBox& line) { m_originatingLine = line; }
+
     LayoutSize locationOffsetOfBorderBox() const
     {
         ASSERT(isPlaced());
@@ -102,6 +107,7 @@ private:
     friend FloatingObjects;
 
     SingleThreadWeakPtr<RenderBox> m_renderer;
+    WeakPtr<LegacyRootInlineBox> m_originatingLine;
     LayoutRect m_frameRect;
     LayoutUnit m_paginationStrut;
     LayoutSize m_marginOffset;
@@ -143,6 +149,8 @@ typedef PODIntervalTree<LayoutUnit, FloatingObject*> FloatingObjectTree;
 
 // FIXME: This is really the same thing as FloatingObjectSet.
 // Change clients to use that set directly, and replace the moveAllToFloatInfoMap function with a takeSet function.
+using RendererToFloatInfoMap = HashMap<SingleThreadWeakRef<RenderBox>, std::unique_ptr<FloatingObject>>;
+
 class FloatingObjects {
     WTF_MAKE_NONCOPYABLE(FloatingObjects); WTF_MAKE_FAST_ALLOCATED;
 public:
@@ -150,6 +158,7 @@ public:
     ~FloatingObjects();
 
     void clear();
+    void moveAllToFloatInfoMap(RendererToFloatInfoMap&);
     FloatingObject* add(std::unique_ptr<FloatingObject>);
     void remove(FloatingObject*);
     void addPlacedObject(FloatingObject*);
@@ -159,6 +168,7 @@ public:
     bool hasLeftObjects() const { return m_leftObjectsCount > 0; }
     bool hasRightObjects() const { return m_rightObjectsCount > 0; }
     const FloatingObjectSet& set() const { return m_set; }
+    void clearLineBoxTreePointers();
 
     LayoutUnit logicalLeftOffset(LayoutUnit fixedOffset, LayoutUnit logicalTop, LayoutUnit logicalHeight);
     LayoutUnit logicalRightOffset(LayoutUnit fixedOffset, LayoutUnit logicalTop, LayoutUnit logicalHeight);

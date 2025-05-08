@@ -34,8 +34,7 @@
 namespace WebCore {
 
 class MathMLMencloseElement final: public MathMLRowElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(MathMLMencloseElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(MathMLMencloseElement);
+    WTF_MAKE_ISO_ALLOCATED(MathMLMencloseElement);
 public:
     static Ref<MathMLMencloseElement> create(const QualifiedName& tagName, Document&);
 

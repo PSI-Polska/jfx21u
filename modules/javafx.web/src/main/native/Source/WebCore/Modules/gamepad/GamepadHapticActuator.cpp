@@ -156,6 +156,11 @@ const Document* GamepadHapticActuator::document() const
     return downcast<Document>(scriptExecutionContext());
 }
 
+const char* GamepadHapticActuator::activeDOMObjectName() const
+{
+    return "GamepadHapticActuator";
+}
+
 void GamepadHapticActuator::suspend(ReasonForSuspension)
 {
     stopEffects([] { });

@@ -39,20 +39,15 @@ class BaselineJITPlan final : public JITPlan {
     using Base = JITPlan;
 
 public:
-    BaselineJITPlan(CodeBlock*);
+    BaselineJITPlan(CodeBlock*, BytecodeIndex loopOSREntryBytecodeIndex);
 
     CompilationPath compileInThreadImpl() final;
     size_t codeSize() const final;
     CompilationResult finalize() override;
 
-    CompilationPath compileSync(JITCompilationEffort);
-
-    bool isKnownToBeLiveAfterGC() final;
-    bool isKnownToBeLiveDuringGC(AbstractSlotVisitor&) final;
-
 private:
-    CompilationPath compileInThreadImpl(JITCompilationEffort);
-
+    BytecodeIndex m_loopOSREntryBytecodeIndex;
+    std::unique_ptr<LinkBuffer> m_linkBuffer;
     RefPtr<BaselineJITCode> m_jitCode;
 };
 

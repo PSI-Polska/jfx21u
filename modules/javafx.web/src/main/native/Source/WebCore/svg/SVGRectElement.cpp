@@ -28,12 +28,11 @@
 #include "NodeName.h"
 #include "RenderSVGRect.h"
 #include "SVGElementInlines.h"
-#include "SVGNames.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGRectElement);
+WTF_MAKE_ISO_ALLOCATED_IMPL(SVGRectElement);
 
 inline SVGRectElement::SVGRectElement(const QualifiedName& tagName, Document& document)
     : SVGGeometryElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -56,45 +55,28 @@ Ref<SVGRectElement> SVGRectElement::create(const QualifiedName& tagName, Documen
     return adoptRef(*new SVGRectElement(tagName, document));
 }
 
-SVGAnimatedProperty* SVGRectElement::propertyForAttribute(const QualifiedName& name) const
-{
-    if (name == SVGNames::xAttr)
-        return m_x.ptr();
-    if (name == SVGNames::yAttr)
-        return m_y.ptr();
-    if (name == SVGNames::widthAttr)
-        return m_width.ptr();
-    if (name == SVGNames::heightAttr)
-        return m_height.ptr();
-    if (name == SVGNames::rxAttr)
-        return m_rx.ptr();
-    if (name == SVGNames::ryAttr)
-        return m_ry.ptr();
-    return nullptr;
-}
-
 void SVGRectElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     SVGParsingError parseError = NoError;
 
     switch (name.nodeName()) {
     case AttributeNames::xAttr:
-        Ref { m_x }->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError));
+        m_x->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError));
         break;
     case AttributeNames::yAttr:
-        Ref { m_y }->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, newValue, parseError));
+        m_y->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, newValue, parseError));
         break;
     case AttributeNames::rxAttr:
-        Ref { m_rx }->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError, SVGLengthNegativeValuesMode::Forbid));
+        m_rx->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError, SVGLengthNegativeValuesMode::Forbid));
         break;
     case AttributeNames::ryAttr:
-        Ref { m_ry }->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, newValue, parseError, SVGLengthNegativeValuesMode::Forbid));
+        m_ry->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, newValue, parseError, SVGLengthNegativeValuesMode::Forbid));
         break;
     case AttributeNames::widthAttr:
-        Ref { m_width }->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError, SVGLengthNegativeValuesMode::Forbid));
+        m_width->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError, SVGLengthNegativeValuesMode::Forbid));
         break;
     case AttributeNames::heightAttr:
-        Ref { m_height }->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, newValue, parseError, SVGLengthNegativeValuesMode::Forbid));
+        m_height->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, newValue, parseError, SVGLengthNegativeValuesMode::Forbid));
         break;
     default:
         break;
@@ -108,7 +90,6 @@ void SVGRectElement::svgAttributeChanged(const QualifiedName& attrName)
     if (PropertyRegistry::isKnownAttribute(attrName)) {
         InstanceInvalidationGuard guard(*this);
         setPresentationalHintStyleIsDirty();
-        invalidateResourceImageBuffersIfNeeded();
         return;
     }
 
@@ -117,8 +98,11 @@ void SVGRectElement::svgAttributeChanged(const QualifiedName& attrName)
 
 RenderPtr<RenderElement> SVGRectElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (document().settings().layerBasedSVGEngineEnabled())
         return createRenderer<RenderSVGRect>(*this, WTFMove(style));
+#endif
+
     return createRenderer<LegacyRenderSVGRect>(*this, WTFMove(style));
 }
 

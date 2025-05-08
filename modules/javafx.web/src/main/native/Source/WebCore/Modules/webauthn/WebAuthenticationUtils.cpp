@@ -41,14 +41,14 @@ namespace WebCore {
 
 Vector<uint8_t> convertBytesToVector(const uint8_t byteArray[], const size_t length)
 {
-    return { std::span { byteArray, length } };
+    return { byteArray, length };
 }
 
 Vector<uint8_t> produceRpIdHash(const String& rpId)
 {
     auto crypto = PAL::CryptoDigest::create(PAL::CryptoDigest::Algorithm::SHA_256);
     auto rpIdUTF8 = rpId.utf8();
-    crypto->addBytes(rpIdUTF8.span());
+    crypto->addBytes(rpIdUTF8.data(), rpIdUTF8.length());
     return crypto->computeHash();
 }
 
@@ -169,7 +169,7 @@ Ref<ArrayBuffer> buildClientDataJson(ClientDataType type, const BufferSource& ch
         object->setString("type"_s, "webauthn.get"_s);
         break;
     }
-    object->setString("challenge"_s, base64URLEncodeToString(challenge.span()));
+    object->setString("challenge"_s, base64URLEncodeToString(challenge.data(), challenge.length()));
     object->setString("origin"_s, origin.toRawString());
 
     if (!topOrigin.isNull())
@@ -178,13 +178,15 @@ Ref<ArrayBuffer> buildClientDataJson(ClientDataType type, const BufferSource& ch
     if (scope != WebAuthn::Scope::SameOrigin)
         object->setBoolean("crossOrigin"_s, scope != WebAuthn::Scope::SameOrigin);
 
-    return ArrayBuffer::create(object->toJSONString().utf8().span());
+    auto utf8JSONString = object->toJSONString().utf8();
+
+    return ArrayBuffer::create(utf8JSONString.data(), utf8JSONString.length());
 }
 
 Vector<uint8_t> buildClientDataJsonHash(const ArrayBuffer& clientDataJson)
 {
     auto crypto = PAL::CryptoDigest::create(PAL::CryptoDigest::Algorithm::SHA_256);
-    crypto->addBytes(clientDataJson.span());
+    crypto->addBytes(clientDataJson.data(), clientDataJson.byteLength());
     return crypto->computeHash();
 }
 
@@ -196,53 +198,6 @@ Vector<uint8_t> encodeRawPublicKey(const Vector<uint8_t>& x, const Vector<uint8_
     rawKey.appendVector(x);
     rawKey.appendVector(y);
     return rawKey;
-}
-
-String toString(AuthenticatorTransport transport)
-{
-    switch (transport) {
-    case AuthenticatorTransport::Usb:
-        return authenticatorTransportUsb;
-        break;
-    case AuthenticatorTransport::Nfc:
-        return authenticatorTransportNfc;
-        break;
-    case AuthenticatorTransport::Ble:
-        return authenticatorTransportBle;
-        break;
-    case AuthenticatorTransport::Internal:
-        return authenticatorTransportInternal;
-        break;
-    case AuthenticatorTransport::Cable:
-        return authenticatorTransportCable;
-    case AuthenticatorTransport::Hybrid:
-        return authenticatorTransportHybrid;
-    case AuthenticatorTransport::SmartCard:
-        return authenticatorTransportSmartCard;
-    default:
-        break;
-    }
-    ASSERT_NOT_REACHED();
-    return nullString();
-}
-
-std::optional<AuthenticatorTransport> convertStringToAuthenticatorTransport(const String& transport)
-{
-    if (transport == authenticatorTransportUsb)
-        return AuthenticatorTransport::Usb;
-    if (transport == authenticatorTransportNfc)
-        return AuthenticatorTransport::Nfc;
-    if (transport == authenticatorTransportBle)
-        return AuthenticatorTransport::Ble;
-    if (transport == authenticatorTransportInternal)
-        return AuthenticatorTransport::Internal;
-    if (transport == authenticatorTransportCable)
-        return AuthenticatorTransport::Cable;
-    if (transport == authenticatorTransportHybrid)
-        return AuthenticatorTransport::Hybrid;
-    if (transport == authenticatorTransportSmartCard)
-        return AuthenticatorTransport::SmartCard;
-    return std::nullopt;
 }
 
 } // namespace WebCore

@@ -40,11 +40,11 @@
 #include "Node.h"
 #include "ScriptExecutionContext.h"
 #include <JavaScriptCore/HeapInlines.h>
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(IDBDatabase);
+WTF_MAKE_ISO_ALLOCATED_IMPL(IDBDatabase);
 
 static Vector<String> sortAndRemoveDuplicates(Vector<String>&& vector)
 {
@@ -67,7 +67,7 @@ IDBDatabase::IDBDatabase(ScriptExecutionContext& context, IDBClient::IDBConnecti
     , m_databaseConnectionIdentifier(resultData.databaseConnectionIdentifier())
     , m_eventNames(eventNames())
 {
-    LOG(IndexedDB, "IDBDatabase::IDBDatabase - Creating database %s with version %" PRIu64 " connection %" PRIu64 " (%p)", m_info.name().utf8().data(), m_info.version(), m_databaseConnectionIdentifier.toUInt64(), this);
+    LOG(IndexedDB, "IDBDatabase::IDBDatabase - Creating database %s with version %" PRIu64 " connection %" PRIu64 " (%p)", m_info.name().utf8().data(), m_info.version(), m_databaseConnectionIdentifier, this);
     m_connectionProxy->registerDatabaseConnection(*this);
 }
 
@@ -235,7 +235,7 @@ ExceptionOr<void> IDBDatabase::deleteObjectStore(const String& objectStoreName)
 
 void IDBDatabase::close()
 {
-    LOG(IndexedDB, "IDBDatabase::close - %" PRIu64, m_databaseConnectionIdentifier.toUInt64());
+    LOG(IndexedDB, "IDBDatabase::close - %" PRIu64, m_databaseConnectionIdentifier);
 
     ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
@@ -249,14 +249,14 @@ void IDBDatabase::close()
 
 void IDBDatabase::didCloseFromServer(const IDBError& error)
 {
-    LOG(IndexedDB, "IDBDatabase::didCloseFromServer - %" PRIu64, m_databaseConnectionIdentifier.toUInt64());
+    LOG(IndexedDB, "IDBDatabase::didCloseFromServer - %" PRIu64, m_databaseConnectionIdentifier);
 
     connectionToServerLost(error);
 }
 
 void IDBDatabase::connectionToServerLost(const IDBError& error)
 {
-    LOG(IndexedDB, "IDBDatabase::connectionToServerLost - %" PRIu64, m_databaseConnectionIdentifier.toUInt64());
+    LOG(IndexedDB, "IDBDatabase::connectionToServerLost - %" PRIu64, m_databaseConnectionIdentifier);
 
     ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
@@ -286,7 +286,7 @@ void IDBDatabase::connectionToServerLost(const IDBError& error)
 
 void IDBDatabase::maybeCloseInServer()
 {
-    LOG(IndexedDB, "IDBDatabase::maybeCloseInServer - %" PRIu64, m_databaseConnectionIdentifier.toUInt64());
+    LOG(IndexedDB, "IDBDatabase::maybeCloseInServer - %" PRIu64, m_databaseConnectionIdentifier);
 
     ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
@@ -303,9 +303,15 @@ void IDBDatabase::maybeCloseInServer()
     m_connectionProxy->databaseConnectionClosed(*this);
 }
 
+const char* IDBDatabase::activeDOMObjectName() const
+{
+    ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
+    return "IDBDatabase";
+}
+
 void IDBDatabase::stop()
 {
-    LOG(IndexedDB, "IDBDatabase::stop - %" PRIu64, m_databaseConnectionIdentifier.toUInt64());
+    LOG(IndexedDB, "IDBDatabase::stop - %" PRIu64, m_databaseConnectionIdentifier);
 
     ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
@@ -442,7 +448,7 @@ void IDBDatabase::didCommitOrAbortTransaction(IDBTransaction& transaction)
 void IDBDatabase::fireVersionChangeEvent(const IDBResourceIdentifier& requestIdentifier, uint64_t requestedVersion)
 {
     uint64_t currentVersion = m_info.version();
-    LOG(IndexedDB, "IDBDatabase::fireVersionChangeEvent - current version %" PRIu64 ", requested version %" PRIu64 ", connection %" PRIu64 " (%p)", currentVersion, requestedVersion, m_databaseConnectionIdentifier.toUInt64(), this);
+    LOG(IndexedDB, "IDBDatabase::fireVersionChangeEvent - current version %" PRIu64 ", requested version %" PRIu64 ", connection %" PRIu64 " (%p)", currentVersion, requestedVersion, m_databaseConnectionIdentifier, this);
 
     ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
@@ -457,7 +463,7 @@ void IDBDatabase::fireVersionChangeEvent(const IDBResourceIdentifier& requestIde
 
 void IDBDatabase::dispatchEvent(Event& event)
 {
-    LOG(IndexedDB, "IDBDatabase::dispatchEvent (%" PRIu64 ") (%p)", m_databaseConnectionIdentifier.toUInt64(), this);
+    LOG(IndexedDB, "IDBDatabase::dispatchEvent (%" PRIu64 ") (%p)", m_databaseConnectionIdentifier, this);
     ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
     Ref protectedThis { *this };

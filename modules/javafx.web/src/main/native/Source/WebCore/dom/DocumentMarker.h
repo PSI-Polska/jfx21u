@@ -27,27 +27,11 @@
 #include <wtf/OptionSet.h>
 #include <wtf/UUID.h>
 #include <wtf/WeakPtr.h>
-#include <wtf/text/MakeString.h>
 #include <wtf/text/WTFString.h>
 
 #if PLATFORM(IOS_FAMILY)
 #import <wtf/RetainPtr.h>
 #endif
-
-namespace WebCore {
-class DocumentMarker;
-
-namespace WritingTools {
-using TextSuggestionID = WTF::UUID;
-using SessionID = WTF::UUID;
-}
-
-} // namespace WebCore
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::DocumentMarker> : std::true_type { };
-}
 
 namespace WebCore {
 
@@ -99,10 +83,9 @@ public:
         // This marker maintains state for the platform text checker.
         PlatformTextChecking = 1 << 15,
 #endif
-#if ENABLE(WRITING_TOOLS)
-        WritingToolsTextSuggestion = 1 << 16,
+#if ENABLE(UNIFIED_TEXT_REPLACEMENT)
+        UnifiedTextReplacement = 1 << 16,
 #endif
-        TransparentContent = 1 << 17,
     };
 
     static constexpr OptionSet<Type> allMarkers();
@@ -118,23 +101,19 @@ public:
     };
 #endif
 
-#if ENABLE(WRITING_TOOLS)
-    struct WritingToolsTextSuggestionData {
+#if ENABLE(UNIFIED_TEXT_REPLACEMENT)
+    struct UnifiedTextReplacementData {
         enum class State: uint8_t {
-            Accepted,
-            Rejected
+            Pending,
+            Committed,
+            Reverted
         };
 
         String originalText;
-        WritingTools::TextSuggestionID suggestionID;
-        State state { State::Accepted };
+        WTF::UUID uuid;
+        State state { State::Pending };
     };
 #endif
-
-    struct TransparentContentData {
-        RefPtr<Node> node;
-        WTF::UUID uuid;
-    };
 
     using Data = std::variant<
         String
@@ -147,10 +126,9 @@ public:
 #if ENABLE(PLATFORM_DRIVEN_TEXT_CHECKING)
         , PlatformTextCheckingData // PlatformTextChecking
 #endif
-#if ENABLE(WRITING_TOOLS)
-        , WritingToolsTextSuggestionData // WritingToolsTextSuggestion
+#if ENABLE(UNIFIED_TEXT_REPLACEMENT)
+        , UnifiedTextReplacementData // UnifiedTextReplacement
 #endif
-        , TransparentContentData // TransparentContent
     >;
 
     DocumentMarker(Type, OffsetRange, Data&& = { });
@@ -201,10 +179,9 @@ constexpr auto DocumentMarker::allMarkers() -> OptionSet<Type>
 #if ENABLE(PLATFORM_DRIVEN_TEXT_CHECKING)
         Type::PlatformTextChecking,
 #endif
-#if ENABLE(WRITING_TOOLS)
-        Type::WritingToolsTextSuggestion,
+#if ENABLE(UNIFIED_TEXT_REPLACEMENT)
+        Type::UnifiedTextReplacement,
 #endif
-        Type::TransparentContent,
     };
 }
 
@@ -226,9 +203,9 @@ inline String DocumentMarker::description() const
     if (auto* description = std::get_if<String>(&m_data))
         return *description;
 
-#if ENABLE(WRITING_TOOLS)
-    if (auto* data = std::get_if<DocumentMarker::WritingToolsTextSuggestionData>(&m_data))
-        return makeString("('"_s, data->originalText, "', state: "_s, enumToUnderlyingType(data->state), ')');
+#if ENABLE(UNIFIED_TEXT_REPLACEMENT)
+    if (auto* data = std::get_if<DocumentMarker::UnifiedTextReplacementData>(&m_data))
+        return makeString("('", data->originalText, "', state: ", enumToUnderlyingType(data->state), ")");
 #endif
 
     return emptyString();

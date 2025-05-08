@@ -32,7 +32,6 @@
 #include "Exception.h"
 #include "HTTPParsers.h"
 #include "ScriptExecutionContext.h"
-#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -64,7 +63,7 @@ Exception convertToExceptionAndLog(ScriptExecutionContext* context, Error error)
 {
     auto exception = convertToException(error);
     if (context)
-        context->addConsoleMessage(MessageSource::JS, MessageLevel::Error, makeString("Cache API operation failed: "_s, exception.message()));
+        context->addConsoleMessage(MessageSource::JS, MessageLevel::Error, makeString("Cache API operation failed: ", exception.message()));
     return exception;
 }
 

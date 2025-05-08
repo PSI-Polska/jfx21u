@@ -84,13 +84,13 @@ public:
 
     inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
-    static constexpr ptrdiff_t offsetOfScopeChain()
+    static inline ptrdiff_t offsetOfScopeChain()
     {
         return OBJECT_OFFSETOF(JSCallee, m_scope);
     }
 
 protected:
-    JSCallee(VM&, JSGlobalObject*, Structure*);
+    JS_EXPORT_PRIVATE JSCallee(VM&, JSGlobalObject*, Structure*);
     JSCallee(VM&, JSScope*, Structure*);
 
     DECLARE_DEFAULT_FINISH_CREATION;

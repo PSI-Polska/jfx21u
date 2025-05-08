@@ -69,7 +69,7 @@ void DatabaseTask::performTask()
     // Database tasks are meant to be used only once, so make sure this one hasn't been performed before.
     ASSERT(!m_complete);
 
-    LOG(StorageAPI, "Performing %s %p\n", debugTaskName().characters(), this);
+    LOG(StorageAPI, "Performing %s %p\n", debugTaskName(), this);
 
     m_database.resetAuthorizer();
 
@@ -100,9 +100,9 @@ void DatabaseOpenTask::doPerformTask()
 
 #if !LOG_DISABLED
 
-ASCIILiteral DatabaseOpenTask::debugTaskName() const
+const char* DatabaseOpenTask::debugTaskName() const
 {
-    return "DatabaseOpenTask"_s;
+    return "DatabaseOpenTask";
 }
 
 #endif
@@ -122,9 +122,9 @@ void DatabaseCloseTask::doPerformTask()
 
 #if !LOG_DISABLED
 
-ASCIILiteral DatabaseCloseTask::debugTaskName() const
+const char* DatabaseCloseTask::debugTaskName() const
 {
-    return "DatabaseCloseTask"_s;
+    return "DatabaseCloseTask";
 }
 
 #endif
@@ -161,9 +161,9 @@ void DatabaseTransactionTask::doPerformTask()
 
 #if !LOG_DISABLED
 
-ASCIILiteral DatabaseTransactionTask::debugTaskName() const
+const char* DatabaseTransactionTask::debugTaskName() const
 {
-    return "DatabaseTransactionTask"_s;
+    return "DatabaseTransactionTask";
 }
 
 #endif
@@ -185,9 +185,9 @@ void DatabaseTableNamesTask::doPerformTask()
 
 #if !LOG_DISABLED
 
-ASCIILiteral DatabaseTableNamesTask::debugTaskName() const
+const char* DatabaseTableNamesTask::debugTaskName() const
 {
-    return "DatabaseTableNamesTask"_s;
+    return "DatabaseTableNamesTask";
 }
 
 #endif

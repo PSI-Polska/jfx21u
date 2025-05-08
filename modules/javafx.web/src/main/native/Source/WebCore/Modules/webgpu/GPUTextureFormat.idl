@@ -27,7 +27,8 @@
 
 [
     EnabledBySetting=WebGPUEnabled
-] enum GPUTextureFormat {
+]
+enum GPUTextureFormat {
     // 8-bit formats
     "r8unorm",
     "r8snorm",

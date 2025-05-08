@@ -41,9 +41,13 @@ namespace JSC { namespace B3 {
 using Arg = Air::Arg;
 using Inst = Air::Inst;
 
-PatchpointSpecial::PatchpointSpecial() = default;
+PatchpointSpecial::PatchpointSpecial()
+{
+}
 
-PatchpointSpecial::~PatchpointSpecial() = default;
+PatchpointSpecial::~PatchpointSpecial()
+{
+}
 
 void PatchpointSpecial::forEachArg(Inst& inst, const ScopedLambda<Inst::EachArgCallback>& callback)
 {
@@ -160,6 +164,7 @@ MacroAssembler::Jump PatchpointSpecial::generate(Inst& inst, CCallHelpers& jit, 
     offset += value->numChildren();
 
     StackmapGenerationParams params(value, reps, context);
+    JIT_COMMENT(jit, "Patchpoint body start, with arg value reps: ", listDump(reps));
 
     for (unsigned i = value->numGPScratchRegisters; i--;)
         params.m_gpScratch.append(inst.args[offset++].gpr());

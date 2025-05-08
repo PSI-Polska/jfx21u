@@ -42,9 +42,7 @@ public:
         VP8,
         VP9,
         VP9_P2,
-#if ENABLE(AV1)
         AV1
-#endif
     };
     static void create(Type, const Config&, CreateCallback&&, DescriptionCallback&&, OutputCallback&&, PostTaskCallback&&);
 
@@ -57,7 +55,6 @@ private:
     void flush(Function<void()>&&) final;
     void reset() final;
     void close() final;
-    bool setRates(uint64_t bitRate, double frameRate, Function<void()>&&) final;
 
     Ref<LibWebRTCVPXInternalVideoEncoder> m_internalEncoder;
 };

@@ -47,9 +47,6 @@ public:
 
     // Helper to post callback task.
     WEBCORE_EXPORT void scheduleCallback(ScriptExecutionContext&, const String& data);
-
-private:
-    virtual bool hasCallback() const = 0;
 };
 
 } // namespace WebCore

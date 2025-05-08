@@ -270,10 +270,10 @@ static Vector<uint8_t> encode(const SingleByteEncodeTable& table, StringView str
 }
 
 // https://encoding.spec.whatwg.org/#single-byte-decoder
-static String decode(const SingleByteDecodeTable& table, std::span<const uint8_t> bytes, bool, bool stopOnError, bool& sawError)
+static String decode(const SingleByteDecodeTable& table, const uint8_t* bytes, size_t length, bool, bool stopOnError, bool& sawError)
 {
     StringBuilder result;
-    result.reserveCapacity(bytes.size());
+    result.reserveCapacity(length);
     auto parseByte = [&] (uint8_t byte) {
         if (isASCII(byte)) {
             result.append(byte);
@@ -285,14 +285,14 @@ static String decode(const SingleByteDecodeTable& table, std::span<const uint8_t
         result.append(codePoint);
     };
     if (stopOnError) {
-        for (auto byte : bytes) {
-            parseByte(byte);
+        for (size_t i = 0; i < length; i++) {
+            parseByte(bytes[i]);
             if (sawError)
                 return result.toString();
         }
     } else {
-        for (auto byte : bytes)
-            parseByte(byte);
+        for (size_t i = 0; i < length; i++)
+            parseByte(bytes[i]);
     }
     return result.toString();
 }
@@ -302,9 +302,9 @@ Vector<uint8_t> TextCodecSingleByte::encode(StringView string, UnencodableHandli
     return PAL::encode(tableForEncoding(m_encoding), string, unencodableHandler(handling));
 }
 
-String TextCodecSingleByte::decode(std::span<const uint8_t> bytes, bool flush, bool stopOnError, bool& sawError)
+String TextCodecSingleByte::decode(const char* bytes, size_t length, bool flush, bool stopOnError, bool& sawError)
 {
-    return PAL::decode(tableForDecoding(m_encoding), bytes, flush, stopOnError, sawError);
+    return PAL::decode(tableForDecoding(m_encoding), reinterpret_cast<const uint8_t*>(bytes), length, flush, stopOnError, sawError);
 }
 
 TextCodecSingleByte::TextCodecSingleByte(Encoding encoding)

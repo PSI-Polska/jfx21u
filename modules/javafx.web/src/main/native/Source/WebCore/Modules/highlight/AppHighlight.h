@@ -44,17 +44,6 @@ struct AppHighlight {
     HighlightRequestOriginatedInApp requestOriginatedInApp;
 };
 
-} // namespace WebCore
-
-namespace IPC {
-
-template<typename AsyncReplyResult> struct AsyncReplyError;
-
-template<> struct AsyncReplyError<WebCore::AppHighlight> {
-    static WebCore::AppHighlight create() { return { WebCore::FragmentedSharedBuffer::create(), std::nullopt, WebCore::CreateNewGroupForHighlight::No, WebCore::HighlightRequestOriginatedInApp::No }; }
-};
-
-} // namespace IPC
-
+}
 
 #endif // ENABLE(APP_HIGHLIGHTS)

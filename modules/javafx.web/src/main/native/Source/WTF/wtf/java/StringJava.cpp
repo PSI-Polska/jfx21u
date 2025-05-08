@@ -42,12 +42,10 @@ String::String(JNIEnv* env, const JLString &s)
         } else {
             const jchar* str = env->GetStringCritical(s, NULL);
             if (str) {
-                std::span<const UChar> createSpan(reinterpret_cast<const UChar*>(str), len);
-                m_impl = StringImpl::create(createSpan);
+                m_impl = StringImpl::create((const UChar*)str, len);
                 env->ReleaseStringCritical(s, str);
             } else {
-                std::span<const UChar> createSpan(reinterpret_cast<const UChar*>(str), 3);
-                m_impl = StringImpl::create(createSpan);
+                m_impl = StringImpl::create(reinterpret_cast<const UChar*>(L"OME"), 3);
             }
         }
     }
@@ -67,9 +65,7 @@ JLString String::toJavaString(JNIEnv *env) const
             }
             return env->NewString(jchars.data(), len);
         } else {
-              //return env->NewString((jchar*)characters16(), len);
-              std::span<const UChar> span = span16();
-              return env->NewString(reinterpret_cast<const jchar*>(span.data()), span.size());
+            return env->NewString((jchar*)characters16(), len);
         }
     }
 }

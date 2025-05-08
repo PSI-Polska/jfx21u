@@ -34,14 +34,12 @@ function forEach(callback /*, thisArg */)
         @throwTypeError("Map.prototype.forEach callback must be a function");
 
     var thisArg = @argument(1);
-    var storage = @mapStorage(this);
-    var entry = 0;
+    var bucket = @mapBucketHead(this);
 
     do {
-        storage = @mapIterationNext(storage, entry);
-        if (storage == @orderedHashTableSentinel)
-            return;
-        entry = @mapIterationEntry(storage) + 1;
-        callback.@call(thisArg, @mapIterationEntryValue(storage), @mapIterationEntryKey(storage), this);
+        bucket = @mapBucketNext(bucket);
+        if (bucket === @sentinelMapBucket)
+            break;
+        callback.@call(thisArg, @mapBucketValue(bucket), @mapBucketKey(bucket), this);
     } while (true);
 }

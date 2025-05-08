@@ -35,7 +35,7 @@ namespace Wasm {
 
 inline bool isSupported()
 {
-    return Options::useWasm();
+    return Options::useWebAssembly();
 }
 
 #else

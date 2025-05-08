@@ -37,26 +37,20 @@ namespace WGSL {
 #define CONTINUATION(args...) args RPAREN
 #define EXPAND(x) x
 
-#define ENUM_DEFINE_TO_STRING_CASE_(__type, __name, __string, ...) \
+#define ENUM_DEFINE_PRINT_INTERNAL_CASE_(__type, __name, __string, ...) \
     case __type::__name: \
-        return #__string##_s; \
+        out.print(#__string); \
         break;
 
-#define ENUM_DEFINE_TO_STRING_CASE(__name) \
-    ENUM_DEFINE_TO_STRING_CASE_ LPAREN __name, CONTINUATION
-
-#define ENUM_DEFINE_TO_STRING(__name) \
-    ASCIILiteral toString(__name __value) \
-    { \
-        switch (__value) { \
-            EXPAND(ENUM_##__name(ENUM_DEFINE_TO_STRING_CASE LPAREN __name RPAREN)) \
-        } \
-    }
+#define ENUM_DEFINE_PRINT_INTERNAL_CASE(__name) \
+    ENUM_DEFINE_PRINT_INTERNAL_CASE_ LPAREN __name, CONTINUATION
 
 #define ENUM_DEFINE_PRINT_INTERNAL(__name) \
     void printInternal(PrintStream& out, __name __value) \
     { \
-        out.print(toString(__value)); \
+        switch (__value) { \
+            EXPAND(ENUM_##__name(ENUM_DEFINE_PRINT_INTERNAL_CASE LPAREN __name RPAREN)) \
+        } \
     }
 
 #define ENUM_DEFINE_PARSE_ENTRY_(__type, __name, __string, ...) \
@@ -76,7 +70,6 @@ namespace WGSL {
     }
 
 #define ENUM_DEFINE(__name) \
-    ENUM_DEFINE_TO_STRING(__name) \
     ENUM_DEFINE_PRINT_INTERNAL(__name) \
     ENUM_DEFINE_PARSE(__name)
 
@@ -93,9 +86,8 @@ ENUM_DEFINE(LanguageFeature);
 
 #undef ENUM_DEFINE
 #undef ENUM_DEFINE_PRINT_INTERNAL
-#undef ENUM_DEFINE_TO_STRING
-#undef ENUM_DEFINE_TO_STRING_CASE
-#undef ENUM_DEFINE_TO_STRING_CASE_
+#undef ENUM_DEFINE_PRINT_INTERNAL_CASE
+#undef ENUM_DEFINE_PRINT_INTERNAL_CASE_
 #undef EXPAND
 #undef CONTINUATION
 #undef RPAREN

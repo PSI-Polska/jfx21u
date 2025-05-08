@@ -30,7 +30,6 @@
 #include "FetchHeaders.h"
 
 #include "HTTPParsers.h"
-#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -43,10 +42,10 @@ static void removePrivilegedNoCORSRequestHeaders(HTTPHeaderMap& headers)
 static ExceptionOr<bool> canWriteHeader(const String& name, const String& value, const String& combinedValue, FetchHeaders::Guard guard)
 {
     if (!isValidHTTPToken(name))
-        return Exception { ExceptionCode::TypeError, makeString("Invalid header name: '"_s, name, '\'') };
+        return Exception { ExceptionCode::TypeError, makeString("Invalid header name: '", name, "'") };
     ASSERT(value.isEmpty() || (!isASCIIWhitespaceWithoutFF(value[0]) && !isASCIIWhitespaceWithoutFF(value[value.length() - 1])));
     if (!isValidHTTPHeaderValue((value)))
-        return Exception { ExceptionCode::TypeError, makeString("Header '"_s, name, "' has invalid value: '"_s, value, '\'') };
+        return Exception { ExceptionCode::TypeError, makeString("Header '", name, "' has invalid value: '", value, "'") };
     if (guard == FetchHeaders::Guard::Immutable)
         return Exception { ExceptionCode::TypeError, "Headers object's guard is 'immutable'"_s };
     if (guard == FetchHeaders::Guard::Request && isForbiddenHeader(name, value))
@@ -61,7 +60,7 @@ static ExceptionOr<bool> canWriteHeader(const String& name, const String& value,
 static ExceptionOr<void> appendSetCookie(const String& value, Vector<String>& setCookieValues, FetchHeaders::Guard guard)
 {
     if (!isValidHTTPHeaderValue((value)))
-        return Exception { ExceptionCode::TypeError, makeString("Header 'Set-Cookie' has invalid value: '"_s, value, '\'') };
+        return Exception { ExceptionCode::TypeError, makeString("Header 'Set-Cookie' has invalid value: '", value, "'") };
     if (guard == FetchHeaders::Guard::Immutable)
         return Exception { ExceptionCode::TypeError, "Headers object's guard is 'immutable'"_s };
 
@@ -79,7 +78,7 @@ static ExceptionOr<void> appendToHeaderMap(const String& name, const String& val
 
     String combinedValue = normalizedValue;
     if (headers.contains(name))
-        combinedValue = makeString(headers.get(name), ", "_s, normalizedValue);
+        combinedValue = makeString(headers.get(name), ", ", normalizedValue);
     auto canWriteResult = canWriteHeader(name, normalizedValue, combinedValue, guard);
     if (canWriteResult.hasException())
         return canWriteResult.releaseException();
@@ -182,7 +181,7 @@ ExceptionOr<void> FetchHeaders::append(const String& name, const String& value)
 ExceptionOr<void> FetchHeaders::remove(const String& name)
 {
     if (!isValidHTTPToken(name))
-        return Exception { ExceptionCode::TypeError, makeString("Invalid header name: '"_s, name, '\'') };
+        return Exception { ExceptionCode::TypeError, makeString("Invalid header name: '", name, "'") };
     if (m_guard == FetchHeaders::Guard::Immutable)
         return Exception { ExceptionCode::TypeError, "Headers object's guard is 'immutable'"_s };
     if (m_guard == FetchHeaders::Guard::Request && isForbiddenHeaderName(name))
@@ -207,12 +206,18 @@ ExceptionOr<void> FetchHeaders::remove(const String& name)
 ExceptionOr<String> FetchHeaders::get(const String& name) const
 {
     if (!isValidHTTPToken(name))
-        return Exception { ExceptionCode::TypeError, makeString("Invalid header name: '"_s, name, '\'') };
+        return Exception { ExceptionCode::TypeError, makeString("Invalid header name: '", name, "'") };
 
     if (equalIgnoringASCIICase(name, "set-cookie"_s)) {
         if (m_setCookieValues.isEmpty())
             return String();
-        return makeString(interleave(m_setCookieValues, ", "_s));
+        StringBuilder builder;
+        for (const auto& value : m_setCookieValues) {
+            if (!builder.isEmpty())
+                builder.append(", ");
+            builder.append(value);
+        }
+        return builder.toString();
     }
     return m_headers.get(name);
 }
@@ -225,7 +230,7 @@ const Vector<String>& FetchHeaders::getSetCookie() const
 ExceptionOr<bool> FetchHeaders::has(const String& name) const
 {
     if (!isValidHTTPToken(name))
-        return Exception { ExceptionCode::TypeError, makeString("Invalid header name: '"_s, name, '\'') };
+        return Exception { ExceptionCode::TypeError, makeString("Invalid header name: '", name, "'") };
 
     if (equalIgnoringASCIICase(name, "set-cookie"_s))
         return !m_setCookieValues.isEmpty();

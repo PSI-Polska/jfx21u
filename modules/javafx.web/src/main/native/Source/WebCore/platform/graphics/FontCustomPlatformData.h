@@ -42,12 +42,10 @@ typedef const struct __CTFontDescriptor* CTFontDescriptorRef;
 #include "TextFlags.h"
 #include "RenderStyleConstants.h"
 #include <wtf/java/JavaRef.h> // todo tav remove when building w/ pch
-#elif USE(CAIRO)
+#else
 #include "RefPtrCairo.h"
 
 typedef struct FT_FaceRec_*  FT_Face;
-#elif USE(SKIA)
-#include <skia/core/SkTypeface.h>
 #endif
 
 namespace WebCore {
@@ -72,9 +70,6 @@ struct FontCustomPlatformData : public RefCounted<FontCustomPlatformData> {
     WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(FontCustomPlatformData);
 public:
-    WEBCORE_EXPORT static RefPtr<FontCustomPlatformData> create(SharedBuffer&, const String&);
-    WEBCORE_EXPORT static RefPtr<FontCustomPlatformData> createMemorySafe(SharedBuffer&, const String&);
-
 #if PLATFORM(WIN)
     FontCustomPlatformData(const String& name, FontPlatformData::CreationData&&);
 #elif USE(CORE_TEXT)
@@ -84,13 +79,10 @@ public:
         , m_renderingResourceIdentifier(RenderingResourceIdentifier::generate())
     {
     }
-#elif USE(CAIRO)
+#elif PLATFORM(JAVA)
+    FontCustomPlatformData(const JLObject& data);
+#else
     FontCustomPlatformData(FT_Face, FontPlatformData::CreationData&&);
-#elif USE(SKIA)
-    FontCustomPlatformData(sk_sp<SkTypeface>&&, FontPlatformData::CreationData&&);
-#endif
-#if PLATFORM(JAVA)
-    FontCustomPlatformData(const JLObject& data, FontPlatformData::CreationData&&);
 #endif
     WEBCORE_EXPORT ~FontCustomPlatformData();
 
@@ -98,27 +90,26 @@ public:
 
 #if USE(CORE_TEXT)
     WEBCORE_EXPORT FontCustomPlatformSerializedData serializedData() const;
-    WEBCORE_EXPORT static std::optional<Ref<FontCustomPlatformData>> tryMakeFromSerializationData(FontCustomPlatformSerializedData&&, bool);
+    WEBCORE_EXPORT static std::optional<Ref<FontCustomPlatformData>> tryMakeFromSerializationData(FontCustomPlatformSerializedData&&);
 #endif
     static bool supportsFormat(const String&);
     static bool supportsTechnology(const FontTechnology&);
 
 #if PLATFORM(WIN)
     String name;
+    FontPlatformData::CreationData creationData;
 #elif USE(CORE_TEXT)
     RetainPtr<CTFontDescriptorRef> fontDescriptor;
-#elif USE(CAIRO)
-    RefPtr<cairo_font_face_t> m_fontFace;
-#elif USE(SKIA)
-    sk_sp<SkTypeface> m_typeface;
-#endif
     FontPlatformData::CreationData creationData;
-#if PLATFORM(JAVA)
-    JGObject m_data;
+#elif PLATFORM(JAVA)
+        JGObject m_data;
+#else
+    RefPtr<cairo_font_face_t> m_fontFace;
 #endif
+
     RenderingResourceIdentifier m_renderingResourceIdentifier;
 };
-#if PLATFORM(JAVA)
+
 WEBCORE_EXPORT RefPtr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffer&, const String&);
-#endif
+
 } // namespace WebCore

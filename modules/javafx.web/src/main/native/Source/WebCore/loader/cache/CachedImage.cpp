@@ -29,7 +29,6 @@
 #include "CachedResourceClient.h"
 #include "CachedResourceClientWalker.h"
 #include "CachedResourceLoader.h"
-#include "Font.h"
 #include "FrameLoader.h"
 #include "FrameLoaderTypes.h"
 #include "LocalFrame.h"
@@ -38,7 +37,6 @@
 #include "MIMETypeRegistry.h"
 #include "MemoryCache.h"
 #include "RenderElement.h"
-#include "RenderImage.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGImage.h"
 #include "SecurityOrigin.h"
@@ -56,10 +54,6 @@
 #include "PDFDocumentImage.h"
 #endif
 
-#if ENABLE(MULTI_REPRESENTATION_HEIC)
-#include "MultiRepresentationHEICMetrics.h"
-#endif
-
 namespace WebCore {
 
 CachedImage::CachedImage(CachedResourceRequest&& request, PAL::SessionID sessionID, const CookieJar* cookieJar)
@@ -68,7 +62,6 @@ CachedImage::CachedImage(CachedResourceRequest&& request, PAL::SessionID session
     , m_isManuallyCached(false)
     , m_shouldPaintBrokenImage(true)
     , m_forceUpdateImageDataEnabledForTesting(false)
-    , m_allowsOrientationOverride(true)
 {
     setStatus(Unknown);
 }
@@ -80,7 +73,6 @@ CachedImage::CachedImage(Image* image, PAL::SessionID sessionID, const CookieJar
     , m_isManuallyCached(false)
     , m_shouldPaintBrokenImage(true)
     , m_forceUpdateImageDataEnabledForTesting(false)
-    , m_allowsOrientationOverride(true)
 {
 }
 
@@ -97,8 +89,6 @@ CachedImage::CachedImage(const URL& url, Image* image, PAL::SessionID sessionID,
     // Use the incoming URL in the response field. This ensures that code using the response directly,
     // such as origin checks for security, actually see something.
     mutableResponse().setURL(url);
-
-    setAllowsOrientationOverride(isCORSSameOrigin() || m_image->sourceURL().protocolIsData());
 }
 
 CachedImage::~CachedImage()
@@ -109,7 +99,9 @@ CachedImage::~CachedImage()
 void CachedImage::load(CachedResourceLoader& loader)
 {
     m_skippingRevalidationDocument = loader.document();
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
     m_layerBasedSVGEngineEnabled = loader.document() ? loader.document()->settings().layerBasedSVGEngineEnabled() : false;
+#endif
 
     if (loader.shouldPerformImageLoad(url()))
         CachedResource::load(loader);
@@ -193,12 +185,10 @@ void CachedImage::removeAllClientsWaitingForAsyncDecoding()
 {
     if (m_clientsWaitingForAsyncDecoding.isEmptyIgnoringNullReferences() || !hasImage())
         return;
-
     RefPtr bitmapImage = dynamicDowncast<BitmapImage>(image());
     if (!bitmapImage)
         return;
-    bitmapImage->stopDecodingWorkQueue();
-
+    bitmapImage->stopAsyncDecodingQueue();
     for (auto& client : m_clientsWaitingForAsyncDecoding)
         client.imageChanged(this);
     m_clientsWaitingForAsyncDecoding.clear();
@@ -292,6 +282,11 @@ Image* CachedImage::imageForRenderer(const RenderObject* renderer)
     return m_image.get();
 }
 
+bool CachedImage::hasSVGImage() const
+{
+    return image() && image()->isSVGImage();
+}
+
 void CachedImage::setContainerContextForClient(const CachedImageClient& client, const LayoutSize& containerSize, float containerZoom, const URL& imageURL)
 {
     if (containerSize.isEmpty())
@@ -316,13 +311,6 @@ FloatSize CachedImage::imageSizeForRenderer(const RenderElement* renderer, SizeT
     RefPtr image = m_image;
     if (!image)
         return { };
-
-#if ENABLE(MULTI_REPRESENTATION_HEIC)
-    if (CheckedPtr renderImage = dynamicDowncast<RenderImage>(renderer); renderImage && renderImage->isMultiRepresentationHEIC()) {
-        auto metrics = renderImage->style().fontCascade().primaryFont().metricsForMultiRepresentationHEIC();
-        return metrics.size();
-    }
-#endif
 
     if (image->drawsSVGImage() && sizeType == UsedSize)
         return m_svgImageCache->imageSizeForRenderer(renderer);
@@ -383,6 +371,11 @@ bool CachedImage::isPDFResource() const
     return Image::isPDFResource(response().mimeType(), url());
 }
 
+bool CachedImage::isPostScriptResource() const
+{
+    return Image::isPostScriptResource(response().mimeType(), url());
+}
+
 void CachedImage::clear()
 {
     destroyDecodedData();
@@ -439,7 +432,7 @@ void CachedImage::CachedImageObserver::didDraw(const Image& image)
         cachedImage->didDraw(image);
 }
 
-bool CachedImage::CachedImageObserver::canDestroyDecodedData(const Image& image) const
+bool CachedImage::CachedImageObserver::canDestroyDecodedData(const Image& image)
 {
     for (CachedResourceHandle cachedImage : m_cachedImages) {
         if (&image != cachedImage->image())
@@ -470,11 +463,6 @@ void CachedImage::CachedImageObserver::scheduleRenderingUpdate(const Image& imag
 
 bool CachedImage::CachedImageObserver::allowsAnimation(const Image& image) const
 {
-    // *::allowsAnimation can only return false when systemAllowsAnimationControls == true,
-    // so this prevents unnecessary work by exiting early.
-    if (!Image::systemAllowsAnimationControls())
-        return true;
-
     for (CachedResourceHandle cachedImage : m_cachedImages) {
         if (cachedImage->allowsAnimation(image))
             return true;
@@ -499,7 +487,6 @@ inline void CachedImage::clearImage()
     m_image = nullptr;
     m_lastUpdateImageDataTime = { };
     m_updateImageDataCount = 0;
-    m_allowsOrientationOverride = true;
 }
 
 void CachedImage::updateBufferInternal(const FragmentedSharedBuffer& data)
@@ -516,10 +503,21 @@ void CachedImage::updateBufferInternal(const FragmentedSharedBuffer& data)
 
     EncodedDataStatus encodedDataStatus = EncodedDataStatus::Unknown;
 
+    if (isPostScriptResource()) {
+#if PLATFORM(MAC) && !USE(WEBKIT_IMAGE_DECODERS)
+        // Delay updating the image with the PostScript data till all the data
+        // is received so it can be converted to PDF data.
+        return;
+#else
+        // Set the encodedDataStatus to Error so loading this image will be canceled.
+        encodedDataStatus = EncodedDataStatus::Error;
+#endif
+    } else {
         // Have the image update its data from its internal buffer. Decoding the image data
         // will be delayed until info (like size or specific image frames) are queried which
         // usually happens when the observers are repainted.
         encodedDataStatus = updateImageData(false);
+    }
 
     if (encodedDataStatus > EncodedDataStatus::Error && encodedDataStatus < EncodedDataStatus::SizeAvailable)
         return;
@@ -603,8 +601,6 @@ void CachedImage::finishLoading(const FragmentedSharedBuffer* data, const Networ
     }
 
     setLoading(false);
-    setAllowsOrientationOverride(isCORSSameOrigin() || m_image->sourceURL().protocolIsData());
-
     notifyObservers();
     CachedResource::finishLoading(data, metrics);
 }
@@ -673,7 +669,7 @@ void CachedImage::didDraw(const Image& image)
     CachedResource::didAccessDecodedData(timeStamp);
 }
 
-bool CachedImage::canDestroyDecodedData(const Image& image) const
+bool CachedImage::canDestroyDecodedData(const Image& image)
 {
     if (&image != m_image)
         return false;
@@ -731,9 +727,6 @@ bool CachedImage::allowsAnimation(const Image& image) const
 {
     if (&image != m_image)
         return false;
-
-    if (!Image::systemAllowsAnimationControls())
-        return true;
 
     CachedResourceClientWalker<CachedImageClient> walker(*this);
     while (auto* client = walker.next()) {

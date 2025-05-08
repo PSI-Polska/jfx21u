@@ -100,7 +100,6 @@ bool JSLexicalEnvironment::getOwnPropertySlot(JSObject* object, JSGlobalObject* 
     VM& vm = globalObject->vm();
     unsigned attributes;
     if (JSValue value = thisObject->getDirect(vm, propertyName, attributes)) {
-        RELEASE_ASSERT(!(attributes & PropertyAttribute::Accessor));
         slot.setValue(thisObject, attributes, value);
         return true;
     }

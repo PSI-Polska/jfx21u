@@ -28,7 +28,6 @@
 
 #include "CSSCustomPropertyValue.h"
 #include "Document.h"
-#include "StyleAttributeMutationScope.h"
 #include "StylePropertiesInlines.h"
 #include "StyledElement.h"
 
@@ -88,22 +87,17 @@ auto InlineStylePropertyMap::entries(ScriptExecutionContext* context) const -> V
 
 void InlineStylePropertyMap::removeProperty(CSSPropertyID propertyID)
 {
-    if (!m_element)
-        return;
-    StyleAttributeMutationScope mutationScope { m_element.get() };
-    if (m_element->removeInlineStyleProperty(propertyID))
-        mutationScope.enqueueMutationRecord();
+    if (m_element)
+        m_element->removeInlineStyleProperty(propertyID);
 }
 
 bool InlineStylePropertyMap::setShorthandProperty(CSSPropertyID propertyID, const String& value)
 {
     if (!m_element)
         return false;
-    StyleAttributeMutationScope mutationScope { m_element.get() };
     bool didFailParsing = false;
-    m_element->setInlineStyleProperty(propertyID, value, IsImportant::No, &didFailParsing);
-    if (!didFailParsing)
-        mutationScope.enqueueMutationRecord();
+    bool important = false;
+    m_element->setInlineStyleProperty(propertyID, value, important, &didFailParsing);
     return !didFailParsing;
 }
 
@@ -111,15 +105,13 @@ bool InlineStylePropertyMap::setProperty(CSSPropertyID propertyID, Ref<CSSValue>
 {
     if (!m_element)
         return false;
-    StyleAttributeMutationScope mutationScope { m_element.get() };
     bool didFailParsing = false;
+    bool important = false;
     // FIXME: We should be able to validate CSSValues without having to serialize to text and go through the
     // parser. This is inefficient.
-    m_element->setInlineStyleProperty(propertyID, value->cssText(), IsImportant::No, &didFailParsing);
-    if (!didFailParsing) {
+    m_element->setInlineStyleProperty(propertyID, value->cssText(), important, &didFailParsing);
+    if (!didFailParsing)
         m_element->setInlineStyleProperty(propertyID, WTFMove(value));
-        mutationScope.enqueueMutationRecord();
-    }
     return !didFailParsing;
 }
 
@@ -128,29 +120,21 @@ bool InlineStylePropertyMap::setCustomProperty(Document&, const AtomString& prop
     if (!m_element)
         return false;
 
-    StyleAttributeMutationScope mutationScope { m_element.get() };
     auto customPropertyValue = CSSCustomPropertyValue::createUnresolved(property, WTFMove(value));
-    if (m_element->setInlineStyleCustomProperty(WTFMove(customPropertyValue)))
-        mutationScope.enqueueMutationRecord();
+    m_element->setInlineStyleCustomProperty(WTFMove(customPropertyValue));
     return true;
 }
 
 void InlineStylePropertyMap::removeCustomProperty(const AtomString& property)
 {
-    if (!m_element)
-        return;
-    StyleAttributeMutationScope mutationScope { m_element.get() };
-    if (m_element->removeInlineStyleCustomProperty(property))
-        mutationScope.enqueueMutationRecord();
+    if (m_element)
+        m_element->removeInlineStyleCustomProperty(property);
 }
 
 void InlineStylePropertyMap::clear()
 {
-    if (!m_element)
-        return;
-    StyleAttributeMutationScope mutationScope { m_element.get() };
+    if (m_element)
         m_element->removeAllInlineStyleProperties();
-    mutationScope.enqueueMutationRecord();
 }
 
 } // namespace WebCore

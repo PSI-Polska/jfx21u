@@ -32,7 +32,6 @@
 #include "ServiceWorkerClients.h"
 #include "ServiceWorkerGlobalScope.h"
 #include "ServiceWorkerThread.h"
-#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -75,12 +74,12 @@ void ServiceWorkerWindowClient::navigate(ScriptExecutionContext& context, const 
     auto url = context.completeURL(urlString);
 
     if (!url.isValid()) {
-        promise->reject(Exception { ExceptionCode::TypeError, makeString("URL string "_s, urlString, " cannot successfully be parsed"_s) });
+        promise->reject(Exception { ExceptionCode::TypeError, makeString("URL string ", urlString, " cannot successfully be parsed") });
         return;
     }
 
     if (url.protocolIsAbout()) {
-        promise->reject(Exception { ExceptionCode::TypeError, makeString("ServiceWorkerClients.navigate() cannot be called with URL "_s, url.string()) });
+        promise->reject(Exception { ExceptionCode::TypeError, makeString("ServiceWorkerClients.navigate() cannot be called with URL ", url.string()) });
         return;
     }
 

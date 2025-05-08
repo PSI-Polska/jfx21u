@@ -36,8 +36,7 @@
 namespace WebCore {
 
 class DetailsMarkerControl final : public HTMLDivElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DetailsMarkerControl);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DetailsMarkerControl);
+    WTF_MAKE_ISO_ALLOCATED(DetailsMarkerControl);
 public:
     static Ref<DetailsMarkerControl> create(Document&);
 

@@ -43,9 +43,6 @@ public:
     using ActiveDOMCallback::ActiveDOMCallback;
 
     virtual CallbackResult<void> handleEvent(WebCodecsEncodedAudioChunk&, const WebCodecsEncodedAudioChunkMetadata&) = 0;
-
-private:
-    virtual bool hasCallback() const = 0;
 };
 
 } // namespace WebCore

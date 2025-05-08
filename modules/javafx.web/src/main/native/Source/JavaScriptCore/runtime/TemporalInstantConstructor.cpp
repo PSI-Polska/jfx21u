@@ -36,7 +36,9 @@ namespace JSC {
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(TemporalInstantConstructor);
 
 static JSC_DECLARE_HOST_FUNCTION(temporalInstantConstructorFuncFrom);
+static JSC_DECLARE_HOST_FUNCTION(temporalInstantConstructorFuncFromEpochSeconds);
 static JSC_DECLARE_HOST_FUNCTION(temporalInstantConstructorFuncFromEpochMilliseconds);
+static JSC_DECLARE_HOST_FUNCTION(temporalInstantConstructorFuncFromEpochMicroseconds);
 static JSC_DECLARE_HOST_FUNCTION(temporalInstantConstructorFuncFromEpochNanoseconds);
 static JSC_DECLARE_HOST_FUNCTION(temporalInstantConstructorFuncCompare);
 
@@ -51,7 +53,9 @@ const ClassInfo TemporalInstantConstructor::s_info = { "Function"_s, &Base::s_in
 /* Source for TemporalInstantConstructor.lut.h
 @begin temporalInstantConstructorTable
   from                   temporalInstantConstructorFuncFrom                   DontEnum|Function 1
+  fromEpochSeconds       temporalInstantConstructorFuncFromEpochSeconds       DontEnum|Function 1
   fromEpochMilliseconds  temporalInstantConstructorFuncFromEpochMilliseconds  DontEnum|Function 1
+  fromEpochMicroseconds  temporalInstantConstructorFuncFromEpochMicroseconds  DontEnum|Function 1
   fromEpochNanoseconds   temporalInstantConstructorFuncFromEpochNanoseconds   DontEnum|Function 1
   compare                temporalInstantConstructorFuncCompare                DontEnum|Function 2
 @end
@@ -104,7 +108,7 @@ JSC_DEFINE_HOST_FUNCTION(callTemporalInstant, (JSGlobalObject* globalObject, Cal
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(globalObject, scope, "Instant"_s));
+    return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(globalObject, scope, "Instant"));
 }
 
 JSC_DEFINE_HOST_FUNCTION(temporalInstantConstructorFuncFrom, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -112,9 +116,19 @@ JSC_DEFINE_HOST_FUNCTION(temporalInstantConstructorFuncFrom, (JSGlobalObject* gl
     return JSValue::encode(TemporalInstant::from(globalObject, callFrame->argument(0)));
 }
 
+JSC_DEFINE_HOST_FUNCTION(temporalInstantConstructorFuncFromEpochSeconds, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    return JSValue::encode(TemporalInstant::fromEpochSeconds(globalObject, callFrame->argument(0)));
+}
+
 JSC_DEFINE_HOST_FUNCTION(temporalInstantConstructorFuncFromEpochMilliseconds, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     return JSValue::encode(TemporalInstant::fromEpochMilliseconds(globalObject, callFrame->argument(0)));
+}
+
+JSC_DEFINE_HOST_FUNCTION(temporalInstantConstructorFuncFromEpochMicroseconds, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    return JSValue::encode(TemporalInstant::fromEpochMicroseconds(globalObject, callFrame->argument(0)));
 }
 
 JSC_DEFINE_HOST_FUNCTION(temporalInstantConstructorFuncFromEpochNanoseconds, (JSGlobalObject* globalObject, CallFrame* callFrame))

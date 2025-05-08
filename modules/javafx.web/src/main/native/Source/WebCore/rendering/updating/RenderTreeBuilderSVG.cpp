@@ -65,69 +65,88 @@ void RenderTreeBuilder::SVG::attach(RenderSVGInline& parent, RenderPtr<RenderObj
     auto& childToAdd = *child;
     m_builder.inlineBuilder().attach(parent, WTFMove(child), beforeChild);
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (!childToAdd.document().settings().layerBasedSVGEngineEnabled())
     SVGResourcesCache::clientWasAddedToTree(childToAdd);
+#else
+    SVGResourcesCache::clientWasAddedToTree(childToAdd);
+#endif
 
     if (auto* textAncestor = RenderSVGText::locateRenderSVGTextAncestor(parent))
         textAncestor->subtreeChildWasAdded(&childToAdd);
 }
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
 void RenderTreeBuilder::SVG::attach(RenderSVGRoot& parent, RenderPtr<RenderObject> child, RenderObject* beforeChild)
 {
     m_builder.attachToRenderElement(findOrCreateParentForChild(parent), WTFMove(child), beforeChild);
 }
+#endif
 
 void RenderTreeBuilder::SVG::attach(RenderSVGText& parent, RenderPtr<RenderObject> child, RenderObject* beforeChild)
 {
     auto& childToAdd = *child;
     m_builder.blockFlowBuilder().attach(parent, WTFMove(child), beforeChild);
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (!childToAdd.document().settings().layerBasedSVGEngineEnabled())
     SVGResourcesCache::clientWasAddedToTree(childToAdd);
+#else
+    SVGResourcesCache::clientWasAddedToTree(childToAdd);
+#endif
 
     parent.subtreeChildWasAdded(&childToAdd);
 }
 
-RenderPtr<RenderObject> RenderTreeBuilder::SVG::detach(LegacyRenderSVGRoot& parent, RenderObject& child, RenderTreeBuilder::WillBeDestroyed willBeDestroyed)
+RenderPtr<RenderObject> RenderTreeBuilder::SVG::detach(LegacyRenderSVGRoot& parent, RenderObject& child)
 {
     SVGResourcesCache::clientWillBeRemovedFromTree(child);
-    return m_builder.detachFromRenderElement(parent, child, willBeDestroyed);
+    return m_builder.detachFromRenderElement(parent, child);
 }
 
-RenderPtr<RenderObject> RenderTreeBuilder::SVG::detach(RenderSVGText& parent, RenderObject& child, RenderTreeBuilder::WillBeDestroyed willBeDestroyed)
+RenderPtr<RenderObject> RenderTreeBuilder::SVG::detach(RenderSVGText& parent, RenderObject& child)
 {
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (!child.document().settings().layerBasedSVGEngineEnabled())
     SVGResourcesCache::clientWillBeRemovedFromTree(child);
+#else
+    SVGResourcesCache::clientWillBeRemovedFromTree(child);
+#endif
 
     Vector<SVGTextLayoutAttributes*, 2> affectedAttributes;
     parent.subtreeChildWillBeRemoved(&child, affectedAttributes);
-    auto takenChild = m_builder.blockBuilder().detach(parent, child, willBeDestroyed);
+    auto takenChild = m_builder.blockBuilder().detach(parent, child);
     parent.subtreeChildWasRemoved(affectedAttributes);
     return takenChild;
 }
 
-RenderPtr<RenderObject> RenderTreeBuilder::SVG::detach(RenderSVGInline& parent, RenderObject& child, RenderTreeBuilder::WillBeDestroyed willBeDestroyed)
+RenderPtr<RenderObject> RenderTreeBuilder::SVG::detach(RenderSVGInline& parent, RenderObject& child)
 {
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (!child.document().settings().layerBasedSVGEngineEnabled())
     SVGResourcesCache::clientWillBeRemovedFromTree(child);
+#else
+    SVGResourcesCache::clientWillBeRemovedFromTree(child);
+#endif
 
     auto* textAncestor = RenderSVGText::locateRenderSVGTextAncestor(parent);
     if (!textAncestor)
-        return m_builder.detachFromRenderElement(parent, child, willBeDestroyed);
+        return m_builder.detachFromRenderElement(parent, child);
 
     Vector<SVGTextLayoutAttributes*, 2> affectedAttributes;
     textAncestor->subtreeChildWillBeRemoved(&child, affectedAttributes);
-    auto takenChild = m_builder.detachFromRenderElement(parent, child, willBeDestroyed);
+    auto takenChild = m_builder.detachFromRenderElement(parent, child);
     textAncestor->subtreeChildWasRemoved(affectedAttributes);
     return takenChild;
 }
 
-RenderPtr<RenderObject> RenderTreeBuilder::SVG::detach(LegacyRenderSVGContainer& parent, RenderObject& child, RenderTreeBuilder::WillBeDestroyed willBeDestroyed)
+RenderPtr<RenderObject> RenderTreeBuilder::SVG::detach(LegacyRenderSVGContainer& parent, RenderObject& child)
 {
     SVGResourcesCache::clientWillBeRemovedFromTree(child);
-    return m_builder.detachFromRenderElement(parent, child, willBeDestroyed);
+    return m_builder.detachFromRenderElement(parent, child);
 }
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
 RenderSVGViewportContainer& RenderTreeBuilder::SVG::findOrCreateParentForChild(RenderSVGRoot& parent)
 {
     if (auto* viewportContainer = parent.viewportContainer())
@@ -161,5 +180,6 @@ void RenderTreeBuilder::SVG::updateAfterDescendants(RenderSVGRoot& svgRoot)
         return;
     createViewportContainer(svgRoot);
 }
+#endif
 
 }

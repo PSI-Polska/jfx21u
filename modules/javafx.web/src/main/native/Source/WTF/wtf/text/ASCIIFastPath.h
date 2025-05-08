@@ -60,16 +60,10 @@ template<> struct NonASCIIMask<4, UChar> {
 template<> struct NonASCIIMask<4, LChar> {
     static inline uint32_t value() { return 0x80808080U; }
 };
-template<> struct NonASCIIMask<4, char8_t> {
-    static inline uint32_t value() { return 0x80808080U; }
-};
 template<> struct NonASCIIMask<8, UChar> {
     static inline uint64_t value() { return 0xFF80FF80FF80FF80ULL; }
 };
 template<> struct NonASCIIMask<8, LChar> {
-    static inline uint64_t value() { return 0x8080808080808080ULL; }
-};
-template<> struct NonASCIIMask<8, char8_t> {
     static inline uint64_t value() { return 0x8080808080808080ULL; }
 };
 
@@ -90,11 +84,10 @@ inline bool containsOnlyASCII(MachineWord word)
 // Note: This function assume the input is likely all ASCII, and
 // does not leave early if it is not the case.
 template<typename CharacterType>
-inline bool charactersAreAllASCII(std::span<const CharacterType> span)
+inline bool charactersAreAllASCII(const CharacterType* characters, size_t length)
 {
     MachineWord allCharBits = 0;
-    auto* characters = span.data();
-    auto* end = characters + span.size();
+    const CharacterType* end = characters + length;
 
     // Prologue: align the input.
     while (!isAlignedToMachineWord(characters) && characters != end) {
@@ -123,14 +116,13 @@ inline bool charactersAreAllASCII(std::span<const CharacterType> span)
 // Note: This function assume the input is likely all Latin1, and
 // does not leave early if it is not the case.
 template<typename CharacterType>
-inline bool charactersAreAllLatin1(std::span<const CharacterType> span)
+inline bool charactersAreAllLatin1(const CharacterType* characters, size_t length)
 {
     if constexpr (sizeof(CharacterType) == 1)
         return true;
     else {
         MachineWord allCharBits = 0;
-        auto* characters = span.data();
-        auto* end = characters + span.size();
+        const CharacterType* end = characters + length;
 
         // Prologue: align the input.
         while (!isAlignedToMachineWord(characters) && characters != end) {

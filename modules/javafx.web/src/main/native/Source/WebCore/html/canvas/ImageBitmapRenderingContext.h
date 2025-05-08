@@ -45,7 +45,7 @@ using ImageBitmapCanvas = std::variant<RefPtr<HTMLCanvasElement>>;
 #endif
 
 class ImageBitmapRenderingContext final : public CanvasRenderingContext {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ImageBitmapRenderingContext);
+    WTF_MAKE_ISO_ALLOCATED(ImageBitmapRenderingContext);
 public:
     static std::unique_ptr<ImageBitmapRenderingContext> create(CanvasBase&, ImageBitmapRenderingContextSettings&&);
 
@@ -67,10 +67,9 @@ private:
     ImageBitmapRenderingContext(CanvasBase&, ImageBitmapRenderingContextSettings&&);
 
     bool isBitmapRenderer() const final { return true; }
-    RefPtr<ImageBuffer> transferToImageBuffer() final;
+    bool isAccelerated() const override;
 
     void setOutputBitmap(RefPtr<ImageBitmap>);
-    void setBlank();
 
     BitmapMode m_bitmapMode { BitmapMode::Blank };
     ImageBitmapRenderingContextSettings m_settings;

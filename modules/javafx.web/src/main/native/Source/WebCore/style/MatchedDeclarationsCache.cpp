@@ -36,7 +36,6 @@
 #include "FontCascade.h"
 #include "RenderStyleInlines.h"
 #include "StyleResolver.h"
-#include "StyleScope.h"
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {
@@ -66,11 +65,6 @@ bool MatchedDeclarationsCache::isCacheable(const Element& element, const RenderS
     // Document::setWritingMode/DirectionSetOnDocumentElement. We can't skip the applying by caching.
     if (&element == element.document().documentElement())
         return false;
-    // FIXME: Without the following early return we hit the final assert in
-    // Element::resolvePseudoElementStyle(). Making matchedPseudoElementIds
-    // PseudoElementIdentifier-aware might be a possible solution.
-    if (!style.pseudoElementNameArgument().isNull())
-        return false;
     // content:attr() value depends on the element it is being applied to.
     if (style.hasAttrContent() || (style.pseudoElementType() != PseudoId::None && parentStyle.hasAttrContent()))
         return false;
@@ -79,14 +73,6 @@ bool MatchedDeclarationsCache::isCacheable(const Element& element, const RenderS
     if (style.writingMode() != RenderStyle::initialWritingMode() || style.direction() != RenderStyle::initialDirection())
         return false;
     if (style.usesContainerUnits())
-        return false;
-
-    // An anchor-positioned element needs to first be resolved in order to gather
-    // relevant anchor-names. Style & layout interleaving uses that information to find
-    // the relevant anchors that this element will be positioned relative to. Then, the
-    // anchor-positioned element will be resolved once again, this time with the anchor
-    // information needed to fully resolve the element.
-    if (element.document().styleScope().anchorPositionedStates().contains(element))
         return false;
 
     // Getting computed style after a font environment change but before full style resolution may involve styles with non-current fonts.
@@ -104,7 +90,7 @@ bool MatchedDeclarationsCache::isCacheable(const Element& element, const RenderS
 
 bool MatchedDeclarationsCache::Entry::isUsableAfterHighPriorityProperties(const RenderStyle& style) const
 {
-    if (style.usedZoom() != renderStyle->usedZoom())
+    if (style.effectiveZoom() != renderStyle->effectiveZoom())
         return false;
 
 #if ENABLE(DARK_MODE_CSS)
@@ -117,17 +103,9 @@ bool MatchedDeclarationsCache::Entry::isUsableAfterHighPriorityProperties(const 
 
 unsigned MatchedDeclarationsCache::computeHash(const MatchResult& matchResult, const StyleCustomPropertyData& inheritedCustomProperties)
 {
-    if (matchResult.isCompletelyNonCacheable)
+    if (!matchResult.isCacheable)
         return 0;
 
-    if (matchResult.userAgentDeclarations.isEmpty() && matchResult.userDeclarations.isEmpty()) {
-        bool allNonCacheable = std::ranges::all_of(matchResult.authorDeclarations, [](auto& matchedProperties) {
-            return matchedProperties.isCacheable != IsCacheable::Yes;
-        });
-        // No point of caching if we are not applying any properties.
-        if (allNonCacheable)
-            return 0;
-    }
     return WTF::computeHash(matchResult, &inheritedCustomProperties);
 }
 
@@ -141,7 +119,7 @@ const MatchedDeclarationsCache::Entry* MatchedDeclarationsCache::find(unsigned h
         return nullptr;
 
     auto& entry = it->value;
-    if (!matchResult.cacheablePropertiesEqual(entry.matchResult))
+    if (matchResult != entry.matchResult)
         return nullptr;
 
     if (&entry.parentRenderStyle->inheritedCustomProperties() != &inheritedCustomProperties)

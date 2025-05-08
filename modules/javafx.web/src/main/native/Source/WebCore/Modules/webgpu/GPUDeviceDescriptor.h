@@ -27,7 +27,6 @@
 
 #include "GPUFeatureName.h"
 #include "GPUObjectDescriptorBase.h"
-#include "GPUQueueDescriptor.h"
 #include "WebGPUDeviceDescriptor.h"
 #include <cstdint>
 #include <wtf/HashMap.h>
@@ -51,7 +50,6 @@ struct GPUDeviceDescriptor : public GPUObjectDescriptorBase {
 
     Vector<GPUFeatureName> requiredFeatures;
     Vector<KeyValuePair<String, uint64_t>> requiredLimits;
-    GPUQueueDescriptor defaultQueue;
 };
 
 }

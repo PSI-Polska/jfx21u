@@ -25,6 +25,8 @@
 
 #pragma once
 
+#if ENABLE(CSS_PAINTING_API)
+
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 
@@ -52,3 +54,5 @@ private:
 };
 
 } // namespace WebCore
+
+#endif

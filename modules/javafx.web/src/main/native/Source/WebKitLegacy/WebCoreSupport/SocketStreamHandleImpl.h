@@ -51,17 +51,17 @@ public:
 
     virtual ~SocketStreamHandleImpl();
 
-    static void setLegacyTLSEnabled(bool);
+    WEBCORE_EXPORT static void setLegacyTLSEnabled(bool);
 
-    void platformSend(std::span<const uint8_t> data, Function<void(bool)>&&) final;
-    void platformSendHandshake(std::span<const uint8_t> data, const std::optional<CookieRequestHeaderFieldProxy>&, Function<void(bool, bool)>&&) final;
-    void platformClose() final;
+    WEBCORE_EXPORT void platformSend(const uint8_t* data, size_t length, Function<void(bool)>&&) final;
+    WEBCORE_EXPORT void platformSendHandshake(const uint8_t* data, size_t length, const std::optional<CookieRequestHeaderFieldProxy>&, Function<void(bool, bool)>&&) final;
+    WEBCORE_EXPORT void platformClose() final;
 private:
     size_t bufferedAmount() final;
-    std::optional<size_t> platformSendInternal(std::span<const uint8_t>);
+    std::optional<size_t> platformSendInternal(const uint8_t*, size_t);
     bool sendPendingData();
 
-    SocketStreamHandleImpl(const URL&, SocketStreamHandleClient&, PAL::SessionID, const String& credentialPartition, SourceApplicationAuditToken&&, const StorageSessionProvider*, bool shouldAcceptInsecureCertificates);
+    WEBCORE_EXPORT SocketStreamHandleImpl(const URL&, SocketStreamHandleClient&, PAL::SessionID, const String& credentialPartition, SourceApplicationAuditToken&&, const StorageSessionProvider*, bool shouldAcceptInsecureCertificates);
     void createStreams();
     void scheduleStreams();
     void chooseProxy();

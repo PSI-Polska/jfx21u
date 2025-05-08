@@ -39,8 +39,6 @@ public:
 
     bool equals(const CSSFontValue&) const;
 
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>&) const;
-
     RefPtr<CSSValue> style;
     RefPtr<CSSPrimitiveValue> variant;
     RefPtr<CSSPrimitiveValue> weight;

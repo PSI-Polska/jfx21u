@@ -42,7 +42,6 @@
 #include "WorkerType.h"
 #include <wtf/persistence/PersistentCoders.h>
 #include <wtf/persistence/PersistentDecoder.h>
-#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -70,7 +69,7 @@ static String databaseFilePath(const String& directory)
     if (directory.isEmpty())
         return emptyString();
 
-    return FileSystem::pathByAppendingComponent(directory, makeString("ServiceWorkerRegistrations-"_s, SWRegistrationDatabase::schemaVersion, ".sqlite3"_s));
+    return FileSystem::pathByAppendingComponent(directory, makeString("ServiceWorkerRegistrations-", SWRegistrationDatabase::schemaVersion, ".sqlite3"));
 }
 
 static String scriptDirectoryPath(const String& directory)

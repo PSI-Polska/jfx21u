@@ -56,18 +56,11 @@ private:
 
 class WebContentReader final : public FrameWebContentReader {
 public:
-#if PLATFORM(COCOA)
-    static constexpr auto placeholderAttachmentFilenamePrefix = "webkit-attachment-"_s;
-#endif
-
     WebContentReader(LocalFrame& frame, const SimpleRange& context, bool allowPlainText)
         : FrameWebContentReader(frame)
         , m_context(context)
-#if PLATFORM(COCOA) || PLATFORM(GTK)
         , m_allowPlainText(allowPlainText)
-#endif
     {
-        UNUSED_PARAM(allowPlainText);
     }
 
     void addFragment(Ref<DocumentFragment>&&);
@@ -94,9 +87,7 @@ private:
 #endif
 
     const SimpleRange m_context;
-#if PLATFORM(COCOA) || PLATFORM(GTK)
     const bool m_allowPlainText;
-#endif
 
     RefPtr<DocumentFragment> m_fragment;
     bool m_madeFragmentFromPlainText { false };
@@ -137,13 +128,7 @@ struct FragmentAndResources {
     Vector<Ref<ArchiveResource>> resources;
 };
 
-enum class FragmentCreationOptions : uint8_t {
-    IgnoreResources = 1 << 0,
-    NoInterchangeNewlines = 1 << 1,
-    SanitizeMarkup = 1 << 2
-};
-
-WEBCORE_EXPORT RefPtr<DocumentFragment> createFragment(LocalFrame&, NSAttributedString *, OptionSet<FragmentCreationOptions> = { });
+RefPtr<DocumentFragment> createFragmentAndAddResources(LocalFrame&, NSAttributedString *);
 #endif
 
 }

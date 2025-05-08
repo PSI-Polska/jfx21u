@@ -36,7 +36,7 @@
 namespace WebCore {
 
 struct ApplePayShippingContactUpdate final : public ApplePayDetailsUpdateBase {
-    Vector<Ref<ApplePayError>> errors;
+    Vector<RefPtr<ApplePayError>> errors;
     Vector<ApplePayShippingMethod> newShippingMethods;
 };
 

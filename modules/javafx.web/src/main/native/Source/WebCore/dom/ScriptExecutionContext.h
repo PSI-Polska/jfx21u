@@ -39,7 +39,6 @@
 #include <JavaScriptCore/HandleTypes.h>
 #include <pal/SessionID.h>
 #include <wtf/CheckedRef.h>
-#include <wtf/CompletionHandler.h>
 #include <wtf/CrossThreadTask.h>
 #include <wtf/Function.h>
 #include <wtf/HashSet.h>
@@ -137,7 +136,6 @@ public:
 
     virtual void disableEval(const String& errorMessage) = 0;
     virtual void disableWebAssembly(const String& errorMessage) = 0;
-    virtual void setRequiresTrustedTypes(bool required) = 0;
 
     virtual IDBClient::IDBConnectionProxy* idbConnectionProxy() = 0;
 
@@ -283,8 +281,8 @@ public:
     // These two methods are used when CryptoKeys are serialized into IndexedDB. As a side effect, it is also
     // used for things that utilize the same structure clone algorithm, for example, message passing between
     // worker and document.
-    virtual std::optional<Vector<uint8_t>> wrapCryptoKey(const Vector<uint8_t>& key) = 0;
-    virtual std::optional<Vector<uint8_t>> unwrapCryptoKey(const Vector<uint8_t>& wrappedKey) = 0;
+    virtual bool wrapCryptoKey(const Vector<uint8_t>& key, Vector<uint8_t>& wrappedKey) = 0;
+    virtual bool unwrapCryptoKey(const Vector<uint8_t>& wrappedKey, Vector<uint8_t>& key) = 0;
 #endif
 
     int timerNestingLevel() const { return m_timerNestingLevel; }
@@ -308,7 +306,7 @@ public:
     void setDomainForCachePartition(String&& domain) { m_domainForCachePartition = WTFMove(domain); }
 
     bool allowsMediaDevices() const;
-    ServiceWorker* activeServiceWorker() const { return m_activeServiceWorker.get(); }
+    ServiceWorker* activeServiceWorker() const;
     void setActiveServiceWorker(RefPtr<ServiceWorker>&&);
 
     void registerServiceWorker(ServiceWorker&);
@@ -343,7 +341,7 @@ public:
     WEBCORE_EXPORT HasResourceAccess canAccessResource(ResourceType) const;
 
     enum NotificationCallbackIdentifierType { };
-    using NotificationCallbackIdentifier = LegacyNullableAtomicObjectIdentifier<NotificationCallbackIdentifierType>;
+    using NotificationCallbackIdentifier = AtomicObjectIdentifier<NotificationCallbackIdentifierType>;
 
     WEBCORE_EXPORT NotificationCallbackIdentifier addNotificationCallback(CompletionHandler<void()>&&);
     WEBCORE_EXPORT CompletionHandler<void()> takeNotificationCallback(NotificationCallbackIdentifier);
@@ -369,12 +367,6 @@ public:
             m_nativePromiseRequests.add(*weakRequest);
             command->track(*weakRequest);
         }
-    }
-
-    template<typename Promise, typename Task, typename Finalizer>
-    void enqueueTaskWhenSettled(Ref<Promise>&& promise, TaskSource taskSource, Task&& task, Finalizer&& finalizer)
-    {
-        enqueueTaskWhenSettled(WTFMove(promise), taskSource, CompletionHandlerWithFinalizer<void(typename Promise::Result&&)>(WTFMove(task), WTFMove(finalizer)));
     }
 
 protected:
@@ -422,7 +414,7 @@ private:
     RejectedPromiseTracker* ensureRejectedPromiseTrackerSlow();
 
     void checkConsistency() const;
-    WEBCORE_EXPORT RefCountedSerialFunctionDispatcher& nativePromiseDispatcher();
+    RefCountedSerialFunctionDispatcher& nativePromiseDispatcher();
 
     HashSet<MessagePort*> m_messagePorts;
     HashSet<ContextDestructionObserver*> m_destructionObservers;
@@ -434,7 +426,7 @@ private:
     std::unique_ptr<Vector<std::unique_ptr<PendingException>>> m_pendingExceptions;
     std::unique_ptr<RejectedPromiseTracker> m_rejectedPromiseTracker;
 
-    RefPtr<PublicURLManager> m_publicURLManager;
+    std::unique_ptr<PublicURLManager> m_publicURLManager;
 
     RefPtr<DatabaseContext> m_databaseContext;
 

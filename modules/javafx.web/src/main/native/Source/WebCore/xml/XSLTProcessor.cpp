@@ -40,7 +40,6 @@
 #include "XMLDocument.h"
 #include "markup.h"
 #include <wtf/Assertions.h>
-#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -49,14 +48,14 @@ static inline void transformTextStringToXHTMLDocumentString(String& text)
     // Modify the output so that it is a well-formed XHTML document with a <pre> tag enclosing the text.
     text = makeStringByReplacingAll(text, '&', "&amp;"_s);
     text = makeStringByReplacingAll(text, '<', "&lt;"_s);
-    text = makeString("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+    text = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
         "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n"
         "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n"
         "<head><title/></head>\n"
         "<body>\n"
-        "<pre>"_s, text, "</pre>\n"
+        "<pre>" + text + "</pre>\n"
         "</body>\n"
-        "</html>\n"_s);
+        "</html>\n";
 }
 
 XSLTProcessor::~XSLTProcessor()

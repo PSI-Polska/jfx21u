@@ -135,16 +135,13 @@ struct ListResult
         memset(&modifiedTime, 0, sizeof(FTPTime));
     }
 
-    std::span<const char> filenameSpan() const { return { filename, filenameLength }; }
-    std::span<const char> linknameSpan() const { return { linkname, linknameLength }; }
-
     bool valid;
     FTPEntryType type;
 
-    const char* filename; // FIXME: Should be stored as a std::span.
+    const char* filename;
     uint32_t filenameLength;
 
-    const char* linkname; // FIXME: Should be stored as a std::span.
+    const char* linkname;
     uint32_t linknameLength;
 
     String fileSize;

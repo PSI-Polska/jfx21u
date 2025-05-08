@@ -29,11 +29,11 @@
 #if ENABLE(WEB_RTC)
 
 #include "RTCDataChannel.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RTCDataChannelEvent);
+WTF_MAKE_ISO_ALLOCATED_IMPL(RTCDataChannelEvent);
 
 Ref<RTCDataChannelEvent> RTCDataChannelEvent::create(const AtomString& type, CanBubble canBubble, IsCancelable cancelable, Ref<RTCDataChannel>&& channel)
 {
@@ -46,13 +46,13 @@ Ref<RTCDataChannelEvent> RTCDataChannelEvent::create(const AtomString& type, Ini
 }
 
 RTCDataChannelEvent::RTCDataChannelEvent(const AtomString& type, CanBubble canBubble, IsCancelable cancelable, Ref<RTCDataChannel>&& channel)
-    : Event(EventInterfaceType::RTCDataChannelEvent, type, canBubble, cancelable)
+    : Event(type, canBubble, cancelable)
     , m_channel(WTFMove(channel))
 {
 }
 
 RTCDataChannelEvent::RTCDataChannelEvent(const AtomString& type, Init&& initializer, IsTrusted isTrusted)
-    : Event(EventInterfaceType::RTCDataChannelEvent, type, initializer, isTrusted)
+    : Event(type, initializer, isTrusted)
     , m_channel(initializer.channel.releaseNonNull())
 {
 }
@@ -60,6 +60,11 @@ RTCDataChannelEvent::RTCDataChannelEvent(const AtomString& type, Init&& initiali
 RTCDataChannel& RTCDataChannelEvent::channel()
 {
     return m_channel.get();
+}
+
+EventInterface RTCDataChannelEvent::eventInterface() const
+{
+    return RTCDataChannelEventInterfaceType;
 }
 
 } // namespace WebCore

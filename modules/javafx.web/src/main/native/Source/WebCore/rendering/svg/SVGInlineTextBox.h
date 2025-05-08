@@ -35,7 +35,7 @@ class SVGPaintServerHandling;
 class SVGRootInlineBox;
 
 class SVGInlineTextBox final : public LegacyInlineTextBox {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGInlineTextBox);
+    WTF_MAKE_ISO_ALLOCATED(SVGInlineTextBox);
 public:
     explicit SVGInlineTextBox(RenderSVGInlineText&);
 
@@ -75,8 +75,10 @@ private:
 
     TextRun constructTextRun(const RenderStyle&, const SVGTextFragment&) const;
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
     bool acquirePaintingResource(SVGPaintServerHandling&, float scalingFactor, RenderBoxModelObject&, const RenderStyle&);
     void releasePaintingResource(SVGPaintServerHandling&);
+#endif
 
     bool acquireLegacyPaintingResource(GraphicsContext*&, float scalingFactor, RenderBoxModelObject&, const RenderStyle&);
     void releaseLegacyPaintingResource(GraphicsContext*&, const Path*);
@@ -93,7 +95,9 @@ private:
     unsigned m_legacyPaintingResourceMode : 4; // RenderSVGResourceMode
     unsigned m_startsNewTextChunk : 1;
     LegacyRenderSVGResource* m_legacyPaintingResource { nullptr };
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
     SVGPaintServerOrColor m_paintServerOrColor { };
+#endif
 
     Vector<SVGTextFragment> m_textFragments;
 };

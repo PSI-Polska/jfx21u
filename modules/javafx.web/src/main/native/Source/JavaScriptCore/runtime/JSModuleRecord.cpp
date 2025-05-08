@@ -33,7 +33,6 @@
 #include "JSModuleLoader.h"
 #include "JSModuleNamespaceObject.h"
 #include "UnlinkedModuleProgramCodeBlock.h"
-#include <wtf/text/MakeString.h>
 
 namespace JSC {
 
@@ -159,7 +158,7 @@ void JSModuleRecord::instantiateDeclarations(JSGlobalObject* globalObject, Modul
             RELEASE_ASSERT(vm.exceptionForInspection(), vm.traps().maybeNeedHandling(), vm.exceptionForInspection(), importedModule);
             RELEASE_ASSERT(vm.traps().maybeNeedHandling(), vm.traps().maybeNeedHandling(), vm.exceptionForInspection(), importedModule);
             if (!vm.exceptionForInspection() || !vm.traps().maybeNeedHandling()) {
-                throwSyntaxError(globalObject, scope, makeString("Importing module '"_s, String(importEntry.moduleRequest.impl()), "' is not found."_s));
+                throwSyntaxError(globalObject, scope, makeString("Importing module '", String(importEntry.moduleRequest.impl()), "' is not found."));
                 return;
             }
         }
@@ -236,7 +235,7 @@ void JSModuleRecord::instantiateDeclarations(JSGlobalObject* globalObject, Modul
                     unlinkedFunctionExecutable->unlinkedFunctionStart(),
                     unlinkedFunctionExecutable->unlinkedFunctionEnd());
             }
-            JSFunction* function = JSFunction::create(vm, globalObject, unlinkedFunctionExecutable->link(vm, moduleProgramExecutable, moduleProgramExecutable->source()), moduleEnvironment);
+            JSFunction* function = JSFunction::create(vm, unlinkedFunctionExecutable->link(vm, moduleProgramExecutable, moduleProgramExecutable->source()), moduleEnvironment);
             bool putResult = false;
             symbolTablePutTouchWatchpointSet(moduleEnvironment, globalObject, unlinkedFunctionExecutable->name(), function, /* shouldThrowReadOnlyError */ false, /* ignoreReadOnlyErrors */ true, putResult);
             RETURN_IF_EXCEPTION(scope, void());

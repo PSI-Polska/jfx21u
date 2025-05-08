@@ -50,14 +50,11 @@ class StyleRuleFontFace;
 class StyleRuleFontFeatureValues;
 class StyleRuleFontPaletteValues;
 
-class CSSFontSelector final : public FontSelector, public CSSFontFaceClient, public ActiveDOMObject {
+class CSSFontSelector final : public FontSelector, public CSSFontFace::Client, public ActiveDOMObject {
 public:
     using FontSelector::weakPtrFactory;
     using FontSelector::WeakValueType;
     using FontSelector::WeakPtrImplType;
-
-    using FontSelector::ref;
-    using FontSelector::deref;
 
     static Ref<CSSFontSelector> create(ScriptExecutionContext&);
     virtual ~CSSFontSelector();
@@ -98,9 +95,9 @@ public:
 
     void updateStyleIfNeeded();
 
-    // CSSFontFaceClient needs to be able to be held in a RefPtr.
-    void ref() const final { FontSelector::ref(); }
-    void deref() const final { FontSelector::deref(); }
+    // CSSFontFace::Client needs to be able to be held in a RefPtr.
+    void ref() final { FontSelector::ref(); }
+    void deref() final { FontSelector::deref(); }
 
 private:
     explicit CSSFontSelector(ScriptExecutionContext&);
@@ -114,11 +111,14 @@ private:
     const FontPaletteValues& lookupFontPaletteValues(const AtomString& familyName, const FontDescription&);
     RefPtr<FontFeatureValues> lookupFontFeatureValues(const AtomString& familyName);
 
-    // CSSFontFaceClient
+    // CSSFontFace::Client
     void fontLoaded(CSSFontFace&) final;
     void updateStyleIfNeeded(CSSFontFace&) final;
 
     void fontModified();
+
+    // ActiveDOMObject
+    const char* activeDOMObjectName() const final { return "CSSFontSelector"_s; }
 
     struct PendingFontFaceRule {
         StyleRuleFontFace& styleRuleFontFace;

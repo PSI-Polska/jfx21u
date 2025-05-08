@@ -27,6 +27,8 @@
 
 namespace JSC {
 
+#if COMPILER(GCC_COMPATIBLE)
+
 ALWAYS_INLINE void ensureStillAliveHere(uint64_t value)
 {
     asm volatile ("" : : "g"(value) : "memory");
@@ -36,5 +38,12 @@ ALWAYS_INLINE void ensureStillAliveHere(const void* pointer)
 {
     asm volatile ("" : : "g"(pointer) : "memory");
 }
+
+#else
+
+JS_EXPORT_PRIVATE void ensureStillAliveHere(uint64_t value);
+JS_EXPORT_PRIVATE void ensureStillAliveHere(const void*);
+
+#endif
 
 } // namespace JSC

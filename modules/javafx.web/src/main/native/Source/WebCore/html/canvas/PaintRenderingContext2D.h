@@ -27,34 +27,27 @@
 
 #include "CanvasRenderingContext2DBase.h"
 
+#if ENABLE(CSS_PAINTING_API)
+
+#include "CustomPaintCanvas.h"
+
 namespace WebCore {
 
-namespace DisplayList {
-class DrawingContext;
-}
-
-class CustomPaintCanvas;
-
 class PaintRenderingContext2D final : public CanvasRenderingContext2DBase {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(PaintRenderingContext2D);
+    WTF_MAKE_ISO_ALLOCATED(PaintRenderingContext2D);
 public:
-    static std::unique_ptr<PaintRenderingContext2D> create(CustomPaintCanvas&);
+    static std::unique_ptr<PaintRenderingContext2D> create(CanvasBase&);
 
     virtual ~PaintRenderingContext2D();
 
-    GraphicsContext* drawingContext() const final;
-    GraphicsContext* existingDrawingContext() const final;
-    GraphicsContext* effectiveDrawingContext() const final { return drawingContext(); }
-    AffineTransform baseTransform() const final;
-
-    CustomPaintCanvas& canvas() const;
-    void replayDisplayList(GraphicsContext& target) const;
+    CustomPaintCanvas& canvas() const { return downcast<CustomPaintCanvas>(canvasBase()); }
 
 private:
-    PaintRenderingContext2D(CustomPaintCanvas&);
     bool isPaint() const override { return true; }
-    mutable std::unique_ptr<DisplayList::DrawingContext> m_recordingContext;
+
+    PaintRenderingContext2D(CanvasBase&);
 };
 
 } // namespace WebCore
 SPECIALIZE_TYPE_TRAITS_CANVASRENDERINGCONTEXT(WebCore::PaintRenderingContext2D, isPaint())
+#endif

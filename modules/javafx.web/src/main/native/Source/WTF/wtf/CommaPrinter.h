@@ -26,14 +26,13 @@
 #pragma once
 
 #include <wtf/PrintStream.h>
-#include <wtf/text/ASCIILiteral.h>
 
 namespace WTF {
 
 class CommaPrinter final {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    CommaPrinter(ASCIILiteral comma = ", "_s, ASCIILiteral start = ""_s)
+    CommaPrinter(const char* comma = ", ", const char* start = "")
         : m_comma(comma)
         , m_start(start)
         , m_didPrint(false)
@@ -54,8 +53,8 @@ public:
     bool didPrint() const { return m_didPrint; }
 
 private:
-    ASCIILiteral m_comma;
-    ASCIILiteral m_start;
+    const char* m_comma;
+    const char* m_start;
     mutable bool m_didPrint;
 };
 

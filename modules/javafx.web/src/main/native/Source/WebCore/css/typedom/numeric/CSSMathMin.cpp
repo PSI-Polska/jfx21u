@@ -30,12 +30,12 @@
 #include "CSSNumericArray.h"
 #include "ExceptionOr.h"
 #include <wtf/FixedVector.h>
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CSSMathMin);
+WTF_MAKE_ISO_ALLOCATED_IMPL(CSSMathMin);
 
 ExceptionOr<Ref<CSSMathMin>> CSSMathMin::create(FixedVector<CSSNumberish>&& numberishes)
 {
@@ -69,10 +69,10 @@ void CSSMathMin::serialize(StringBuilder& builder, OptionSet<SerializationArgume
 {
     // https://drafts.css-houdini.org/css-typed-om/#calc-serialization
     if (!arguments.contains(SerializationArguments::WithoutParentheses))
-        builder.append("min("_s);
+        builder.append("min(");
     m_values->forEach([&](auto& numericValue, bool first) {
         if (!first)
-            builder.append(", "_s);
+            builder.append(", ");
         numericValue.serialize(builder, { SerializationArguments::Nested, SerializationArguments::WithoutParentheses });
     });
     if (!arguments.contains(SerializationArguments::WithoutParentheses))

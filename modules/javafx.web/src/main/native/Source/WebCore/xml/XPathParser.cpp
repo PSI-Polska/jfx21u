@@ -36,7 +36,6 @@
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RobinHoodHashMap.h>
 #include <wtf/StdLibExtras.h>
-#include <wtf/text/MakeString.h>
 #include <wtf/text/StringHash.h>
 
 extern int xpathyyparse(WebCore::XPath::Parser&);
@@ -261,7 +260,7 @@ bool Parser::lexQName(String& name)
     if (!lexNCName(n2))
         return false;
 
-    name = makeString(n1, ':', n2);
+    name = n1 + ":" + n2;
     return true;
 }
 
@@ -363,7 +362,7 @@ inline Parser::Token Parser::nextTokenInternal()
         skipWS();
         if (peekCurHelper() == '*') {
             m_nextPos++;
-            return Token(NAMETEST, makeString(name, ":*"_s));
+            return Token(NAMETEST, name + ":*");
         }
 
         // Make a full qname.
@@ -371,7 +370,7 @@ inline Parser::Token Parser::nextTokenInternal()
         if (!lexNCName(n2))
             return Token(XPATH_ERROR);
 
-        name = makeString(name, ':', n2);
+        name = name + ":" + n2;
     }
 
     skipWS();

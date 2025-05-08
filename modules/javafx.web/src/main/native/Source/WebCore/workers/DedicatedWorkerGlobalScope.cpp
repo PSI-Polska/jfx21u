@@ -44,7 +44,7 @@
 #include "StructuredSerializeOptions.h"
 #include "Worker.h"
 #include "WorkerObjectProxy.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 #if ENABLE(NOTIFICATIONS)
 #include "WorkerNotificationClient.h"
@@ -54,13 +54,9 @@
 #include "WorkerAnimationController.h"
 #endif
 
-#if USE(SKIA)
-#include "JSImageBitmap.h"
-#endif
-
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DedicatedWorkerGlobalScope);
+WTF_MAKE_ISO_ALLOCATED_IMPL(DedicatedWorkerGlobalScope);
 
 Ref<DedicatedWorkerGlobalScope> DedicatedWorkerGlobalScope::create(const WorkerParameters& params, Ref<SecurityOrigin>&& origin, DedicatedWorkerThread& thread, Ref<SecurityOrigin>&& topOrigin, IDBClient::IDBConnectionProxy* connectionProxy, SocketProvider* socketProvider, std::unique_ptr<WorkerClient>&& workerClient)
 {
@@ -83,9 +79,9 @@ DedicatedWorkerGlobalScope::~DedicatedWorkerGlobalScope()
     removeFromContextsMap();
 }
 
-enum EventTargetInterfaceType DedicatedWorkerGlobalScope::eventTargetInterface() const
+EventTargetInterface DedicatedWorkerGlobalScope::eventTargetInterface() const
 {
-    return EventTargetInterfaceType::DedicatedWorkerGlobalScope;
+    return DedicatedWorkerGlobalScopeEventTargetInterfaceType;
 }
 
 void DedicatedWorkerGlobalScope::prepareForDestruction()
@@ -95,17 +91,7 @@ void DedicatedWorkerGlobalScope::prepareForDestruction()
 
 ExceptionOr<void> DedicatedWorkerGlobalScope::postMessage(JSC::JSGlobalObject& state, JSC::JSValue messageValue, StructuredSerializeOptions&& options)
 {
-#if USE(SKIA)
-    // When using skia, transferring ownership of accelerated ImageBitmaps causes GrDirectContext mismatches,
-    // threfore, we need to let ImageBitmap know so that it can act accordingly.
-    for (const auto& transferItem : options.transfer) {
-        if (auto* imageBitmap = JSImageBitmap::toWrapped(state.vm(), transferItem.get()))
-            imageBitmap->prepareForCrossThreadTransfer();
-    }
-#endif
-
-    Vector<Ref<MessagePort>> ports;
-
+    Vector<RefPtr<MessagePort>> ports;
     auto message = SerializedScriptValue::create(state, messageValue, WTFMove(options.transfer), ports, SerializationForStorage::No, SerializationContext::WorkerPostMessage);
     if (message.hasException())
         return message.releaseException();

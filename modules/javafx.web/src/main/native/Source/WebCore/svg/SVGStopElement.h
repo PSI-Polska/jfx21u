@@ -26,8 +26,7 @@
 namespace WebCore {
 
 class SVGStopElement final : public SVGElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGStopElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGStopElement);
+    WTF_MAKE_ISO_ALLOCATED(SVGStopElement);
 public:
     static Ref<SVGStopElement> create(const QualifiedName&, Document&);
 

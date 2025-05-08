@@ -29,43 +29,43 @@
 #if ENABLE(WEB_AUTHN)
 
 #include "AuthenticatorCoordinator.h"
-#include "DigitalCredential.h"
+#include "DigitalIdentity.h"
 #include <wtf/RefCounted.h>
 #include <wtf/WeakPtr.h>
 
+namespace WebAuthn {
+enum class Scope;
+}
+
 namespace WebCore {
 
+class DigitalIdentity;
 class Document;
 class WeakPtrImplWithEventTargetData;
 struct CredentialCreationOptions;
 struct CredentialRequestOptions;
+struct DigitalCredentialRequestOptions;
 
 class CredentialsContainer : public RefCounted<CredentialsContainer> {
 public:
-    static Ref<CredentialsContainer> create(WeakPtr<Document, WeakPtrImplWithEventTargetData>&& document)
-    {
-        return adoptRef(*new CredentialsContainer(WTFMove(document)));
-    }
+    static Ref<CredentialsContainer> create(WeakPtr<Document, WeakPtrImplWithEventTargetData>&& document) { return adoptRef(*new CredentialsContainer(WTFMove(document))); }
 
-    virtual void get(CredentialRequestOptions&&, CredentialPromise&&);
+    void get(CredentialRequestOptions&&, CredentialPromise&&);
 
     void store(const BasicCredential&, CredentialPromise&&);
 
-    virtual void isCreate(CredentialCreationOptions&&, CredentialPromise&&);
+    void isCreate(CredentialCreationOptions&&, CredentialPromise&&);
 
     void preventSilentAccess(DOMPromiseDeferred<void>&&) const;
 
-    CredentialsContainer(WeakPtr<Document, WeakPtrImplWithEventTargetData>&&);
-
-    virtual ~CredentialsContainer() = default;
+    void requestIdentity(DigitalCredentialRequestOptions&&, DigitalIdentityPromise&&);
 
 private:
-    WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
+    CredentialsContainer(WeakPtr<Document, WeakPtrImplWithEventTargetData>&&);
 
-protected:
-    template<typename Options>
-    bool performCommonChecks(const Options&, CredentialPromise&);
-    const Document* document() const { return m_document.get(); }
+    ScopeAndCrossOriginParent scopeAndCrossOriginParent() const;
+
+    WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
 };
 
 } // namespace WebCore

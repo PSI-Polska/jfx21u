@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2008-2024 Apple Inc. All rights reserved.
- * Copyright (C) 2013-2020 Google Inc. All rights reserved.
+ * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2013 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,8 +42,7 @@ using SMILEventSender = EventSender<SVGSMILElement, WeakPtrImplWithEventTargetDa
 
 // This class implements SMIL interval timing model as needed for SVG animation.
 class SVGSMILElement : public SVGElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGSMILElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGSMILElement);
+    WTF_MAKE_ISO_ALLOCATED(SVGSMILElement);
 public:
     SVGSMILElement(const QualifiedName&, Document&, UniqueRef<SVGPropertyRegistry>&&);
     virtual ~SVGSMILElement();
@@ -58,10 +57,8 @@ public:
     virtual void animationAttributeChanged() = 0;
 
     SMILTimeContainer* timeContainer() { return m_timeContainer.get(); }
-    RefPtr<SMILTimeContainer> protectedTimeContainer() const;
 
     SVGElement* targetElement() const { return m_targetElement.get(); }
-    RefPtr<SVGElement> protectedTargetElement() const { return m_targetElement.get(); }
     const QualifiedName& attributeName() const { return m_attributeName; }
 
     void beginByLinkActivation();
@@ -110,8 +107,9 @@ public:
     void dispatchPendingEvent(SMILEventSender*, const AtomString& eventType);
 
 protected:
-    enum ActiveState { Inactive, Active, Frozen };
-    ActiveState activeState() const { return m_activeState; }
+    void addBeginTime(SMILTime eventTime, SMILTime endTime, SMILTimeWithOrigin::Origin = SMILTimeWithOrigin::ParserOrigin);
+    void addEndTime(SMILTime eventTime, SMILTime endTime, SMILTimeWithOrigin::Origin = SMILTimeWithOrigin::ParserOrigin);
+
     void setInactive() { m_activeState = Inactive; }
 
     bool rendererIsNeeded(const RenderStyle&) override { return false; }
@@ -121,10 +119,6 @@ protected:
     virtual void setAttributeName(const QualifiedName&);
 
     void didFinishInsertingNode() override;
-
-    enum BeginOrEnd { Begin, End };
-
-    void addInstanceTime(BeginOrEnd, SMILTime, SMILTimeWithOrigin::Origin = SMILTimeWithOrigin::ParserOrigin);
 
 private:
     void buildPendingResource() override;
@@ -137,10 +131,10 @@ private:
     virtual void updateAnimation(float percent, unsigned repeat) = 0;
 
     static bool isSupportedAttribute(const QualifiedName&);
-    bool hasPresentationalHintsForAttribute(const QualifiedName&) const override;
     QualifiedName constructAttributeName() const;
     void updateAttributeName();
 
+    enum BeginOrEnd { Begin, End };
     SMILTime findInstanceTime(BeginOrEnd, SMILTime minimumTime, bool equalsMinimumOK) const;
     void resolveFirstInterval();
     bool resolveNextInterval();
@@ -171,11 +165,17 @@ private:
 
     void disconnectConditions();
 
-    void notifyDependentsIntervalChanged();
-    void createInstanceTimesFromSyncbase(SVGSMILElement* syncbase);
+    // Event base timing
+    void handleConditionEvent(Condition*);
+
+    // Syncbase timing
+    enum NewOrExistingInterval { NewInterval, ExistingInterval };
+    void notifyDependentsIntervalChanged(NewOrExistingInterval);
+    void createInstanceTimesFromSyncbase(SVGSMILElement* syncbase, NewOrExistingInterval);
     void addTimeDependent(SVGSMILElement*);
     void removeTimeDependent(SVGSMILElement*);
 
+    enum ActiveState { Inactive, Active, Frozen };
     ActiveState determineActiveState(SMILTime elapsed) const;
     float calculateAnimationPercentAndRepeat(SMILTime elapsed, unsigned& repeat) const;
     SMILTime calculateNextProgressTime(SMILTime elapsed) const;

@@ -34,6 +34,7 @@
 #include "LocalFrame.h"
 #include "Page.h"
 #include "Supplementable.h"
+#include "WorkerCacheStorageConnection.h"
 #include "WorkerGlobalScope.h"
 
 namespace WebCore {
@@ -123,19 +124,15 @@ DOMCacheStorage* WorkerGlobalScopeCaches::caches() const
 
 // WindowOrWorkerGlobalScopeCaches.
 
-ExceptionOr<DOMCacheStorage*> WindowOrWorkerGlobalScopeCaches::caches(ScriptExecutionContext& context, DOMWindow& window)
+ExceptionOr<DOMCacheStorage*> WindowOrWorkerGlobalScopeCaches::caches(ScriptExecutionContext& context, LocalDOMWindow& window)
 {
     if (downcast<Document>(context).isSandboxed(SandboxOrigin))
         return Exception { ExceptionCode::SecurityError, "Cache storage is disabled because the context is sandboxed and lacks the 'allow-same-origin' flag"_s };
 
-    RefPtr localWindow = dynamicDowncast<LocalDOMWindow>(window);
-    if (!localWindow)
+    if (!window.isCurrentlyDisplayedInFrame())
         return nullptr;
 
-    if (!localWindow->isCurrentlyDisplayedInFrame())
-        return nullptr;
-
-    return DOMWindowCaches::from(*localWindow)->caches();
+    return DOMWindowCaches::from(window)->caches();
 }
 
 DOMCacheStorage* WindowOrWorkerGlobalScopeCaches::caches(ScriptExecutionContext&, WorkerGlobalScope& scope)

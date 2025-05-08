@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,15 +36,13 @@ namespace JSC {
 
 // This indirection is provided so that we can manually force on assertions for
 // testing even on release builds.
-#if ENABLE(JIT_OPERATION_VALIDATION) && ASSERT_ENABLED
-#define ENABLE_JIT_OPERATION_VALIDATION_ASSERT 1
-#endif
+#define JIT_OPERATION_VALIDATION_ASSERT_ENABLED ASSERT_ENABLED
 
 struct JITOperationAnnotation;
 
 class JITOperationList {
 public:
-    static JITOperationList& singleton();
+    static JITOperationList& instance();
     static void initialize();
 
 #if ENABLE(JIT_OPERATION_VALIDATION)
@@ -54,7 +52,7 @@ public:
         return m_validatedOperations.get(removeCodePtrTag(bitwise_cast<void*>(pointer)));
     }
 
-#if ENABLE(JIT_OPERATION_VALIDATION_ASSERT)
+#if JIT_OPERATION_VALIDATION_ASSERT_ENABLED
     template<typename PtrType>
     void* inverseMap(PtrType pointer) const
     {
@@ -75,16 +73,16 @@ public:
     template<typename T> static void assertIsJITOperation(T function)
     {
         UNUSED_PARAM(function);
-#if ENABLE(JIT_OPERATION_VALIDATION_ASSERT)
-        RELEASE_ASSERT(!Options::useJIT() || JITOperationList::singleton().map(function));
+#if JIT_OPERATION_VALIDATION_ASSERT_ENABLED
+        RELEASE_ASSERT(!Options::useJIT() || JITOperationList::instance().map(function));
 #endif
     }
 
     template<typename T> static void assertIsJITOperationWithValidation(T function)
     {
         UNUSED_PARAM(function);
-#if ENABLE(JIT_OPERATION_VALIDATION_ASSERT)
-        RELEASE_ASSERT(!Options::useJIT() || JITOperationList::singleton().inverseMap(function));
+#if JIT_OPERATION_VALIDATION_ASSERT_ENABLED
+        RELEASE_ASSERT(!Options::useJIT() || JITOperationList::instance().inverseMap(function));
 #endif
     }
 
@@ -98,12 +96,12 @@ private:
 #if ENABLE(JIT_OPERATION_VALIDATION)
     ALWAYS_INLINE void addPointers(const JITOperationAnnotation* begin, const JITOperationAnnotation* end);
 
-#if ENABLE(JIT_OPERATION_VALIDATION_ASSERT)
+#if JIT_OPERATION_VALIDATION_ASSERT_ENABLED
     void addInverseMap(void* validationEntry, void* pointer);
 #endif
 
     HashMap<void*, void*> m_validatedOperations;
-#if ENABLE(JIT_OPERATION_VALIDATION_ASSERT)
+#if JIT_OPERATION_VALIDATION_ASSERT_ENABLED
     HashMap<void*, void*> m_validatedOperationsInverseMap;
 #endif
 #endif // ENABLE(JIT_OPERATION_VALIDATION)
@@ -113,7 +111,7 @@ private:
 
 JS_EXPORT_PRIVATE extern LazyNeverDestroyed<JITOperationList> jitOperationList;
 
-inline JITOperationList& JITOperationList::singleton()
+inline JITOperationList& JITOperationList::instance()
 {
     return jitOperationList.get();
 }

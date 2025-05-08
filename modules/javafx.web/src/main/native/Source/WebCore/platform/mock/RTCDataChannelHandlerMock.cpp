@@ -51,13 +51,13 @@ void RTCDataChannelHandlerMock::setClient(RTCDataChannelHandlerClient& client, S
 
 bool RTCDataChannelHandlerMock::sendStringData(const CString& string)
 {
-    m_client->didReceiveStringData(String::fromUTF8(string.span()));
+    m_client->didReceiveStringData(String::fromUTF8(string));
     return true;
 }
 
-bool RTCDataChannelHandlerMock::sendRawData(std::span<const uint8_t> data)
+bool RTCDataChannelHandlerMock::sendRawData(const uint8_t* data, size_t size)
 {
-    m_client->didReceiveRawData(data);
+    m_client->didReceiveRawData(data, size);
     return true;
 }
 

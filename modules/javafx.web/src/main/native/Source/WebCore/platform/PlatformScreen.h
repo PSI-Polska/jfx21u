@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <wtf/EnumTraits.h>
 #include <wtf/Forward.h>
 
 #if PLATFORM(MAC)
@@ -62,7 +63,7 @@ class Widget;
 
 using PlatformDisplayID = uint32_t;
 
-using PlatformGPUID = uint64_t; // On MAC, global IOKit registryID that can identify a GPU across process boundaries.
+using PlatformGPUID = uint64_t; // On MAC, MACCATALYST, global IOKit registryID that can identify a GPU across process boundaries.
 
 int screenDepth(Widget*);
 int screenDepthPerComponent(Widget*);
@@ -145,7 +146,6 @@ float screenPPIFactor();
 WEBCORE_EXPORT FloatSize screenSize();
 WEBCORE_EXPORT FloatSize availableScreenSize();
 WEBCORE_EXPORT FloatSize overrideScreenSize();
-WEBCORE_EXPORT FloatSize overrideAvailableScreenSize();
 WEBCORE_EXPORT float screenScaleFactor(UIScreen * = nullptr);
 
 #endif

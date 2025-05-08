@@ -35,9 +35,13 @@ namespace JSC {
 WTF_MAKE_TZONE_ALLOCATED_IMPL(OpaqueByproduct);
 WTF_MAKE_TZONE_ALLOCATED_IMPL(OpaqueByproducts);
 
-OpaqueByproducts::OpaqueByproducts() = default;
+OpaqueByproducts::OpaqueByproducts()
+{
+}
 
-OpaqueByproducts::~OpaqueByproducts() = default;
+OpaqueByproducts::~OpaqueByproducts()
+{
+}
 
 void OpaqueByproducts::add(std::unique_ptr<OpaqueByproduct> byproduct)
 {

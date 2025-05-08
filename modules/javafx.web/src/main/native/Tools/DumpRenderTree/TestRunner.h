@@ -66,8 +66,7 @@ public:
     void setLocalhostAliases(std::set<std::string> hosts) { m_localhostAliases = WTFMove(hosts); }
     void addURLToRedirect(std::string origin, std::string destination);
     const char* redirectionDestinationForURL(const char*);
-    void setPortsForUpgradingInsecureScheme(uint16_t insecurePort, uint16_t securePort) { m_portsForUpgradingInsecureScheme = { insecurePort, securePort }; }
-    std::optional<std::pair<uint16_t, uint16_t>> portsForUpgradingInsecureScheme() { return m_portsForUpgradingInsecureScheme; }
+    void clearAllApplicationCaches();
     void clearAllDatabases();
     void clearNotificationPermissionState();
     void clearApplicationCacheForOrigin(JSStringRef name);
@@ -104,6 +103,7 @@ public:
     void removeAllCookies(JSValueRef callback);
     void removeAllVisitedLinks();
     void setAcceptsEditing(bool);
+    void setAppCacheMaximumSize(unsigned long long quota);
     void setCacheModel(int);
     void setCustomPolicyDelegate(bool setDelegate, bool permissive);
     void setDatabaseQuota(unsigned long long quota);
@@ -396,11 +396,6 @@ public:
 
     void generateTestReport(JSStringRef message, JSStringRef group);
 
-    void setTopContentInset(double);
-
-    void setPageScaleFactor(double scaleFactor, long x, long y);
-    static JSValueRef alwaysResolvePromise(JSContextRef);
-
 private:
     TestRunner(const std::string& testURL, const std::string& expectedPixelHash);
 
@@ -485,7 +480,6 @@ private:
     std::set<std::string> m_willSendRequestClearHeaders;
     std::set<std::string> m_allowedHosts;
     std::set<std::string> m_localhostAliases;
-    std::optional<std::pair<uint16_t, uint16_t>> m_portsForUpgradingInsecureScheme;
 
     std::vector<uint8_t> m_audioResult;
 

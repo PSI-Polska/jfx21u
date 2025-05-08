@@ -25,10 +25,11 @@
 
 #pragma once
 
-#include "MediaPlayerClientIdentifier.h"
+#include <wtf/ObjectIdentifier.h>
 
 namespace WebCore {
 
-using HTMLMediaElementIdentifier = MediaPlayerClientIdentifier;
+struct HTMLMediaElementIdentifierType;
+using HTMLMediaElementIdentifier = ObjectIdentifier<HTMLMediaElementIdentifierType>;
 
 }

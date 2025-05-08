@@ -24,7 +24,6 @@
  */
 
 #pragma once
-
 #include "File.h"
 #include "SharedBuffer.h"
 #include <wtf/URL.h>
@@ -37,7 +36,7 @@ struct ShareData {
     String title;
     String text;
     String url;
-    Vector<Ref<File>> files { };
+    Vector<RefPtr<File>> files { };
 };
 
 struct RawFile {

@@ -286,13 +286,13 @@ public:
 
     void setUsessSIMD()
     {
-        RELEASE_ASSERT(Options::useWasmSIMD());
+        RELEASE_ASSERT(Options::useWebAssemblySIMD());
         m_usesSIMD = true;
     }
     bool usesSIMD() const
     {
         // See also: WasmModuleInformation::usesSIMD().
-        if (!Options::useWasmSIMD())
+        if (!Options::useWebAssemblySIMD())
             return false;
         if (Options::forceAllFunctionsToUseSIMD())
             return true;

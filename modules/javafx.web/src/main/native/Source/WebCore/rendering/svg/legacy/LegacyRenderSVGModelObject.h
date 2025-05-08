@@ -44,11 +44,8 @@ namespace WebCore {
 class SVGElement;
 
 class LegacyRenderSVGModelObject : public RenderElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(LegacyRenderSVGModelObject);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LegacyRenderSVGModelObject);
+    WTF_MAKE_ISO_ALLOCATED(LegacyRenderSVGModelObject);
 public:
-    virtual ~LegacyRenderSVGModelObject();
-
     LayoutRect clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext) const override;
     RepaintRects rectsForRepaintingAfterLayout(const RenderLayerModelObject* repaintContainer, RepaintOutlineBounds) const override;
 
@@ -66,7 +63,6 @@ public:
     static bool checkEnclosure(RenderElement*, const FloatRect&);
 
     SVGElement& element() const { return downcast<SVGElement>(nodeForNonAnonymous()); }
-    Ref<SVGElement> protectedElement() const;
 
 protected:
     LegacyRenderSVGModelObject(Type, SVGElement&, RenderStyle&&, OptionSet<SVGModelObjectFlag> = { });

@@ -19,6 +19,8 @@
 
 #pragma once
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+
 #include "RenderLayerModelObject.h"
 #include <wtf/Noncopyable.h>
 #include <wtf/OptionSet.h>
@@ -43,8 +45,7 @@ public:
         IgnoreTransformations               = 1 << 6, /* WebKit extension - internal    */
         OverrideBoxWithFilterBox            = 1 << 7, /* WebKit extension - internal    */
         OverrideBoxWithFilterBoxForChildren = 1 << 8, /* WebKit extension - internal    */
-        CalculateFastRepaintRect            = 1 << 9, /* WebKit extension - internal    */
-        UseFilterBoxOnEmptyRect             = 1 << 10  /* WebKit extension - internal    */
+        CalculateFastRepaintRect            = 1 << 9  /* WebKit extension - internal    */
     };
 
     using DecorationOptions = OptionSet<DecorationOption>;
@@ -67,7 +68,16 @@ public:
         return computeDecoratedBoundingBox(renderer, repaintBoundingBoxDecoration);
     }
 
-    static LayoutRect computeVisualOverflowRect(const RenderLayerModelObject&);
+    static LayoutRect computeVisualOverflowRect(const RenderLayerModelObject& renderer)
+    {
+        auto repaintBoundingBoxWithoutTransformations = computeDecoratedBoundingBox(renderer, repaintBoundingBoxDecoration | DecorationOption::IncludeOutline | DecorationOption::IgnoreTransformations);
+        if (repaintBoundingBoxWithoutTransformations.isEmpty())
+            return { };
+
+        auto visualOverflowRect = enclosingLayoutRect(repaintBoundingBoxWithoutTransformations);
+        visualOverflowRect.moveBy(-renderer.nominalSVGLayoutLocation());
+        return visualOverflowRect;
+    }
 
 private:
     FloatRect handleShapeOrTextOrInline(const DecorationOptions&, bool* boundingBoxValid = nullptr) const;
@@ -76,7 +86,9 @@ private:
 
     void adjustBoxForClippingAndEffects(const DecorationOptions&, FloatRect& box, const DecorationOptions& optionsToCheckForFilters = filterBoundingBoxDecoration) const;
 
-    SingleThreadWeakRef<const RenderLayerModelObject> m_renderer;
+    const RenderLayerModelObject& m_renderer;
 };
 
 } // namespace WebCore
+
+#endif

@@ -42,7 +42,7 @@ public:
     {
     }
 
-    RealtimeMediaSourceSupportedConstraints(bool supportsWidth, bool supportsHeight, bool supportsAspectRatio, bool supportsFrameRate, bool supportsFacingMode, bool supportsVolume, bool supportsSampleRate, bool supportsSampleSize, bool supportsEchoCancellation, bool supportsDeviceId, bool supportsGroupId, bool supportsDisplaySurface, bool supportsLogicalSurface, bool supportsFocusDistance, bool supportsWhiteBalanceMode, bool supportsZoom, bool supportsTorch, bool supportsBackgroundBlur, bool supportsPowerEfficient)
+    RealtimeMediaSourceSupportedConstraints(bool supportsWidth, bool supportsHeight, bool supportsAspectRatio, bool supportsFrameRate, bool supportsFacingMode, bool supportsVolume, bool supportsSampleRate, bool supportsSampleSize, bool supportsEchoCancellation, bool supportsDeviceId, bool supportsGroupId, bool supportsDisplaySurface, bool supportsLogicalSurface, bool supportsFocusDistance, bool supportsWhiteBalanceMode, bool supportsZoom, bool supportsTorch)
         : m_supportsWidth(supportsWidth)
         , m_supportsHeight(supportsHeight)
         , m_supportsAspectRatio(supportsAspectRatio)
@@ -60,8 +60,6 @@ public:
         , m_supportsWhiteBalanceMode(supportsWhiteBalanceMode)
         , m_supportsZoom(supportsZoom)
         , m_supportsTorch(supportsTorch)
-        , m_supportsBackgroundBlur(supportsBackgroundBlur)
-        , m_supportsPowerEfficient(supportsPowerEfficient)
     {
     }
 
@@ -118,12 +116,6 @@ public:
     bool supportsTorch() const { return m_supportsTorch; }
     void setSupportsTorch(bool value) { m_supportsTorch = value; }
 
-    bool supportsBackgroundBlur() const { return m_supportsBackgroundBlur; }
-    void setSupportsBackgroundBlur(bool value) { m_supportsBackgroundBlur = value; }
-
-    bool supportsPowerEfficient() const { return m_supportsPowerEfficient; }
-    void setSupportsPowerEfficient(bool value) { m_supportsPowerEfficient = value; }
-
 private:
     bool m_supportsWidth { false };
     bool m_supportsHeight { false };
@@ -142,8 +134,6 @@ private:
     bool m_supportsWhiteBalanceMode { false };
     bool m_supportsZoom { false };
     bool m_supportsTorch { false };
-    bool m_supportsBackgroundBlur { false };
-    bool m_supportsPowerEfficient { false };
 };
 
 } // namespace WebCore

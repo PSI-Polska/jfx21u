@@ -170,6 +170,9 @@ class Database;
 namespace DOMJIT {
 class Signature;
 }
+namespace Wasm {
+class Instance;
+}
 
 struct EntryFrame;
 
@@ -240,6 +243,10 @@ private:
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(VM);
 
+#if COMPILER(MSVC)
+#pragma warning(push)
+#pragma warning(disable: 4200) // Disable "zero-sized array in struct/union" warning
+#endif
 struct ScratchBuffer {
     ScratchBuffer()
     {
@@ -269,6 +276,9 @@ struct ScratchBuffer {
     } u;
     void* m_buffer[0];
 };
+#if COMPILER(MSVC)
+#pragma warning(pop)
+#endif
 
 class ActiveScratchBufferScope {
 public:
@@ -280,7 +290,7 @@ private:
 };
 
 enum VMIdentifierType { };
-using VMIdentifier = LegacyNullableAtomicObjectIdentifier<VMIdentifierType>;
+using VMIdentifier = AtomicObjectIdentifier<VMIdentifierType>;
 
 class VM : public ThreadSafeRefCounted<VM>, public DoublyLinkedListNode<VM> {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(VM);
@@ -437,7 +447,6 @@ public:
     EntryFrame* topEntryFrame { nullptr };
 private:
     OptionSet<EntryScopeService> m_entryScopeServices;
-    VMTraps m_traps;
 
     VMIdentifier m_identifier;
     RefPtr<JSLock> m_apiLock;
@@ -474,8 +483,8 @@ public:
 #endif
 
     ALWAYS_INLINE CompleteSubspace& primitiveGigacageAuxiliarySpace() { return heap.primitiveGigacageAuxiliarySpace; }
-    ALWAYS_INLINE CompleteSubspace& auxiliarySpace() { return heap.auxiliarySpace; }
-    ALWAYS_INLINE CompleteSubspace& immutableButterflyAuxiliarySpace() { return heap.immutableButterflyAuxiliarySpace; }
+    ALWAYS_INLINE CompleteSubspace& jsValueGigacageAuxiliarySpace() { return heap.jsValueGigacageAuxiliarySpace; }
+    ALWAYS_INLINE CompleteSubspace& immutableButterflyJSValueGigacageAuxiliarySpace() { return heap.immutableButterflyJSValueGigacageAuxiliarySpace; }
     ALWAYS_INLINE CompleteSubspace& gigacageAuxiliarySpace(Gigacage::Kind kind) { return heap.gigacageAuxiliarySpace(kind); }
     ALWAYS_INLINE CompleteSubspace& cellSpace() { return heap.cellSpace; }
     ALWAYS_INLINE CompleteSubspace& variableSizedCellSpace() { return heap.variableSizedCellSpace; }
@@ -559,8 +568,8 @@ public:
 
     WriteBarrier<JSPropertyNameEnumerator> m_emptyPropertyNameEnumerator;
 
-    WriteBarrier<JSCell> m_orderedHashTableDeletedValue;
-    WriteBarrier<JSCell> m_orderedHashTableSentinel;
+    WriteBarrier<JSCell> m_sentinelSetBucket;
+    WriteBarrier<JSCell> m_sentinelMapBucket;
 
     WriteBarrier<NativeExecutable> m_fastCanConstructBoundExecutable;
     WriteBarrier<NativeExecutable> m_slowCanConstructBoundExecutable;
@@ -600,18 +609,18 @@ public:
 
     WriteBarrier<JSBigInt> heapBigIntConstantOne;
 
-    JSCell* orderedHashTableDeletedValue()
+    JSCell* sentinelSetBucket()
     {
-        if (LIKELY(m_orderedHashTableDeletedValue))
-            return m_orderedHashTableDeletedValue.get();
-        return orderedHashTableDeletedValueSlow();
+        if (LIKELY(m_sentinelSetBucket))
+            return m_sentinelSetBucket.get();
+        return sentinelSetBucketSlow();
     }
 
-    JSCell* orderedHashTableSentinel()
+    JSCell* sentinelMapBucket()
     {
-        if (LIKELY(m_orderedHashTableSentinel))
-            return m_orderedHashTableSentinel.get();
-        return orderedHashTableSentinelSlow();
+        if (LIKELY(m_sentinelMapBucket))
+            return m_sentinelMapBucket.get();
+        return sentinelMapBucketSlow();
     }
 
     JSPropertyNameEnumerator* emptyPropertyNameEnumerator()
@@ -693,42 +702,37 @@ public:
     MacroAssemblerCodeRef<JSEntryPtrTag> getCTIThrowExceptionFromCallSlowPath();
     MacroAssemblerCodeRef<JITStubRoutinePtrTag> getCTIVirtualCall(CallMode);
 
-    static constexpr ptrdiff_t exceptionOffset()
+    static ptrdiff_t exceptionOffset()
     {
         return OBJECT_OFFSETOF(VM, m_exception);
     }
 
-    static constexpr ptrdiff_t callFrameForCatchOffset()
+    static ptrdiff_t callFrameForCatchOffset()
     {
         return OBJECT_OFFSETOF(VM, callFrameForCatch);
     }
 
-    static constexpr ptrdiff_t topEntryFrameOffset()
+    static ptrdiff_t topEntryFrameOffset()
     {
         return OBJECT_OFFSETOF(VM, topEntryFrame);
     }
 
-    static constexpr ptrdiff_t offsetOfEncodedHostCallReturnValue()
+    static ptrdiff_t offsetOfEncodedHostCallReturnValue()
     {
         return OBJECT_OFFSETOF(VM, encodedHostCallReturnValue);
     }
 
-    static constexpr ptrdiff_t offsetOfHeapBarrierThreshold()
+    static ptrdiff_t offsetOfHeapBarrierThreshold()
     {
         return OBJECT_OFFSETOF(VM, heap) + OBJECT_OFFSETOF(Heap, m_barrierThreshold);
     }
 
-    static constexpr ptrdiff_t offsetOfHeapMutatorShouldBeFenced()
+    static ptrdiff_t offsetOfHeapMutatorShouldBeFenced()
     {
         return OBJECT_OFFSETOF(VM, heap) + OBJECT_OFFSETOF(Heap, m_mutatorShouldBeFenced);
     }
 
-    static constexpr ptrdiff_t offsetOfTrapsBits()
-    {
-        return OBJECT_OFFSETOF(VM, m_traps) + VMTraps::offsetOfTrapsBits();
-    }
-
-    static constexpr ptrdiff_t offsetOfSoftStackLimit()
+    static ptrdiff_t offsetOfSoftStackLimit()
     {
         return OBJECT_OFFSETOF(VM, m_softStackLimit);
     }
@@ -830,7 +834,7 @@ public:
 
     std::unique_ptr<Profiler::Database> m_perBytecodeProfiler;
     RefPtr<TypedArrayController> m_typedArrayController;
-    std::unique_ptr<RegExpCache> m_regExpCache;
+    RegExpCache* m_regExpCache;
     BumpPointerAllocator m_regExpAllocator;
     ConcurrentJSLock m_regExpAllocatorLock;
 
@@ -863,15 +867,14 @@ public:
     JS_EXPORT_PRIVATE void invalidateStructureChainIntegrity(StructureChainIntegrityEvent);
 
 #if ENABLE(REGEXP_TRACING)
-    using RTTraceList = ListHashSet<RegExp*>;
-    RTTraceList m_rtTraceList;
+    ListHashSet<RegExp*> m_rtTraceList;
     void addRegExpToTrace(RegExp*);
     JS_EXPORT_PRIVATE void dumpRegExpTrace();
 #endif
 
     bool hasTimeZoneChange() { return dateCache.hasTimeZoneChange(); }
 
-    RegExpCache* regExpCache() { return m_regExpCache.get(); }
+    RegExpCache* regExpCache() { return m_regExpCache; }
 
     bool isCollectorBusyOnCurrentThread() { return heap.currentThreadIsDoingGCWork(); }
 
@@ -1018,6 +1021,10 @@ public:
 
     Ref<Waiter> syncWaiter();
 
+#if ENABLE(WEBASSEMBLY)
+    void registerWasmInstance(Wasm::Instance&);
+#endif
+
     void notifyDebuggerHookInjected() { m_isDebuggerHookInjected = true; }
     bool isDebuggerHookInjected() const { return m_isDebuggerHookInjected; }
 
@@ -1026,8 +1033,8 @@ private:
     static VM*& sharedInstanceInternal();
     void createNativeThunk();
 
-    JS_EXPORT_PRIVATE JSCell* orderedHashTableDeletedValueSlow();
-    JS_EXPORT_PRIVATE JSCell* orderedHashTableSentinelSlow();
+    JS_EXPORT_PRIVATE JSCell* sentinelSetBucketSlow();
+    JS_EXPORT_PRIVATE JSCell* sentinelMapBucketSlow();
     JSPropertyNameEnumerator* emptyPropertyNameEnumeratorSlow();
 
     void updateStackLimits();
@@ -1116,6 +1123,7 @@ private:
     unsigned m_controlFlowProfilerEnabledCount { 0 };
     MicrotaskQueue m_microtaskQueue;
     MallocPtr<EncodedJSValue, VMMalloc> m_exceptionFuzzBuffer;
+    VMTraps m_traps;
     LazyRef<VM, Watchdog> m_watchdog;
     LazyUniqueRef<VM, HeapProfiler> m_heapProfiler;
     LazyUniqueRef<VM, AdaptiveStringSearcherTables> m_stringSearcherTables;
@@ -1145,6 +1153,9 @@ private:
     Ref<Waiter> m_syncWaiter;
 
     Vector<Function<void()>> m_didPopListeners;
+#if ENABLE(WEBASSEMBLY)
+    ThreadSafeWeakHashSet<Wasm::Instance> m_wasmInstances;
+#endif
 
 #if ENABLE(DFG_DOES_GC_VALIDATION)
     DoesGCCheck m_doesGC;
@@ -1184,7 +1195,7 @@ inline Heap* WeakSet::heap() const
 }
 
 #if !ENABLE(C_LOOP)
-extern "C" void SYSV_ABI sanitizeStackForVMImpl(VM*);
+extern "C" void sanitizeStackForVMImpl(VM*);
 #endif
 
 JS_EXPORT_PRIVATE void sanitizeStackForVM(VM&);

@@ -33,15 +33,15 @@ namespace JSC {
 void ExitFlag::dump(PrintStream& out) const
 {
     if (!m_bits) {
-        out.print("false"_s);
+        out.print("false");
         return;
     }
 
-    CommaPrinter comma("|"_s);
+    CommaPrinter comma("|");
     if (isSet(ExitFromNotInlined))
-        out.print(comma, "notInlined"_s);
+        out.print(comma, "notInlined");
     if (isSet(ExitFromInlined))
-        out.print(comma, "inlined"_s);
+        out.print(comma, "inlined");
 }
 
 } // namespace JSC

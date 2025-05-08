@@ -55,7 +55,7 @@ public:
 
 class InlineBoxIterator : public BoxIterator {
 public:
-    InlineBoxIterator() = default;
+    InlineBoxIterator() { }
     InlineBoxIterator(Box::PathVariant&&);
     InlineBoxIterator(const Box&);
 

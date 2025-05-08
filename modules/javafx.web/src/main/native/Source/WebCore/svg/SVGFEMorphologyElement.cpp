@@ -24,14 +24,13 @@
 
 #include "FEMorphology.h"
 #include "NodeName.h"
-#include "SVGFilter.h"
 #include "SVGNames.h"
 #include "SVGParserUtilities.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGFEMorphologyElement);
+WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFEMorphologyElement);
 
 inline SVGFEMorphologyElement::SVGFEMorphologyElement(const QualifiedName& tagName, Document& document)
     : SVGFilterPrimitiveStandardAttributes(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -57,16 +56,16 @@ void SVGFEMorphologyElement::attributeChanged(const QualifiedName& name, const A
     case AttributeNames::operatorAttr: {
         MorphologyOperatorType propertyValue = SVGPropertyTraits<MorphologyOperatorType>::fromString(newValue);
         if (propertyValue != MorphologyOperatorType::Unknown)
-            Ref { m_svgOperator }->setBaseValInternal<MorphologyOperatorType>(propertyValue);
+            m_svgOperator->setBaseValInternal<MorphologyOperatorType>(propertyValue);
         break;
     }
     case AttributeNames::inAttr:
-        Ref { m_in1 }->setBaseValInternal(newValue);
+        m_in1->setBaseValInternal(newValue);
         break;
     case AttributeNames::radiusAttr:
         if (auto result = parseNumberOptionalNumber(newValue)) {
-            Ref { m_radiusX }->setBaseValInternal(result->first);
-            Ref { m_radiusY }->setBaseValInternal(result->second);
+            m_radiusX->setBaseValInternal(result->first);
+            m_radiusY->setBaseValInternal(result->second);
         }
         break;
     default:

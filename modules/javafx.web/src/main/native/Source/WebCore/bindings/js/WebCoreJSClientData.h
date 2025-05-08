@@ -33,15 +33,6 @@
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
-class JSVMClientDataClient;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::JSVMClientDataClient> : std::true_type { };
-}
-
-namespace WebCore {
 
 class ExtendedDOMClientIsoSubspaces;
 class ExtendedDOMIsoSubspaces;
@@ -77,14 +68,17 @@ private:
     JSC::IsoHeapCellType m_runtimeObjectHeapCellType;
     JSC::IsoHeapCellType m_windowProxyHeapCellType;
 public:
-    JSC::IsoHeapCellType m_heapCellTypeForJSDOMWindow;
+    JSC::IsoHeapCellType m_heapCellTypeForJSLocalDOMWindow;
     JSC::IsoHeapCellType m_heapCellTypeForJSDedicatedWorkerGlobalScope;
+    JSC::IsoHeapCellType m_heapCellTypeForJSRemoteDOMWindow;
     JSC::IsoHeapCellType m_heapCellTypeForJSWorkerGlobalScope;
     JSC::IsoHeapCellType m_heapCellTypeForJSSharedWorkerGlobalScope;
     JSC::IsoHeapCellType m_heapCellTypeForJSShadowRealmGlobalScope;
     JSC::IsoHeapCellType m_heapCellTypeForJSServiceWorkerGlobalScope;
     JSC::IsoHeapCellType m_heapCellTypeForJSWorkletGlobalScope;
+#if ENABLE(CSS_PAINTING_API)
     JSC::IsoHeapCellType m_heapCellTypeForJSPaintWorkletGlobalScope;
+#endif
 #if ENABLE(WEB_AUDIO)
     JSC::IsoHeapCellType m_heapCellTypeForJSAudioWorkletGlobalScope;
 #endif
@@ -107,12 +101,6 @@ private:
 };
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(JSVMClientData);
-
-class JSVMClientDataClient : public CanMakeWeakPtr<JSVMClientDataClient> {
-public:
-    virtual ~JSVMClientDataClient() = default;
-    virtual void willDestroyVM() = 0;
-};
 
 class JSVMClientData : public JSC::VM::ClientData {
     WTF_MAKE_NONCOPYABLE(JSVMClientData);
@@ -162,7 +150,12 @@ public:
 
     ExtendedDOMClientIsoSubspaces& clientSubspaces() { return *m_clientSubspaces.get(); }
 
-    void addClient(JSVMClientDataClient& client) { m_clients.add(client); }
+    class Client : public CanMakeWeakPtr<Client> {
+    public:
+        virtual ~Client() = default;
+        virtual void willDestroyVM() = 0;
+    };
+    void addClient(Client& client) { m_clients.add(client); }
 
 private:
     HashSet<DOMWrapperWorld*> m_worldSet;
@@ -185,7 +178,7 @@ private:
 
     std::unique_ptr<ExtendedDOMClientIsoSubspaces> m_clientSubspaces;
 
-    WeakHashSet<JSVMClientDataClient> m_clients;
+    WeakHashSet<Client> m_clients;
 };
 
 

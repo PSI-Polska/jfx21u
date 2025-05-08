@@ -34,15 +34,12 @@ namespace WebCore {
 
 class LegacyRenderSVGResourceContainer;
 class RenderElement;
-class RenderSVGResourceContainer;
 
 class SVGResourceImage final : public GeneratedImage {
 public:
-    static Ref<SVGResourceImage> create(RenderSVGResourceContainer&, const URL& reresolvedURL);
     static Ref<SVGResourceImage> create(LegacyRenderSVGResourceContainer&, const URL& reresolvedURL);
 
 private:
-    SVGResourceImage(RenderSVGResourceContainer&, const URL& reresolvedURL);
     SVGResourceImage(LegacyRenderSVGResourceContainer&, const URL& reresolvedURL);
 
     ImageDrawResult draw(GraphicsContext&, const FloatRect& destinationRect, const FloatRect& sourceRect, ImagePaintingOptions = { }) final;
@@ -52,8 +49,7 @@ private:
 
     void dump(WTF::TextStream&) const final;
 
-    SingleThreadWeakPtr<RenderSVGResourceContainer> m_renderResource;
-    SingleThreadWeakPtr<LegacyRenderSVGResourceContainer> m_legacyRenderResource;
+    SingleThreadWeakPtr<LegacyRenderSVGResourceContainer> m_renderResource;
     URL m_reresolvedURL;
 };
 

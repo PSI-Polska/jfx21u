@@ -51,10 +51,8 @@ namespace WebCore {
 void EventDispatcher::dispatchScopedEvent(Node& node, Event& event)
 {
     // Need to set the target here so the scoped event queue knows which node to dispatch to.
-    RefPtr target = EventPath::eventTargetRespectingTargetRules(node);
-    ASSERT(target);
-    event.setTarget(target.copyRef());
-    ScopedEventQueue::singleton().enqueueEvent({ event, *target });
+    event.setTarget(RefPtr { EventPath::eventTargetRespectingTargetRules(node) });
+    ScopedEventQueue::singleton().enqueueEvent(event);
 }
 
 static void callDefaultEventHandlersInBubblingOrder(Event& event, const EventPath& path)
@@ -189,7 +187,7 @@ void EventDispatcher::dispatchEvent(Node& node, Event& event)
 
     EventPath eventPath { node, event };
 
-    if (node.document().settings().sendMouseEventsToDisabledFormControlsEnabled() && event.isTrusted() && is<MouseEvent>(event)
+    if (node.document().settings().sendMouseEventsToDisabledFormControlsEnabled() && event.isTrusted() && event.isMouseEvent()
         && (typeInfo.type() == EventType::mousedown || typeInfo.type() == EventType::mouseup || typeInfo.type() == EventType::click || typeInfo.type() == EventType::dblclick)) {
         eventPath.adjustForDisabledFormControl();
     }
@@ -221,7 +219,7 @@ void EventDispatcher::dispatchEvent(Node& node, Event& event)
     clickHandlingState.trusted = event.isTrusted();
 
     RefPtr inputForLegacyPreActivationBehavior = dynamicDowncast<HTMLInputElement>(node);
-    if (!inputForLegacyPreActivationBehavior && event.bubbles() && isAnyClick(event))
+    if (!inputForLegacyPreActivationBehavior && event.bubbles() && event.type() == eventNames().clickEvent)
         inputForLegacyPreActivationBehavior = findInputElementInEventPath(eventPath);
     if (inputForLegacyPreActivationBehavior
         && (!event.isTrusted() || !inputForLegacyPreActivationBehavior->isDisabledFormControl())) {

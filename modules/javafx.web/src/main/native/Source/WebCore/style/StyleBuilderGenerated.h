@@ -35,11 +35,9 @@ struct CSSRegisteredCustomProperty;
 namespace Style {
 class BuilderState;
 
-enum class ApplyValueType : uint8_t;
-
 class BuilderGenerated {
 public:
-    static void applyProperty(CSSPropertyID, Style::BuilderState&, CSSValue&, ApplyValueType);
+    static void applyProperty(CSSPropertyID, Style::BuilderState&, CSSValue&, bool isInitial, bool isInherit, const CSSRegisteredCustomProperty*);
 };
 
 }

@@ -26,15 +26,13 @@
 #include "config.h"
 #include "WasmEntryPlan.h"
 
-#include "LLIntData.h"
 #include "WasmBinding.h"
-#include "WasmToJS.h"
 #include <wtf/DataLog.h>
 #include <wtf/Locker.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/SystemTracing.h>
-#include <wtf/text/MakeString.h>
+#include <wtf/text/StringConcatenateNumbers.h>
 
 #if ENABLE(WEBASSEMBLY)
 
@@ -80,7 +78,7 @@ void EntryPlan::moveToState(State state)
     m_state = state;
 }
 
-bool EntryPlan::parseAndValidateModule(std::span<const uint8_t> source)
+bool EntryPlan::parseAndValidateModule(const uint8_t* source, size_t sourceLength)
 {
     if (m_state != State::Initial)
         return true;
@@ -90,7 +88,7 @@ bool EntryPlan::parseAndValidateModule(std::span<const uint8_t> source)
     if (WasmEntryPlanInternal::verbose || Options::reportCompileTimes())
         startTime = MonotonicTime::now();
 
-    m_streamingParser.addBytes(source);
+    m_streamingParser.addBytes(source, sourceLength);
     {
         Locker locker { m_lock };
         if (failed())
@@ -113,18 +111,39 @@ bool EntryPlan::parseAndValidateModule(std::span<const uint8_t> source)
 void EntryPlan::prepare()
 {
     ASSERT(m_state == State::Validated);
-    dataLogLnIf(WasmEntryPlanInternal::verbose, "Starting preparation"_s);
+    dataLogLnIf(WasmEntryPlanInternal::verbose, "Starting preparation");
 
     const auto& functions = m_moduleInformation->functions;
     m_numberOfFunctions = functions.size();
-    if (!tryReserveCapacity(m_wasmToWasmExitStubs, m_moduleInformation->importFunctionTypeIndices.size(), " WebAssembly to WebAssembly stubs"_s))
-        return;
-    if (!tryReserveCapacity(m_wasmToJSExitStubs, m_moduleInformation->importFunctionTypeIndices.size(), " WebAssembly to JavaScript stubs"_s))
-        return;
-    if (!tryReserveCapacity(m_unlinkedWasmToWasmCalls, functions.size(), " unlinked WebAssembly to WebAssembly calls"_s))
+    if (!tryReserveCapacity(m_wasmToWasmExitStubs, m_moduleInformation->importFunctionTypeIndices.size(), " WebAssembly to JavaScript stubs")
+        || !tryReserveCapacity(m_unlinkedWasmToWasmCalls, functions.size(), " unlinked WebAssembly to WebAssembly calls"))
         return;
 
     m_unlinkedWasmToWasmCalls.resize(functions.size());
+
+#if ENABLE(JIT)
+    m_wasmToWasmExitStubs.resize(m_moduleInformation->importFunctionTypeIndices.size());
+    unsigned importFunctionIndex = 0;
+    for (unsigned importIndex = 0; importIndex < m_moduleInformation->imports.size(); ++importIndex) {
+        Import* import = &m_moduleInformation->imports[importIndex];
+        if (import->kind != ExternalKind::Function)
+            continue;
+        dataLogLnIf(WasmEntryPlanInternal::verbose, "Processing import function number ", importFunctionIndex, ": ", makeString(import->module), ": ", makeString(import->field));
+        auto binding = wasmToWasm(importFunctionIndex);
+        if (UNLIKELY(!binding)) {
+            switch (binding.error()) {
+            case BindingFailure::OutOfMemory: {
+                Locker locker { m_lock };
+                m_wasmToWasmExitStubs.resize(importFunctionIndex);
+                return fail(makeString("Out of executable memory at import "_s, importIndex));
+            }
+            }
+            RELEASE_ASSERT_NOT_REACHED();
+        }
+        m_wasmToWasmExitStubs[importFunctionIndex++] = binding.value();
+    }
+    ASSERT(importFunctionIndex == m_wasmToWasmExitStubs.size());
+#endif
 
     const uint32_t importFunctionCount = m_moduleInformation->importFunctionCount();
     for (const auto& exp : m_moduleInformation->exports) {
@@ -186,13 +205,10 @@ void EntryPlan::compileFunctions(CompilationEffort effort)
 
     size_t bytesCompiled = 0;
     while (true) {
-        if (effort == Partial && bytesCompiled >= Options::wasmPartialCompileLimit())
+        if (effort == Partial && bytesCompiled >= Options::webAssemblyPartialCompileLimit())
             return;
 
         uint32_t functionIndex;
-        uint32_t functionIndexEnd;
-        bool areWasmToWasmStubsCompiled = false;
-        bool areWasmToJSStubsCompiled = false;
         {
             Locker locker { m_lock };
             if (m_currentIndex >= m_numberOfFunctions) {
@@ -201,41 +217,11 @@ void EntryPlan::compileFunctions(CompilationEffort effort)
                 return;
             }
             functionIndex = m_currentIndex;
-            functionIndexEnd = m_numberOfFunctions;
-            for (uint32_t index = functionIndex; index < m_numberOfFunctions; ++index) {
-                bytesCompiled += m_moduleInformation->functions[index].data.size();
-                if (bytesCompiled >= Options::wasmPartialCompileLimit()) {
-                    functionIndexEnd = index + 1;
-                    break;
-                }
-        }
-            m_currentIndex = functionIndexEnd;
-            areWasmToWasmStubsCompiled = std::exchange(m_areWasmToWasmStubsCompiled, true);
-            areWasmToJSStubsCompiled = std::exchange(m_areWasmToJSStubsCompiled, true);
+            ++m_currentIndex;
         }
 
-        for (uint32_t index = functionIndex; index < functionIndexEnd; ++index)
-            compileFunction(index);
-
-        if (!areWasmToWasmStubsCompiled) {
-#if ENABLE(JIT)
-            if (UNLIKELY(!generateWasmToWasmStubs())) {
-                Locker locker { m_lock };
-                fail(makeString("Out of executable memory at stub generation"_s));
-                return;
-            }
-#endif
-        }
-
-        if (!areWasmToJSStubsCompiled) {
-#if ENABLE(JIT)
-            if (UNLIKELY(!generateWasmToJSStubs())) {
-                Locker locker { m_lock };
-                fail(makeString("Out of executable memory at stub generation"_s));
-                return;
-            }
-#endif
-        }
+        compileFunction(functionIndex);
+        bytesCompiled += m_moduleInformation->functions[functionIndex].data.size();
     }
 }
 
@@ -248,95 +234,9 @@ void EntryPlan::complete()
         didCompleteCompilation();
 
     if (!isComplete()) {
-        generateStubsIfNecessary();
         moveToState(State::Completed);
         runCompletionTasks();
     }
-}
-
-bool EntryPlan::completeSyncIfPossible()
-{
-    Locker locker { m_lock };
-    if (m_currentIndex >= m_numberOfFunctions) {
-        if (hasWork())
-            moveToState(State::Compiled);
-
-        if (!m_numberOfActiveThreads) {
-            complete();
-            return true;
-        }
-    }
-    return false;
-}
-
-void EntryPlan::generateStubsIfNecessary()
-{
-    if (!std::exchange(m_areWasmToWasmStubsCompiled, true)) {
-#if ENABLE(JIT)
-        if (UNLIKELY(!generateWasmToWasmStubs())) {
-            fail(makeString("Out of executable memory at stub generation"_s));
-            return;
-        }
-#endif
-    }
-
-    if (!std::exchange(m_areWasmToJSStubsCompiled, true)) {
-#if ENABLE(JIT)
-        if (UNLIKELY(!generateWasmToJSStubs())) {
-            fail(makeString("Out of executable memory at stub generation"_s));
-            return;
-        }
-#endif
-    }
-}
-
-
-bool EntryPlan::generateWasmToWasmStubs()
-{
-    m_wasmToWasmExitStubs.resize(m_moduleInformation->importFunctionTypeIndices.size());
-    unsigned importFunctionIndex = 0;
-    for (unsigned importIndex = 0; importIndex < m_moduleInformation->imports.size(); ++importIndex) {
-        Import* import = &m_moduleInformation->imports[importIndex];
-        if (import->kind != ExternalKind::Function)
-            continue;
-        dataLogLnIf(WasmEntryPlanInternal::verbose, "Processing import function number "_s, importFunctionIndex, ": "_s, makeString(import->module), ": "_s, makeString(import->field));
-#if ENABLE(JIT)
-        if (Options::useJIT()) {
-            auto binding = wasmToWasm(importFunctionIndex);
-            if (UNLIKELY(!binding))
-                return false;
-            m_wasmToWasmExitStubs[importFunctionIndex++] = binding.value();
-        }
-#else
-        if (false);
-#endif // ENABLE(JIT)
-        else
-            m_wasmToWasmExitStubs[importFunctionIndex++] = LLInt::getCodeRef<WasmEntryPtrTag>(wasm_to_wasm_wrapper_entry);
-    }
-    ASSERT(importFunctionIndex == m_wasmToWasmExitStubs.size());
-    return true;
-}
-
-
-bool EntryPlan::generateWasmToJSStubs()
-{
-    m_wasmToJSExitStubs.resize(m_moduleInformation->importFunctionCount());
-    for (unsigned importIndex = 0; importIndex < m_moduleInformation->importFunctionCount(); ++importIndex) {
-#if ENABLE(JIT)
-        Wasm::TypeIndex typeIndex = m_moduleInformation->importFunctionTypeIndices.at(importIndex);
-        if (Options::useJIT()) {
-            auto binding = wasmToJS(typeIndex, importIndex);
-            if (UNLIKELY(!binding))
-                return false;
-            m_wasmToJSExitStubs[importIndex] = binding.value();
-        }
-#else
-        if (false);
-#endif // ENABLE(JIT)
-        else
-            m_wasmToJSExitStubs[importIndex] = LLInt::getCodeRef<WasmEntryPtrTag>(wasm_to_js_wrapper_entry);
-    }
-    return true;
 }
 
 

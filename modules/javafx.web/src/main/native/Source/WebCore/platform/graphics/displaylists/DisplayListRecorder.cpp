@@ -299,8 +299,8 @@ void Recorder::drawSystemImage(SystemImage& systemImage, const FloatRect& destin
 {
     appendStateChangeItemIfNecessary();
 #if USE(SYSTEM_PREVIEW)
-    if (auto* badgeSystemImage = dynamicDowncast<ARKitBadgeSystemImage>(systemImage)) {
-        if (auto image = badgeSystemImage->image()) {
+    if (is<ARKitBadgeSystemImage>(systemImage)) {
+        if (auto image = downcast<ARKitBadgeSystemImage>(systemImage).image()) {
             auto nativeImage = image->nativeImage();
             if (!nativeImage)
                 return;
@@ -409,17 +409,6 @@ void Recorder::beginTransparencyLayer(float opacity)
     m_stateStack.append(m_stateStack.last().cloneForTransparencyLayer());
 }
 
-void Recorder::beginTransparencyLayer(CompositeOperator compositeOperator, BlendMode blendMode)
-{
-    GraphicsContext::beginTransparencyLayer(compositeOperator, blendMode);
-
-    appendStateChangeItemIfNecessary();
-    recordBeginTransparencyLayer(compositeOperator, blendMode);
-
-    GraphicsContext::save(GraphicsContextState::Purpose::TransparencyLayer);
-    m_stateStack.append(m_stateStack.last().cloneForTransparencyLayer());
-}
-
 void Recorder::endTransparencyLayer()
 {
     GraphicsContext::endTransparencyLayer();
@@ -479,16 +468,16 @@ void Recorder::drawFocusRing(const Vector<FloatRect>& rects, float outlineOffset
     recordDrawFocusRingRects(rects, outlineOffset, outlineWidth, color);
 }
 
-void Recorder::fillRect(const FloatRect& rect, RequiresClipToRect requiresClipToRect)
+void Recorder::fillRect(const FloatRect& rect)
 {
     appendStateChangeItemIfNecessary();
-    recordFillRect(rect, requiresClipToRect);
+    recordFillRect(rect);
 }
 
-void Recorder::fillRect(const FloatRect& rect, Gradient& gradient, const AffineTransform& gradientSpaceTransform, RequiresClipToRect requiresClipToRect)
+void Recorder::fillRect(const FloatRect& rect, Gradient& gradient, const AffineTransform& gradientSpaceTransform)
 {
     appendStateChangeItemIfNecessary();
-    recordFillRectWithGradientAndSpaceTransform(rect, gradient, gradientSpaceTransform, requiresClipToRect);
+    recordFillRectWithGradientAndSpaceTransform(rect, gradient, gradientSpaceTransform);
 }
 
 void Recorder::fillRect(const FloatRect& rect, const Color& color)

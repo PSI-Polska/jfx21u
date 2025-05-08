@@ -35,41 +35,19 @@
 #include <JavaScriptCore/ConsoleMessage.h>
 #include <optional>
 #include <wtf/SortedArrayMap.h>
-#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
 ApplicationManifest ApplicationManifestParser::parse(Document& document, const String& source, const URL& manifestURL, const URL& documentURL)
 {
     ApplicationManifestParser parser { &document };
-    auto object = parser.createJSONObject(source);
-    if (!object)
-        object = JSON::Object::create();
-
-    return parser.parseManifest(*object, source, manifestURL, documentURL);
+    return parser.parseManifest(source, manifestURL, documentURL);
 }
 
 ApplicationManifest ApplicationManifestParser::parse(const String& source, const URL& manifestURL, const URL& documentURL)
 {
     ApplicationManifestParser parser { nullptr };
-    auto object = parser.createJSONObject(source);
-    if (!object)
-        object = JSON::Object::create();
-
-    return parser.parseManifest(*object, source, manifestURL, documentURL);
-}
-
-std::optional<ApplicationManifest> ApplicationManifestParser::parseWithValidation(const String& source, const URL& manifestURL, const URL& documentURL)
-{
-    if (!manifestURL.isValid() || !documentURL.isValid())
-        return std::nullopt;
-
-    ApplicationManifestParser parser { nullptr };
-    auto object = parser.createJSONObject(source);
-    if (!object)
-        return std::nullopt;
-
-    return parser.parseManifest(*object, source, manifestURL, documentURL);
+    return parser.parseManifest(source, manifestURL, documentURL);
 }
 
 ApplicationManifestParser::ApplicationManifestParser(RefPtr<Document> document)
@@ -77,48 +55,44 @@ ApplicationManifestParser::ApplicationManifestParser(RefPtr<Document> document)
 {
 }
 
-RefPtr<JSON::Object> ApplicationManifestParser::createJSONObject(const String& text)
+ApplicationManifest ApplicationManifestParser::parseManifest(const String& text, const URL& manifestURL, const URL& documentURL)
 {
+    m_manifestURL = manifestURL;
+
     auto jsonValue = JSON::Value::parseJSON(text);
     if (!jsonValue) {
         logDeveloperWarning("The manifest is not valid JSON data."_s);
-        return nullptr;
+        jsonValue = JSON::Object::create();
     }
 
-    auto jsontObject = jsonValue->asObject();
-    if (!jsontObject) {
+    auto manifest = jsonValue->asObject();
+    if (!manifest) {
         logDeveloperWarning("The manifest is not a JSON value of type \"object\"."_s);
-        return nullptr;
+        manifest = JSON::Object::create();
     }
 
-    return jsontObject;
-}
-
-ApplicationManifest ApplicationManifestParser::parseManifest(const JSON::Object& manifest, const String& text, const URL& manifestURL, const URL& documentURL)
-{
-    m_manifestURL = manifestURL;
     ApplicationManifest parsedManifest;
 
     parsedManifest.rawJSON = text;
     parsedManifest.manifestURL = manifestURL;
-    parsedManifest.startURL = parseStartURL(manifest, documentURL);
-    parsedManifest.display = parseDisplay(manifest);
-    parsedManifest.name = parseName(manifest);
-    parsedManifest.description = parseDescription(manifest);
-    parsedManifest.shortName = parseShortName(manifest);
-    if (auto parsedScope = parseScope(manifest, documentURL, parsedManifest.startURL))
+    parsedManifest.startURL = parseStartURL(*manifest, documentURL);
+    parsedManifest.display = parseDisplay(*manifest);
+    parsedManifest.name = parseName(*manifest);
+    parsedManifest.description = parseDescription(*manifest);
+    parsedManifest.shortName = parseShortName(*manifest);
+    if (auto parsedScope = parseScope(*manifest, documentURL, parsedManifest.startURL))
         parsedManifest.scope = WTFMove(*parsedScope);
     else {
         parsedManifest.scope = URL { parsedManifest.startURL, "./"_s };
         parsedManifest.isDefaultScope = true;
     }
-    parsedManifest.backgroundColor = parseColor(manifest, "background_color"_s);
-    parsedManifest.themeColor = parseColor(manifest, "theme_color"_s);
-    parsedManifest.categories = parseCategories(manifest);
-    parsedManifest.icons = parseIcons(manifest);
-    parsedManifest.shortcuts = parseShortcuts(manifest);
-    parsedManifest.id = parseId(manifest, parsedManifest.startURL);
-    parsedManifest.orientation = parseOrientation(manifest);
+    parsedManifest.backgroundColor = parseColor(*manifest, "background_color"_s);
+    parsedManifest.themeColor = parseColor(*manifest, "theme_color"_s);
+    parsedManifest.categories = parseCategories(*manifest);
+    parsedManifest.icons = parseIcons(*manifest);
+    parsedManifest.shortcuts = parseShortcuts(*manifest);
+    parsedManifest.id = parseId(*manifest, parsedManifest.startURL);
+    parsedManifest.orientation = parseOrientation(*manifest);
 
     if (m_document)
         m_document->processApplicationManifest(parsedManifest);
@@ -449,8 +423,6 @@ URL ApplicationManifestParser::parseId(const JSON::Object& manifest, const URL& 
     if (!protocolHostAndPortAreEqual(idURL, startURL))
         return startURL;
 
-    idURL.removeFragmentIdentifier();
-
     return idURL;
 }
 
@@ -486,8 +458,6 @@ std::optional<URL> ApplicationManifestParser::parseScope(const JSON::Object& man
         logDeveloperWarning("The start URL is not within scope of the provided scope URL."_s);
         return std::nullopt;
     }
-
-    scopeURL.removeQueryAndFragmentIdentifier();
 
     return scopeURL;
 }

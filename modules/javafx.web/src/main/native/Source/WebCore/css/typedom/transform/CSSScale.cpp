@@ -39,11 +39,11 @@
 #include "CSSUnits.h"
 #include "DOMMatrix.h"
 #include "ExceptionOr.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CSSScale);
+WTF_MAKE_ISO_ALLOCATED_IMPL(CSSScale);
 
 static bool isValidScaleCoord(const CSSNumericValue& coord)
 {
@@ -146,12 +146,12 @@ void CSSScale::setZ(CSSNumberish z)
 void CSSScale::serialize(StringBuilder& builder) const
 {
     // https://drafts.css-houdini.org/css-typed-om/#serialize-a-cssscale
-    builder.append(is2D() ? "scale("_s : "scale3d("_s);
+    builder.append(is2D() ? "scale(" : "scale3d(");
     m_x->serialize(builder);
-    builder.append(", "_s);
+    builder.append(", ");
     m_y->serialize(builder);
     if (!is2D()) {
-        builder.append(", "_s);
+        builder.append(", ");
         m_z->serialize(builder);
     }
     builder.append(')');

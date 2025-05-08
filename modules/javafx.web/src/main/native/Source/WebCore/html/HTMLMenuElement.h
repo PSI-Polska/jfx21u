@@ -27,8 +27,7 @@
 namespace WebCore {
 
 class HTMLMenuElement final : public HTMLElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLMenuElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLMenuElement);
+    WTF_MAKE_ISO_ALLOCATED(HTMLMenuElement);
 public:
     static Ref<HTMLMenuElement> create(const QualifiedName&, Document&);
 

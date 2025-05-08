@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 #include "EventLoop.h"
 #include "JSDOMExceptionHandling.h"
 #include "JSDOMPromise.h"
+#include "JSLocalDOMWindow.h"
 #include "LocalDOMWindow.h"
 #include "ScriptController.h"
 #include "ScriptDisallowedScope.h"
@@ -145,12 +146,6 @@ void DeferredPromise::reject(std::nullptr_t, RejectAsHandled rejectAsHandled)
 
 void DeferredPromise::reject(Exception exception, RejectAsHandled rejectAsHandled)
 {
-    JSC::JSValue exceptionObject;
-    reject(exception, rejectAsHandled, exceptionObject);
-}
-
-void DeferredPromise::reject(Exception exception, RejectAsHandled rejectAsHandled, JSC::JSValue& exceptionObject)
-{
     if (shouldIgnoreRequestToFulfill())
         return;
 
@@ -173,15 +168,13 @@ void DeferredPromise::reject(Exception exception, RejectAsHandled rejectAsHandle
         return;
     }
 
-    if (exceptionObject.isEmpty()) {
-        exceptionObject = createDOMException(lexicalGlobalObject, WTFMove(exception));
+    auto error = createDOMException(lexicalGlobalObject, WTFMove(exception));
     if (UNLIKELY(scope.exception())) {
         handleUncaughtException(scope, lexicalGlobalObject);
         return;
     }
-    }
 
-    reject(lexicalGlobalObject, exceptionObject, rejectAsHandled);
+    reject(lexicalGlobalObject, error, rejectAsHandled);
     if (UNLIKELY(scope.exception()))
         handleUncaughtException(scope, lexicalGlobalObject);
 }
@@ -219,6 +212,18 @@ void DeferredPromise::reject(ExceptionCode ec, const String& message, RejectAsHa
     reject(lexicalGlobalObject, error, rejectAsHandled);
     if (UNLIKELY(scope.exception()))
         handleUncaughtException(scope, lexicalGlobalObject);
+}
+
+void DeferredPromise::reject(const JSC::PrivateName& privateName, RejectAsHandled rejectAsHandled)
+{
+    if (shouldIgnoreRequestToFulfill())
+        return;
+
+    ASSERT(deferred());
+    ASSERT(m_globalObject);
+    JSC::JSGlobalObject* lexicalGlobalObject = m_globalObject.get();
+    JSC::JSLockHolder locker(lexicalGlobalObject);
+    reject(*lexicalGlobalObject, JSC::Symbol::create(lexicalGlobalObject->vm(), privateName.uid()), rejectAsHandled);
 }
 
 void rejectPromiseWithExceptionIfAny(JSC::JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject, JSPromise& promise, JSC::CatchScope& catchScope)
@@ -282,23 +287,9 @@ void fulfillPromiseWithArrayBuffer(Ref<DeferredPromise>&& promise, ArrayBuffer* 
     promise->resolve<IDLInterface<ArrayBuffer>>(*arrayBuffer);
 }
 
-void fulfillPromiseWithArrayBufferFromSpan(Ref<DeferredPromise>&& promise, std::span<const uint8_t> data)
+void fulfillPromiseWithArrayBuffer(Ref<DeferredPromise>&& promise, const void* data, size_t length)
 {
-    fulfillPromiseWithArrayBuffer(WTFMove(promise), ArrayBuffer::tryCreate(data).get());
-}
-
-void fulfillPromiseWithUint8Array(Ref<DeferredPromise>&& promise, Uint8Array* bytes)
-{
-    if (!bytes) {
-        promise->reject<IDLAny>(createOutOfMemoryError(promise->globalObject()));
-        return;
-    }
-    promise->resolve<IDLInterface<Uint8Array>>(*bytes);
-}
-
-void fulfillPromiseWithUint8ArrayFromSpan(Ref<DeferredPromise>&& promise, std::span<const uint8_t> data)
-{
-    fulfillPromiseWithUint8Array(WTFMove(promise), Uint8Array::tryCreate(data).get());
+    fulfillPromiseWithArrayBuffer(WTFMove(promise), ArrayBuffer::tryCreate(data, length).get());
 }
 
 bool DeferredPromise::handleTerminationExceptionIfNeeded(CatchScope& scope, JSDOMGlobalObject& lexicalGlobalObject)

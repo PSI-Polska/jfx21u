@@ -60,8 +60,7 @@ void determineMallocFallbackState()
 } // anonymous namespace
 
 MallocResult tryMalloc(
-    size_t size,
-    [[maybe_unused]] CompactAllocationMode mode
+    size_t size
 #if BENABLE_MALLOC_HEAP_BREAKDOWN
     , malloc_zone_t* zone
 #endif
@@ -76,7 +75,7 @@ MallocResult tryMalloc(
 #if BENABLE_MALLOC_HEAP_BREAKDOWN
             return malloc_zone_malloc(zone, size);
 #else
-            return api::tryMalloc(size, mode);
+            return api::tryMalloc(size);
 #endif
         case MallocFallbackState::DoNotFallBack:
             return MallocResult();

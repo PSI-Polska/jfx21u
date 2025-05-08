@@ -65,10 +65,6 @@ public:
     static ExceptionOr<Ref<WebTransport>> create(ScriptExecutionContext&, String&&, WebTransportOptions&&);
     ~WebTransport();
 
-    // ActiveDOMObject.
-    void ref() const final { WebTransportSessionClient::ref(); }
-    void deref() const final { WebTransportSessionClient::deref(); }
-
     void getStats(Ref<DeferredPromise>&&);
     DOMPromise& ready();
     WebTransportReliabilityMode reliability();
@@ -90,7 +86,7 @@ private:
     void initializeOverHTTP(SocketProvider&, ScriptExecutionContext&, URL&&, bool dedicated, bool http3Only, WebTransportCongestionControl, Vector<WebTransportHash>&&);
     void cleanup(Ref<DOMException>&&, std::optional<WebTransportCloseInfo>&&);
 
-    // ActiveDOMObject.
+    const char* activeDOMObjectName() const final;
     bool virtualHasPendingActivity() const final;
 
     void receiveDatagram(std::span<const uint8_t>) final;

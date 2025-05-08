@@ -23,7 +23,6 @@
 #include <wtf/HashMap.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/Vector.h>
-#include <wtf/WeakRef.h>
 
 namespace WebCore {
 
@@ -49,8 +48,8 @@ public:
     void clear();
     static float emptyValue();
 
-    RenderSVGInlineText& context();
-    const RenderSVGInlineText& context() const;
+    RenderSVGInlineText& context() { return m_context; }
+    const RenderSVGInlineText& context() const { return m_context; }
 
     SVGCharacterDataMap& characterDataMap() { return m_characterDataMap; }
     const SVGCharacterDataMap& characterDataMap() const { return m_characterDataMap; }
@@ -58,7 +57,7 @@ public:
     Vector<SVGTextMetrics>& textMetricsValues() { return m_textMetricsValues; }
 
 private:
-    SingleThreadWeakRef<RenderSVGInlineText> m_context;
+    RenderSVGInlineText& m_context;
     SVGCharacterDataMap m_characterDataMap;
     Vector<SVGTextMetrics> m_textMetricsValues;
 };

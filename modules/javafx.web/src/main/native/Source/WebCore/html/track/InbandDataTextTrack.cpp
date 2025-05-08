@@ -32,46 +32,39 @@
 #include "DataCue.h"
 #include "InbandTextTrackPrivate.h"
 #include "TextTrackList.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(InbandDataTextTrack);
+WTF_MAKE_ISO_ALLOCATED_IMPL(InbandDataTextTrack);
 
-inline InbandDataTextTrack::InbandDataTextTrack(ScriptExecutionContext& context, InbandTextTrackPrivate& trackPrivate)
-    : InbandTextTrack(context, trackPrivate)
+inline InbandDataTextTrack::InbandDataTextTrack(Document& document, InbandTextTrackPrivate& trackPrivate)
+    : InbandTextTrack(document, trackPrivate)
 {
 }
 
-Ref<InbandDataTextTrack> InbandDataTextTrack::create(ScriptExecutionContext& context, InbandTextTrackPrivate& trackPrivate)
+Ref<InbandDataTextTrack> InbandDataTextTrack::create(Document& document, InbandTextTrackPrivate& trackPrivate)
 {
-    auto textTrack = adoptRef(*new InbandDataTextTrack(context, trackPrivate));
+    auto textTrack = adoptRef(*new InbandDataTextTrack(document, trackPrivate));
     textTrack->suspendIfNeeded();
     return textTrack;
 }
 
 InbandDataTextTrack::~InbandDataTextTrack() = default;
 
-void InbandDataTextTrack::addDataCue(const MediaTime& start, const MediaTime& end, std::span<const uint8_t> data)
+void InbandDataTextTrack::addDataCue(const MediaTime& start, const MediaTime& end, const void* data, unsigned length)
 {
-    // FIXME: handle datacue creation on worker.
-    if (RefPtr document = dynamicDowncast<Document>(scriptExecutionContext()))
-        addCue(DataCue::create(*document, start, end, data));
+    addCue(DataCue::create(document(), start, end, data, length));
 }
 
 #if ENABLE(DATACUE_VALUE)
 
 void InbandDataTextTrack::addDataCue(const MediaTime& start, const MediaTime& end, Ref<SerializedPlatformDataCue>&& platformValue, const String& type)
 {
-    // FIXME: handle datacue creation on worker.
-    RefPtr document = dynamicDowncast<Document>(scriptExecutionContext());
-    if (!document)
-        return;
-
     if (findIncompleteCue(platformValue))
         return;
 
-    auto cue = DataCue::create(*document, start, end, platformValue.copyRef(), type);
+    auto cue = DataCue::create(document(), start, end, platformValue.copyRef(), type);
     if (hasCue(cue, TextTrackCue::IgnoreDuration)) {
         INFO_LOG(LOGIDENTIFIER, "ignoring already added cue: ", cue.get());
         return;

@@ -168,9 +168,9 @@ constexpr FontSelectionValue italicThreshold()
     return FontSelectionValue { 14 };
 }
 
-constexpr bool isItalic(std::optional<FontSelectionValue> slope)
+constexpr bool isItalic(std::optional<FontSelectionValue> fontWeight)
 {
-    return slope && slope.value() >= italicThreshold();
+    return fontWeight && fontWeight.value() >= italicThreshold();
 }
 
 constexpr FontSelectionValue normalItalicValue()

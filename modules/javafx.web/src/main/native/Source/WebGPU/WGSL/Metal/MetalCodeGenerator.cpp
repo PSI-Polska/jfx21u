@@ -28,13 +28,14 @@
 
 #include "AST.h"
 #include "MetalFunctionWriter.h"
-#include <notify.h>
 #include <wtf/DataLog.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WGSL {
 
 namespace Metal {
+
+static constexpr bool dumpMetalCode = true;
 
 static StringView metalCodePrologue()
 {
@@ -50,27 +51,18 @@ static StringView metalCodePrologue()
 
 static void dumpMetalCodeIfNeeded(StringBuilder& stringBuilder)
 {
-    static bool dumpMetalCode = false;
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
-        int dumpMetalCodeToken;
-        notify_register_dispatch("com.apple.WebKit.WebGPU.TogglePrintMetalCode", &dumpMetalCodeToken, dispatch_get_main_queue(), ^(int) {
-            dumpMetalCode = !dumpMetalCode;
-        });
-    });
-
     if (dumpMetalCode) {
         dataLogLn("Generated Metal code:");
         dataLogLn(stringBuilder.toString());
     }
 }
 
-String generateMetalCode(ShaderModule& shaderModule, PrepareResult& prepareResult, const HashMap<String, ConstantValue>& constantValues)
+String generateMetalCode(const CallGraph& callGraph, const HashMap<String, ConstantValue>& constantValues)
 {
     StringBuilder stringBuilder;
     stringBuilder.append(metalCodePrologue());
 
-    Metal::emitMetalFunctions(stringBuilder, shaderModule, prepareResult, constantValues);
+    Metal::emitMetalFunctions(stringBuilder, callGraph, constantValues);
 
     dumpMetalCodeIfNeeded(stringBuilder);
 

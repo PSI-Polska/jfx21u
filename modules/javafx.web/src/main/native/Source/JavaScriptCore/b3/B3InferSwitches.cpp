@@ -327,7 +327,7 @@ private:
 
 bool inferSwitches(Procedure& proc)
 {
-    PhaseScope phaseScope(proc, "inferSwitches"_s);
+    PhaseScope phaseScope(proc, "inferSwitches");
     InferSwitches inferSwitches(proc);
     return inferSwitches.run();
 }

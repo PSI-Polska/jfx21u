@@ -42,7 +42,7 @@ class WebKitMediaKeyError;
 class WebKitMediaKeys;
 
 class WebKitMediaKeySession final : public RefCounted<WebKitMediaKeySession>, public EventTarget, public ActiveDOMObject, private LegacyCDMSessionClient {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebKitMediaKeySession);
+    WTF_MAKE_ISO_ALLOCATED(WebKitMediaKeySession);
 public:
     static Ref<WebKitMediaKeySession> create(Document&, WebKitMediaKeys&, const String& keySystem);
     ~WebKitMediaKeySession();
@@ -60,9 +60,8 @@ public:
     void generateKeyRequest(const String& mimeType, Ref<Uint8Array>&& initData);
     RefPtr<ArrayBuffer> cachedKeyForKeyId(const String& keyId) const;
 
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
+    using RefCounted::ref;
+    using RefCounted::deref;
 
 private:
     WebKitMediaKeySession(Document&, WebKitMediaKeys&, const String& keySystem);
@@ -78,15 +77,16 @@ private:
 
     // ActiveDOMObject.
     void stop() final;
+    const char* activeDOMObjectName() const final;
     bool virtualHasPendingActivity() const final;
 
-    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::WebKitMediaKeySession; }
+    EventTargetInterface eventTargetInterface() const final { return WebKitMediaKeySessionEventTargetInterfaceType; }
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger; }
     const void* logIdentifier() const final { return m_logIdentifier; }
-    ASCIILiteral logClassName() const { return "WebKitMediaKeySession"_s; }
+    const char* logClassName() const { return "WebKitMediaKeySession"; }
     WTFLogChannel& logChannel() const;
 
     Ref<Logger> m_logger;

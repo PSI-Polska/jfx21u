@@ -61,7 +61,8 @@ void RuntimeMethod::finishCreation(VM& vm, const String& ident)
 
 JSC_DEFINE_CUSTOM_GETTER(methodLengthGetter, (JSGlobalObject* exec, EncodedJSValue thisValue, PropertyName))
 {
-    auto scope = DECLARE_THROW_SCOPE(exec->vm());
+    VM& vm = exec->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
 
     RuntimeMethod* thisObject = jsDynamicCast<RuntimeMethod*>(JSValue::decode(thisValue));
     if (!thisObject)
@@ -71,9 +72,9 @@ JSC_DEFINE_CUSTOM_GETTER(methodLengthGetter, (JSGlobalObject* exec, EncodedJSVal
 
 bool RuntimeMethod::getOwnPropertySlot(JSObject* object, JSGlobalObject* exec, PropertyName propertyName, PropertySlot &slot)
 {
-    Ref vm = exec->vm();
+    VM& vm = exec->vm();
     RuntimeMethod* thisObject = jsCast<RuntimeMethod*>(object);
-    if (propertyName == vm->propertyNames->length) {
+    if (propertyName == vm.propertyNames->length) {
         slot.setCacheableCustom(thisObject, PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum, methodLengthGetter);
         return true;
     }
@@ -88,7 +89,8 @@ GCClient::IsoSubspace* RuntimeMethod::subspaceForImpl(VM& vm)
 
 JSC_DEFINE_HOST_FUNCTION(callRuntimeMethod, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    auto scope = DECLARE_THROW_SCOPE(globalObject->vm());
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
 
     RuntimeMethod* method = static_cast<RuntimeMethod*>(callFrame->jsCallee());
 

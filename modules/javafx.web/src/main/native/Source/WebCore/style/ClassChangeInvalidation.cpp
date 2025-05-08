@@ -42,23 +42,23 @@ struct ClassChange {
     ClassChangeType type;
 };
 
-constexpr size_t classChangeVectorInlineCapacity = 4;
-using ClassChangeVector = Vector<ClassChange, classChangeVectorInlineCapacity>;
+using ClassChangeVector = Vector<ClassChange, 4>;
 
 static ClassChangeVector collectClasses(const SpaceSplitString& classes, ClassChangeType changeType)
 {
-    return WTF::map<classChangeVectorInlineCapacity>(classes, [changeType](auto& className) {
-        return ClassChange { className.impl(), changeType };
+    return ClassChangeVector(classes.size(), [&](size_t i) {
+        return ClassChange { classes[i].impl(), changeType };
     });
 }
 
 static ClassChangeVector computeClassChanges(const SpaceSplitString& oldClasses, const SpaceSplitString& newClasses)
 {
     unsigned oldSize = oldClasses.size();
+    unsigned newSize = newClasses.size();
 
     if (!oldSize)
         return collectClasses(newClasses, ClassChangeType::Add);
-    if (newClasses.isEmpty())
+    if (!newSize)
         return collectClasses(oldClasses, ClassChangeType::Remove);
 
     ClassChangeVector changedClasses;
@@ -66,17 +66,17 @@ static ClassChangeVector computeClassChanges(const SpaceSplitString& oldClasses,
     BitVector remainingClassBits;
     remainingClassBits.ensureSize(oldSize);
     // Class vectors tend to be very short. This is faster than using a hash table.
-    for (auto& newClass : newClasses) {
+    for (unsigned i = 0; i < newSize; ++i) {
         bool foundFromBoth = false;
-        for (unsigned i = 0; i < oldSize; ++i) {
-            if (newClass == oldClasses[i]) {
-                remainingClassBits.quickSet(i);
+        for (unsigned j = 0; j < oldSize; ++j) {
+            if (newClasses[i] == oldClasses[j]) {
+                remainingClassBits.quickSet(j);
                 foundFromBoth = true;
             }
         }
         if (foundFromBoth)
             continue;
-        changedClasses.append({ newClass.impl(), ClassChangeType::Add });
+        changedClasses.append({ newClasses[i].impl(), ClassChangeType::Add });
     }
     for (unsigned i = 0; i < oldSize; ++i) {
         // If the bit is not set the corresponding class has been removed.

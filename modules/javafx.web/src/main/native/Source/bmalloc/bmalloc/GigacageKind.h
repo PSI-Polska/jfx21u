@@ -29,6 +29,7 @@ namespace Gigacage {
 
 enum Kind {
     Primitive,
+    JSValue,
     NumberOfKinds
 };
 

@@ -31,9 +31,8 @@
 #include <wtf/ProcessID.h>
 #include <wtf/ProcessPrivilege.h>
 #include <wtf/UUID.h>
-#include <wtf/text/MakeString.h>
+#include <wtf/text/StringConcatenateNumbers.h>
 #include <wtf/NeverDestroyed.h>
-
 static std::unique_ptr<WebCore::NetworkStorageSession>& defaultNetworkStorageSession()
 {
     ASSERT(isMainThread());

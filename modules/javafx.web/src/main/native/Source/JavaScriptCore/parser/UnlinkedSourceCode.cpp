@@ -33,7 +33,7 @@ namespace JSC {
 CString UnlinkedSourceCode::toUTF8() const
 {
     if (!m_provider)
-        return ""_span;
+        return CString("", 0);
 
     return m_provider->source().substring(m_startOffset, m_endOffset - m_startOffset).utf8();
 }

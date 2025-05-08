@@ -45,15 +45,6 @@
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
-class CachedResource;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::CachedResource> : std::true_type { };
-}
-
-namespace WebCore {
 
 class CachedResourceClient;
 class CachedResourceHandleBase;
@@ -258,7 +249,7 @@ public:
 
     bool isExpired() const;
 
-    void cancelLoad(LoadWillContinueInAnotherProcess = LoadWillContinueInAnotherProcess::No);
+    void cancelLoad();
     bool wasCanceled() const;
     bool errorOccurred() const { return m_status == LoadError || m_status == DecodeError; }
     bool loadFailedOrCanceled() const;
@@ -344,7 +335,7 @@ private:
 
     void decodedDataDeletionTimerFired();
 
-    virtual void checkNotify(const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess = LoadWillContinueInAnotherProcess::No);
+    virtual void checkNotify(const NetworkLoadMetrics&);
     virtual bool mayTryReplaceEncodedData() const { return false; }
 
     Seconds freshnessLifetime(const ResourceResponse&) const;

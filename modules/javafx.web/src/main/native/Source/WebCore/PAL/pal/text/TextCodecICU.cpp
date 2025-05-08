@@ -211,7 +211,7 @@ private:
     UConverterToUCallback m_savedAction { nullptr };
 };
 
-String TextCodecICU::decode(std::span<const uint8_t> bytes, bool flush, bool stopOnError, bool& sawError)
+String TextCodecICU::decode(const char* bytes, size_t length, bool flush, bool stopOnError, bool& sawError)
 {
     // Get a converter for the passed-in encoding.
     if (!m_converter) {
@@ -229,14 +229,14 @@ String TextCodecICU::decode(std::span<const uint8_t> bytes, bool flush, bool sto
 
     UChar buffer[ConversionBufferSize];
     UChar* bufferLimit = buffer + ConversionBufferSize;
-    const char* source = byteCast<char>(bytes.data());
-    const char* sourceLimit = source + bytes.size();
+    const char* source = reinterpret_cast<const char*>(bytes);
+    const char* sourceLimit = source + length;
     int32_t* offsets = nullptr;
     UErrorCode err = U_ZERO_ERROR;
 
     do {
-        size_t ucharsDecoded = decodeToBuffer(buffer, bufferLimit, source, sourceLimit, offsets, flush, err);
-        result.append(std::span { buffer, ucharsDecoded });
+        int ucharsDecoded = decodeToBuffer(buffer, bufferLimit, source, sourceLimit, offsets, flush, err);
+        result.appendCharacters(buffer, ucharsDecoded);
     } while (needsToGrowToProduceBuffer(err));
 
     if (U_FAILURE(err)) {
@@ -313,7 +313,7 @@ Vector<uint8_t> TextCodecICU::encode(StringView string, UnencodableHandling hand
         char* targetLimit = target + ConversionBufferSize;
         error = U_ZERO_ERROR;
         ucnv_fromUnicode(m_converter.get(), &target, targetLimit, &source, sourceLimit, 0, true, &error);
-        result.append(std::span(byteCast<uint8_t>(&buffer[0]), target - buffer));
+        result.append(reinterpret_cast<uint8_t*>(buffer), target - buffer);
     } while (needsToGrowToProduceBuffer(error));
     return result;
 }

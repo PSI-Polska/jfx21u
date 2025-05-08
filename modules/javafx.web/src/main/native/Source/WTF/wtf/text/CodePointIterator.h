@@ -35,57 +35,57 @@ template<typename CharacterType>
 class CodePointIterator {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    ALWAYS_INLINE CodePointIterator() = default;
-    ALWAYS_INLINE CodePointIterator(std::span<const CharacterType> data)
-        : m_data(data)
+    ALWAYS_INLINE CodePointIterator() { }
+    ALWAYS_INLINE CodePointIterator(const CharacterType* begin, const CharacterType* end)
+        : m_begin(begin)
+        , m_end(end)
     {
     }
 
     ALWAYS_INLINE CodePointIterator(const CodePointIterator& begin, const CodePointIterator& end)
-        : CodePointIterator({ begin.m_data.data(), end.m_data.data() })
+        : CodePointIterator(begin.m_begin, end.m_begin)
     {
-        ASSERT(end.m_data.data() >= begin.m_data.data());
+        ASSERT(end.m_begin >= begin.m_begin);
     }
 
     ALWAYS_INLINE char32_t operator*() const;
     ALWAYS_INLINE CodePointIterator& operator++();
 
-    ALWAYS_INLINE friend bool operator==(const CodePointIterator& a, const CodePointIterator& b)
-    {
-        return a.m_data.data() == b.m_data.data() && a.m_data.size() == b.m_data.size();
-    }
+    ALWAYS_INLINE friend bool operator==(const CodePointIterator&, const CodePointIterator&) = default;
 
     ALWAYS_INLINE bool atEnd() const
     {
-        return m_data.empty();
+        ASSERT(m_begin <= m_end);
+        return m_begin >= m_end;
     }
 
     ALWAYS_INLINE size_t codeUnitsSince(const CharacterType* reference) const
     {
-        ASSERT(m_data.data() >= reference);
-        return m_data.data() - reference;
+        ASSERT(m_begin >= reference);
+        return m_begin - reference;
     }
 
     ALWAYS_INLINE size_t codeUnitsSince(const CodePointIterator& other) const
     {
-        return codeUnitsSince(other.m_data.data());
+        return codeUnitsSince(other.m_begin);
     }
 
 private:
-    std::span<const CharacterType> m_data;
+    const CharacterType* m_begin { nullptr };
+    const CharacterType* m_end { nullptr };
 };
 
 template<>
 ALWAYS_INLINE char32_t CodePointIterator<LChar>::operator*() const
 {
     ASSERT(!atEnd());
-    return m_data.front();
+    return *m_begin;
 }
 
 template<>
 ALWAYS_INLINE auto CodePointIterator<LChar>::operator++() -> CodePointIterator&
 {
-    m_data = m_data.subspan(1);
+    m_begin++;
     return *this;
 }
 
@@ -94,7 +94,7 @@ ALWAYS_INLINE char32_t CodePointIterator<UChar>::operator*() const
 {
     ASSERT(!atEnd());
     char32_t c;
-    U16_GET(m_data, 0, 0, m_data.size(), c);
+    U16_GET(m_begin, 0, 0, m_end - m_begin, c);
     return c;
 }
 
@@ -102,12 +102,10 @@ template<>
 ALWAYS_INLINE auto CodePointIterator<UChar>::operator++() -> CodePointIterator&
 {
     unsigned i = 0;
-    size_t length = m_data.size();
-    U16_FWD_1(m_data, i, length);
-    m_data = m_data.subspan(i);
+    size_t length = m_end - m_begin;
+    U16_FWD_1(m_begin, i, length);
+    m_begin += i;
     return *this;
 }
-
-template<typename CharacterType> CodePointIterator(std::span<const CharacterType>) -> CodePointIterator<CharacterType>;
 
 } // namespace WTF

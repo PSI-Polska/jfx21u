@@ -38,12 +38,12 @@ class Procedure;
 class PhaseScope {
     WTF_MAKE_NONCOPYABLE(PhaseScope);
 public:
-    PhaseScope(Procedure&, ASCIILiteral name);
+    PhaseScope(Procedure&, const char* name);
     ~PhaseScope(); // this does validation
 
 private:
     Procedure& m_procedure;
-    ASCIILiteral m_name;
+    const char* m_name;
     CompilerTimingScope m_timingScope;
     CString m_dumpBefore;
 };

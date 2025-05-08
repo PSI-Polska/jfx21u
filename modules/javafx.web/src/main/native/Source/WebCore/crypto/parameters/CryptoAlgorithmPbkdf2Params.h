@@ -48,7 +48,7 @@ public:
         if (!m_saltVector.isEmpty() || !salt.length())
             return m_saltVector;
 
-        m_saltVector.append(salt.span());
+        m_saltVector.append(salt.data(), salt.length());
         return m_saltVector;
     }
 

@@ -121,10 +121,10 @@ RefPtr<FilterImage> Filter::apply(ImageBuffer* sourceImage, const FloatRect& sou
     return result;
 }
 
-FilterStyleVector Filter::createFilterStyles(GraphicsContext& context, const FloatRect& sourceImageRect) const
+FilterStyleVector Filter::createFilterStyles(const FloatRect& sourceImageRect) const
 {
     auto input = FilterStyle { std::nullopt, m_filterRegion, sourceImageRect };
-    auto result = createFilterStyles(context, input);
+    auto result = createFilterStyles(input);
     if (result.isEmpty())
         return { };
 

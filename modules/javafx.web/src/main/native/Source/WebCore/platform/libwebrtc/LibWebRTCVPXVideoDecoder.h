@@ -42,9 +42,7 @@ public:
         VP8,
         VP9,
         VP9_P2,
-#if ENABLE(AV1)
         AV1
-#endif
     };
     static void create(Type, const Config&, CreateCallback&&, OutputCallback&&, PostTaskCallback&&);
 

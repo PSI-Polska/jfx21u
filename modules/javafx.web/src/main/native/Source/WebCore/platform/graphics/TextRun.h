@@ -40,9 +40,8 @@ class Font;
 
 struct GlyphData;
 
-class TextRun final : public CanMakeCheckedPtr<TextRun> {
+class TextRun : public CanMakeCheckedPtr {
     WTF_MAKE_FAST_ALLOCATED;
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(TextRun);
     friend void add(Hasher&, const TextRun&);
 public:
     explicit TextRun(const String& text, float xpos = 0, float expansion = 0, ExpansionBehavior expansionBehavior = ExpansionBehavior::defaultBehavior(), TextDirection direction = TextDirection::LTR, bool directionalOverride = false, bool characterScanForCodePath = true)
@@ -110,21 +109,24 @@ public:
         auto result { *this };
 
         if (is8Bit())
-            result.setText(subspan8(startOffset).first(length));
+            result.setText(data8(startOffset), length);
         else
-            result.setText(subspan16(startOffset).first(length));
+            result.setText(data16(startOffset), length);
         return result;
     }
 
     UChar operator[](unsigned i) const { RELEASE_ASSERT(i < m_text.length()); return m_text[i]; }
-    std::span<const LChar> span8() const { ASSERT(is8Bit()); return m_text.span8(); }
-    std::span<const UChar> span16() const { ASSERT(!is8Bit()); return m_text.span16(); }
-    std::span<const LChar> subspan8(unsigned i) const { return span8().subspan(i); }
-    std::span<const UChar> subspan16(unsigned i) const { return span16().subspan(i); }
+    const LChar* data8(unsigned i) const { ASSERT_WITH_SECURITY_IMPLICATION(i < m_text.length()); ASSERT(is8Bit()); return &m_text.characters8()[i]; }
+    const UChar* data16(unsigned i) const { ASSERT_WITH_SECURITY_IMPLICATION(i < m_text.length()); ASSERT(!is8Bit()); return &m_text.characters16()[i]; }
+
+    const LChar* characters8() const { ASSERT(is8Bit()); return m_text.characters8(); }
+    const UChar* characters16() const { ASSERT(!is8Bit()); return m_text.characters16(); }
 
     bool is8Bit() const { return m_text.is8Bit(); }
     unsigned length() const { return m_text.length(); }
 
+    void setText(const LChar* text, unsigned length) { setText({ text, length }); }
+    void setText(const UChar* text, unsigned length) { setText({ text, length }); }
     void setText(StringView text) { ASSERT(!text.isNull()); m_text = text.toStringWithoutCopying(); }
 
     float horizontalGlyphStretch() const { return m_horizontalGlyphStretch; }
@@ -185,12 +187,10 @@ inline void TextRun::setTabSize(bool allow, const TabSize& size)
 inline TextRun TextRun::isolatedCopy() const
 {
     TextRun clone = *this;
-    // We need to ensure a deep copy here, calling `clone.m_text.isolatedCopy()`
-    // is insufficient (rdar://125823370).
     if (clone.m_text.is8Bit())
-        clone.m_text = clone.m_text.span8();
+        clone.m_text = String(clone.m_text.characters8(), clone.m_text.length());
     else
-        clone.m_text = clone.m_text.span16();
+        clone.m_text = String(clone.m_text.characters16(), clone.m_text.length());
     return clone;
 }
 

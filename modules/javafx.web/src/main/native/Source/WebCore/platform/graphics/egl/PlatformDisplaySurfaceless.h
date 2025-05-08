@@ -25,6 +25,7 @@
 
 #pragma once
 
+#if USE(EGL)
 #include "PlatformDisplay.h"
 
 namespace WebCore {
@@ -35,9 +36,11 @@ public:
 
     virtual ~PlatformDisplaySurfaceless();
 private:
-    explicit PlatformDisplaySurfaceless(std::unique_ptr<GLDisplay>&&);
+    PlatformDisplaySurfaceless();
 
     Type type() const override { return PlatformDisplay::Type::Surfaceless; }
 };
 
 } // namespace WebCore
+
+#endif // USE(EGL)

@@ -44,7 +44,7 @@ class PhantomInsertionPhase : public Phase {
     static constexpr bool verbose = false;
 public:
     PhantomInsertionPhase(Graph& graph)
-        : Phase(graph, "phantom insertion"_s)
+        : Phase(graph, "phantom insertion")
         , m_insertionSet(graph)
         , m_values(OperandsLike, graph.block(0)->variablesAtHead)
     {

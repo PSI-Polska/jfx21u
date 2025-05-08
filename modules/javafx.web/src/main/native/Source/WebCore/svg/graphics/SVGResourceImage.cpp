@@ -29,20 +29,8 @@
 
 #include "LegacyRenderSVGResourceMasker.h"
 #include "ReferencedSVGResources.h"
-#include "RenderSVGResourceMasker.h"
 
 namespace WebCore {
-
-Ref<SVGResourceImage> SVGResourceImage::create(RenderSVGResourceContainer& renderResource, const URL& reresolvedURL)
-{
-    return adoptRef(*new SVGResourceImage(renderResource, reresolvedURL));
-}
-
-SVGResourceImage::SVGResourceImage(RenderSVGResourceContainer& renderResource, const URL& reresolvedURL)
-    : m_renderResource(renderResource)
-    , m_reresolvedURL(reresolvedURL)
-{
-}
 
 Ref<SVGResourceImage> SVGResourceImage::create(LegacyRenderSVGResourceContainer& renderResource, const URL& reresolvedURL)
 {
@@ -50,18 +38,14 @@ Ref<SVGResourceImage> SVGResourceImage::create(LegacyRenderSVGResourceContainer&
 }
 
 SVGResourceImage::SVGResourceImage(LegacyRenderSVGResourceContainer& renderResource, const URL& reresolvedURL)
-    : m_legacyRenderResource(renderResource)
+    : m_renderResource(renderResource)
     , m_reresolvedURL(reresolvedURL)
 {
 }
 
 ImageDrawResult SVGResourceImage::draw(GraphicsContext& context, const FloatRect& destinationRect, const FloatRect& sourceRect, ImagePaintingOptions options)
 {
-    if (CheckedPtr masker = dynamicDowncast<RenderSVGResourceMasker>(m_renderResource.get())) {
-        if (masker->drawContentIntoContext(context, destinationRect, sourceRect, options))
-            return ImageDrawResult::DidDraw;
-    }
-    if (CheckedPtr masker = dynamicDowncast<LegacyRenderSVGResourceMasker>(m_legacyRenderResource.get())) {
+    if (auto* masker = dynamicDowncast<LegacyRenderSVGResourceMasker>(m_renderResource.get())) {
         if (masker->drawContentIntoContext(context, destinationRect, sourceRect, options))
             return ImageDrawResult::DidDraw;
     }
@@ -71,7 +55,7 @@ ImageDrawResult SVGResourceImage::draw(GraphicsContext& context, const FloatRect
 
 void SVGResourceImage::drawPattern(GraphicsContext& context, const FloatRect& destinationRect, const FloatRect& sourceRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options)
 {
-    RefPtr imageBuffer = context.createImageBuffer(size());
+    auto imageBuffer = context.createImageBuffer(size());
     if (!imageBuffer)
         return;
 

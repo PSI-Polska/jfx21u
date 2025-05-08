@@ -69,7 +69,7 @@ protected:
     RealtimeIncomingAudioSource(rtc::scoped_refptr<webrtc::AudioTrackInterface>&&, String&&);
 
 #if !RELEASE_LOG_DISABLED
-    ASCIILiteral logClassName() const final { return "RealtimeIncomingAudioSource"_s; }
+    const char* logClassName() const final { return "RealtimeIncomingAudioSource"; }
 #endif
 
     // RealtimeMediaSource API

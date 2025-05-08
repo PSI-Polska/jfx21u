@@ -45,7 +45,7 @@ void EventContext::handleLocalEvents(Event& event, EventInvokePhase phase) const
     event.setCurrentTarget(m_currentTarget.copyRef(), m_currentTargetIsInShadowTree);
 
     if (m_relatedTargetIsSet) {
-        ASSERT(!m_relatedTarget || isMouseOrFocusEventContext() || isWindowContext());
+        ASSERT(!m_relatedTarget || m_type == Type::MouseOrFocus);
         event.setRelatedTarget(m_relatedTarget.copyRef());
     }
 
@@ -88,9 +88,9 @@ void EventContext::handleLocalEvents(Event& event, EventInvokePhase phase) const
     if (!m_node->hasEventTargetData())
         return;
 
-    if (event.isTrusted() && is<MouseEvent>(event) && !event.isWheelEvent() && !m_node->document().settings().sendMouseEventsToDisabledFormControlsEnabled()) {
+    if (event.isTrusted()) {
         auto* element = dynamicDowncast<Element>(m_node.get());
-        if (element && element->isDisabledFormControl())
+        if (element && element->isDisabledFormControl() && event.isMouseEvent() && !event.isWheelEvent() && !m_node->document().settings().sendMouseEventsToDisabledFormControlsEnabled())
         return;
     }
 

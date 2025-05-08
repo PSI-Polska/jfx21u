@@ -33,7 +33,6 @@ namespace WebCore {
 
 struct CanvasRenderingContext2DSettings {
     bool desynchronized { false };
-    bool willReadFrequently { false };
     PredefinedColorSpace colorSpace { PredefinedColorSpace::SRGB };
     enum class RenderingMode {
         Unaccelerated,

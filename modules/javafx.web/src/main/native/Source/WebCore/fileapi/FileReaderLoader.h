@@ -52,9 +52,7 @@ class ScriptExecutionContext;
 class TextResourceDecoder;
 class ThreadableLoader;
 
-class FileReaderLoader final : public ThreadableLoaderClient {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FileReaderLoader);
+class FileReaderLoader : public ThreadableLoaderClient {
 public:
     enum ReadType {
         ReadAsArrayBuffer,
@@ -74,10 +72,10 @@ public:
     WEBCORE_EXPORT void cancel();
 
     // ThreadableLoaderClient
-    void didReceiveResponse(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const ResourceResponse&) override;
+    void didReceiveResponse(ResourceLoaderIdentifier, const ResourceResponse&) override;
     void didReceiveData(const SharedBuffer&) override;
-    void didFinishLoading(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const NetworkLoadMetrics&) override;
-    void didFail(ScriptExecutionContextIdentifier, const ResourceError&) override;
+    void didFinishLoading(ResourceLoaderIdentifier, const NetworkLoadMetrics&) override;
+    void didFail(const ResourceError&) override;
 
     String stringResult();
     WEBCORE_EXPORT RefPtr<JSC::ArrayBuffer> arrayBufferResult() const;
@@ -98,7 +96,6 @@ private:
     void failed(ExceptionCode);
     void convertToText();
     void convertToDataURL();
-    bool processResponse(const ResourceResponse&);
 
     static ExceptionCode httpStatusCodeToErrorCode(int);
     static ExceptionCode toErrorCode(BlobResourceHandle::Error);

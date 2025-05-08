@@ -33,7 +33,7 @@
 #include "ScriptCallStackFactory.h"
 #include <wtf/SetForScope.h>
 #include <wtf/TZoneMallocInlines.h>
-#include <wtf/text/MakeString.h>
+#include <wtf/text/StringConcatenateNumbers.h>
 
 namespace Inspector {
 
@@ -79,8 +79,11 @@ Protocol::ErrorStringOr<void> InspectorConsoleAgent::enable()
         expiredMessage.addToFrontend(*m_frontendDispatcher, m_injectedScriptManager, false);
     }
 
-    for (auto& message : m_consoleMessages)
-        message->addToFrontend(*m_frontendDispatcher, m_injectedScriptManager, false);
+    Vector<std::unique_ptr<ConsoleMessage>> messages;
+    m_consoleMessages.swap(messages);
+
+    for (size_t i = 0; i < messages.size(); ++i)
+        messages[i]->addToFrontend(*m_frontendDispatcher, m_injectedScriptManager, false);
 
     return { };
 }
@@ -97,13 +100,7 @@ Protocol::ErrorStringOr<void> InspectorConsoleAgent::disable()
 
 Protocol::ErrorStringOr<void> InspectorConsoleAgent::clearMessages()
 {
-    clearMessages(Inspector::Protocol::Console::ClearReason::Frontend);
-    return { };
-}
-
-Protocol::ErrorStringOr<void> InspectorConsoleAgent::setConsoleClearAPIEnabled(bool enabled)
-{
-    m_consoleClearAPIEnabled = enabled;
+    clearMessages(Inspector::Protocol::Console::ClearReason::ConsoleAPI);
     return { };
 }
 
@@ -122,9 +119,6 @@ void InspectorConsoleAgent::mainFrameNavigated()
 
 void InspectorConsoleAgent::clearMessages(Inspector::Protocol::Console::ClearReason reason)
 {
-    if (!m_consoleClearAPIEnabled && reason == Inspector::Protocol::Console::ClearReason::ConsoleAPI)
-        return;
-
     m_consoleMessages.clear();
     m_expiredConsoleMessageCount = 0;
 
@@ -137,7 +131,7 @@ void InspectorConsoleAgent::clearMessages(Inspector::Protocol::Console::ClearRea
 void InspectorConsoleAgent::addMessageToConsole(std::unique_ptr<ConsoleMessage> message)
 {
     if (message->type() == MessageType::Clear)
-        clearMessages(Inspector::Protocol::Console::ClearReason::ConsoleAPI);
+        clearMessages();
 
     addConsoleMessage(WTFMove(message));
 }
@@ -243,13 +237,20 @@ void InspectorConsoleAgent::countReset(JSC::JSGlobalObject* globalObject, const 
     // FIXME: Web Inspector should have a better UI for counters, but for now we just log an updated counter value.
 }
 
+static bool isGroupMessage(MessageType type)
+{
+    return type == MessageType::StartGroup
+        || type == MessageType::StartGroupCollapsed
+        || type == MessageType::EndGroup;
+}
+
 void InspectorConsoleAgent::addConsoleMessage(std::unique_ptr<ConsoleMessage> consoleMessage)
 {
     ASSERT_ARG(consoleMessage, consoleMessage);
 
     ConsoleMessage* previousMessage = m_consoleMessages.isEmpty() ? nullptr : m_consoleMessages.last().get();
 
-    if (previousMessage && previousMessage->isEqual(consoleMessage.get())) {
+    if (previousMessage && !isGroupMessage(previousMessage->type()) && previousMessage->isEqual(consoleMessage.get())) {
         previousMessage->incrementCount();
         if (m_enabled)
             previousMessage->updateRepeatCountInConsole(*m_frontendDispatcher);

@@ -38,7 +38,6 @@
 #include <WebCore/SubresourceLoader.h>
 #include <wtf/MainThread.h>
 #include <wtf/SetForScope.h>
-#include <wtf/TZoneMallocInlines.h>
 #include <wtf/URL.h>
 #include <wtf/text/CString.h>
 
@@ -61,8 +60,6 @@ WebResourceLoadScheduler& webResourceLoadScheduler()
 {
     return static_cast<WebResourceLoadScheduler&>(*platformStrategies()->loaderStrategy());
 }
-
-WTF_MAKE_TZONE_ALLOCATED_IMPL(WebResourceLoadScheduler);
 
 auto WebResourceLoadScheduler::hostForURL(const URL& url, CreateHostPolicy createHostPolicy) -> CheckedPtr<HostInformation>
 {
@@ -323,8 +320,6 @@ void WebResourceLoadScheduler::requestTimerFired()
 {
     servePendingRequests();
 }
-
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(WebResourceLoadSchedulerHostInformation, WebResourceLoadScheduler::HostInformation);
 
 WebResourceLoadScheduler::HostInformation::HostInformation(const String& name, unsigned maxRequestsInFlight)
     : m_name(name)

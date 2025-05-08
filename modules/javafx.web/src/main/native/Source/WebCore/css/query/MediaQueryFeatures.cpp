@@ -264,10 +264,14 @@ const FeatureSchema& colorGamut()
         "color-gamut"_s,
         FixedVector { CSSValueSRGB, CSSValueP3, CSSValueRec2020 },
         [](auto& context) {
+            Ref frame = *context.document->frame();
+
             // FIXME: At some point we should start detecting displays that support more colors.
             MatchingIdentifiers identifiers { CSSValueSRGB };
-            if (screenSupportsExtendedColor(context.document->protectedFrame()->mainFrame().protectedVirtualView().get()))
+            if (RefPtr localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame())) {
+                if (screenSupportsExtendedColor(localFrame->protectedView().get()))
                     identifiers.append(CSSValueP3);
+            }
             return identifiers;
         }
     };
@@ -458,9 +462,6 @@ const FeatureSchema& orientation()
         "orientation"_s,
         FixedVector { CSSValueLandscape, CSSValuePortrait },
         [](auto& context) {
-            if (context.document->quirks().shouldPreventOrientationMediaQueryFromEvaluatingToLandscape())
-                return MatchingIdentifiers { CSSValuePortrait };
-
             Ref view = *context.document->view();
             // Square viewport is portrait.
             bool isPortrait = view->layoutHeight() >= view->layoutWidth();
@@ -502,7 +503,7 @@ const FeatureSchema& prefersContrast()
 {
     static MainThreadNeverDestroyed<IdentifierSchema> schema {
         "prefers-contrast"_s,
-        FixedVector { CSSValueNoPreference, CSSValueMore, CSSValueLess, CSSValueCustom },
+        FixedVector { CSSValueNoPreference, CSSValueMore, CSSValueLess },
         [](auto& context) {
             bool userPrefersContrast = [&] {
                 Ref frame = *context.document->frame();
@@ -615,8 +616,13 @@ const FeatureSchema& transform3d()
     static MainThreadNeverDestroyed<BooleanSchema> schema {
         "-webkit-transform-3d"_s,
         [](auto& context) {
+#if ENABLE(3D_TRANSFORMS)
             CheckedPtr view = context.document->renderView();
             return view && view->compositor().canRender3DTransforms();
+#else
+            UNUSED_PARAM(context);
+            return false;
+#endif
         }
     };
     return schema;

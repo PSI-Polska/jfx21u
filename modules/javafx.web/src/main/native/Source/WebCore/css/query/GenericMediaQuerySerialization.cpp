@@ -34,8 +34,6 @@ namespace MQ {
 static void serialize(StringBuilder& builder, const QueryInParens& queryInParens)
 {
     WTF::switchOn(queryInParens, [&](auto& node) {
-        if (node.functionId)
-            builder.append(nameString(*node.functionId));
         builder.append('(');
         serialize(builder, node);
         builder.append(')');
@@ -50,14 +48,14 @@ static void serialize(StringBuilder& builder, const QueryInParens& queryInParens
 void serialize(StringBuilder& builder, const Condition& condition)
 {
     if (condition.queries.size() == 1 && condition.logicalOperator == LogicalOperator::Not) {
-        builder.append("not "_s);
+        builder.append("not ");
         serialize(builder, condition.queries.first());
         return;
     }
 
     for (auto& query : condition.queries) {
         if (&query != &condition.queries.first())
-            builder.append(condition.logicalOperator == LogicalOperator::And ? " and "_s : " or "_s);
+            builder.append(condition.logicalOperator == LogicalOperator::And ? " and " : " or ");
         serialize(builder, query);
     }
 }
@@ -71,7 +69,7 @@ void serialize(StringBuilder& builder, const Feature& feature)
             builder.append('<');
             break;
         case ComparisonOperator::LessThanOrEqual:
-            builder.append("<="_s);
+            builder.append("<=");
             break;
         case ComparisonOperator::Equal:
             builder.append('=');
@@ -80,7 +78,7 @@ void serialize(StringBuilder& builder, const Feature& feature)
             builder.append('>');
             break;
         case ComparisonOperator::GreaterThanOrEqual:
-            builder.append(">="_s);
+            builder.append(">=");
             break;
         }
         builder.append(' ');
@@ -94,12 +92,12 @@ void serialize(StringBuilder& builder, const Feature& feature)
     case Syntax::Plain:
         switch (feature.rightComparison->op) {
         case MQ::ComparisonOperator::LessThanOrEqual:
-            builder.append("max-"_s);
+            builder.append("max-");
             break;
         case MQ::ComparisonOperator::Equal:
             break;
         case MQ::ComparisonOperator::GreaterThanOrEqual:
-            builder.append("min-"_s);
+            builder.append("min-");
             break;
         case MQ::ComparisonOperator::LessThan:
         case MQ::ComparisonOperator::GreaterThan:
@@ -108,7 +106,8 @@ void serialize(StringBuilder& builder, const Feature& feature)
         }
         serializeIdentifier(feature.name, builder);
 
-        builder.append(": "_s, feature.rightComparison->value->cssText());
+        builder.append(": ");
+        builder.append(feature.rightComparison->value->cssText());
         break;
 
     case Syntax::Range:

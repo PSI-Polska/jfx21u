@@ -33,11 +33,13 @@
 
 namespace JSC { namespace B3 {
 
-MemoryValue::~MemoryValue() = default;
+MemoryValue::~MemoryValue()
+{
+}
 
 bool MemoryValue::isLegalOffsetImpl(int64_t offset) const
 {
-    return WTF::isRepresentableAs<OffsetType>(offset) && isLegalOffset(static_cast<OffsetType>(offset));
+    return B3::isRepresentableAs<OffsetType>(offset) && isLegalOffset(static_cast<OffsetType>(offset));
 }
 
 Type MemoryValue::accessType() const

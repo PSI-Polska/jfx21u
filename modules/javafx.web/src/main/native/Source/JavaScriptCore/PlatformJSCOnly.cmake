@@ -16,9 +16,3 @@ if (USE_GLIB)
         ${GLIB_LIBRARIES}
     )
 endif ()
-
-if (USE_LIBBACKTRACE)
-    list(APPEND WTF_LIBRARIES
-        LIBBACKTRACE::LIBBACKTRACE
-    )
-endif ()

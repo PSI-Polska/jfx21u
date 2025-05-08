@@ -38,12 +38,13 @@ struct GPUPipelineLayoutDescriptor : public GPUObjectDescriptorBase {
         return {
             { label },
             bindGroupLayouts.map([](const auto& bindGroupLayout) -> std::reference_wrapper<WebGPU::BindGroupLayout> {
+                ASSERT(bindGroupLayout);
                 return bindGroupLayout->backing();
             }),
         };
     }
 
-    Vector<Ref<GPUBindGroupLayout>> bindGroupLayouts;
+    Vector<RefPtr<GPUBindGroupLayout>> bindGroupLayouts;
 };
 
 }

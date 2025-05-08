@@ -41,7 +41,7 @@ public:
         HardLineBreak,
         SoftLineBreak,
         WordBreakOpportunity,
-        AtomicInlineBox,
+        Box,
         InlineBoxStart,
         InlineBoxEnd,
         Float,
@@ -57,7 +57,7 @@ public:
     const RenderStyle& firstLineStyle() const { return layoutBox().firstLineStyle(); }
 
     bool isText() const { return type() == Type::Text; }
-    bool isAtomicInlineBox() const { return type() == Type::AtomicInlineBox; }
+    bool isBox() const { return type() == Type::Box; }
     bool isFloat() const { return type() == Type::Float; }
     bool isLineBreak() const { return isSoftLineBreak() || isHardLineBreak(); }
     bool isWordBreakOpportunity() const { return type() == Type::WordBreakOpportunity; }
@@ -117,14 +117,4 @@ SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::Layout::ToValueTypeName) \
 SPECIALIZE_TYPE_TRAITS_END()
 
 }
-}
-
-namespace WTF {
-
-template<>
-struct VectorTraits<WebCore::Layout::InlineItem> : public VectorTraitsBase<false, void> {
-    static constexpr bool canCopyWithMemcpy = true;
-    static constexpr bool canMoveWithMemcpy = true;
-};
-
 }

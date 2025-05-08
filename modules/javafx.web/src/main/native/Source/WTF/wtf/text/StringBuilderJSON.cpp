@@ -19,10 +19,10 @@
 namespace WTF {
 
 template<typename OutputCharacterType, typename InputCharacterType>
-ALWAYS_INLINE static void appendQuotedJSONStringInternal(OutputCharacterType*& output, std::span<const InputCharacterType> input)
+ALWAYS_INLINE static void appendQuotedJSONStringInternal(OutputCharacterType*& output, const InputCharacterType* input, unsigned length)
 {
-    for (; !input.empty(); input = input.subspan(1)) {
-        auto character = input.front();
+    for (auto* end = input + length; input != end; ++input) {
+        auto character = *input;
         if (LIKELY(character <= 0xFF)) {
             auto escaped = escapedFormsForJSON[character];
             if (LIKELY(!escaped)) {
@@ -46,15 +46,13 @@ ALWAYS_INLINE static void appendQuotedJSONStringInternal(OutputCharacterType*& o
             continue;
         }
 
-        if (input.size() > 1) {
-            auto next = input[1];
-            bool isValidSurrogatePair = U16_IS_SURROGATE_LEAD(character) && U16_IS_TRAIL(next);
+        auto next = input + 1;
+        bool isValidSurrogatePair = U16_IS_SURROGATE_LEAD(character) && next != end && U16_IS_TRAIL(*next);
         if (isValidSurrogatePair) {
             *output++ = character;
-                *output++ = next;
-                input = input.subspan(1);
+            *output++ = *next;
+            ++input;
             continue;
-        }
         }
 
         uint8_t upper = static_cast<uint32_t>(character) >> 8;
@@ -90,7 +88,7 @@ void StringBuilder::appendQuotedJSONString(const String& string)
         if (auto* output = extendBufferForAppending<LChar>(saturatedSum<uint32_t>(m_length, stringLengthValue))) {
             auto* end = output + stringLengthValue;
             *output++ = '"';
-            appendQuotedJSONStringInternal(output, string.span8());
+            appendQuotedJSONStringInternal(output, string.characters8(), string.length());
             *output++ = '"';
             if (output < end)
                 shrink(m_length - (end - output));
@@ -100,9 +98,9 @@ void StringBuilder::appendQuotedJSONString(const String& string)
             auto* end = output + stringLengthValue;
             *output++ = '"';
             if (string.is8Bit())
-                appendQuotedJSONStringInternal(output, string.span8());
+                appendQuotedJSONStringInternal(output, string.characters8(), string.length());
             else
-                appendQuotedJSONStringInternal(output, string.span16());
+                appendQuotedJSONStringInternal(output, string.characters16(), string.length());
             *output++ = '"';
             if (output < end)
                 shrink(m_length - (end - output));

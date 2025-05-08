@@ -45,7 +45,7 @@ class PutStackSinkingPhase : public Phase {
     static constexpr bool verbose = false;
 public:
     PutStackSinkingPhase(Graph& graph)
-        : Phase(graph, "PutStack sinking"_s)
+        : Phase(graph, "PutStack sinking")
     {
     }
 

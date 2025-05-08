@@ -55,7 +55,7 @@ public:
     String label() const;
     void setLabel(String&&);
 
-    void submit(Vector<Ref<GPUCommandBuffer>>&&);
+    void submit(Vector<RefPtr<GPUCommandBuffer>>&&);
 
     using OnSubmittedWorkDonePromise = DOMPromiseDeferred<IDLNull>;
     void onSubmittedWorkDone(OnSubmittedWorkDonePromise&&);

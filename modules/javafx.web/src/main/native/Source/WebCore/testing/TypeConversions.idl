@@ -87,16 +87,14 @@
 };
 
 [
-    JSGenerateToJSObject,
-    JSGenerateToNativeObject
+    JSGenerateToJSObject
 ] dictionary TypeConversionsOtherDictionary {
     long longValue = 0;
     DOMString stringValue = "";
 };
 
 [
-    JSGenerateToJSObject,
-    JSGenerateToNativeObject
+    JSGenerateToJSObject
 ] dictionary TypeConversionsDictionary {
     long longValue = 0;
     DOMString stringValue = "";

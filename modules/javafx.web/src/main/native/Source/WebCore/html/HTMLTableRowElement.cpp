@@ -34,11 +34,11 @@
 #include "NodeList.h"
 #include "NodeRareData.h"
 #include "Text.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLTableRowElement);
+WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLTableRowElement);
 
 using namespace HTMLNames;
 
@@ -64,7 +64,8 @@ static inline RefPtr<HTMLTableElement> findTable(const HTMLTableRowElement& row)
     if (auto* table = dynamicDowncast<HTMLTableElement>(parent))
         return table;
     if (is<HTMLTableSectionElement>(parent)) {
-        if (auto* table = dynamicDowncast<HTMLTableElement>(parent->parentNode()))
+        auto* grandparent = parent->parentNode();
+        if (auto* table = dynamicDowncast<HTMLTableElement>(grandparent))
             return table;
     }
     return nullptr;

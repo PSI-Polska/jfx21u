@@ -38,12 +38,12 @@ DecodedDataDocumentParser::DecodedDataDocumentParser(Document& document)
 {
 }
 
-void DecodedDataDocumentParser::appendBytes(DocumentWriter& writer, std::span<const uint8_t> data)
+void DecodedDataDocumentParser::appendBytes(DocumentWriter& writer, const uint8_t* data, size_t length)
 {
-    if (data.empty())
+    if (!length)
         return;
 
-    String decoded = writer.decoder().decode(data);
+    String decoded = writer.decoder().decode(data, length);
     if (decoded.isEmpty())
         return;
 

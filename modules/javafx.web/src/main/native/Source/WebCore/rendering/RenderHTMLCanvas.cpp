@@ -39,24 +39,21 @@
 #include "RenderBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderLayer.h"
-#include "RenderLayerBacking.h"
 #include "RenderStyleInlines.h"
 #include "RenderView.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderHTMLCanvas);
+WTF_MAKE_ISO_ALLOCATED_IMPL(RenderHTMLCanvas);
 
 RenderHTMLCanvas::RenderHTMLCanvas(HTMLCanvasElement& element, RenderStyle&& style)
     : RenderReplaced(Type::HTMLCanvas, element, WTFMove(style), element.size())
 {
     ASSERT(isRenderHTMLCanvas());
 }
-
-RenderHTMLCanvas::~RenderHTMLCanvas() = default;
 
 HTMLCanvasElement& RenderHTMLCanvas::canvasElement() const
 {
@@ -68,7 +65,10 @@ bool RenderHTMLCanvas::requiresLayer() const
     if (RenderReplaced::requiresLayer())
         return true;
 
-    return canvasCompositingStrategy(*this) != CanvasPaintedToEnclosingLayer;
+    if (CanvasRenderingContext* context = canvasElement().renderingContext())
+        return context->isAccelerated();
+
+    return false;
 }
 
 void RenderHTMLCanvas::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
@@ -106,7 +106,7 @@ void RenderHTMLCanvas::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& pa
 void RenderHTMLCanvas::canvasSizeChanged()
 {
     IntSize canvasSize = canvasElement().size();
-    LayoutSize zoomedSize(canvasSize.width() * style().usedZoom(), canvasSize.height() * style().usedZoom());
+    LayoutSize zoomedSize(canvasSize.width() * style().effectiveZoom(), canvasSize.height() * style().effectiveZoom());
 
     if (zoomedSize == intrinsicSize())
         return;

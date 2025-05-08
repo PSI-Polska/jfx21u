@@ -32,7 +32,6 @@
 #include "ObjectConstructor.h"
 #include "VMInlines.h"
 #include <wtf/NoTailCalls.h>
-#include <wtf/text/MakeString.h>
 
 // Note that we use NO_TAIL_CALLS() throughout this file because we rely on the machine stack
 // growing larger for throwing OOM errors for when we have an effectively cyclic prototype chain.
@@ -98,7 +97,7 @@ JSObject* ProxyObject::getHandlerTrap(JSGlobalObject* globalObject, JSObject* ha
 
         callData = JSC::getCallData(value);
         if (callData.type == CallData::Type::None) {
-            throwTypeError(globalObject, scope, makeString('\'', String(ident.impl()), "' property of a Proxy's handler should be callable"_s));
+            throwTypeError(globalObject, scope, makeString("'", String(ident.impl()), "' property of a Proxy's handler should be callable"));
             return nullptr;
         }
 

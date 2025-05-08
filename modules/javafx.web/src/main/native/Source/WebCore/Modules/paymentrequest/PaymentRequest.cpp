@@ -52,15 +52,14 @@
 #include <JavaScriptCore/JSONObject.h>
 #include <JavaScriptCore/ThrowScope.h>
 #include <wtf/ASCIICType.h>
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/RunLoop.h>
 #include <wtf/Scope.h>
-#include <wtf/TZoneMallocInlines.h>
 #include <wtf/UUID.h>
-#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(PaymentRequest);
+WTF_MAKE_ISO_ALLOCATED_IMPL(PaymentRequest);
 
 // Implements the IsWellFormedCurrencyCode abstract operation from ECMA 402
 // https://tc39.github.io/ecma402/#sec-iswellformedcurrencycode
@@ -91,10 +90,10 @@ static ExceptionOr<String> checkAndCanonicalizeData(ScriptExecutionContext& cont
 static ExceptionOr<void> checkAndCanonicalizeAmount(PaymentCurrencyAmount& amount)
 {
     if (!isWellFormedCurrencyCode(amount.currency))
-        return Exception { ExceptionCode::RangeError, makeString('"', amount.currency, "\" is not a valid currency code."_s) };
+        return Exception { ExceptionCode::RangeError, makeString("\"", amount.currency, "\" is not a valid currency code.") };
 
     if (!isValidDecimalMonetaryValue(amount.value))
-        return Exception { ExceptionCode::TypeError, makeString('"', amount.value, "\" is not a valid decimal monetary value."_s) };
+        return Exception { ExceptionCode::TypeError, makeString("\"", amount.value, "\" is not a valid decimal monetary value.") };
 
     amount.currency = amount.currency.convertToASCIIUppercase();
     return { };
@@ -246,7 +245,7 @@ static ExceptionOr<std::tuple<String, Vector<String>>> checkAndCanonicalizeDetai
             if (isUpdate == IsUpdate::Yes) {
                 auto paymentMethodIdentifier = convertAndValidatePaymentMethodIdentifier(modifier.supportedMethods);
                 if (!paymentMethodIdentifier)
-                    return Exception { ExceptionCode::RangeError, makeString('"', modifier.supportedMethods, "\" is an invalid payment method identifier."_s) };
+                    return Exception { ExceptionCode::RangeError, makeString('"', modifier.supportedMethods, "\" is an invalid payment method identifier.") };
             }
 
             if (modifier.total) {
@@ -314,7 +313,7 @@ ExceptionOr<Ref<PaymentRequest>> PaymentRequest::create(Document& document, Vect
     for (auto& paymentMethod : methodData) {
         auto identifier = convertAndValidatePaymentMethodIdentifier(paymentMethod.supportedMethods);
         if (!identifier)
-            return Exception { ExceptionCode::RangeError, makeString('"', paymentMethod.supportedMethods, "\" is an invalid payment method identifier."_s) };
+            return Exception { ExceptionCode::RangeError, makeString('"', paymentMethod.supportedMethods, "\" is an invalid payment method identifier.") };
 
         if (!seenMethodIDs.add(stringify(*identifier)))
             return Exception { ExceptionCode::RangeError, "Payment method IDs must be unique."_s };
@@ -655,12 +654,11 @@ void PaymentRequest::settleDetailsPromise(UpdateReason reason)
 
     auto& context = *m_detailsPromise->scriptExecutionContext();
     auto throwScope = DECLARE_THROW_SCOPE(context.vm());
-    auto detailsUpdateConversion = convertDictionary<PaymentDetailsUpdate>(*context.globalObject(), m_detailsPromise->result());
-    if (detailsUpdateConversion.hasException(throwScope)) {
+    auto detailsUpdate = convertDictionary<PaymentDetailsUpdate>(*context.globalObject(), m_detailsPromise->result());
+    if (throwScope.exception()) {
         abortWithException(Exception { ExceptionCode::ExistingExceptionError });
         return;
     }
-    auto detailsUpdate = detailsUpdateConversion.releaseReturnValue();
 
     if (detailsUpdate.total) {
         auto totalResult = checkAndCanonicalizeTotal(*detailsUpdate.total);

@@ -167,18 +167,21 @@ void ThreadedScrollingTree::didCommitTreeOnScrollingThread()
 
     auto nodesWithPendingScrollAnimations = std::exchange(m_nodesWithPendingScrollAnimations, { });
     for (const auto& it : nodesWithPendingScrollAnimations) {
-        RefPtr targetNode = dynamicDowncast<ScrollingTreeScrollingNode>(nodeForID(it.key));
-        if (!targetNode)
+        RefPtr targetNode = nodeForID(it.key);
+        if (!is<ScrollingTreeScrollingNode>(targetNode))
             continue;
-        targetNode->startAnimatedScrollToPosition(it.value.destinationPosition(targetNode->currentScrollPosition()));
+
+        auto& node = downcast<ScrollingTreeScrollingNode>(*targetNode);
+        node.startAnimatedScrollToPosition(it.value.destinationPosition(node.currentScrollPosition()));
     }
 
     auto nodesWithPendingKeyboardScrollAnimations = std::exchange(m_nodesWithPendingKeyboardScrollAnimations, { });
     for (const auto& [key, value] : nodesWithPendingKeyboardScrollAnimations) {
-        RefPtr targetNode = dynamicDowncast<ScrollingTreeScrollingNode>(nodeForID(key));
-        if (!targetNode)
+        RefPtr targetNode = nodeForID(key);
+        if (!is<ScrollingTreeScrollingNode>(targetNode))
             continue;
-        targetNode->handleKeyboardScrollRequest(value);
+
+        downcast<ScrollingTreeScrollingNode>(*targetNode).handleKeyboardScrollRequest(value);
     }
 }
 
@@ -208,11 +211,11 @@ void ThreadedScrollingTree::propagateSynchronousScrollingReasons(const HashSet<S
         auto currNode = node.parent();
 
         while (currNode) {
-            if (RefPtr scrollingNode = dynamicDowncast<ScrollingTreeScrollingNode>(currNode))
-                scrollingNode->addSynchronousScrollingReason(SynchronousScrollingReason::DescendantScrollersHaveSynchronousScrolling);
+            if (is<ScrollingTreeScrollingNode>(currNode))
+                downcast<ScrollingTreeScrollingNode>(*currNode).addSynchronousScrollingReason(SynchronousScrollingReason::DescendantScrollersHaveSynchronousScrolling);
 
-            if (RefPtr proxyNode = dynamicDowncast<ScrollingTreeOverflowScrollProxyNode>(currNode)) {
-                currNode = nodeForID(proxyNode->overflowScrollingNodeID());
+            if (is<ScrollingTreeOverflowScrollProxyNode>(currNode)) {
+                currNode = nodeForID(downcast<ScrollingTreeOverflowScrollProxyNode>(*currNode).overflowScrollingNodeID());
                 continue;
             }
 
@@ -247,8 +250,8 @@ void ThreadedScrollingTree::scrollingTreeNodeDidScroll(ScrollingTreeScrollingNod
         return;
 
     std::optional<FloatPoint> layoutViewportOrigin;
-    if (auto* scrollingNode = dynamicDowncast<ScrollingTreeFrameScrollingNode>(node))
-        layoutViewportOrigin = scrollingNode->layoutViewport().location();
+    if (is<ScrollingTreeFrameScrollingNode>(node))
+        layoutViewportOrigin = downcast<ScrollingTreeFrameScrollingNode>(node).layoutViewport().location();
 
     auto scrollPosition = node.currentScrollPosition();
     auto scrollUpdate = ScrollUpdate { node.scrollingNodeID(), scrollPosition, layoutViewportOrigin, ScrollUpdateType::PositionUpdate, scrollingLayerPositionAction };

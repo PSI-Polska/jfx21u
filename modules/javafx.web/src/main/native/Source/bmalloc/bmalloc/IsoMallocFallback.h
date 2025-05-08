@@ -28,7 +28,6 @@
 #include "BExport.h"
 #include "BInline.h"
 #include "BPlatform.h"
-#include "CompactAllocationMode.h"
 #include <cstddef>
 #include <cstdint>
 
@@ -68,8 +67,7 @@ struct MallocResult {
 };
 
 BEXPORT MallocResult tryMalloc(
-    size_t size,
-    CompactAllocationMode mode
+    size_t size
 #if BENABLE_MALLOC_HEAP_BREAKDOWN
     , malloc_zone_t* zone = nullptr
 #endif

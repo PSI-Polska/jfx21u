@@ -34,15 +34,6 @@ OBJC_CLASS WebThermalMitigationObserver;
 #endif
 
 namespace WebCore {
-class ThermalMitigationNotifier;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::ThermalMitigationNotifier> : std::true_type { };
-}
-
-namespace WebCore {
 
 class ThermalMitigationNotifier : public CanMakeWeakPtr<ThermalMitigationNotifier> {
     WTF_MAKE_FAST_ALLOCATED;

@@ -30,15 +30,6 @@
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
-struct PreviewConverterClient;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::PreviewConverterClient> : std::true_type { };
-}
-
-namespace WebCore {
 
 class PreviewConverter;
 class ResourceError;

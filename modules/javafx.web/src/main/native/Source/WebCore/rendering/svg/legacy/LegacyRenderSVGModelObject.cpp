@@ -40,20 +40,18 @@
 #include "SVGNames.h"
 #include "SVGResourcesCache.h"
 #include "ShadowRoot.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(LegacyRenderSVGModelObject);
+WTF_MAKE_ISO_ALLOCATED_IMPL(LegacyRenderSVGModelObject);
 
 LegacyRenderSVGModelObject::LegacyRenderSVGModelObject(Type type, SVGElement& element, RenderStyle&& style, OptionSet<SVGModelObjectFlag> typeFlags)
-    : RenderElement(type, element, WTFMove(style), { }, typeFlags | SVGModelObjectFlag::IsLegacy | SVGModelObjectFlag::UsesBoundaryCaching)
+    : RenderElement(type, element, WTFMove(style), { }, typeFlags | SVGModelObjectFlag::IsLegacy)
 {
     ASSERT(isLegacyRenderSVGModelObject());
     ASSERT(!isRenderSVGModelObject());
 }
-
-LegacyRenderSVGModelObject::~LegacyRenderSVGModelObject() = default;
 
 LayoutRect LegacyRenderSVGModelObject::clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext context) const
 {
@@ -131,7 +129,7 @@ void LegacyRenderSVGModelObject::willBeDestroyed()
 void LegacyRenderSVGModelObject::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
     if (diff == StyleDifference::Layout) {
-        invalidateCachedBoundaries();
+        setNeedsBoundariesUpdate();
         if (style().affectsTransform() || (oldStyle && oldStyle->affectsTransform()))
             setNeedsTransformUpdate();
     }
@@ -149,17 +147,17 @@ static void getElementCTM(SVGElement* element, AffineTransform& transform)
 {
     ASSERT(element);
 
-    RefPtr stopAtElement = SVGLocatable::nearestViewportElement(element);
+    SVGElement* stopAtElement = SVGLocatable::nearestViewportElement(element);
     ASSERT(stopAtElement);
 
     AffineTransform localTransform;
     Node* current = element;
 
-    while (RefPtr currentElement = dynamicDowncast<SVGElement>(current)) {
+    while (auto* currentElement = dynamicDowncast<SVGElement>(current)) {
         localTransform = currentElement->renderer()->localToParentTransform();
         transform = localTransform.multiply(transform);
         // For getCTM() computation, stop at the nearest viewport element
-        if (currentElement == stopAtElement.get())
+        if (currentElement == stopAtElement)
             break;
 
         current = current->parentOrShadowHostNode();
@@ -195,37 +193,32 @@ void LegacyRenderSVGModelObject::absoluteFocusRingQuads(Vector<FloatQuad>& quads
 
 bool LegacyRenderSVGModelObject::checkIntersection(RenderElement* renderer, const FloatRect& rect)
 {
-    if (!renderer || renderer->usedPointerEvents() == PointerEvents::None)
+    if (!renderer || renderer->style().effectivePointerEvents() == PointerEvents::None)
         return false;
     if (!isGraphicsElement(*renderer))
         return false;
     AffineTransform ctm;
-    RefPtr svgElement = downcast<SVGElement>(renderer->element());
-    getElementCTM(svgElement.get(), ctm);
+    SVGElement* svgElement = downcast<SVGElement>(renderer->element());
+    getElementCTM(svgElement, ctm);
     ASSERT(svgElement->renderer());
     // FIXME: [SVG] checkEnclosure implementation is inconsistent
     // https://bugs.webkit.org/show_bug.cgi?id=262709
-    return intersectsAllowingEmpty(rect, ctm.mapRect(svgElement->checkedRenderer()->repaintRectInLocalCoordinates(RepaintRectCalculation::Accurate)));
+    return intersectsAllowingEmpty(rect, ctm.mapRect(svgElement->renderer()->repaintRectInLocalCoordinates(RepaintRectCalculation::Accurate)));
 }
 
 bool LegacyRenderSVGModelObject::checkEnclosure(RenderElement* renderer, const FloatRect& rect)
 {
-    if (!renderer || renderer->usedPointerEvents() == PointerEvents::None)
+    if (!renderer || renderer->style().effectivePointerEvents() == PointerEvents::None)
         return false;
     if (!isGraphicsElement(*renderer))
         return false;
     AffineTransform ctm;
-    RefPtr svgElement = downcast<SVGElement>(renderer->element());
-    getElementCTM(svgElement.get(), ctm);
+    SVGElement* svgElement = downcast<SVGElement>(renderer->element());
+    getElementCTM(svgElement, ctm);
     ASSERT(svgElement->renderer());
     // FIXME: [SVG] checkEnclosure implementation is inconsistent
     // https://bugs.webkit.org/show_bug.cgi?id=262709
-    return rect.contains(ctm.mapRect(svgElement->checkedRenderer()->repaintRectInLocalCoordinates(RepaintRectCalculation::Accurate)));
-}
-
-Ref<SVGElement> LegacyRenderSVGModelObject::protectedElement() const
-{
-    return element();
+    return rect.contains(ctm.mapRect(svgElement->renderer()->repaintRectInLocalCoordinates(RepaintRectCalculation::Accurate)));
 }
 
 } // namespace WebCore

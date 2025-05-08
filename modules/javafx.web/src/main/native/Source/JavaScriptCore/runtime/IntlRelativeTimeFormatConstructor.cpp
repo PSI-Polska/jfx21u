@@ -103,7 +103,7 @@ JSC_DEFINE_HOST_FUNCTION(callIntlRelativeTimeFormat, (JSGlobalObject* globalObje
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(globalObject, scope, "RelativeTimeFormat"_s));
+    return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(globalObject, scope, "RelativeTimeFormat"));
 }
 
 // https://tc39.es/ecma402/#sec-Intl.RelativeTimeFormat.supportedLocalesOf

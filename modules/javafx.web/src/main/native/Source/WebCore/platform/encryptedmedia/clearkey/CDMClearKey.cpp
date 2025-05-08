@@ -138,8 +138,8 @@ static std::pair<unsigned, unsigned> extractKeyidsLocationFromCencInitData(const
     if (initData.isEmpty() || initData.size() > std::numeric_limits<unsigned>::max())
         return keyIdsMap;
 
-    auto data = initData.span();
-    unsigned initDataSize = data.size();
+    auto* data = initData.data();
+    unsigned initDataSize = initData.size();
     unsigned index = 0;
     unsigned psshSize = 0;
 
@@ -203,7 +203,7 @@ static Ref<SharedBuffer> extractKeyidsFromCencInitData(const SharedBuffer& initD
     // Check if initData is a valid CENC initData.
     if (!keyIdCount || !index)
         return SharedBuffer::create();
-    auto data = initData.span();
+    auto* data = initData.data();
 
     auto object = JSON::Object::create();
     auto keyIdsArray = JSON::Array::create();
@@ -215,12 +215,13 @@ static Ref<SharedBuffer> extractKeyidsFromCencInitData(const SharedBuffer& initD
     // "kids"
     // An array of key IDs. Each element of the array is the base64url encoding of the octet sequence containing the key ID value.
     for (unsigned i = 0; i < keyIdCount; i++) {
-        keyIdsArray->pushString(base64URLEncodeToString(data.subspan(index, ClearKey::KeyIDSizeInBytes)));
+        keyIdsArray->pushString(base64URLEncodeToString(&data[index], ClearKey::KeyIDSizeInBytes));
         index += ClearKey::KeyIDSizeInBytes;
     }
 
     object->setArray("kids"_s, WTFMove(keyIdsArray));
-    return SharedBuffer::create(object->toJSONString().utf8().span());
+    CString jsonData = object->toJSONString().utf8();
+    return SharedBuffer::create(jsonData.data(), jsonData.length());
 }
 
 static Ref<SharedBuffer> extractKeyIdFromWebMInitData(const SharedBuffer& initData)
@@ -238,10 +239,11 @@ static Ref<SharedBuffer> extractKeyIdFromWebMInitData(const SharedBuffer& initDa
     // The format is a JSON object containing the following members:
     // "kids"
     // An array of key IDs. Each element of the array is the base64url encoding of the octet sequence containing the key ID value.
-    keyIdsArray->pushString(base64URLEncodeToString(initData.span()));
+    keyIdsArray->pushString(base64URLEncodeToString(initData.data(), initData.size()));
 
     object->setArray("kids"_s, WTFMove(keyIdsArray));
-    return SharedBuffer::create(object->toJSONString().utf8().span());
+    CString jsonData = object->toJSONString().utf8();
+    return SharedBuffer::create(jsonData.data(), jsonData.length());
 }
 
 CDMFactoryClearKey& CDMFactoryClearKey::singleton()
@@ -508,7 +510,7 @@ void CDMInstanceSessionClearKey::updateLicense(const String& sessionId, LicenseT
     if (parseLicenseReleaseAcknowledgementFormat(*root)) {
         LOG(EME, "EME - ClearKey - session %s release acknowledged, clearing all known keys", sessionId.utf8().data());
         parentInstance().unrefAllKeysFrom(m_keyStore);
-        m_keyStore.clear();
+        m_keyStore.unrefAllKeys();
         dispatchCallback(true, std::nullopt, SuccessValue::Succeeded);
         return;
     }
@@ -565,19 +567,20 @@ void CDMInstanceSessionClearKey::removeSessionData(const String& sessionId, Lice
         auto rootObject = JSON::Object::create();
         {
             auto array = JSON::Array::create();
-            for (const auto& key : m_keyStore.values()) {
+            for (const auto& key : m_keyStore) {
                 ASSERT(key->id().size() <= std::numeric_limits<unsigned>::max());
-                array->pushString(base64URLEncodeToString(key->id().span()));
+                array->pushString(base64URLEncodeToString(key->id().data(), key->id().size()));
             }
             rootObject->setArray("kids"_s, WTFMove(array));
         }
 
         // Copy the JSON data into a SharedBuffer object.
         String messageString = rootObject->toJSONString();
-        message = SharedBuffer::create(messageString.utf8().span());
+        CString messageCString = messageString.utf8();
+        message = SharedBuffer::create(messageCString.data(), messageCString.length());
     }
 
-    m_keyStore.clear();
+    m_keyStore.unrefAllKeys();
     dispatchCallback(WTFMove(keyStatusVector), Ref<SharedBuffer>(*message), SuccessValue::Succeeded);
 }
 

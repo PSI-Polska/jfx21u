@@ -47,12 +47,11 @@
 #include "WebCodecsEncodedAudioChunkOutputCallback.h"
 #include "WebCodecsErrorCallback.h"
 #include <JavaScriptCore/ArrayBuffer.h>
-#include <wtf/TZoneMallocInlines.h>
-#include <wtf/text/MakeString.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WebCodecsAudioEncoder);
+WTF_MAKE_ISO_ALLOCATED_IMPL(WebCodecsAudioEncoder);
 
 Ref<WebCodecsAudioEncoder> WebCodecsAudioEncoder::create(ScriptExecutionContext& context, Init&& init)
 {
@@ -69,7 +68,9 @@ WebCodecsAudioEncoder::WebCodecsAudioEncoder(ScriptExecutionContext& context, In
 {
 }
 
-WebCodecsAudioEncoder::~WebCodecsAudioEncoder() = default;
+WebCodecsAudioEncoder::~WebCodecsAudioEncoder()
+{
+}
 
 static bool isSupportedEncoderCodec(const StringView& codec)
 {
@@ -120,7 +121,9 @@ static ExceptionOr<AudioEncoder::Config> createAudioEncoderConfig(const WebCodec
     if (config.flac)
         flacConfig = { config.flac->blockSize, config.flac->compressLevel };
 
-    return AudioEncoder::Config { config.sampleRate, config.numberOfChannels, config.bitrate.value_or(0), WTFMove(opusConfig), WTFMove(isAacADTS), WTFMove(flacConfig) };
+    std::optional<size_t> sampleRate = config.sampleRate;
+    std::optional<size_t> numberOfChannels = config.numberOfChannels;
+    return AudioEncoder::Config { WTFMove(sampleRate), WTFMove(numberOfChannels), config.bitrate.value_or(0), WTFMove(opusConfig), WTFMove(isAacADTS), WTFMove(flacConfig) };
 }
 
 ExceptionOr<void> WebCodecsAudioEncoder::configure(ScriptExecutionContext&, WebCodecsAudioEncoderConfig&& config)
@@ -135,7 +138,7 @@ ExceptionOr<void> WebCodecsAudioEncoder::configure(ScriptExecutionContext&, WebC
     m_isKeyChunkRequired = true;
 
     if (m_internalEncoder) {
-        queueControlMessageAndProcess({ *this, [this, config]() mutable {
+        queueControlMessageAndProcess([this, config]() mutable {
             m_isMessageQueueBlocked = true;
             m_internalEncoder->flush([weakThis = ThreadSafeWeakPtr { *this }, config = WTFMove(config)]() mutable {
                 RefPtr protectedThis = weakThis.get();
@@ -148,11 +151,11 @@ ExceptionOr<void> WebCodecsAudioEncoder::configure(ScriptExecutionContext&, WebC
                 protectedThis->m_isMessageQueueBlocked = false;
                 protectedThis->processControlMessageQueue();
             });
-        } });
+        });
     }
 
     bool isSupportedCodec = isSupportedEncoderCodec(config.codec);
-    queueControlMessageAndProcess({ *this, [this, config = WTFMove(config), isSupportedCodec, identifier = scriptExecutionContext()->identifier()]() mutable {
+    queueControlMessageAndProcess([this, config = WTFMove(config), isSupportedCodec, identifier = scriptExecutionContext()->identifier()]() mutable {
         m_isMessageQueueBlocked = true;
         AudioEncoder::PostTaskCallback postTaskCallback = [weakThis = ThreadSafeWeakPtr { *this }, identifier](auto&& task) {
             ScriptExecutionContext::postTaskTo(identifier, [weakThis, task = WTFMove(task)](auto&) mutable {
@@ -196,7 +199,7 @@ ExceptionOr<void> WebCodecsAudioEncoder::configure(ScriptExecutionContext&, WebC
             if (m_state != WebCodecsCodecState::Configured)
                 return;
 
-            RefPtr buffer = JSC::ArrayBuffer::create(result.data);
+            RefPtr<JSC::ArrayBuffer> buffer = JSC::ArrayBuffer::create(result.data.data(), result.data.size());
             auto chunk = WebCodecsEncodedAudioChunk::create(WebCodecsEncodedAudioChunk::Init {
                 result.isKeyFrame ? WebCodecsEncodedAudioChunkType::Key : WebCodecsEncodedAudioChunkType::Delta,
                 result.timestamp,
@@ -205,7 +208,7 @@ ExceptionOr<void> WebCodecsAudioEncoder::configure(ScriptExecutionContext&, WebC
             });
             m_output->handleEvent(WTFMove(chunk), createEncodedChunkMetadata());
         }, WTFMove(postTaskCallback));
-    } });
+    });
     return { };
 }
 
@@ -216,8 +219,8 @@ WebCodecsEncodedAudioChunkMetadata WebCodecsAudioEncoder::createEncodedChunkMeta
     if (m_hasNewActiveConfiguration) {
         m_hasNewActiveConfiguration = false;
         // FIXME: Provide more accurate decoder configuration...
-        auto baseConfigurationSampleRate = m_baseConfiguration.sampleRate;
-        auto baseConfigurationNumberOfChannels = m_baseConfiguration.numberOfChannels;
+        auto baseConfigurationSampleRate = m_baseConfiguration.sampleRate.value_or(0);
+        auto baseConfigurationNumberOfChannels = m_baseConfiguration.numberOfChannels.value_or(0);
         metadata.decoderConfig = WebCodecsAudioDecoderConfig {
             !m_activeConfiguration.codec.isEmpty() ? WTFMove(m_activeConfiguration.codec) : String { m_baseConfiguration.codec },
             { },
@@ -267,18 +270,24 @@ ExceptionOr<void> WebCodecsAudioEncoder::encode(Ref<WebCodecsAudioData>&& frame)
     }
 
     ++m_encodeQueueSize;
-    queueControlMessageAndProcess({ *this, [this, audioData = WTFMove(audioData), timestamp = frame->timestamp(), duration = frame->duration()]() mutable {
+    queueControlMessageAndProcess([this, audioData = WTFMove(audioData), timestamp = frame->timestamp(), duration = frame->duration()]() mutable {
+        ++m_beingEncodedQueueSize;
         --m_encodeQueueSize;
         scheduleDequeueEvent();
-        m_internalEncoder->encode({ WTFMove(audioData), timestamp, duration }, [this, protectedThis = Ref { *this }, pendingActivity = makePendingActivity(*this)](auto&& result) {
+        m_internalEncoder->encode({ WTFMove(audioData), timestamp, duration }, [this, weakThis = ThreadSafeWeakPtr { *this }](auto&& result) {
+            RefPtr protectedThis = weakThis.get();
+            if (!protectedThis)
+                return;
+
+            --m_beingEncodedQueueSize;
             if (!result.isNull()) {
                 if (auto* context = scriptExecutionContext())
-                    context->addConsoleMessage(MessageSource::JS, MessageLevel::Error, makeString("AudioEncoder encode failed: "_s, result));
+                    context->addConsoleMessage(MessageSource::JS, MessageLevel::Error, makeString("AudioEncoder encode failed: ", result));
                 closeEncoder(Exception { ExceptionCode::EncodingError, WTFMove(result) });
                 return;
             }
         });
-    } });
+    });
     return { };
 }
 
@@ -290,15 +299,17 @@ void WebCodecsAudioEncoder::flush(Ref<DeferredPromise>&& promise)
     }
 
     m_pendingFlushPromises.append(WTFMove(promise));
-    queueControlMessageAndProcess({ *this, [this, clearFlushPromiseCount = m_clearFlushPromiseCount]() mutable {
-        m_internalEncoder->flush([this, weakThis = ThreadSafeWeakPtr { *this }, clearFlushPromiseCount, pendingActivity = makePendingActivity(*this)] {
+    m_isFlushing = true;
+    queueControlMessageAndProcess([this, clearFlushPromiseCount = m_clearFlushPromiseCount]() mutable {
+        m_internalEncoder->flush([this, weakThis = ThreadSafeWeakPtr { *this }, clearFlushPromiseCount] {
             RefPtr protectedThis = weakThis.get();
             if (!protectedThis || clearFlushPromiseCount != m_clearFlushPromiseCount)
                 return;
 
             m_pendingFlushPromises.takeFirst()->resolve();
+            m_isFlushing = !m_pendingFlushPromises.isEmpty();
+        });
     });
-    } });
 }
 
 ExceptionOr<void> WebCodecsAudioEncoder::reset()
@@ -394,7 +405,7 @@ void WebCodecsAudioEncoder::setInternalEncoder(UniqueRef<AudioEncoder>&& interna
     m_internalEncoder = internalEncoder.moveToUniquePtr();
 }
 
-void WebCodecsAudioEncoder::queueControlMessageAndProcess(WebCodecsControlMessage<WebCodecsAudioEncoder>&& message)
+void WebCodecsAudioEncoder::queueControlMessageAndProcess(Function<void()>&& message)
 {
     if (m_isMessageQueueBlocked) {
         m_controlMessageQueue.append(WTFMove(message));
@@ -425,9 +436,14 @@ void WebCodecsAudioEncoder::stop()
     // FIXME: Implement.
 }
 
+const char* WebCodecsAudioEncoder::activeDOMObjectName() const
+{
+    return "AudioEncoder";
+}
+
 bool WebCodecsAudioEncoder::virtualHasPendingActivity() const
 {
-    return m_state == WebCodecsCodecState::Configured && (m_encodeQueueSize || m_isMessageQueueBlocked);
+    return m_state == WebCodecsCodecState::Configured && (m_encodeQueueSize || m_beingEncodedQueueSize || m_isFlushing);
 }
 
 } // namespace WebCore

@@ -27,11 +27,11 @@
 #include "IDBGetResult.h"
 
 #include <wtf/CrossThreadCopier.h>
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(IDBGetResult);
+WTF_MAKE_ISO_ALLOCATED_IMPL(IDBGetResult);
 
 IDBGetResult::IDBGetResult(const IDBGetResult& that, IsolatedCopyTag)
 {

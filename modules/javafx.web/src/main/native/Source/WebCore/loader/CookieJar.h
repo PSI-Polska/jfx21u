@@ -86,7 +86,6 @@ protected:
 
 private:
     Ref<StorageSessionProvider> m_storageSessionProvider;
-    Ref<StorageSessionProvider> protectedStorageSessionProvider() const;
 };
 
 } // namespace WebCore

@@ -100,11 +100,11 @@ JSC_DEFINE_HOST_FUNCTION(intlCollatorFuncCompare, (JSGlobalObject* globalObject,
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
     // 9. Return CompareStrings(collator, X, Y).
-    auto xView = x->view(globalObject);
+    auto xViewWithString = x->viewWithUnderlyingString(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    auto yView = y->view(globalObject);
+    auto yViewWithString = y->viewWithUnderlyingString(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    RELEASE_AND_RETURN(scope, JSValue::encode(jsNumber(collator->compareStrings(globalObject, xView, yView))));
+    RELEASE_AND_RETURN(scope, JSValue::encode(jsNumber(collator->compareStrings(globalObject, xViewWithString.view, yViewWithString.view))));
 }
 
 JSC_DEFINE_CUSTOM_GETTER(intlCollatorPrototypeGetterCompare, (JSGlobalObject* globalObject, EncodedJSValue thisValue, PropertyName))

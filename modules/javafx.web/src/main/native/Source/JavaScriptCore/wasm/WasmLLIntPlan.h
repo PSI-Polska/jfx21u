@@ -27,7 +27,6 @@
 
 #if ENABLE(WEBASSEMBLY)
 
-#include "WasmCallee.h"
 #include "WasmEntryPlan.h"
 #include "WasmFunctionCodeBlockGenerator.h"
 
@@ -52,6 +51,12 @@ public:
     JS_EXPORT_PRIVATE LLIntPlan(VM&, Vector<uint8_t>&&, CompilerMode, CompletionTask&&);
     LLIntPlan(VM&, Ref<ModuleInformation>, const Ref<LLIntCallee>*, CompletionTask&&);
     LLIntPlan(VM&, Ref<ModuleInformation>, CompilerMode, CompletionTask&&); // For StreamingCompiler.
+
+    MacroAssemblerCodeRef<JITCompilationPtrTag>&& takeEntryThunks()
+    {
+        RELEASE_ASSERT(!failed() && !hasWork());
+        return WTFMove(m_entryThunks);
+    }
 
     Vector<Ref<LLIntCallee>>&& takeCallees()
     {
@@ -87,14 +92,12 @@ private:
     void addTailCallEdge(uint32_t, uint32_t);
     void computeTransitiveTailCalls() const;
 
-    bool ensureEntrypoint(LLIntCallee&, unsigned functionIndex);
-
     Vector<std::unique_ptr<FunctionCodeBlockGenerator>> m_wasmInternalFunctions;
     const Ref<LLIntCallee>* m_callees { nullptr };
     Vector<Ref<LLIntCallee>> m_calleesVector;
-    Vector<RefPtr<JSEntrypointCallee>> m_entrypoints;
     JSEntrypointCalleeMap m_jsEntrypointCallees;
     TailCallGraph m_tailCallGraph;
+    MacroAssemblerCodeRef<JITCompilationPtrTag> m_entryThunks;
 };
 
 

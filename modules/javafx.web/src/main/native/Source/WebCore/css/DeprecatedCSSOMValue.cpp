@@ -33,9 +33,9 @@ namespace WebCore {
 
 void DeprecatedCSSOMValue::operator delete(DeprecatedCSSOMValue* value, std::destroying_delete_t)
 {
-    auto destroyAndFree = [&]<typename ValueType> (ValueType& value) {
+    auto destroyAndFree = [&](auto& value) {
         std::destroy_at(&value);
-        ValueType::freeAfterDestruction(&value);
+        std::decay_t<decltype(value)>::freeAfterDestruction(&value);
     };
 
     switch (value->classType()) {

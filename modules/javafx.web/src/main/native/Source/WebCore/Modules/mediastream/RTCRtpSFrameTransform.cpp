@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,11 +47,11 @@
 #include "SharedBuffer.h"
 #include "WritableStream.h"
 #include <wtf/EnumTraits.h>
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RTCRtpSFrameTransform);
+WTF_MAKE_ISO_ALLOCATED_IMPL(RTCRtpSFrameTransform);
 
 Ref<RTCRtpSFrameTransform> RTCRtpSFrameTransform::create(ScriptExecutionContext& context, Options options)
 {
@@ -68,7 +68,9 @@ RTCRtpSFrameTransform::RTCRtpSFrameTransform(ScriptExecutionContext& context, Op
     m_transformer->setAuthenticationSize(options.authenticationSize);
 }
 
-RTCRtpSFrameTransform::~RTCRtpSFrameTransform() = default;
+RTCRtpSFrameTransform::~RTCRtpSFrameTransform()
+{
+}
 
 void RTCRtpSFrameTransform::setEncryptionKey(CryptoKey& key, std::optional<uint64_t> keyId, DOMPromiseDeferred<void>&& promise)
 {
@@ -116,6 +118,8 @@ static RTCRtpSFrameTransformErrorEvent::Type errorTypeFromInformation(const RTCR
         return RTCRtpSFrameTransformErrorEvent::Type::Authentication;
     case RTCRtpSFrameTransformer::Error::Syntax:
         return RTCRtpSFrameTransformErrorEvent::Type::Syntax;
+    case RTCRtpSFrameTransformer::Error::Other:
+        return RTCRtpSFrameTransformErrorEvent::Type::Other;
     default:
         RELEASE_ASSERT_NOT_REACHED();
     }
@@ -231,10 +235,9 @@ ExceptionOr<void> RTCRtpSFrameTransform::createStreams()
         auto& globalObject = *JSC::jsCast<JSDOMGlobalObject*>(context.globalObject());
         auto scope = DECLARE_THROW_SCOPE(globalObject.vm());
 
-        auto frameConversionResult = convert<IDLUnion<IDLArrayBuffer, IDLArrayBufferView, IDLInterface<RTCEncodedAudioFrame>, IDLInterface<RTCEncodedVideoFrame>>>(globalObject, value);
-        if (UNLIKELY(frameConversionResult.hasException(scope)))
+        auto frame = convert<IDLUnion<IDLArrayBuffer, IDLArrayBufferView, IDLInterface<RTCEncodedAudioFrame>, IDLInterface<RTCEncodedVideoFrame>>>(globalObject, value);
+        if (scope.exception())
             return Exception { ExceptionCode::ExistingExceptionError };
-        auto frame = frameConversionResult.releaseReturnValue();
 
         // We do not want to throw any exception in the transform to make sure we do not error the transform.
         WTF::switchOn(frame, [&](RefPtr<RTCEncodedAudioFrame>& value) {
@@ -242,9 +245,9 @@ ExceptionOr<void> RTCRtpSFrameTransform::createStreams()
         }, [&](RefPtr<RTCEncodedVideoFrame>& value) {
             transformFrame(*value, globalObject, transformer.get(), *readableStreamSource, context.identifier(), weakThis);
         }, [&](RefPtr<ArrayBuffer>& value) {
-            transformFrame(value->span(), globalObject, transformer.get(), *readableStreamSource, context.identifier(), weakThis);
+            transformFrame({ static_cast<const uint8_t*>(value->data()), value->byteLength() }, globalObject, transformer.get(), *readableStreamSource, context.identifier(), weakThis);
         }, [&](RefPtr<ArrayBufferView>& value) {
-            transformFrame(value->span(), globalObject, transformer.get(), *readableStreamSource, context.identifier(), weakThis);
+            transformFrame({ static_cast<const uint8_t*>(value->data()), value->byteLength() }, globalObject, transformer.get(), *readableStreamSource, context.identifier(), weakThis);
         });
         return { };
     }));

@@ -33,14 +33,9 @@ namespace WebCore {
 
 class FontAccessor;
 
-enum class ExternalResourceDownloadPolicy : bool {
+enum class ExternalResourceDownloadPolicy {
     Forbid,
     Allow
-};
-
-enum class IsGenericFontFamily : bool {
-    No,
-    Yes
 };
 
 class FontRanges {
@@ -80,7 +75,7 @@ public:
     ~FontRanges();
 
     FontRanges(const FontRanges&) = default;
-    FontRanges(FontRanges&& other, IsGenericFontFamily);
+    FontRanges(FontRanges&& other, bool isGeneric);
     FontRanges& operator=(FontRanges&&) = default;
 
     bool isNull() const { return m_ranges.isEmpty(); }
@@ -95,11 +90,11 @@ public:
     WEBCORE_EXPORT const Font* fontForCharacter(char32_t) const;
     WEBCORE_EXPORT const Font& fontForFirstRange() const;
     bool isLoading() const;
-    bool isGenericFontFamily() const { return m_isGenericFontFamily == IsGenericFontFamily::Yes; }
+    bool isGeneric() const { return m_isGeneric; }
 
 private:
     Vector<Range, 1> m_ranges;
-    IsGenericFontFamily m_isGenericFontFamily { IsGenericFontFamily::No };
+    bool m_isGeneric { false };
 };
 
 }

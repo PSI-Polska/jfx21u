@@ -63,7 +63,6 @@ class StyleRuleNamespace;
 class StyleRulePage;
 class StyleRuleSupports;
 class StyleRuleViewport;
-class StyleRuleViewTransition;
 class StyleSheetContents;
 class ImmutableStyleProperties;
 class Element;
@@ -73,31 +72,29 @@ class CSSParserImpl {
     WTF_MAKE_NONCOPYABLE(CSSParserImpl);
 public:
     CSSParserImpl(const CSSParserContext&, const String&, StyleSheetContents* = nullptr, CSSParserObserverWrapper* = nullptr, CSSParserEnum::IsNestedContext = CSSParserEnum::IsNestedContext::No);
-    ~CSSParserImpl();
 
-    enum class AllowedRules : uint8_t {
+    enum AllowedRulesType {
         // As per css-syntax, css-cascade and css-namespaces, @charset rules
         // must come first, followed by @import then @namespace.
         // AllowImportRules actually means we allow @import and any rules that
         // may follow it, i.e. @namespace rules and regular rules.
         // AllowCharsetRules and AllowNamespaceRules behave similarly.
-        CharsetRules,
-        LayerStatementRules,
-        ImportRules,
-        NamespaceRules,
+        AllowCharsetRules,
+        AllowLayerStatementRules,
+        AllowImportRules,
+        AllowNamespaceRules,
         RegularRules,
         KeyframeRules,
         CounterStyleRules,
         FontFeatureValuesRules,
-        ViewTransitionRules,
         NoRules, // For parsing at-rules inside declaration lists (without nesting support)
     };
 
-    static CSSParser::ParseResult parseValue(MutableStyleProperties&, CSSPropertyID, const String&, IsImportant, const CSSParserContext&);
-    static CSSParser::ParseResult parseCustomPropertyValue(MutableStyleProperties&, const AtomString& propertyName, const String&, IsImportant, const CSSParserContext&);
+    static CSSParser::ParseResult parseValue(MutableStyleProperties&, CSSPropertyID, const String&, bool important, const CSSParserContext&);
+    static CSSParser::ParseResult parseCustomPropertyValue(MutableStyleProperties&, const AtomString& propertyName, const String&, bool important, const CSSParserContext&);
     static Ref<ImmutableStyleProperties> parseInlineStyleDeclaration(const String&, const Element&);
     static bool parseDeclarationList(MutableStyleProperties*, const String&, const CSSParserContext&);
-    static RefPtr<StyleRuleBase> parseRule(const String&, const CSSParserContext&, StyleSheetContents*, AllowedRules, CSSParserEnum::IsNestedContext = CSSParserEnum::IsNestedContext::No);
+    static RefPtr<StyleRuleBase> parseRule(const String&, const CSSParserContext&, StyleSheetContents*, AllowedRulesType, CSSParserEnum::IsNestedContext = CSSParserEnum::IsNestedContext::No);
     static void parseStyleSheet(const String&, const CSSParserContext&, StyleSheetContents&);
     static CSSSelectorList parsePageSelector(CSSParserTokenRange, StyleSheetContents*);
 
@@ -107,12 +104,10 @@ public:
     const CSSParserContext& context() const { return m_context; }
 
     // This function updates the range it's given.
-    RefPtr<StyleRuleBase> consumeAtRule(CSSParserTokenRange&, AllowedRules);
+    RefPtr<StyleRuleBase> consumeAtRule(CSSParserTokenRange&, AllowedRulesType);
 
     static void parseDeclarationListForInspector(const String&, const CSSParserContext&, CSSParserObserver&);
     static void parseStyleSheetForInspector(const String&, const CSSParserContext&, StyleSheetContents&, CSSParserObserver&);
-
-    static IsImportant consumeTrailingImportantAndWhitespace(CSSParserTokenRange&);
 
     CSSTokenizer* tokenizer() const { return m_tokenizer.get(); }
 
@@ -125,19 +120,19 @@ private:
     };
     CSSParserImpl(const CSSParserContext&, StyleSheetContents*);
 
-    enum class RuleList : uint8_t {
-        TopLevel,
-        Regular,
-        Keyframes,
-        FontFeatureValues,
+    enum RuleListType {
+        TopLevelRuleList,
+        RegularRuleList,
+        KeyframesRuleList,
+        FontFeatureValuesRuleList,
     };
 
     // Returns whether the first encountered rule was valid
     template<typename T>
-    bool consumeRuleList(CSSParserTokenRange, RuleList, T callback);
+    bool consumeRuleList(CSSParserTokenRange, RuleListType, T callback);
 
     // This function updates the range it's given.
-    RefPtr<StyleRuleBase> consumeQualifiedRule(CSSParserTokenRange&, AllowedRules);
+    RefPtr<StyleRuleBase> consumeQualifiedRule(CSSParserTokenRange&, AllowedRulesType);
 
     // This function is used for all the nested group rules (@media, @layer, @supports, @scope, @container,..etc)
     // It handles potentially orphaned declarations (in the context of style nesting)
@@ -162,7 +157,6 @@ private:
     RefPtr<StyleRuleProperty> consumePropertyRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
     RefPtr<StyleRuleScope> consumeScopeRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
     RefPtr<StyleRuleStartingStyle> consumeStartingStyleRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
-    RefPtr<StyleRuleViewTransition> consumeViewTransitionRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
 
     RefPtr<StyleRuleKeyframe> consumeKeyframeStyleRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
     RefPtr<StyleRuleBase> consumeStyleRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
@@ -177,8 +171,8 @@ private:
     void consumeDeclarationList(CSSParserTokenRange, StyleRuleType);
     void consumeStyleBlock(CSSParserTokenRange, StyleRuleType, ParsingStyleDeclarationsInRuleList = ParsingStyleDeclarationsInRuleList::No);
     bool consumeDeclaration(CSSParserTokenRange, StyleRuleType);
-    void consumeDeclarationValue(CSSParserTokenRange, CSSPropertyID, IsImportant, StyleRuleType);
-    void consumeCustomPropertyValue(CSSParserTokenRange, const AtomString& propertyName, IsImportant);
+    void consumeDeclarationValue(CSSParserTokenRange, CSSPropertyID, bool important, StyleRuleType);
+    void consumeCustomPropertyValue(CSSParserTokenRange, const AtomString& propertyName, bool important);
 
     static Vector<double> consumeKeyframeKeyList(CSSParserTokenRange);
 

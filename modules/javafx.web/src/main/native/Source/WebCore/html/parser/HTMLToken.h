@@ -421,7 +421,7 @@ inline void HTMLToken::appendToComment(char character)
 inline void HTMLToken::appendToComment(ASCIILiteral literal)
 {
     ASSERT(m_type == Type::Comment);
-    m_data.append(literal.span8());
+    m_data.append(literal.characters8(), literal.length());
 }
 
 inline void HTMLToken::appendToComment(UChar character)
@@ -436,7 +436,7 @@ inline const HTMLToken::Attribute* findAttribute(const HTMLToken::AttributeList&
 {
     for (auto& attribute : attributes) {
         // FIXME: The one caller that uses this probably wants to ignore letter case.
-        if (attribute.name.size() == name.size() && equal(attribute.name.data(), name))
+        if (attribute.name.size() == name.size() && equal(attribute.name.data(), name.data(), name.size()))
             return &attribute;
     }
     return nullptr;

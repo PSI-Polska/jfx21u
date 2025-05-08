@@ -33,7 +33,6 @@
 #include <wtf/MathExtras.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/SortedArrayMap.h>
-#include <wtf/text/MakeString.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
@@ -75,7 +74,7 @@ std::optional<AVCParameters> parseAVCCodecParameters(StringView codecString)
 String createAVCCodecParametersString(const AVCParameters& parameters)
 {
     // The format of the 'avc1' codec string is specified in ISO/IEC 14496-15:2014, Annex E.2.
-    return makeString("avc1."_s
+    return makeString("avc1."
         , hex(parameters.profileIDC, 2)
         , hex(parameters.constraintsFlags, 2)
         , hex(parameters.levelIDC, 2));
@@ -221,7 +220,7 @@ String createHEVCCodecParametersString(const HEVCParameters& parameters)
     }
 
     StringBuilder resultBuilder;
-    resultBuilder.append(parameters.codec == HEVCParameters::Codec::Hev1 ? "hev1"_s : "hvc1"_s, '.');
+    resultBuilder.append(parameters.codec == HEVCParameters::Codec::Hev1 ? "hev1" : "hvc1", '.');
     if (parameters.generalProfileSpace) {
         // The format of the 'hevc' codec string is specified in ISO/IEC 14496-15:2014, Annex E.3.
         char profileSpaceCharacter = 'A' + parameters.generalProfileSpace - 1;
@@ -446,7 +445,7 @@ String createDoViCodecParametersString(const DoViParameters& parameters)
 {
     // The format of the DoVi codec string is specified in "Dolby Vision Profiles and Levels Version 1.3.2"
     StringBuilder builder;
-    builder.append("dvh1."_s);
+    builder.append("dvh1.");
     if (parameters.bitstreamProfileID < 10)
         builder.append('0');
     builder.append(parameters.bitstreamProfileID);

@@ -28,11 +28,11 @@
 #include "NodeName.h"
 #include "RenderSVGResourceMarker.h"
 #include "SVGNames.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGMarkerElement);
+WTF_MAKE_ISO_ALLOCATED_IMPL(SVGMarkerElement);
 
 inline SVGMarkerElement::SVGMarkerElement(const QualifiedName& tagName, Document& document)
     : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -69,26 +69,26 @@ void SVGMarkerElement::attributeChanged(const QualifiedName& name, const AtomStr
     case AttributeNames::markerUnitsAttr: {
         auto propertyValue = SVGPropertyTraits<SVGMarkerUnitsType>::fromString(newValue);
         if (propertyValue > 0)
-            Ref { m_markerUnits }->setBaseValInternal<SVGMarkerUnitsType>(propertyValue);
+            m_markerUnits->setBaseValInternal<SVGMarkerUnitsType>(propertyValue);
         return;
     }
     case AttributeNames::orientAttr: {
         auto pair = SVGPropertyTraits<std::pair<SVGAngleValue, SVGMarkerOrientType>>::fromString(newValue);
-        Ref { m_orientAngle }->setBaseValInternal(pair.first);
-        Ref { m_orientType }->setBaseValInternal(pair.second);
+        m_orientAngle->setBaseValInternal(pair.first);
+        m_orientType->setBaseValInternal(pair.second);
         return;
     }
     case AttributeNames::refXAttr:
-        Ref { m_refX }->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError));
+        m_refX->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError));
         break;
     case AttributeNames::refYAttr:
-        Ref { m_refY }->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, newValue, parseError));
+        m_refY->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, newValue, parseError));
         break;
     case AttributeNames::markerWidthAttr:
-        Ref { m_markerWidth }->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError));
+        m_markerWidth->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError));
         break;
     case AttributeNames::markerHeightAttr:
-        Ref { m_markerHeight }->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, newValue, parseError));
+        m_markerHeight->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, newValue, parseError));
         break;
     default:
         break;
@@ -101,11 +101,13 @@ void SVGMarkerElement::attributeChanged(const QualifiedName& name, const AtomStr
 
 void SVGMarkerElement::invalidateMarkerResource()
 {
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (document().settings().layerBasedSVGEngineEnabled()) {
-        if (CheckedPtr markerRenderer = dynamicDowncast<RenderSVGResourceMarker>(renderer()))
+        if (auto* markerRenderer = dynamicDowncast<RenderSVGResourceMarker>(renderer()))
             markerRenderer->invalidateMarker();
         return;
     }
+#endif
 
     updateSVGRendererForElementChange();
 }
@@ -154,20 +156,22 @@ void SVGMarkerElement::setOrient(const AtomString& orient)
 
 void SVGMarkerElement::setOrientToAuto()
 {
-    Ref { m_orientType }->setBaseVal(SVGMarkerOrientAuto);
+    m_orientType->setBaseVal(SVGMarkerOrientAuto);
     invalidateMarkerResource();
 }
 
 void SVGMarkerElement::setOrientToAngle(const SVGAngle& angle)
 {
-    Ref { m_orientAngle }->baseVal()->newValueSpecifiedUnits(angle.unitType(), angle.valueInSpecifiedUnits());
+    m_orientAngle->baseVal()->newValueSpecifiedUnits(angle.unitType(), angle.valueInSpecifiedUnits());
     invalidateMarkerResource();
 }
 
 RenderPtr<RenderElement> SVGMarkerElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (document().settings().layerBasedSVGEngineEnabled())
     return createRenderer<RenderSVGResourceMarker>(*this, WTFMove(style));
+#endif
     return createRenderer<LegacyRenderSVGResourceMarker>(*this, WTFMove(style));
 }
 

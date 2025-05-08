@@ -56,7 +56,6 @@
 #define WIRHasLocalDebuggerKey                  @"WIRHasLocalDebuggerKey"
 #define WIRTitleKey                             @"WIRTitleKey"
 #define WIRURLKey                               @"WIRURLKey"
-#define WIROverrideNameKey                      @"WIROverrideNameKey"
 #define WIRUserInfoKey                          @"WIRUserInfoKey"
 #define WIRApplicationDictionaryKey             @"WIRApplicationDictionaryKey"
 #define WIRMessageDataKey                       @"WIRMessageDataKey"

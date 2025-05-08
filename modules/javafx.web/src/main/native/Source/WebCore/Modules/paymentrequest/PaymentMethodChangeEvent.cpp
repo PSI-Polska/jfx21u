@@ -28,21 +28,26 @@
 
 #if ENABLE(PAYMENT_REQUEST)
 
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(PaymentMethodChangeEvent);
+WTF_MAKE_ISO_ALLOCATED_IMPL(PaymentMethodChangeEvent);
+
+EventInterface PaymentMethodChangeEvent::eventInterface() const
+{
+    return PaymentMethodChangeEventInterfaceType;
+}
 
 PaymentMethodChangeEvent::PaymentMethodChangeEvent(const AtomString& type, Init&& eventInit)
-    : PaymentRequestUpdateEvent { EventInterfaceType::PaymentMethodChangeEvent, type, eventInit }
+    : PaymentRequestUpdateEvent { type, eventInit }
     , m_methodName { WTFMove(eventInit.methodName) }
     , m_methodDetails { std::in_place_type_t<JSValueInWrappedObject>(), eventInit.methodDetails.get() }
 {
 }
 
 PaymentMethodChangeEvent::PaymentMethodChangeEvent(const AtomString& type, const String& methodName, MethodDetailsFunction&& methodDetailsFunction)
-    : PaymentRequestUpdateEvent { EventInterfaceType::PaymentMethodChangeEvent, type }
+    : PaymentRequestUpdateEvent { type }
     , m_methodName { methodName }
     , m_methodDetails { std::in_place_type_t<MethodDetailsFunction>(), WTFMove(methodDetailsFunction) }
 {

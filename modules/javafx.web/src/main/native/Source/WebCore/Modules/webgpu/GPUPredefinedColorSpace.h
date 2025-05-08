@@ -32,7 +32,6 @@ namespace WebCore {
 
 enum class GPUPredefinedColorSpace : uint8_t {
     SRGB,
-    DisplayP3
 };
 
 inline WebGPU::PredefinedColorSpace convertToBacking(GPUPredefinedColorSpace predefinedColorSpace)
@@ -40,12 +39,6 @@ inline WebGPU::PredefinedColorSpace convertToBacking(GPUPredefinedColorSpace pre
     switch (predefinedColorSpace) {
     case GPUPredefinedColorSpace::SRGB:
         return WebGPU::PredefinedColorSpace::SRGB;
-    case GPUPredefinedColorSpace::DisplayP3:
-#if ENABLE(PREDEFINED_COLOR_SPACE_DISPLAY_P3)
-        return WebGPU::PredefinedColorSpace::DisplayP3;
-#else
-        return WebGPU::PredefinedColorSpace::SRGB;
-#endif
     }
     RELEASE_ASSERT_NOT_REACHED();
 }

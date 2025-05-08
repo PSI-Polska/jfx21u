@@ -532,7 +532,7 @@ void GenerateAndAllocateRegisters::generate(CCallHelpers& jit)
 {
     m_jit = &jit;
 
-    CompilerTimingScope timingScope("Air"_s, "GenerateAndAllocateRegisters::generate"_s);
+    CompilerTimingScope timingScope("Air", "GenerateAndAllocateRegisters::generate");
 
     DisallowMacroScratchRegisterUsage disallowScratch(*m_jit);
 
@@ -741,7 +741,7 @@ void GenerateAndAllocateRegisters::generate(CCallHelpers& jit)
             checkConsistency();
 
             inst.forEachTmp([&] (const Tmp& tmp, Arg::Role role, Bank, Width width) {
-                ASSERT(width <= Width64 || Options::useWasmSIMD());
+                ASSERT(width <= Width64 || Options::useWebAssemblySIMD());
                 if (tmp.isReg() && isDisallowedRegister(tmp.reg()))
                     return;
 
@@ -754,7 +754,7 @@ void GenerateAndAllocateRegisters::generate(CCallHelpers& jit)
             });
 
             inst.forEachArg([&] (Arg& arg, Arg::Role role, Bank, Width width) {
-                ASSERT_UNUSED(width, width <= Width64 || Options::useWasmSIMD());
+                ASSERT_UNUSED(width, width <= Width64 || Options::useWebAssemblySIMD());
                 if (!arg.isTmp())
                     return;
 

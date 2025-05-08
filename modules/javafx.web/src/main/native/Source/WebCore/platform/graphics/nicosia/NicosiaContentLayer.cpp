@@ -33,6 +33,11 @@
 
 namespace Nicosia {
 
+Ref<ContentLayer> ContentLayer::create(Client& client)
+{
+    return adoptRef(*new ContentLayer(client, adoptRef(*new WebCore::TextureMapperPlatformLayerProxyGL)));
+}
+
 Ref<ContentLayer> ContentLayer::create(Client& client, Ref<WebCore::TextureMapperPlatformLayerProxy>&& proxy)
 {
     return adoptRef(*new ContentLayer(client, WTFMove(proxy)));

@@ -48,7 +48,7 @@ class SeekSupport extends MediaControllerSupport
 
     syncControl()
     {
-        this.control.enabled = this.mediaController.media.duration <= maxNonLiveDuration;
+        this.control.enabled = this.mediaController.media.duration !== Number.POSITIVE_INFINITY;
     }
 
     // Private

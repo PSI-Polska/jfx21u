@@ -121,10 +121,10 @@ void ParallelHelperClient::runTask(const RefPtr<SharedTask<void ()>>& task)
     }
 }
 
-ParallelHelperPool::ParallelHelperPool(ASCIILiteral threadName)
+ParallelHelperPool::ParallelHelperPool(CString&& threadName)
     : m_lock(Box<Lock>::create())
     , m_workAvailableCondition(AutomaticThreadCondition::create())
-    , m_threadName(threadName)
+    , m_threadName(WTFMove(threadName))
 {
 }
 
@@ -176,9 +176,9 @@ public:
     {
     }
 
-    ASCIILiteral name() const final
+    const char* name() const final
     {
-        return m_pool.m_threadName;
+        return m_pool.m_threadName.data();
     }
 
 private:

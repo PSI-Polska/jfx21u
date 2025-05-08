@@ -128,8 +128,7 @@ JSValue JavaInstance::stringValue(JSGlobalObject* globalObject) const
     jstring stringValue = (jstring) result.l;
     JNIEnv* env = getJNIEnv();
     const jchar* c = getUCharactersFromJStringInEnv(env, stringValue);
-    std::span<const UChar> createSpan(reinterpret_cast<const UChar*>(c), (int)env->GetStringLength(stringValue));
-    String u(createSpan);
+    String u((const UChar*)c, (int)env->GetStringLength(stringValue));
     releaseUCharactersForJStringInEnv(env, stringValue, c);
     return jsString(vm, u);
 }

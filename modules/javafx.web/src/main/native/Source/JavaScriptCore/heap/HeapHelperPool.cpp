@@ -39,9 +39,9 @@ ParallelHelperPool& heapHelperPool()
         initializeHelperPoolOnceFlag,
         [] {
 #if OS(LINUX)
-            constexpr auto threadName = "HeapHelper"_s;
+            const char* threadName = "HeapHelper";
 #else
-            constexpr auto threadName = "Heap Helper Thread"_s;
+            const char* threadName = "Heap Helper Thread";
 #endif
             helperPool = new ParallelHelperPool(threadName);
             helperPool->ensureThreads(Options::numberOfGCMarkers() - 1);

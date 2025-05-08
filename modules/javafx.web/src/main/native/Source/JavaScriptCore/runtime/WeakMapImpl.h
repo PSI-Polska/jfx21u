@@ -27,16 +27,12 @@
 #pragma once
 
 #include "ExceptionHelpers.h"
-#include "HashMapHelper.h"
+#include "HashMapImpl.h"
 #include "JSObject.h"
+#include <wtf/JSValueMalloc.h>
 #include <wtf/MallocPtr.h>
 
 namespace JSC {
-
-enum class HashTableType {
-    Key,
-    KeyValue
-};
 
 struct WeakMapBucketDataKey {
     static const HashTableType Type = HashTableType::Key;
@@ -95,7 +91,7 @@ public:
         m_data.key.copyFrom(from.m_data.key);
     }
 
-    static constexpr ptrdiff_t offsetOfKey()
+    static ptrdiff_t offsetOfKey()
     {
         return OBJECT_OFFSETOF(WeakMapBucket, m_data) + OBJECT_OFFSETOF(Data, key);
     }
@@ -172,10 +168,10 @@ public:
         return bitwise_cast<BucketType*>(this);
     }
 
-    static MallocPtr<WeakMapBuffer> create(uint32_t capacity)
+    static MallocPtr<WeakMapBuffer, JSValueMalloc> create(uint32_t capacity)
     {
         size_t allocationSize = WeakMapBuffer::allocationSize(capacity);
-        auto buffer = MallocPtr<WeakMapBuffer>::malloc(allocationSize);
+        auto buffer = MallocPtr<WeakMapBuffer, JSValueMalloc>::malloc(allocationSize);
         buffer->reset(capacity);
         return buffer;
     }
@@ -262,12 +258,12 @@ public:
 
     void takeSnapshot(MarkedArgumentBuffer&, unsigned limit = 0);
 
-    static constexpr ptrdiff_t offsetOfBuffer()
+    static ptrdiff_t offsetOfBuffer()
     {
         return OBJECT_OFFSETOF(WeakMapImpl<WeakMapBucketType>, m_buffer);
     }
 
-    static constexpr ptrdiff_t offsetOfCapacity()
+    static ptrdiff_t offsetOfCapacity()
     {
         return OBJECT_OFFSETOF(WeakMapImpl<WeakMapBucketType>, m_capacity);
     }
@@ -412,7 +408,7 @@ private:
     template<typename Appender>
     void takeSnapshotInternal(unsigned limit, Appender);
 
-    MallocPtr<WeakMapBufferType> m_buffer;
+    MallocPtr<WeakMapBufferType, JSValueMalloc> m_buffer;
     uint32_t m_capacity { 0 };
     uint32_t m_keyCount { 0 };
     uint32_t m_deleteCount { 0 };

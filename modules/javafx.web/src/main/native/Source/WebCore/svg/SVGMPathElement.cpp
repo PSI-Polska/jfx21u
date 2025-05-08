@@ -27,11 +27,11 @@
 #include "SVGElementTypeHelpers.h"
 #include "SVGNames.h"
 #include "SVGPathElement.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGMPathElement);
+WTF_MAKE_ISO_ALLOCATED_IMPL(SVGMPathElement);
 
 inline SVGMPathElement::SVGMPathElement(const QualifiedName& tagName, Document& document)
     : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -67,7 +67,7 @@ void SVGMPathElement::buildPendingResource()
             treeScope.addPendingSVGResource(target.identifier, *this);
             ASSERT(hasPendingResources());
         }
-    } else if (RefPtr svgElement = dynamicDowncast<SVGElement>(*target.element))
+    } else if (auto* svgElement = dynamicDowncast<SVGElement>(*target.element))
         svgElement->addReferencingElement(*this);
 
     targetPathChanged();
@@ -124,7 +124,8 @@ RefPtr<SVGPathElement> SVGMPathElement::pathElement()
 
 void SVGMPathElement::targetPathChanged()
 {
-    if (RefPtr animateMotionElement = dynamicDowncast<SVGAnimateMotionElement>(parentNode()))
+    auto* parent = parentNode();
+    if (auto* animateMotionElement = dynamicDowncast<SVGAnimateMotionElement>(parent))
         animateMotionElement->updateAnimationPath();
 }
 

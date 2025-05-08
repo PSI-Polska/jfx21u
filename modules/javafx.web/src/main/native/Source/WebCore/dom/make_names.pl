@@ -499,11 +499,12 @@ sub printConstructorInterior
     # FIXME: Could we instead do this entirely in the wrapper, and use custom wrappers
     # instead of having all the support for this here in this script?
     if ($allElements{$elementKey}{wrapperOnlyIfMediaIsAvailable}) {
-        print F <<END;
+        print F <<END
     if (!document.settings().mediaEnabled())
         return $parameters{fallbackInterfaceName}::create($constructorTagName, document);
 
 END
+;
     }
 
     my $runtimeCondition;
@@ -516,10 +517,11 @@ END
     }
 
     if ($runtimeCondition) {
-        print F <<END;
+        print F <<END
     if (!$runtimeCondition)
         return $parameters{fallbackInterfaceName}::create($constructorTagName, document);
 END
+;
     }
 
     # Call the constructor with the right parameters.
@@ -649,7 +651,7 @@ sub printHeaderHead
 {
     my ($F, $prefix, $namespace, $includes, $definitions) = @_;
 
-    print F<<END;
+    print F<<END
 #pragma once
 
 $includes
@@ -659,6 +661,7 @@ namespace WebCore {
 ${definitions}namespace ${namespace}Names {
 
 END
+    ;
 }
 
 sub printCppHead
@@ -752,7 +755,7 @@ sub printTypeHelpers
         my $elementCount = scalar @{$classToKeys{$class}};
         next if $elementCount > 1;
 
-        print F <<END;
+        print F <<END
 namespace WebCore {
 class $class;
 }
@@ -762,30 +765,26 @@ public:
     static bool isOfType(ArgType& node) { return checkTagName(node); }
 private:
 END
+       ;
        if ($parameters{namespace} eq "HTML" && ($allElements{$elementKey}{wrapperOnlyIfMediaIsAvailable} || $allElements{$elementKey}{settingsConditional} || $allElements{$elementKey}{deprecatedGlobalSettingsConditional})) {
-           print F <<END;
+           print F <<END
     static bool checkTagName(const WebCore::HTMLElement& element) { return !element.isHTMLUnknownElement() && element.hasTagName(WebCore::$parameters{namespace}Names::$allElements{$elementKey}{identifier}Tag); }
-    static bool checkTagName(const WebCore::Node& node)
-    {
-        auto* element = dynamicDowncast<WebCore::HTMLElement>(node);
-        return element && checkTagName(*element);
-    }
+    static bool checkTagName(const WebCore::Node& node) { return is<WebCore::HTMLElement>(node) && checkTagName(downcast<WebCore::HTMLElement>(node)); }
 END
+           ;
        } else {
-           print F <<END;
+           print F <<END
     static bool checkTagName(const WebCore::$parameters{namespace}Element& element) { return element.hasTagName(WebCore::$parameters{namespace}Names::$allElements{$elementKey}{identifier}Tag); }
     static bool checkTagName(const WebCore::Node& node) { return node.hasTagName(WebCore::$parameters{namespace}Names::$allElements{$elementKey}{identifier}Tag); }
 END
+           ;
        }
-       print F <<END;
-    static bool checkTagName(const WebCore::EventTarget& target)
-    {
-        auto* node = dynamicDowncast<WebCore::Node>(target);
-        return node && checkTagName(*node);
-    }
+       print F <<END
+    static bool checkTagName(const WebCore::EventTarget& target) { return is<WebCore::Node>(target) && checkTagName(downcast<WebCore::Node>(target)); }
 };
 }
 END
+       ;
        print F "\n";
     }
 }
@@ -1040,8 +1039,8 @@ sub printTagNameCppFile
     print F "TagName findTagName(const String& name)\n";
     print F "{\n";
     print F "    if (name.is8Bit())\n";
-    print F "        return findTagFromBuffer(name.span8());\n";
-    print F "    return findTagFromBuffer(name.span16());\n";
+    print F "        return findTagFromBuffer(std::span(name.characters8(), name.length()));\n";
+    print F "    return findTagFromBuffer(std::span(name.characters16(), name.length()));\n";
     print F "}\n";
     print F "#endif\n";
     print F "\n";
@@ -1248,8 +1247,8 @@ sub printNodeNameCppFile
     print F "NodeName findNodeName(Namespace ns, const String& name)\n";
     print F "{\n";
     print F "    if (name.is8Bit())\n";
-    print F "        return findNodeNameFromBuffer(ns, name.span8());\n";
-    print F "    return findNodeNameFromBuffer(ns, name.span16());\n";
+    print F "        return findNodeNameFromBuffer(ns, std::span(name.characters8(), name.length()));\n";
+    print F "    return findNodeNameFromBuffer(ns, std::span(name.characters16(), name.length()));\n";
     print F "}\n";
     print F "\n";
     print F "ElementName findHTMLElementName(std::span<const LChar> buffer)\n";
@@ -1265,22 +1264,22 @@ sub printNodeNameCppFile
     print F "ElementName findHTMLElementName(const String& name)\n";
     print F "{\n";
     print F "    if (name.is8Bit())\n";
-    print F "        return findHTMLNodeName(name.span8());\n";
-    print F "    return findHTMLNodeName(name.span16());\n";
+    print F "        return findHTMLNodeName(std::span(name.characters8(), name.length()));\n";
+    print F "    return findHTMLNodeName(std::span(name.characters16(), name.length()));\n";
     print F "}\n";
     print F "\n";
     print F "ElementName findSVGElementName(const String& name)\n";
     print F "{\n";
     print F "    if (name.is8Bit())\n";
-    print F "        return findSVGNodeName(name.span8());\n";
-    print F "    return findSVGNodeName(name.span16());\n";
+    print F "        return findSVGNodeName(std::span(name.characters8(), name.length()));\n";
+    print F "    return findSVGNodeName(std::span(name.characters16(), name.length()));\n";
     print F "}\n";
     print F "\n";
     print F "ElementName findMathMLElementName(const String& name)\n";
     print F "{\n";
     print F "    if (name.is8Bit())\n";
-    print F "        return findMathMLNodeName(name.span8());\n";
-    print F "    return findMathMLNodeName(name.span16());\n";
+    print F "        return findMathMLNodeName(std::span(name.characters8(), name.length()));\n";
+    print F "    return findMathMLNodeName(std::span(name.characters16(), name.length()));\n";
     print F "}\n";
     print F "\n";
     print F "const QualifiedName& qualifiedNameForNodeName(NodeName nodeName)\n";
@@ -1385,7 +1384,13 @@ sub generateFindNameForLength
                     }
                     print F ")) {\n";
                 } else {
-                    print F "${indent}if (WTF::equal($bufferStart, \"". substr($string, $currentIndex, $length - $currentIndex) . "\"_span)) {\n";
+                print F "${indent}static constexpr characterType rest[] = { ";
+                for (my $index = $currentIndex; $index < $length; $index = $index + 1) {
+                    my $letter = substr($string, $index, 1);
+                    print F "'$letter', ";
+                }
+                print F "};\n";
+                print F "${indent}if (WTF::equal($bufferStart, rest, $lengthToCompare)) {\n";
             }
             }
             print F "$indent    return ${enumClass}::$enumValue;\n";
@@ -1692,23 +1697,25 @@ sub printFactoryCppFile
 
     printLicenseHeader($F);
 
-    print F <<END;
+    print F <<END
 #include "config.h"
 END
+    ;
 
     print F "\n#if $parameters{guardFactoryWith}\n\n" if $parameters{guardFactoryWith};
 
-    print F <<END;
+    print F <<END
 #include "$parameters{namespace}ElementFactory.h"
 
 #include "$parameters{namespace}Names.h"
 
 END
+    ;
 
     printElementIncludes($F);
     printConditionalElementIncludes($F, 0);
 
-    print F <<END;
+    print F <<END
 
 #include "DeprecatedGlobalSettings.h"
 #include "Document.h"
@@ -1719,6 +1726,7 @@ END
 namespace WebCore {
 
 END
+    ;
 
     my %tagConstructorMap = buildConstructorMap();
     my $argumentList;
@@ -1739,16 +1747,17 @@ END
         last;
     }
 
-    print F <<END;
+    print F <<END
 
 RefPtr<$parameters{namespace}Element> $parameters{namespace}ElementFactory::createKnownElement(TagName tagName, Document& document$formElementArgumentForDefinition, bool createdByParser)
 {
     switch (tagName) {
 END
+    ;
 
     printTagNameCases($F, \%tagConstructorMap, 0);
 
-    print F <<END;
+    print F <<END
     default:
     return nullptr;
     }
@@ -1758,10 +1767,11 @@ RefPtr<$parameters{namespace}Element> $parameters{namespace}ElementFactory::crea
 {
     switch (tagName) {
 END
+    ;
 
     printTagNameCases($F, \%tagConstructorMap, 1);
 
-    print F <<END;
+    print F <<END
     default:
         return nullptr;
     }
@@ -1798,6 +1808,7 @@ Ref<$parameters{namespace}Element> $parameters{namespace}ElementFactory::createE
 } // namespace WebCore
 
 END
+    ;
 
     print F "#endif\n" if $parameters{guardFactoryWith};
 
@@ -1812,7 +1823,7 @@ sub printFactoryHeaderFile
 
     printLicenseHeader($F);
 
-    print F<<END;
+    print F<<END
 #pragma once
 
 #include <wtf/Forward.h>
@@ -1830,6 +1841,7 @@ enum class TagName : uint16_t;
 class $parameters{namespace}ElementFactory {
 public:
 END
+;
 
 print F "    static RefPtr<$parameters{namespace}Element> createKnownElement(const AtomString&, Document&";
 print F ", HTMLFormElement* = nullptr" if $parameters{namespace} eq "HTML";
@@ -1855,12 +1867,13 @@ print F "    static Ref<$parameters{namespace}Element> createElement(const Quali
 print F ", HTMLFormElement* = nullptr" if $parameters{namespace} eq "HTML";
 print F ", bool createdByParser = false);\n";
 
-printf F <<END;
+printf F <<END
 };
 
 }
 
 END
+;
 
     close F;
 }
@@ -1893,7 +1906,7 @@ sub printWrapperFunctions
         }
 
         if ($allElements{$elementKey}{wrapperOnlyIfMediaIsAvailable}) {
-            print F <<END;
+            print F <<END
 static JSDOMObject* create${JSInterfaceName}Wrapper(JSDOMGlobalObject* globalObject, Ref<$parameters{namespace}Element>&& element)
 {
     if (element->is$parameters{fallbackInterfaceName}())
@@ -1902,8 +1915,9 @@ static JSDOMObject* create${JSInterfaceName}Wrapper(JSDOMGlobalObject* globalObj
 }
 
 END
+            ;
         } elsif ($allElements{$elementKey}{settingsConditional}) {
-            print F <<END;
+            print F <<END
 static JSDOMObject* create$allElements{$elementKey}{interfaceName}Wrapper(JSDOMGlobalObject* globalObject, Ref<$parameters{namespace}Element>&& element)
 {
     if (element->is$parameters{fallbackInterfaceName}())
@@ -1912,9 +1926,10 @@ static JSDOMObject* create$allElements{$elementKey}{interfaceName}Wrapper(JSDOMG
 }
 
 END
+            ;
         } elsif ($allElements{$elementKey}{deprecatedGlobalSettingsConditional}) {
             my $deprecatedGlobalSettingsConditional = $allElements{$elementKey}{deprecatedGlobalSettingsConditional};
-            print F <<END;
+            print F <<END
 static JSDOMObject* create${JSInterfaceName}Wrapper(JSDOMGlobalObject* globalObject, Ref<$parameters{namespace}Element>&& element)
 {
     if (element->is$parameters{fallbackInterfaceName}())
@@ -1922,14 +1937,16 @@ static JSDOMObject* create${JSInterfaceName}Wrapper(JSDOMGlobalObject* globalObj
     return createWrapper<${JSInterfaceName}>(globalObject, WTFMove(element));
 }
 END
+    ;
         } else {
-            print F <<END;
+            print F <<END
 static JSDOMObject* create${JSInterfaceName}Wrapper(JSDOMGlobalObject* globalObject, Ref<$parameters{namespace}Element>&& element)
 {
     return createWrapper<${JSInterfaceName}>(globalObject, WTFMove(element));
 }
 
 END
+    ;
         }
 
         if ($conditional) {
@@ -1956,7 +1973,7 @@ sub printWrapperFactoryCppFile
     printElementIncludes($F);
 
     print F "\n#include \"$parameters{namespace}Names.h\"\n";
-    print F <<END;
+    print F <<END
 
 #include "DeprecatedGlobalSettings.h"
 #include "Document.h"
@@ -1965,16 +1982,18 @@ sub printWrapperFactoryCppFile
 #include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
 END
+;
 
     printConditionalElementIncludes($F, 1);
 
-    print F <<END;
+    print F <<END
 
 using namespace JSC;
 
 namespace WebCore {
 
 END
+;
 
     printWrapperFunctions($F);
 
@@ -1984,13 +2003,13 @@ END
         last;
     }
 
-    print F <<END;
+print F <<END
 
 JSDOMObject* createJS$parameters{namespace}Wrapper(JSDOMGlobalObject* globalObject, Ref<$parameters{namespace}Element>&& element)
 {
     switch (element->elementName()) {
 END
-
+;
     for my $elementKey (sort keys %allElements) {
         # Do not add the name to the map if it does not have a JS wrapper constructor or uses the default wrapper.
         next if usesDefaultJSWrapper($elementKey) && ($parameters{fallbackJSInterfaceName} eq $parameters{namespace} . "Element");
@@ -2015,24 +2034,27 @@ END
     print F "        break;\n";
     print F "    }\n";
     if ($parameters{customElementInterfaceName}) {
-        print F <<END;
+        print F <<END
     if (!element->isUnknownElement())
         return createWrapper<$parameters{customElementInterfaceName}>(globalObject, WTFMove(element));
 END
+;
     }
 
     if ("$parameters{namespace}Element" eq $parameters{fallbackJSInterfaceName}) {
-        print F <<END;
+        print F <<END
     ASSERT(element->is$parameters{fallbackJSInterfaceName}());
 END
+;
     }
 
-    print F <<END;
+    print F <<END
     return createWrapper<$parameters{fallbackJSInterfaceName}>(globalObject, WTFMove(element));
 }
 
 }
 END
+;
     print F "\n#endif\n" if $parameters{guardFactoryWith};
 
     close F;
@@ -2049,7 +2071,7 @@ sub printWrapperFactoryHeaderFile
 
     print F "#pragma once\n\n";
 
-    print F <<END;
+    print F <<END
 #include <wtf/Forward.h>
 
 namespace WebCore {
@@ -2063,6 +2085,7 @@ namespace WebCore {
 }
 
 END
+    ;
 
     close F;
 }

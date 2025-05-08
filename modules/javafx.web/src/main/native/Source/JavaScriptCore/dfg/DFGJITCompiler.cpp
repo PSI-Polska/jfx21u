@@ -64,7 +64,9 @@ JITCompiler::JITCompiler(Graph& dfg)
 #endif
 }
 
-JITCompiler::~JITCompiler() = default;
+JITCompiler::~JITCompiler()
+{
+}
 
 void JITCompiler::linkOSRExits()
 {
@@ -100,20 +102,19 @@ void JITCompiler::linkOSRExits()
 
         jitAssertHasValidCallFrame();
 #if USE(JSVALUE64)
-            move(TrustedImm32(i), GPRInfo::numberTagRegister);
         if (m_graph.m_plan.isUnlinked()) {
+            move(TrustedImm32(i), GPRInfo::numberTagRegister);
             if (info.m_replacementDestination.isSet())
                 dispatchCasesWithoutLinkedFailures.append(jump());
             else
                 dispatchCases.append(jump());
-        } else
-            info.m_patchableJump = patchableJump();
-#else
+            continue;
+        }
+#endif
         UNUSED_VARIABLE(dispatchCases);
         UNUSED_VARIABLE(dispatchCasesWithoutLinkedFailures);
         store32(TrustedImm32(i), &vm().osrExitIndex);
         info.m_patchableJump = patchableJump();
-#endif
     }
 
 #if USE(JSVALUE64)
@@ -131,11 +132,13 @@ void JITCompiler::linkOSRExits()
             didNotHaveException.link(this);
         }
         dispatchCases.link(this);
+        store32(GPRInfo::numberTagRegister, &vm().osrExitIndex);
         loadPtr(Address(GPRInfo::jitDataRegister, JITData::offsetOfExits()), GPRInfo::jitDataRegister);
         static_assert(sizeof(JITData::ExitVector::value_type) == 16);
-        static_assert(!JITData::ExitVector::value_type::offsetOfCodePtr());
-        lshiftPtr(GPRInfo::numberTagRegister, TrustedImm32(4), GPRInfo::notCellMaskRegister);
-        addPtr(GPRInfo::notCellMaskRegister, GPRInfo::jitDataRegister);
+        ASSERT(!JITData::ExitVector::value_type::offsetOfCodePtr());
+        lshiftPtr(TrustedImm32(4), GPRInfo::numberTagRegister);
+        addPtr(GPRInfo::numberTagRegister, GPRInfo::jitDataRegister);
+        emitMaterializeTagCheckRegisters();
         farJump(Address(GPRInfo::jitDataRegister, JITData::ExitVector::Storage::offsetOfData()), OSRExitPtrTag);
     }
 #endif
@@ -158,14 +161,12 @@ void JITCompiler::compileEntry()
 void JITCompiler::compileSetupRegistersForEntry()
 {
     emitSaveCalleeSaves();
-#if USE(JSVALUE64)
-    // Use numberTagRegister as a scratch since it is recovered after this.
-    jitAssertCodeBlockOnCallFrameWithType(GPRInfo::numberTagRegister, JITType::DFGJIT);
-#endif
     emitMaterializeTagCheckRegisters();
 #if USE(JSVALUE64)
+    if (m_graph.m_plan.isUnlinked()) {
         emitGetFromCallFrameHeaderPtr(CallFrameSlot::codeBlock, GPRInfo::jitDataRegister);
         loadPtr(Address(GPRInfo::jitDataRegister, CodeBlock::offsetOfJITData()), GPRInfo::jitDataRegister);
+    }
 #endif
 }
 
@@ -261,7 +262,6 @@ void JITCompiler::link(LinkBuffer& linkBuffer)
     for (unsigned i = 0; i < m_calls.size(); ++i)
         linkBuffer.link(m_calls[i].m_call, m_calls[i].m_function);
 
-#if USE(JSVALUE32_64)
     finalizeInlineCaches(m_getByIds, linkBuffer);
     finalizeInlineCaches(m_getByIdsWithThis, linkBuffer);
     finalizeInlineCaches(m_getByVals, linkBuffer);
@@ -274,16 +274,23 @@ void JITCompiler::link(LinkBuffer& linkBuffer)
     finalizeInlineCaches(m_inByVals, linkBuffer);
     finalizeInlineCaches(m_instanceOfs, linkBuffer);
     finalizeInlineCaches(m_privateBrandAccesses, linkBuffer);
-#else
+
+    if (m_graph.m_plan.isUnlinked()) {
         m_jitCode->m_unlinkedStubInfos = FixedVector<UnlinkedStructureStubInfo>(m_unlinkedStubInfos.size());
         if (m_jitCode->m_unlinkedStubInfos.size())
             std::move(m_unlinkedStubInfos.begin(), m_unlinkedStubInfos.end(), m_jitCode->m_unlinkedStubInfos.begin());
         ASSERT(m_jitCode->common.m_stubInfos.isEmpty());
-#endif
+    }
+
+    for (auto& record : m_jsCalls) {
+        std::visit([&](auto* info) {
+            info->setCodeLocations(linkBuffer.locationOf<JSInternalPtrTag>(record.doneLocation));
+        }, record.info);
+    }
 
     for (auto& record : m_jsDirectCalls) {
         auto& info = *record.info;
-        info.setSlowPathStart(linkBuffer.locationOf<JSInternalPtrTag>(record.slowPath));
+        info.setCodeLocations(linkBuffer.locationOf<JSInternalPtrTag>(record.slowPath));
     }
 
     if (m_graph.m_plan.isUnlinked()) {
@@ -580,14 +587,13 @@ LinkerIR::Constant JITCompiler::addToConstantPool(LinkerIR::Type type, void* pay
 
 std::tuple<CompileTimeStructureStubInfo, StructureStubInfoIndex> JITCompiler::addStructureStubInfo()
 {
-#if USE(JSVALUE64)
+    if (m_graph.m_plan.isUnlinked()) {
         unsigned index = m_unlinkedStubInfos.size();
         DFG::UnlinkedStructureStubInfo* stubInfo = &m_unlinkedStubInfos.alloc();
         return std::tuple { stubInfo, StructureStubInfoIndex { index } };
-#else
+    }
     StructureStubInfo* stubInfo = jitCode()->common.m_stubInfos.add();
     return std::tuple { stubInfo, StructureStubInfoIndex(0) };
-#endif
 }
 
 std::tuple<CompileTimeCallLinkInfo, JITCompiler::LinkableConstant> JITCompiler::addCallLinkInfo(CodeOrigin codeOrigin)
@@ -599,7 +605,7 @@ std::tuple<CompileTimeCallLinkInfo, JITCompiler::LinkableConstant> JITCompiler::
         LinkerIR::Constant callLinkInfoIndex = addToConstantPool(LinkerIR::Type::CallLinkInfo, unlinkedCallLinkInfoIndex);
         return std::tuple { callLinkInfo, LinkableConstant(callLinkInfoIndex) };
     }
-    auto* callLinkInfo = jitCode()->common.m_callLinkInfos.add(codeOrigin, m_graph.m_codeBlock);
+    auto* callLinkInfo = jitCode()->common.m_callLinkInfos.add(codeOrigin, CallLinkInfo::UseDataIC::Yes, m_graph.m_codeBlock);
     return std::tuple { callLinkInfo, LinkableConstant::nonCellPointer(*this, callLinkInfo) };
 }
 

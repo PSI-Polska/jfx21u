@@ -32,11 +32,11 @@
 namespace WebCore {
 
 template <typename CharacterType>
-static inline size_t findSlashDotDotSlash(std::span<const CharacterType> characters, size_t position)
+static inline size_t findSlashDotDotSlash(const CharacterType* characters, size_t length, size_t position)
 {
-    if (characters.size() < 4)
+    if (length < 4)
         return notFound;
-    size_t loopLimit = characters.size() - 3;
+    size_t loopLimit = length - 3;
     for (size_t i = position; i < loopLimit; ++i) {
         if (characters[i] == '/' && characters[i + 1] == '.' && characters[i + 2] == '.' && characters[i + 3] == '/')
             return i;
@@ -45,11 +45,11 @@ static inline size_t findSlashDotDotSlash(std::span<const CharacterType> charact
 }
 
 template <typename CharacterType>
-static inline size_t findSlashSlash(std::span<const CharacterType> characters, size_t position)
+static inline size_t findSlashSlash(const CharacterType* characters, size_t length, size_t position)
 {
-    if (characters.size() < 2)
+    if (length < 2)
         return notFound;
-    size_t loopLimit = characters.size() - 1;
+    size_t loopLimit = length - 1;
     for (size_t i = position; i < loopLimit; ++i) {
         if (characters[i] == '/' && characters[i + 1] == '/')
             return i;
@@ -58,11 +58,11 @@ static inline size_t findSlashSlash(std::span<const CharacterType> characters, s
 }
 
 template <typename CharacterType>
-static inline size_t findSlashDotSlash(std::span<const CharacterType> characters, size_t position)
+static inline size_t findSlashDotSlash(const CharacterType* characters, size_t length, size_t position)
 {
-    if (characters.size() < 3)
+    if (length < 3)
         return notFound;
-    size_t loopLimit = characters.size() - 2;
+    size_t loopLimit = length - 2;
     for (size_t i = position; i < loopLimit; ++i) {
         if (characters[i] == '/' && characters[i + 1] == '.' && characters[i + 2] == '/')
             return i;
@@ -71,11 +71,11 @@ static inline size_t findSlashDotSlash(std::span<const CharacterType> characters
 }
 
 template <typename CharacterType>
-static inline bool containsColonSlashSlash(std::span<const CharacterType> characters)
+static inline bool containsColonSlashSlash(const CharacterType* characters, unsigned length)
 {
-    if (characters.size() < 3)
+    if (length < 3)
         return false;
-    unsigned loopLimit = characters.size() - 2;
+    unsigned loopLimit = length - 2;
     for (unsigned i = 0; i < loopLimit; ++i) {
         if (characters[i] == ':' && characters[i + 1] == '/' && characters[i + 2] == '/')
             return true;
@@ -108,7 +108,7 @@ static void cleanSlashDotDotSlashes(Vector<CharacterType, 512>& path, size_t fir
 {
     size_t slash = firstSlash;
     do {
-        size_t previousSlash = slash ? reverseFind(path.span(), '/', slash - 1) : notFound;
+        size_t previousSlash = slash ? reverseFind(path.data(), path.size(), '/', slash - 1) : notFound;
         // Don't remove the host, i.e. http://foo.org/../foo.html
         if (previousSlash == notFound || (previousSlash > 3 && path[previousSlash - 2] == ':' && path[previousSlash - 1] == '/')) {
             path[slash] = 0;
@@ -119,14 +119,14 @@ static void cleanSlashDotDotSlashes(Vector<CharacterType, 512>& path, size_t fir
                 path[i] = 0;
         }
         slash += 3;
-    } while ((slash = findSlashDotDotSlash(path.span(), slash)) != notFound);
+    } while ((slash = findSlashDotDotSlash(path.data(), path.size(), slash)) != notFound);
     squeezeOutNullCharacters(path);
 }
 
 template <typename CharacterType>
 static void mergeDoubleSlashes(Vector<CharacterType, 512>& path, size_t firstSlash)
 {
-    size_t refPos = find(path.span(), '#');
+    size_t refPos = find(path.data(), path.size(), '#');
     if (!refPos || refPos == notFound)
         refPos = path.size();
 
@@ -136,7 +136,7 @@ static void mergeDoubleSlashes(Vector<CharacterType, 512>& path, size_t firstSla
             path[slash++] = 0;
         else
             slash += 2;
-        if ((slash = findSlashSlash(path.span(), slash)) == notFound)
+        if ((slash = findSlashSlash(path.data(), path.size(), slash)) == notFound)
             break;
     }
     squeezeOutNullCharacters(path);
@@ -150,7 +150,7 @@ static void cleanSlashDotSlashes(Vector<CharacterType, 512>& path, size_t firstS
         path[slash] = 0;
         path[slash + 1] = 0;
         slash += 2;
-    } while ((slash = findSlashDotSlash(path.span(), slash)) != notFound);
+    } while ((slash = findSlashDotSlash(path.data(), path.size(), slash)) != notFound);
     squeezeOutNullCharacters(path);
 }
 
@@ -158,17 +158,17 @@ template <typename CharacterType>
 static inline void cleanPath(Vector<CharacterType, 512>& path)
 {
     // FIXME: Should not do this in the query or anchor part of the URL.
-    size_t firstSlash = findSlashDotDotSlash(path.span(), 0);
+    size_t firstSlash = findSlashDotDotSlash(path.data(), path.size(), 0);
     if (firstSlash != notFound)
         cleanSlashDotDotSlashes(path, firstSlash);
 
     // FIXME: Should not do this in the query part.
-    firstSlash = findSlashSlash(path.span(), 0);
+    firstSlash = findSlashSlash(path.data(), path.size(), 0);
     if (firstSlash != notFound)
         mergeDoubleSlashes(path, firstSlash);
 
     // FIXME: Should not do this in the query or anchor part.
-    firstSlash = findSlashDotSlash(path.span(), 0);
+    firstSlash = findSlashDotSlash(path.data(), path.size(), 0);
     if (firstSlash != notFound)
         cleanSlashDotSlashes(path, firstSlash);
 }
@@ -180,9 +180,9 @@ static inline bool matchLetter(CharacterType c, char lowercaseLetter)
 }
 
 template <typename CharacterType>
-static inline bool needsTrailingSlash(std::span<const CharacterType> characters)
+static inline bool needsTrailingSlash(const CharacterType* characters, unsigned length)
 {
-    if (characters.size() < 6)
+    if (length < 6)
         return false;
     if (!matchLetter(characters[0], 'h') || !matchLetter(characters[1], 't') || !matchLetter(characters[2], 't') || !matchLetter(characters[3], 'p'))
         return false;
@@ -192,38 +192,39 @@ static inline bool needsTrailingSlash(std::span<const CharacterType> characters)
     unsigned pos = characters[4] == ':' ? 5 : 6;
 
     // Skip initial two slashes if present.
-    if (pos + 1 < characters.size() && characters[pos] == '/' && characters[pos + 1] == '/')
+    if (pos + 1 < length && characters[pos] == '/' && characters[pos + 1] == '/')
         pos += 2;
 
     // Find next slash.
-    while (pos < characters.size() && characters[pos] != '/')
+    while (pos < length && characters[pos] != '/')
         ++pos;
 
-    return pos == characters.size();
+    return pos == length;
 }
 
 template <typename CharacterType>
-static ALWAYS_INLINE SharedStringHash computeSharedStringHashInline(std::span<const CharacterType> url)
+static ALWAYS_INLINE SharedStringHash computeSharedStringHashInline(const CharacterType* url, unsigned length)
 {
-    return AlreadyHashed::avoidDeletedValue(SuperFastHash::computeHash(url));
+    return AlreadyHashed::avoidDeletedValue(SuperFastHash::computeHash(url, length));
 }
 
 SharedStringHash computeSharedStringHash(const String& url)
 {
-    if (url.isEmpty() || url.is8Bit())
-        return computeSharedStringHashInline(url.span8());
-    return computeSharedStringHashInline(url.span16());
+    unsigned length = url.length();
+    if (!length || url.is8Bit())
+        return computeSharedStringHashInline(url.characters8(), length);
+    return computeSharedStringHashInline(url.characters16(), length);
 }
 
-SharedStringHash computeSharedStringHash(std::span<const UChar> url)
+SharedStringHash computeSharedStringHash(const UChar* url, unsigned length)
 {
-    return computeSharedStringHashInline(url);
+    return computeSharedStringHashInline(url, length);
 }
 
 template <typename CharacterType>
-static ALWAYS_INLINE SharedStringHash computeSharedStringHashInline(const URL& base, std::span<const CharacterType> characters)
+static ALWAYS_INLINE SharedStringHash computeSharedStringHashInline(const URL& base, const CharacterType* characters, unsigned length)
 {
-    if (characters.empty())
+    if (!length)
         return 0;
 
     // This is a poor man's completeURL. Faster with less memory allocation.
@@ -237,20 +238,20 @@ static ALWAYS_INLINE SharedStringHash computeSharedStringHashInline(const URL& b
     // FIXME: needsTrailingSlash does not properly return true for a URL that has no path, but does
     // have a query or anchor.
 
-    if (containsColonSlashSlash(characters)) {
-        if (!needsTrailingSlash(characters))
-            return computeSharedStringHashInline(characters);
+    if (containsColonSlashSlash(characters, length)) {
+        if (!needsTrailingSlash(characters, length))
+            return computeSharedStringHashInline(characters, length);
 
         // FIXME: This is incorrect for URLs that have a query or anchor; the "/" needs to go at the
         // end of the path, *before* the query or anchor.
         SuperFastHash hasher;
-        hasher.addCharacters(characters);
+        hasher.addCharacters(characters, length);
         hasher.addCharacter('/');
         return AlreadyHashed::avoidDeletedValue(hasher.hash());
     }
 
     Vector<CharacterType, 512> buffer;
-    if (characters.empty())
+    if (!length)
         append(buffer, base.string());
     else {
         switch (characters[0]) {
@@ -265,15 +266,15 @@ static ALWAYS_INLINE SharedStringHash computeSharedStringHashInline(const URL& b
             break;
         }
     }
-    buffer.append(characters);
+    buffer.append(characters, length);
     cleanPath(buffer);
-    if (needsTrailingSlash(buffer.span())) {
+    if (needsTrailingSlash(buffer.data(), buffer.size())) {
         // FIXME: This is incorrect for URLs that have a query or anchor; the "/" needs to go at the
         // end of the path, *before* the query or anchor.
         buffer.append('/');
     }
 
-    return computeSharedStringHashInline(buffer.span());
+    return computeSharedStringHashInline(buffer.data(), buffer.size());
 }
 
 SharedStringHash computeVisitedLinkHash(const URL& base, const AtomString& attributeURL)
@@ -282,10 +283,11 @@ SharedStringHash computeVisitedLinkHash(const URL& base, const AtomString& attri
         return 0;
 
     if ((base.string().isEmpty() || base.string().is8Bit()) && attributeURL.is8Bit())
-        return computeSharedStringHashInline(base, attributeURL.span8());
+        return computeSharedStringHashInline(base, attributeURL.characters8(), attributeURL.length());
 
     auto upconvertedCharacters = StringView(attributeURL.string()).upconvertedCharacters();
-    return computeSharedStringHashInline(base, upconvertedCharacters.span());
+    const UChar* characters = upconvertedCharacters;
+    return computeSharedStringHashInline(base, characters, attributeURL.length());
 }
 
 } // namespace WebCore

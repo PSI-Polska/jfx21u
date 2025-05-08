@@ -27,7 +27,6 @@
 #include "CSSCalcPrimitiveValueNode.h"
 
 #include "CSSCalcCategoryMapping.h"
-#include "CSSCalcSymbolTable.h"
 #include "CSSPrimitiveValue.h"
 #include "CSSPrimitiveValueMappings.h"
 #include "CalcExpressionLength.h"
@@ -104,13 +103,13 @@ void CSSCalcPrimitiveValueNode::add(const CSSCalcPrimitiveValueNode& node, UnitC
         break;
     case UnitConversion::Preserve:
         ASSERT(node.primitiveType() == valueType);
-        m_value = CSSPrimitiveValue::create(value->doubleValue() + node.doubleValue(valueType, { }), valueType);
+        m_value = CSSPrimitiveValue::create(value->doubleValue() + node.doubleValue(valueType), valueType);
         break;
     case UnitConversion::Canonicalize: {
         auto canonicalType = canonicalUnitTypeForUnitType(valueType);
         ASSERT(canonicalType != CSSUnitType::CSS_UNKNOWN);
         double leftValue = value->doubleValue(canonicalType);
-        double rightValue = node.doubleValue(canonicalType, { });
+        double rightValue = node.doubleValue(canonicalType);
         m_value = CSSPrimitiveValue::create(leftValue + rightValue, canonicalType);
         break;
     }
@@ -173,7 +172,7 @@ std::unique_ptr<CalcExpressionNode> CSSCalcPrimitiveValueNode::createCalcExpress
     return nullptr;
 }
 
-double CSSCalcPrimitiveValueNode::doubleValue(CSSUnitType unitType, const CSSCalcSymbolTable&) const
+double CSSCalcPrimitiveValueNode::doubleValue(CSSUnitType unitType) const
 {
     if (hasDoubleValue(unitType)) {
         Ref value = m_value;
@@ -214,11 +213,6 @@ double CSSCalcPrimitiveValueNode::computeLengthPx(const CSSToLengthConversionDat
 void CSSCalcPrimitiveValueNode::collectComputedStyleDependencies(ComputedStyleDependencies& dependencies) const
 {
     protectedValue()->collectComputedStyleDependencies(dependencies);
-}
-
-bool CSSCalcPrimitiveValueNode::isResolvable() const
-{
-    return true;
 }
 
 bool CSSCalcPrimitiveValueNode::isZero() const

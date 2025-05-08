@@ -52,7 +52,7 @@ public:
 private:
     // RTCIceTransportBackend
     const void* backend() const final { return m_backend.get(); }
-    void registerClient(RTCIceTransportBackendClient&) final;
+    void registerClient(Client&) final;
     void unregisterClient() final;
 
     rtc::scoped_refptr<webrtc::IceTransportInterface> m_backend;

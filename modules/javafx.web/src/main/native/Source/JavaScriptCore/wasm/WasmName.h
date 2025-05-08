@@ -25,12 +25,13 @@
 
 #pragma once
 
-#include <wtf/Forward.h>
+#include <wtf/Vector.h>
+#include <wtf/text/LChar.h>
 
 namespace JSC {
 
 namespace Wasm {
 
-using Name = Vector<char8_t>;
+using Name = Vector<LChar>;
 
 } } // namespace JSC::Wasm

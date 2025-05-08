@@ -39,9 +39,6 @@ public:
     using ActiveDOMCallback::ActiveDOMCallback;
 
     virtual CallbackResult<bool> handleEvent(bool) = 0;
-
-private:
-    virtual bool hasCallback() const = 0;
 };
 
 }

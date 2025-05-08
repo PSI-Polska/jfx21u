@@ -36,14 +36,14 @@
 #include "RenderChildIterator.h"
 #include "RenderStyleSetters.h"
 #include "RenderTheme.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/URL.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderAttachment);
+WTF_MAKE_ISO_ALLOCATED_IMPL(RenderAttachment);
 
 RenderAttachment::RenderAttachment(HTMLAttachmentElement& element, RenderStyle&& style)
     : RenderReplaced(Type::Attachment, element, WTFMove(style), LayoutSize())
@@ -54,8 +54,6 @@ RenderAttachment::RenderAttachment(HTMLAttachmentElement& element, RenderStyle&&
     m_hasShadowControls = element.isImageMenuEnabled();
 #endif
 }
-
-RenderAttachment::~RenderAttachment() = default;
 
 HTMLAttachmentElement& RenderAttachment::attachmentElement() const
 {
@@ -116,14 +114,14 @@ LayoutUnit RenderAttachment::baselinePosition(FontBaseline, bool, LineDirectionM
 
 bool RenderAttachment::shouldDrawBorder() const
 {
-    if (style().usedAppearance() == StyleAppearance::BorderlessAttachment)
+    if (style().effectiveAppearance() == StyleAppearance::BorderlessAttachment)
         return false;
     return m_shouldDrawBorder;
 }
 
 void RenderAttachment::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& offset)
 {
-    if (paintInfo.phase != PaintPhase::Selection || !hasVisibleBoxDecorations() || !style().hasUsedAppearance())
+    if (paintInfo.phase != PaintPhase::Selection || !hasVisibleBoxDecorations() || !style().hasEffectiveAppearance())
         return;
 
     auto paintRect = borderBoxRect();

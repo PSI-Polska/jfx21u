@@ -36,17 +36,16 @@ CSSSelectorParserContext::CSSSelectorParserContext(const CSSParserContext& conte
     : mode(context.mode)
     , cssNestingEnabled(context.cssNestingEnabled)
     , customStateSetEnabled(context.customStateSetEnabled)
+    , focusVisibleEnabled(context.focusVisibleEnabled)
     , grammarAndSpellingPseudoElementsEnabled(context.grammarAndSpellingPseudoElementsEnabled)
+    , hasPseudoClassEnabled(context.hasPseudoClassEnabled)
     , highlightAPIEnabled(context.highlightAPIEnabled)
 #if ENABLE(SERVICE_CONTROLS)
     , imageControlsEnabled(context.imageControlsEnabled)
 #endif
     , popoverAttributeEnabled(context.popoverAttributeEnabled)
-    , targetTextPseudoElementEnabled(context.targetTextPseudoElementEnabled)
     , thumbAndTrackPseudoElementsEnabled(context.thumbAndTrackPseudoElementsEnabled)
     , viewTransitionsEnabled(context.propertySettings.viewTransitionsEnabled)
-    , viewTransitionClassesEnabled(viewTransitionsEnabled && context.propertySettings.viewTransitionClassesEnabled)
-    , viewTransitionTypesEnabled(viewTransitionsEnabled && context.viewTransitionTypesEnabled)
 {
 }
 
@@ -54,17 +53,16 @@ CSSSelectorParserContext::CSSSelectorParserContext(const Document& document)
     : mode(document.inQuirksMode() ? HTMLQuirksMode : HTMLStandardMode)
     , cssNestingEnabled(document.settings().cssNestingEnabled())
     , customStateSetEnabled(document.settings().customStateSetEnabled())
+    , focusVisibleEnabled(document.settings().focusVisibleEnabled())
     , grammarAndSpellingPseudoElementsEnabled(document.settings().grammarAndSpellingPseudoElementsEnabled())
+    , hasPseudoClassEnabled(document.settings().hasPseudoClassEnabled())
     , highlightAPIEnabled(document.settings().highlightAPIEnabled())
 #if ENABLE(SERVICE_CONTROLS)
     , imageControlsEnabled(document.settings().imageControlsEnabled())
 #endif
     , popoverAttributeEnabled(document.settings().popoverAttributeEnabled())
-    , targetTextPseudoElementEnabled(document.settings().targetTextPseudoElementEnabled())
     , thumbAndTrackPseudoElementsEnabled(document.settings().thumbAndTrackPseudoElementsEnabled())
     , viewTransitionsEnabled(document.settings().viewTransitionsEnabled())
-    , viewTransitionClassesEnabled(viewTransitionsEnabled && document.settings().viewTransitionClassesEnabled())
-    , viewTransitionTypesEnabled(viewTransitionsEnabled && document.settings().viewTransitionTypesEnabled())
 {
 }
 
@@ -74,17 +72,16 @@ void add(Hasher& hasher, const CSSSelectorParserContext& context)
         context.mode,
         context.cssNestingEnabled,
         context.customStateSetEnabled,
+        context.focusVisibleEnabled,
         context.grammarAndSpellingPseudoElementsEnabled,
+        context.hasPseudoClassEnabled,
         context.highlightAPIEnabled,
 #if ENABLE(SERVICE_CONTROLS)
         context.imageControlsEnabled,
 #endif
         context.popoverAttributeEnabled,
-        context.targetTextPseudoElementEnabled,
         context.thumbAndTrackPseudoElementsEnabled,
-        context.viewTransitionsEnabled,
-        context.viewTransitionClassesEnabled,
-        context.viewTransitionTypesEnabled
+        context.viewTransitionsEnabled
     );
 }
 

@@ -47,8 +47,6 @@ public:
     bool isFiredOrCancelled() const { return m_firedOrCancelled; }
 
 private:
-    virtual bool hasCallback() const = 0;
-
     unsigned m_id { 0 };
     bool m_firedOrCancelled { false };
 };

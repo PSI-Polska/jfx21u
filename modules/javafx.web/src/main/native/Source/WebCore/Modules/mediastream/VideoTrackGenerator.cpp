@@ -34,11 +34,11 @@
 #include "WritableStream.h"
 #include "WritableStreamSink.h"
 
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(VideoTrackGenerator);
+WTF_MAKE_ISO_ALLOCATED_IMPL(VideoTrackGenerator);
 
 ExceptionOr<Ref<VideoTrackGenerator>> VideoTrackGenerator::create(ScriptExecutionContext& context)
 {
@@ -93,7 +93,9 @@ VideoTrackGenerator::VideoTrackGenerator(Ref<Sink>&& sink, Ref<WritableStream>&&
 {
 }
 
-VideoTrackGenerator::~VideoTrackGenerator() = default;
+VideoTrackGenerator::~VideoTrackGenerator()
+{
+}
 
 void VideoTrackGenerator::setMuted(ScriptExecutionContext& context, bool muted)
 {

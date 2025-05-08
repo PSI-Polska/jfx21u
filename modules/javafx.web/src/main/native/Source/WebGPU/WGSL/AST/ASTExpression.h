@@ -31,7 +31,6 @@
 #include <wtf/ReferenceWrapperVector.h>
 
 namespace WGSL {
-class BoundsCheckVisitor;
 class ConstantRewriter;
 class EntryPointRewriter;
 class RewriteGlobalVariables;
@@ -42,7 +41,6 @@ namespace AST {
 
 class Expression : public Node {
     WGSL_AST_BUILDER_NODE(Expression);
-    friend BoundsCheckVisitor;
     friend ConstantRewriter;
     friend EntryPointRewriter;
     friend RewriteGlobalVariables;

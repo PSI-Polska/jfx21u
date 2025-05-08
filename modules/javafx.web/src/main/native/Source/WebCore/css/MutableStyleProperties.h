@@ -47,7 +47,6 @@ public:
     WEBCORE_EXPORT ~MutableStyleProperties();
 
     Ref<ImmutableStyleProperties> immutableCopy() const;
-    Ref<ImmutableStyleProperties> immutableDeduplicatedCopy() const;
 
     unsigned propertyCount() const { return m_propertyVector.size(); }
     bool isEmpty() const { return !propertyCount(); }
@@ -63,18 +62,18 @@ public:
     bool addParsedProperty(const CSSProperty&);
 
     // These expand shorthand properties into multiple properties.
-    bool setProperty(CSSPropertyID, const String& value, CSSParserContext, IsImportant = IsImportant::No, bool* didFailParsing = nullptr);
-    bool setProperty(CSSPropertyID, const String& value, IsImportant = IsImportant::No, bool* didFailParsing = nullptr);
-    void setProperty(CSSPropertyID, RefPtr<CSSValue>&&, IsImportant = IsImportant::No);
+    bool setProperty(CSSPropertyID, const String& value, bool important, CSSParserContext, bool* didFailParsing = nullptr);
+    bool setProperty(CSSPropertyID, const String& value, bool important = false, bool* didFailParsing = nullptr);
+    void setProperty(CSSPropertyID, RefPtr<CSSValue>&&, bool important = false);
 
     // These do not. FIXME: This is too messy, we can do better.
-    bool setProperty(CSSPropertyID, CSSValueID identifier, IsImportant = IsImportant::No);
+    bool setProperty(CSSPropertyID, CSSValueID identifier, bool important = false);
     bool setProperty(const CSSProperty&, CSSProperty* slot = nullptr);
 
     bool removeProperty(CSSPropertyID, String* returnText = nullptr);
     bool removeProperties(std::span<const CSSPropertyID>);
 
-    bool mergeAndOverrideOnConflict(const StyleProperties&);
+    void mergeAndOverrideOnConflict(const StyleProperties&);
 
     void clear();
     bool parseDeclaration(const String& styleDeclaration, CSSParserContext);
@@ -85,8 +84,10 @@ public:
     int findPropertyIndex(CSSPropertyID) const;
     int findCustomPropertyIndex(StringView propertyName) const;
 
+    Vector<CSSProperty, 4> m_propertyVector;
+
     // Methods for querying and altering CSS custom properties.
-    bool setCustomProperty(const String& propertyName, const String& value, CSSParserContext, IsImportant = IsImportant::No);
+    bool setCustomProperty(const String& propertyName, const String& value, bool important, CSSParserContext);
     bool removeCustomProperty(const String& propertyName, String* returnText = nullptr);
 
 private:
@@ -103,8 +104,6 @@ private:
     bool canUpdateInPlace(const CSSProperty&, CSSProperty* toReplace) const;
 
     friend class StyleProperties;
-
-    Vector<CSSProperty, 4> m_propertyVector;
 };
 
 inline void MutableStyleProperties::deref() const

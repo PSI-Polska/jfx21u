@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "CallGraph.h"
 #include "CompilationMessage.h"
 #include "CompilationScope.h"
 #include "ConstantValue.h"
@@ -76,7 +77,6 @@ struct Configuration {
     uint32_t maxBuffersPlusVertexBuffersForVertexStage = 8;
     uint32_t maxBuffersForFragmentStage = 8;
     uint32_t maxBuffersForComputeStage = 8;
-    uint32_t maximumCombinedWorkgroupVariablesSize = 16384;
     const HashSet<String> supportedFeatures = { };
 };
 
@@ -218,6 +218,7 @@ struct EntryPointInformation {
     String originalName;
     String mangledName;
     std::optional<PipelineLayout> defaultLayout; // If the input PipelineLayout is nullopt, the compiler computes a layout and returns it. https://gpuweb.github.io/gpuweb/#default-pipeline-layout
+    HashMap<std::pair<size_t, size_t>, size_t> bufferLengthLocations; // Metal buffer identity -> offset within helper buffer where its size needs to lie
     HashMap<String, SpecializationConstant> specializationConstants;
     std::variant<Vertex, Fragment, Compute> typedEntryPoint;
     size_t sizeForWorkgroupVariables { 0 };
@@ -226,15 +227,18 @@ struct EntryPointInformation {
 } // namespace Reflection
 
 struct PrepareResult {
+    CallGraph callGraph;
     HashMap<String, Reflection::EntryPointInformation> entryPoints;
     CompilationScope compilationScope;
 };
 
-std::variant<PrepareResult, Error> prepare(ShaderModule&, const HashMap<String, PipelineLayout*>&);
-std::variant<PrepareResult, Error> prepare(ShaderModule&, const String& entryPointName, PipelineLayout*);
+// These are not allowed to fail.
+// All failures must have already been caught in check().
+PrepareResult prepare(ShaderModule&, const HashMap<String, std::optional<PipelineLayout>>&);
+PrepareResult prepare(ShaderModule&, const String& entryPointName, const std::optional<PipelineLayout>&);
 
-String generate(ShaderModule&, PrepareResult&, HashMap<String, ConstantValue>&);
+String generate(const CallGraph&, HashMap<String, ConstantValue>&);
 
-std::optional<ConstantValue> evaluate(const AST::Expression&, const HashMap<String, ConstantValue>&);
+ConstantValue evaluate(const AST::Expression&, const HashMap<String, ConstantValue>&);
 
 } // namespace WGSL

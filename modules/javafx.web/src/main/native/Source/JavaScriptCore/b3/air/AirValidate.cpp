@@ -96,7 +96,7 @@ public:
                         VALIDATE(&arg <= &inst.args.last(), ("At ", arg, " in ", inst, " in ", *block));
 
                         // FIXME: replace with a check for wasm simd instructions.
-                        VALIDATE(Options::useWasmSIMD()
+                        VALIDATE(Options::useWebAssemblySIMD()
                             || !Arg::isAnyUse(role)
                             || width <= Width64, ("At ", inst, " in ", *block, " arg ", arg));
                     });

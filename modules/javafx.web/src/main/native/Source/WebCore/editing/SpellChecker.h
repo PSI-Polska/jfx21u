@@ -34,15 +34,6 @@
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
-class SpellChecker;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::SpellChecker> : std::true_type { };
-}
-
-namespace WebCore {
 
 class SpellChecker;
 class TextCheckerClient;

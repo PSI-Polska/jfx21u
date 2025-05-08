@@ -142,8 +142,7 @@ struct Token {
     TokenType type;
     SourceSpan span;
     union {
-        double floatValue;
-        int64_t integerValue;
+        double literalValue;
         String ident;
     };
 
@@ -160,22 +159,15 @@ struct Token {
             && type != TokenType::HalfLiteral);
     }
 
-    Token(TokenType type, SourcePosition position, unsigned length, int64_t integerValue)
+    Token(TokenType type, SourcePosition position, unsigned length, double literalValue)
         : type(type)
         , span(position.line, position.lineOffset, position.offset, length)
-        , integerValue(integerValue)
-    {
-        ASSERT(type == TokenType::IntegerLiteral
-            || type == TokenType::IntegerLiteralSigned
-            || type == TokenType::IntegerLiteralUnsigned);
-    }
-
-    Token(TokenType type, SourcePosition position, unsigned length, double floatValue)
-        : type(type)
-        , span(position.line, position.lineOffset, position.offset, length)
-        , floatValue(floatValue)
+        , literalValue(literalValue)
     {
         ASSERT(type == TokenType::AbstractFloatLiteral
+            || type == TokenType::IntegerLiteral
+            || type == TokenType::IntegerLiteralSigned
+            || type == TokenType::IntegerLiteralUnsigned
             || type == TokenType::FloatLiteral
             || type == TokenType::HalfLiteral);
     }
@@ -202,15 +194,13 @@ struct Token {
             new (NotNull, &ident) String();
             ident = other.ident;
             break;
+        case TokenType::AbstractFloatLiteral:
         case TokenType::IntegerLiteral:
         case TokenType::IntegerLiteralSigned:
         case TokenType::IntegerLiteralUnsigned:
-            integerValue = other.integerValue;
-            break;
-        case TokenType::AbstractFloatLiteral:
         case TokenType::FloatLiteral:
         case TokenType::HalfLiteral:
-            floatValue = other.floatValue;
+            literalValue = other.literalValue;
             break;
         default:
             break;
@@ -229,15 +219,13 @@ struct Token {
             new (NotNull, &ident) String();
             ident = other.ident;
             break;
+        case TokenType::AbstractFloatLiteral:
         case TokenType::IntegerLiteral:
         case TokenType::IntegerLiteralSigned:
         case TokenType::IntegerLiteralUnsigned:
-            integerValue = other.integerValue;
-            break;
-        case TokenType::AbstractFloatLiteral:
         case TokenType::FloatLiteral:
         case TokenType::HalfLiteral:
-            floatValue = other.floatValue;
+            literalValue = other.literalValue;
             break;
         default:
             break;
@@ -255,15 +243,13 @@ struct Token {
             new (NotNull, &ident) String();
             ident = other.ident;
             break;
+        case TokenType::AbstractFloatLiteral:
         case TokenType::IntegerLiteral:
         case TokenType::IntegerLiteralSigned:
         case TokenType::IntegerLiteralUnsigned:
-            integerValue = other.integerValue;
-            break;
-        case TokenType::AbstractFloatLiteral:
         case TokenType::FloatLiteral:
         case TokenType::HalfLiteral:
-            floatValue = other.floatValue;
+            literalValue = other.literalValue;
             break;
         default:
             break;

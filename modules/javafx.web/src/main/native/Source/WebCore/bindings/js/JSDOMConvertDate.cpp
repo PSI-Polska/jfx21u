@@ -25,6 +25,7 @@
 #include <JavaScriptCore/DateInstance.h>
 #include <JavaScriptCore/HeapInlines.h>
 #include <JavaScriptCore/JSCJSValueInlines.h>
+#include <JavaScriptCore/JSGlobalObject.h>
 
 namespace WebCore {
 using namespace JSC;

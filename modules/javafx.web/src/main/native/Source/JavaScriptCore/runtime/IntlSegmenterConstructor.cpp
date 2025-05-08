@@ -101,7 +101,7 @@ JSC_DEFINE_HOST_FUNCTION(callIntlSegmenter, (JSGlobalObject* globalObject, CallF
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(globalObject, scope, "Segmenter"_s));
+    return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(globalObject, scope, "Segmenter"));
 }
 
 JSC_DEFINE_HOST_FUNCTION(intlSegmenterConstructorSupportedLocalesOf, (JSGlobalObject* globalObject, CallFrame* callFrame))

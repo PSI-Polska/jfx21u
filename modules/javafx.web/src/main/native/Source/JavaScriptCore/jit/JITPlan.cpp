@@ -31,8 +31,6 @@
 #include "AbstractSlotVisitor.h"
 #include "CodeBlock.h"
 #include "HeapInlines.h"
-#include "JITSafepoint.h"
-#include "JITWorklistThread.h"
 #include "JSCellInlines.h"
 #include "VMInlines.h"
 #include <wtf/CompilationThread.h>
@@ -57,7 +55,6 @@ JITPlan::JITPlan(JITCompilationMode mode, CodeBlock* codeBlock)
 void JITPlan::cancel()
 {
     RELEASE_ASSERT(m_stage != JITPlanStage::Canceled);
-    RELEASE_ASSERT(!safepointKeepsDependenciesLive());
     ASSERT(m_vm);
     m_stage = JITPlanStage::Canceled;
     m_vm = nullptr;
@@ -141,11 +138,6 @@ bool JITPlan::checkLivenessAndVisitChildren(AbstractSlotVisitor& visitor)
     return true;
 }
 
-bool JITPlan::safepointKeepsDependenciesLive() const
-{
-    return m_thread && m_thread->safepoint() && m_thread->safepoint()->keepDependenciesLive();
-}
-
 bool JITPlan::computeCompileTimes() const
 {
     return reportCompileTimes()
@@ -163,7 +155,7 @@ bool JITPlan::reportCompileTimes() const
 
 void JITPlan::compileInThread(JITWorklistThread* thread)
 {
-    SetForScope threadScope(m_thread, thread);
+    m_thread = thread;
 
     MonotonicTime before;
     CString codeBlockName;
@@ -188,7 +180,7 @@ void JITPlan::compileInThread(JITWorklistThread* thread)
         StringPrintStream stream;
         stream.print(m_mode, " ", *m_codeBlock, " instructions size = ", m_codeBlock->instructionsSize());
         signpostMessage = stream.toCString();
-        WTFBeginSignpost(this, JSCJITCompiler, "%" PUBLIC_LOG_STRING, signpostMessage.data() ? signpostMessage.data() : "(nullptr)");
+        WTFBeginSignpost(this, JSCJITCompiler, "%" PUBLIC_LOG_STRING, signpostMessage.data());
     }
 
     CompilationPath path = compileInThreadImpl();
@@ -196,7 +188,7 @@ void JITPlan::compileInThread(JITWorklistThread* thread)
     RELEASE_ASSERT((path == CancelPath) == (m_stage == JITPlanStage::Canceled));
 
     if (UNLIKELY(Options::useCompilerSignpost()))
-        WTFEndSignpost(this, JSCJITCompiler, "%" PUBLIC_LOG_STRING, signpostMessage.data() ? signpostMessage.data() : "(nullptr)");
+        WTFEndSignpost(this, JSCJITCompiler, "%" PUBLIC_LOG_STRING, signpostMessage.data());
 
     if (LIKELY(!computeCompileTimes))
         return;
@@ -260,13 +252,6 @@ void JITPlan::compileInThread(JITWorklistThread* thread)
             dataLog(" (DFG: ", (m_timeBeforeFTL - before).milliseconds(), ", B3: ", (after - m_timeBeforeFTL).milliseconds(), ")");
         dataLog(".\n");
     }
-}
-
-void JITPlan::runMainThreadFinalizationTasks()
-{
-    auto tasks = std::exchange(m_mainThreadFinalizationTasks, { });
-    for (auto& task : tasks)
-        task->run();
 }
 
 } // namespace JSC

@@ -40,7 +40,6 @@
 #include "SecurityOrigin.h"
 #include "Settings.h"
 #include "WebCoreOpaqueRoot.h"
-#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -66,7 +65,7 @@ static ExceptionOr<String> computeReferrer(ScriptExecutionContext& context, cons
     if (referrerURL.protocolIsAbout() && referrerURL.path() == "client"_s)
         return "client"_str;
 
-    if (!(context.securityOrigin() && context.protectedSecurityOrigin()->canRequest(referrerURL, OriginAccessPatternsForWebProcess::singleton())))
+    if (!(context.securityOrigin() && context.securityOrigin()->canRequest(referrerURL, OriginAccessPatternsForWebProcess::singleton())))
         return "client"_str;
 
     return String { referrerURL.string() };
@@ -226,7 +225,6 @@ ExceptionOr<void> FetchRequest::initializeWith(FetchRequest& input, Init&& init)
     m_options = input.m_options;
     m_referrer = input.m_referrer;
     m_fetchPriorityHint = input.m_fetchPriorityHint;
-    m_enableContentExtensionsCheck = input.m_enableContentExtensionsCheck;
 
     auto optionsResult = initializeOptions(init);
     if (optionsResult.hasException())
@@ -263,7 +261,7 @@ ExceptionOr<void> FetchRequest::initializeWith(FetchRequest& input, Init&& init)
 ExceptionOr<void> FetchRequest::setBody(FetchBody::Init&& body)
 {
     if (!methodCanHaveBody(m_request))
-        return Exception { ExceptionCode::TypeError, makeString("Request has method '"_s, m_request.httpMethod(), "' and cannot have a body"_s) };
+        return Exception { ExceptionCode::TypeError, makeString("Request has method '", m_request.httpMethod(), "' and cannot have a body") };
 
     ASSERT(scriptExecutionContext());
     auto result = extractBody(WTFMove(body));
@@ -282,7 +280,7 @@ ExceptionOr<void> FetchRequest::setBody(FetchRequest& request)
 
     if (!request.isBodyNull()) {
         if (!methodCanHaveBody(m_request))
-            return Exception { ExceptionCode::TypeError, makeString("Request has method '"_s, m_request.httpMethod(), "' and cannot have a body"_s) };
+            return Exception { ExceptionCode::TypeError, makeString("Request has method '", m_request.httpMethod(), "' and cannot have a body") };
         // FIXME: If body has a readable stream, we should pipe it to this new body stream.
         m_body = WTFMove(*request.m_body);
         request.setDisturbed();
@@ -354,7 +352,6 @@ ExceptionOr<Ref<FetchRequest>> FetchRequest::clone()
     clone->suspendIfNeeded();
     clone->cloneBody(*this);
     clone->setNavigationPreloadIdentifier(m_navigationPreloadIdentifier);
-    clone->m_enableContentExtensionsCheck = m_enableContentExtensionsCheck;
     clone->protectedSignal()->signalFollow(m_signal);
     return clone;
 }
@@ -363,6 +360,12 @@ void FetchRequest::stop()
 {
     m_requestURL.clear();
     FetchBodyOwner::stop();
+}
+
+
+const char* FetchRequest::activeDOMObjectName() const
+{
+    return "Request";
 }
 
 WebCoreOpaqueRoot root(FetchRequest* request)

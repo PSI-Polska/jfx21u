@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,12 +25,13 @@
 
 #pragma once
 
-#include "OrderedHashTable.h"
+#include "HashMapImpl.h"
+#include "JSObject.h"
 
 namespace JSC {
 
-class JSMap final : public OrderedHashMap {
-    using Base = OrderedHashMap;
+class JSMap final : public HashMapImpl<HashMapBucket<HashMapBucketDataKeyValue>> {
+    using Base = HashMapImpl<HashMapBucket<HashMapBucketDataKeyValue>>;
 public:
 
     DECLARE_EXPORT_INFO;

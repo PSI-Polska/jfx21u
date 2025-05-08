@@ -38,14 +38,14 @@ public:
     using Base = JSFunction;
     static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
 
-    static JSPromiseConstructor* create(VM&, Structure*, JSPromisePrototype*);
+    static JSPromiseConstructor* create(VM&, Structure*, JSPromisePrototype*, GetterSetter* speciesSymbol);
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     DECLARE_INFO;
 
 protected:
     JSPromiseConstructor(VM&, FunctionExecutable*, JSGlobalObject*, Structure*);
-    void finishCreation(VM&, JSPromisePrototype*);
+    void finishCreation(VM&, JSPromisePrototype*, GetterSetter*);
 
 private:
     void addOwnInternalSlots(VM&, JSGlobalObject*);

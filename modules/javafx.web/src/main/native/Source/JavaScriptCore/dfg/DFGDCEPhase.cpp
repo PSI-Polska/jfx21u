@@ -38,7 +38,7 @@ namespace JSC { namespace DFG {
 class DCEPhase : public Phase {
 public:
     DCEPhase(Graph& graph)
-        : Phase(graph, "dead code elimination"_s)
+        : Phase(graph, "dead code elimination")
         , m_insertionSet(graph)
     {
     }

@@ -36,13 +36,12 @@
 #include "Logging.h"
 #include "WebCoreOpaqueRoot.h"
 #include <JavaScriptCore/HeapInlines.h>
-#include <wtf/TZoneMallocInlines.h>
-#include <wtf/text/MakeString.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 using namespace JSC;
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(IDBIndex);
+WTF_MAKE_ISO_ALLOCATED_IMPL(IDBIndex);
 
 UniqueRef<IDBIndex> IDBIndex::create(ScriptExecutionContext& context, const IDBIndexInfo& info, IDBObjectStore& objectStore)
 {
@@ -63,6 +62,11 @@ IDBIndex::IDBIndex(ScriptExecutionContext& context, const IDBIndexInfo& info, ID
 IDBIndex::~IDBIndex()
 {
     ASSERT(canCurrentThreadAccessThreadLocalData(m_objectStore.transaction().database().originThread()));
+}
+
+const char* IDBIndex::activeDOMObjectName() const
+{
+    return "IDBIndex";
 }
 
 bool IDBIndex::virtualHasPendingActivity() const
@@ -96,7 +100,7 @@ ExceptionOr<void> IDBIndex::setName(const String& name)
         return { };
 
     if (m_objectStore.info().hasIndex(name))
-        return Exception { ExceptionCode::ConstraintError, makeString("Failed set property 'name' on 'IDBIndex': The owning object store already has an index named '"_s, name, "'."_s) };
+        return Exception { ExceptionCode::ConstraintError, makeString("Failed set property 'name' on 'IDBIndex': The owning object store already has an index named '", name, "'.") };
 
     m_objectStore.transaction().database().renameIndex(*this, name);
     m_info.rename(name);
@@ -421,12 +425,12 @@ void IDBIndex::markAsDeleted()
     m_deleted = true;
 }
 
-void IDBIndex::ref() const
+void IDBIndex::ref()
 {
     m_objectStore.ref();
 }
 
-void IDBIndex::deref() const
+void IDBIndex::deref()
 {
     m_objectStore.deref();
 }

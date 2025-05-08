@@ -48,26 +48,23 @@ JSAsyncGeneratorFunction* JSAsyncGeneratorFunction::createImpl(VM& vm, FunctionE
     return asyncGenerator;
 }
 
-JSAsyncGeneratorFunction* JSAsyncGeneratorFunction::create(VM& vm, JSGlobalObject* globalObject, FunctionExecutable* executable, JSScope* scope)
+JSAsyncGeneratorFunction* JSAsyncGeneratorFunction::create(VM& vm, FunctionExecutable* executable, JSScope* scope)
 {
-    return create(vm, globalObject, executable, scope, globalObject->asyncGeneratorFunctionStructure());
+    JSAsyncGeneratorFunction* asyncGenerator = createImpl(vm, executable, scope, scope->globalObject()->asyncGeneratorFunctionStructure());
+    executable->notifyCreation(vm, asyncGenerator, "Allocating an async generator");
+    return asyncGenerator;
 }
 
-JSAsyncGeneratorFunction* JSAsyncGeneratorFunction::create(VM& vm, JSGlobalObject*, FunctionExecutable* executable, JSScope* scope, Structure* structure)
+JSAsyncGeneratorFunction* JSAsyncGeneratorFunction::create(VM& vm, FunctionExecutable* executable, JSScope* scope, Structure* structure)
 {
     JSAsyncGeneratorFunction* asyncGenerator = createImpl(vm, executable, scope, structure);
     executable->notifyCreation(vm, asyncGenerator, "Allocating an async generator");
     return asyncGenerator;
 }
 
-JSAsyncGeneratorFunction* JSAsyncGeneratorFunction::createWithInvalidatedReallocationWatchpoint(VM& vm, JSGlobalObject* globalObject, FunctionExecutable* executable, JSScope* scope)
+JSAsyncGeneratorFunction* JSAsyncGeneratorFunction::createWithInvalidatedReallocationWatchpoint(VM& vm, FunctionExecutable* executable, JSScope* scope)
 {
-    return createWithInvalidatedReallocationWatchpoint(vm, globalObject, executable, scope, globalObject->asyncGeneratorFunctionStructure());
-}
-
-JSAsyncGeneratorFunction* JSAsyncGeneratorFunction::createWithInvalidatedReallocationWatchpoint(VM& vm, JSGlobalObject*, FunctionExecutable* executable, JSScope* scope, Structure* structure)
-{
-    return createImpl(vm, executable, scope, structure);
+    return createImpl(vm, executable, scope, scope->globalObject()->asyncGeneratorFunctionStructure());
 }
 
 }

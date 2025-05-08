@@ -45,20 +45,11 @@ void StopIfNecessaryTimer::doWork(VM& vm)
 
 void StopIfNecessaryTimer::scheduleSoon()
 {
-    if (m_isDisabled)
-        return;
-
     if (isScheduled()) {
         WTF::loadLoadFence();
         return;
     }
     setTimeUntilFire(0_s);
-}
-
-
-void StopIfNecessaryTimer::disable()
-{
-    m_isDisabled = true;
 }
 
 } // namespace JSC

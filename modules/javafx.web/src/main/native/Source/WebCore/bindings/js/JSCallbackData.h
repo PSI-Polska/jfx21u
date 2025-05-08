@@ -31,13 +31,11 @@
 #include "JSDOMBinding.h"
 #include "ScriptExecutionContext.h"
 #include <JavaScriptCore/JSObject.h>
-#include <JavaScriptCore/Weak.h>
-#include <JavaScriptCore/WeakInlines.h>
+#include <JavaScriptCore/Strong.h>
+#include <JavaScriptCore/StrongInlines.h>
 #include <wtf/Threading.h>
 
 namespace WebCore {
-
-template<typename ImplementationClass> struct JSDOMCallbackConverterTraits;
 
 // We have to clean up this data on the context thread because unprotecting a
 // JSObject on the wrong thread without synchronization would corrupt the heap
@@ -48,9 +46,13 @@ class JSCallbackData {
 public:
     enum class CallbackType { Function, Object, FunctionOrObject };
 
-    JSCallbackData(JSC::JSObject* callback, JSDOMGlobalObject* globalObject, void* owner)
+    JSDOMGlobalObject* globalObject() { return m_globalObject.get(); }
+
+    WEBCORE_EXPORT static JSC::JSValue invokeCallback(JSDOMGlobalObject&, JSC::JSObject* callback, JSC::JSValue thisValue, JSC::MarkedArgumentBuffer&, CallbackType, JSC::PropertyName functionName, NakedPtr<JSC::Exception>& returnedException);
+
+protected:
+    explicit JSCallbackData(JSDOMGlobalObject* globalObject)
         : m_globalObject(globalObject)
-        , m_callback(callback, &m_weakOwner, owner)
     {
     }
 
@@ -61,12 +63,22 @@ public:
 #endif
     }
 
-    JSDOMGlobalObject* globalObject() { return m_globalObject.get(); }
+private:
+    JSC::Weak<JSDOMGlobalObject> m_globalObject;
+#if ASSERT_ENABLED
+    Ref<Thread> m_thread { Thread::current() };
+#endif
+};
+
+class JSCallbackDataStrong : public JSCallbackData {
+public:
+    JSCallbackDataStrong(JSC::JSObject* callback, JSDOMGlobalObject* globalObject, void* = nullptr)
+        : JSCallbackData(globalObject)
+        , m_callback(globalObject->vm(), callback)
+    {
+    }
+
     JSC::JSObject* callback() { return m_callback.get(); }
-
-    template<typename Visitor> void visitJSFunction(Visitor&);
-
-    WEBCORE_EXPORT static JSC::JSValue invokeCallback(JSDOMGlobalObject&, JSC::JSObject* callback, JSC::JSValue thisValue, JSC::MarkedArgumentBuffer&, CallbackType, JSC::PropertyName functionName, NakedPtr<JSC::Exception>& returnedException);
 
     JSC::JSValue invokeCallback(JSC::JSValue thisValue, JSC::MarkedArgumentBuffer& args, CallbackType callbackType, JSC::PropertyName functionName, NakedPtr<JSC::Exception>& returnedException)
     {
@@ -78,22 +90,36 @@ public:
     }
 
 private:
-    JSC::Weak<JSDOMGlobalObject> m_globalObject;
+    JSC::Strong<JSC::JSObject> m_callback;
+};
 
-    class WeakOwner : public JSC::WeakHandleOwner {
-        bool isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown>, void* owner, JSC::AbstractSlotVisitor& visitor, ASCIILiteral* reason) override
+class JSCallbackDataWeak : public JSCallbackData {
+public:
+    JSCallbackDataWeak(JSC::JSObject* callback, JSDOMGlobalObject* globalObject, void* owner)
+        : JSCallbackData(globalObject)
+        , m_callback(callback, &m_weakOwner, owner)
     {
-            if (UNLIKELY(reason))
-                *reason = "Callback owner is an opaque root"_s;
-            return visitor.containsOpaqueRoot(owner);
     }
+
+    JSC::JSObject* callback() { return m_callback.get(); }
+
+    JSC::JSValue invokeCallback(JSC::JSValue thisValue, JSC::MarkedArgumentBuffer& args, CallbackType callbackType, JSC::PropertyName functionName, NakedPtr<JSC::Exception>& returnedException)
+    {
+        auto* globalObject = this->globalObject();
+        if (!globalObject)
+            return { };
+
+        return JSCallbackData::invokeCallback(*globalObject, callback(), thisValue, args, callbackType, functionName, returnedException);
+    }
+
+    template<typename Visitor> void visitJSFunction(Visitor&);
+
+private:
+    class WeakOwner : public JSC::WeakHandleOwner {
+        bool isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown>, void* context, JSC::AbstractSlotVisitor&, const char**) override;
     };
     WeakOwner m_weakOwner;
     JSC::Weak<JSC::JSObject> m_callback;
-
-#if ASSERT_ENABLED
-    Ref<Thread> m_thread { Thread::current() };
-#endif
 };
 
 class DeleteCallbackDataTask : public ScriptExecutionContext::Task {

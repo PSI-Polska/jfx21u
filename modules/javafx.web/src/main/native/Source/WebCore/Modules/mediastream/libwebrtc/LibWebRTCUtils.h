@@ -77,7 +77,7 @@ webrtc::Priority fromRTCPriorityType(RTCPriorityType);
 
 inline String fromStdString(const std::string& value)
 {
-    return String::fromUTF8(value);
+    return String::fromUTF8(value.data(), value.length());
 }
 
 RTCIceCandidateFields convertIceCandidate(const cricket::Candidate&);

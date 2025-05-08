@@ -92,7 +92,7 @@ JSC_DEFINE_HOST_FUNCTION(callIntlLocale, (JSGlobalObject* globalObject, CallFram
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(globalObject, scope, "Locale"_s));
+    return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(globalObject, scope, "Locale"));
 }
 
 } // namespace JSC

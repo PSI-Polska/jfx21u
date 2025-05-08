@@ -479,14 +479,14 @@ void ShadowChicken::reset()
 
 void ShadowChicken::dump(PrintStream& out) const
 {
-    out.print("{stack = ["_s, listDump(m_stack), "], log = ["_s);
+    out.print("{stack = [", listDump(m_stack), "], log = [");
 
     CommaPrinter comma;
     unsigned limit = static_cast<unsigned>(m_logCursor - m_log);
-    out.print("\n"_s);
+    out.print("\n");
     for (unsigned i = 0; i < limit; ++i)
-        out.print("\t"_s, comma, "["_s, i, "] "_s, m_log[i], "\n"_s);
-    out.print("]}"_s);
+        out.print("\t", comma, "[", i, "] ", m_log[i], "\n");
+    out.print("]}");
 }
 
 JSArray* ShadowChicken::functionsOnStack(JSGlobalObject* globalObject, CallFrame* callFrame)

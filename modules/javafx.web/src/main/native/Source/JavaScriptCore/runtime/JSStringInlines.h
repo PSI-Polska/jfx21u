@@ -28,7 +28,6 @@
 #include "JSGlobalObjectInlines.h"
 #include "JSString.h"
 #include "KeyAtomStringCacheInlines.h"
-#include <wtf/text/MakeString.h>
 
 namespace JSC {
 
@@ -62,9 +61,9 @@ ALWAYS_INLINE bool JSString::equalInline(JSGlobalObject* globalObject, JSString*
     if (length != other->length())
         return false;
 
-    auto str1 = view(globalObject);
+    auto str1 = unsafeView(globalObject);
     RETURN_IF_EXCEPTION(scope, false);
-    auto str2 = other->view(globalObject);
+    auto str2 = other->unsafeView(globalObject);
     RETURN_IF_EXCEPTION(scope, false);
 
     ensureStillAliveHere(this);
@@ -283,11 +282,11 @@ inline JSString* jsAtomString(JSGlobalObject* globalObject, VM& vm, JSString* st
         };
 
         if (string->valueInternal().is8Bit()) {
-            WTF::HashTranslatorCharBuffer<LChar> buffer { string->valueInternal().span8(), string->valueInternal().hash() };
+            WTF::HashTranslatorCharBuffer<LChar> buffer { string->valueInternal().characters8(), length, string->valueInternal().hash() };
             return vm.keyAtomStringCache.make(vm, buffer, createFromNonRope);
         }
 
-        WTF::HashTranslatorCharBuffer<UChar> buffer { string->valueInternal().span16(), string->valueInternal().hash() };
+        WTF::HashTranslatorCharBuffer<UChar> buffer { string->valueInternal().characters16(), length, string->valueInternal().hash() };
         return vm.keyAtomStringCache.make(vm, buffer, createFromNonRope);
     }
 
@@ -310,21 +309,21 @@ inline JSString* jsAtomString(JSGlobalObject* globalObject, VM& vm, JSString* st
         if (ropeString->is8Bit()) {
             LChar characters[KeyAtomStringCache::maxStringLengthForCache];
             JSRopeString::resolveToBuffer(fiber0, fiber1, fiber2, characters, length, stackLimit);
-            WTF::HashTranslatorCharBuffer<LChar> buffer { std::span { characters, length } };
+            WTF::HashTranslatorCharBuffer<LChar> buffer { characters, length };
             return vm.keyAtomStringCache.make(vm, buffer, createFromRope);
         }
         UChar characters[KeyAtomStringCache::maxStringLengthForCache];
         JSRopeString::resolveToBuffer(fiber0, fiber1, fiber2, characters, length, stackLimit);
-        WTF::HashTranslatorCharBuffer<UChar> buffer { std::span { characters, length } };
+        WTF::HashTranslatorCharBuffer<UChar> buffer { characters, length };
         return vm.keyAtomStringCache.make(vm, buffer, createFromRope);
     }
 
     auto view = StringView { ropeString->substringBase()->valueInternal() }.substring(ropeString->substringOffset(), length);
     if (view.is8Bit()) {
-        WTF::HashTranslatorCharBuffer<LChar> buffer { view.span8() };
+        WTF::HashTranslatorCharBuffer<LChar> buffer { view.characters8(), length };
         return vm.keyAtomStringCache.make(vm, buffer, createFromRope);
     }
-    WTF::HashTranslatorCharBuffer<UChar> buffer { view.span16() };
+    WTF::HashTranslatorCharBuffer<UChar> buffer { view.characters16(), length };
     return vm.keyAtomStringCache.make(vm, buffer, createFromRope);
 }
 
@@ -401,12 +400,12 @@ inline JSString* jsAtomString(JSGlobalObject* globalObject, VM& vm, JSString* s1
     if (s1->is8Bit() && s2->is8Bit()) {
         LChar characters[KeyAtomStringCache::maxStringLengthForCache];
         resolveWith2Fibers(s1, s2, characters, length);
-        WTF::HashTranslatorCharBuffer<LChar> buffer { std::span { characters, length } };
+        WTF::HashTranslatorCharBuffer<LChar> buffer { characters, length };
         return vm.keyAtomStringCache.make(vm, buffer, createFromFibers);
     }
     UChar characters[KeyAtomStringCache::maxStringLengthForCache];
     resolveWith2Fibers(s1, s2, characters, length);
-    WTF::HashTranslatorCharBuffer<UChar> buffer { std::span { characters, length } };
+    WTF::HashTranslatorCharBuffer<UChar> buffer { characters, length };
     return vm.keyAtomStringCache.make(vm, buffer, createFromFibers);
 }
 
@@ -460,12 +459,12 @@ inline JSString* jsAtomString(JSGlobalObject* globalObject, VM& vm, JSString* s1
     if (s1->is8Bit() && s2->is8Bit() && s3->is8Bit()) {
         LChar characters[KeyAtomStringCache::maxStringLengthForCache];
         resolveWith3Fibers(s1, s2, s3, characters, length);
-        WTF::HashTranslatorCharBuffer<LChar> buffer { std::span { characters, length } };
+        WTF::HashTranslatorCharBuffer<LChar> buffer { characters, length };
         return vm.keyAtomStringCache.make(vm, buffer, createFromFibers);
     }
     UChar characters[KeyAtomStringCache::maxStringLengthForCache];
     resolveWith3Fibers(s1, s2, s3, characters, length);
-    WTF::HashTranslatorCharBuffer<UChar> buffer { std::span { characters, length } };
+    WTF::HashTranslatorCharBuffer<UChar> buffer { characters, length };
     return vm.keyAtomStringCache.make(vm, buffer, createFromFibers);
 }
 
@@ -477,15 +476,14 @@ inline JSString* jsSubstringOfResolved(VM& vm, GCDeferralContext* deferralContex
     ASSERT(!s->isRope());
     if (!length)
         return vm.smallStrings.emptyString();
-
-    auto& base = s->valueInternal();
-    if (!offset && length == base.length())
+    if (!offset && length == s->length())
         return s;
-
     if (length == 1) {
+        auto& base = s->valueInternal();
         if (auto c = base.characterAt(offset); c <= maxSingleCharacterString)
             return vm.smallStrings.singleCharacterString(c);
     } else if (length == 2) {
+        auto& base = s->valueInternal();
         UChar first = base.characterAt(offset);
         UChar second = base.characterAt(offset + 1);
         if ((first | second) < 0x80) {
@@ -494,11 +492,11 @@ inline JSString* jsSubstringOfResolved(VM& vm, GCDeferralContext* deferralContex
                 return JSString::create(vm, deferralContext, impl.releaseNonNull());
             };
             LChar buf[] = { static_cast<LChar>(first), static_cast<LChar>(second) };
-            WTF::HashTranslatorCharBuffer<LChar> buffer { std::span { buf, length } };
+            WTF::HashTranslatorCharBuffer<LChar> buffer { buf, length };
             return vm.keyAtomStringCache.make(vm, buffer, createFromSubstring);
         }
     }
-    return JSRopeString::createSubstringOfResolved(vm, deferralContext, s, offset, length, base.is8Bit());
+    return JSRopeString::createSubstringOfResolved(vm, deferralContext, s, offset, length);
 }
 
 } // namespace JSC

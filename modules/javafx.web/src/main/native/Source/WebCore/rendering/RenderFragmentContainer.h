@@ -43,8 +43,7 @@ class RenderBoxFragmentInfo;
 class RenderFragmentedFlow;
 
 class RenderFragmentContainer : public RenderBlockFlow {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderFragmentContainer);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderFragmentContainer);
+    WTF_MAKE_ISO_ALLOCATED(RenderFragmentContainer);
 public:
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
 
@@ -105,9 +104,9 @@ public:
 
     void addLayoutOverflowForBox(const RenderBox&, const LayoutRect&);
     void addVisualOverflowForBox(const RenderBox&, const LayoutRect&);
-    LayoutRect visualOverflowRectForBox(const RenderBox&) const;
+    LayoutRect visualOverflowRectForBox(const RenderBoxModelObject&) const;
     LayoutRect layoutOverflowRectForBoxForPropagation(const RenderBox&);
-    LayoutRect visualOverflowRectForBoxForPropagation(const RenderBox&);
+    LayoutRect visualOverflowRectForBoxForPropagation(const RenderBoxModelObject&);
 
     LayoutRect rectFlowPortionForBox(const RenderBox&, const LayoutRect&) const;
 
@@ -116,14 +115,13 @@ public:
 
     bool canHaveChildren() const override { return false; }
     bool canHaveGeneratedChildren() const override { return true; }
-    VisiblePosition positionForPoint(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*) override;
+    VisiblePosition positionForPoint(const LayoutPoint&, const RenderFragmentContainer*) override;
 
     virtual Vector<LayoutRect> fragmentRectsForFlowContentRect(const LayoutRect&) const;
 
 protected:
     RenderFragmentContainer(Type, Element&, RenderStyle&&, RenderFragmentedFlow*);
     RenderFragmentContainer(Type, Document&, RenderStyle&&, RenderFragmentedFlow*);
-    virtual ~RenderFragmentContainer();
 
     void ensureOverflowForBox(const RenderBox&, RefPtr<RenderOverflow>&, bool) const;
 
@@ -138,8 +136,8 @@ protected:
 private:
     ASCIILiteral renderName() const override { return "RenderFragmentContainer"_s; }
 
-    void insertedIntoTree() override;
-    void willBeRemovedFromTree() override;
+    void insertedIntoTree(IsInternalMove) override;
+    void willBeRemovedFromTree(IsInternalMove) override;
 
     virtual void installFragmentedFlow();
 

@@ -28,10 +28,8 @@
 #include "CachedImage.h"
 #include "ReferencedSVGResources.h"
 #include "RenderElement.h"
-#include "RenderSVGResourceMasker.h"
 #include "RenderView.h"
 #include "SVGImage.h"
-#include "SVGMaskElement.h"
 #include "SVGResourceImage.h"
 #include "SVGSVGElement.h"
 #include "SVGURIReference.h"
@@ -108,7 +106,7 @@ LegacyRenderSVGResourceContainer* StyleCachedImage::uncheckedRenderSVGResource(c
         return nullptr;
     }
 
-    Ref document = renderer->document();
+    auto& document = renderer->document();
     auto reresolvedURL = this->reresolvedURL(document);
 
     if (!m_cachedImage) {
@@ -128,54 +126,16 @@ LegacyRenderSVGResourceContainer* StyleCachedImage::uncheckedRenderSVGResource(c
     return uncheckedRenderSVGResource(rootElement->treeScopeForSVGReferences(), fragmentIdentifier.toAtomString());
 }
 
-LegacyRenderSVGResourceContainer* StyleCachedImage::legacyRenderSVGResource(const RenderElement* renderer) const
+LegacyRenderSVGResourceContainer* StyleCachedImage::renderSVGResource(const RenderElement* renderer) const
 {
     if (m_isRenderSVGResource && !*m_isRenderSVGResource)
         return nullptr;
     return uncheckedRenderSVGResource(renderer);
 }
 
-RenderSVGResourceContainer* StyleCachedImage::renderSVGResource(const RenderElement* renderer) const
-{
-    if (m_isRenderSVGResource)
-        return nullptr;
-
-    if (!renderer)
-        return nullptr;
-
-    if (imageURL().string().find('#') == notFound)
-        return nullptr;
-
-    if (!m_cachedImage) {
-        if (RefPtr referencedMaskElement = ReferencedSVGResources::referencedMaskElement(renderer->treeScopeForSVGReferences(), *this)) {
-            if (auto* referencedMaskerRenderer = dynamicDowncast<RenderSVGResourceMasker>(referencedMaskElement->renderer()))
-                return referencedMaskerRenderer;
-        }
-        return nullptr;
-    }
-
-    auto image = dynamicDowncast<SVGImage>(m_cachedImage->image());
-    if (!image)
-        return nullptr;
-
-    auto rootElement = image->rootElement();
-    if (!rootElement)
-        return nullptr;
-
-    Ref document = renderer->document();
-    auto reresolvedURL = this->reresolvedURL(document);
-    auto fragmentIdentifier = reresolvedURL.fragmentIdentifier();
-    if (RefPtr referencedMaskElement = ReferencedSVGResources::referencedMaskElement(rootElement->treeScopeForSVGReferences(), fragmentIdentifier.toAtomString())) {
-        if (auto* referencedMaskerRenderer = dynamicDowncast<RenderSVGResourceMasker>(referencedMaskElement->renderer()))
-            return referencedMaskerRenderer;
-    }
-
-    return nullptr;
-}
-
 bool StyleCachedImage::isRenderSVGResource(const RenderElement* renderer) const
 {
-    return renderSVGResource(renderer) || legacyRenderSVGResource(renderer);
+    return renderSVGResource(renderer);
 }
 
 void StyleCachedImage::load(CachedResourceLoader& loader, const ResourceLoaderOptions& options)
@@ -316,9 +276,6 @@ RefPtr<Image> StyleCachedImage::image(const RenderElement* renderer, const Float
     ASSERT(!m_isPending);
 
     if (auto renderSVGResource = this->renderSVGResource(renderer))
-        return SVGResourceImage::create(*renderSVGResource, reresolvedURL(renderer->document()));
-
-    if (auto renderSVGResource = this->legacyRenderSVGResource(renderer))
         return SVGResourceImage::create(*renderSVGResource, reresolvedURL(renderer->document()));
 
     if (!m_cachedImage)

@@ -33,44 +33,42 @@ class VM;
 
 class JSONAtomStringCache {
 public:
-    static constexpr auto maxStringLengthForCache = 27;
-    static constexpr auto capacity = 256;
+    static constexpr auto maxStringLengthForCache = 32;
+    static constexpr auto capacity = 512;
+    using Cache = std::array<RefPtr<AtomStringImpl>, capacity>;
 
-    struct Slot {
-        UChar m_buffer[maxStringLengthForCache] { };
-        UChar m_length { 0 };
-        RefPtr<AtomStringImpl> m_impl;
-    };
-    static_assert(sizeof(Slot) <= 64);
-
-    using Cache = std::array<Slot, capacity>;
+    enum class Type : bool { Identifier };
+    static constexpr unsigned numberOfTypes = 1;
 
     template<typename CharacterType>
-    ALWAYS_INLINE Ref<AtomStringImpl> makeIdentifier(std::span<const CharacterType> characters)
+    ALWAYS_INLINE Ref<AtomStringImpl> makeIdentifier(const CharacterType* characters, unsigned length)
     {
-        return make(characters);
+        return make(Type::Identifier, characters, length);
     }
 
     ALWAYS_INLINE void clear()
     {
-        m_cache.fill({ });
+        for (unsigned i = 0; i < numberOfTypes; ++i)
+            cache(static_cast<Type>(i)).fill({ });
     }
 
     VM& vm() const;
 
 private:
     template<typename CharacterType>
-    Ref<AtomStringImpl> make(std::span<const CharacterType>);
+    Ref<AtomStringImpl> make(Type, const CharacterType*, unsigned length);
 
-    ALWAYS_INLINE Slot& cacheSlot(UChar firstCharacter, UChar lastCharacter, UChar length)
+    ALWAYS_INLINE RefPtr<AtomStringImpl>& cacheSlot(Type type, UChar firstCharacter, UChar lastCharacter, UChar length)
     {
         unsigned hash = (firstCharacter << 6) ^ ((lastCharacter << 14) ^ firstCharacter);
         hash += (hash >> 14) + (length << 14);
         hash ^= hash << 14;
-        return m_cache[(hash + (hash >> 6)) % capacity];
+        return cache(type)[(hash + (hash >> 6)) % capacity];
     }
 
-    Cache m_cache { };
+    ALWAYS_INLINE Cache& cache(Type type) { return m_caches[static_cast<size_t>(type)]; }
+
+    Cache m_caches[numberOfTypes] { };
 };
 
 } // namespace JSC

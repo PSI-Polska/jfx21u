@@ -27,7 +27,8 @@
 
 [
     EnabledBySetting=WebGPUEnabled
-] enum GPUIndexFormat {
+]
+enum GPUIndexFormat {
     "uint16",
     "uint32"
 };

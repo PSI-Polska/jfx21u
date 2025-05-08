@@ -30,7 +30,6 @@
 namespace WebCore {
 
 class Color;
-enum class ColorSpace : uint8_t;
 
 // serializationForCSS returns the color serialized according to CSS <https://drafts.csswg.org/css-color-4/#serializing-color-values>.
 // serializationForHTML returns the color serialized according to HTML5 <https://html.spec.whatwg.org/multipage/scripting.html#fill-and-stroke-styles> (10 September 2015).
@@ -39,7 +38,5 @@ enum class ColorSpace : uint8_t;
 WEBCORE_EXPORT String serializationForCSS(const Color&);
 WEBCORE_EXPORT String serializationForHTML(const Color&);
 WEBCORE_EXPORT String serializationForRenderTreeAsText(const Color&);
-
-ASCIILiteral serialization(ColorSpace);
 
 }

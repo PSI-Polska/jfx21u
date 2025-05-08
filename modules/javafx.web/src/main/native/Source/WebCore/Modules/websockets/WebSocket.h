@@ -49,7 +49,7 @@ class Blob;
 class ThreadableWebSocketChannel;
 
 class WebSocket final : public RefCounted<WebSocket>, public EventTarget, public ActiveDOMObject, private WebSocketChannelClient {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebSocket);
+    WTF_MAKE_ISO_ALLOCATED(WebSocket);
 public:
     static ASCIILiteral subprotocolSeparator();
 
@@ -94,9 +94,8 @@ public:
 
     ScriptExecutionContext* scriptExecutionContext() const final;
 
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
+    using RefCounted::ref;
+    using RefCounted::deref;
 
 private:
     explicit WebSocket(ScriptExecutionContext&);
@@ -104,13 +103,12 @@ private:
     void dispatchErrorEventIfNeeded();
 
     void contextDestroyed() final;
-
-    // ActiveDOMObject.
     void suspend(ReasonForSuspension) final;
     void resume() final;
     void stop() final;
+    const char* activeDOMObjectName() const final;
 
-    enum EventTargetInterfaceType eventTargetInterface() const final;
+    EventTargetInterface eventTargetInterface() const final;
 
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }

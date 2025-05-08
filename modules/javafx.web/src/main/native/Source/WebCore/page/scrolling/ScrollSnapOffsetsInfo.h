@@ -46,7 +46,7 @@ struct SnapOffset {
     T offset;
     ScrollSnapStop stop;
     bool hasSnapAreaLargerThanViewport;
-    Markable<ElementIdentifier> snapTargetID;
+    ElementIdentifier snapTargetID;
     bool isFocused;
     Vector<size_t> snapAreaIndices;
 };

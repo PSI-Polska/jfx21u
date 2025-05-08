@@ -28,19 +28,19 @@
 #include "CustomEvent.h"
 
 #include <JavaScriptCore/JSCInlines.h>
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CustomEvent);
+WTF_MAKE_ISO_ALLOCATED_IMPL(CustomEvent);
 
 inline CustomEvent::CustomEvent(IsTrusted isTrusted)
-    : Event(EventInterfaceType::CustomEvent, isTrusted)
+    : Event(isTrusted)
 {
 }
 
 inline CustomEvent::CustomEvent(const AtomString& type, const Init& initializer, IsTrusted isTrusted)
-    : Event(EventInterfaceType::CustomEvent, type, initializer, isTrusted)
+    : Event(type, initializer, isTrusted)
     , m_detail(initializer.detail)
 {
 }
@@ -68,6 +68,11 @@ void CustomEvent::initCustomEvent(const AtomString& type, bool canBubble, bool c
     // https://bugs.webkit.org/show_bug.cgi?id=236353
     m_detail.setWeakly(detail);
     m_cachedDetail.clear();
+}
+
+EventInterface CustomEvent::eventInterface() const
+{
+    return CustomEventInterfaceType;
 }
 
 } // namespace WebCore

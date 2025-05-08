@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +27,6 @@
 
 #include <wtf/Atomics.h>
 #include <wtf/Noncopyable.h>
-#include <wtf/StdLibExtras.h>
 
 namespace WTF {
 
@@ -70,16 +69,19 @@ public:
     // CONSUMER FUNCTIONS: Everything below here is only safe to call from the consumer thread.
 
     // This function is actually safe to call from more than one thread, but ONLY if no thread can call consumeAll.
-    void iterate(const Invocable<void(const T&)> auto& func)
+    template<typename Functor>
+    void iterate(const Functor& func)
     {
         Node* node = m_head.load();
         while (node) {
-            func(node->data);
+            const T& data = node->data;
+            func(data);
             node = node->next;
         }
     }
 
-    void consumeAll(const Invocable<void(T&&)> auto& func)
+    template<typename Functor>
+    void consumeAll(const Functor& func)
     {
         consumeAllWithNode([&] (T&& data, Node* node) {
             func(WTFMove(data));
@@ -87,7 +89,8 @@ public:
         });
     }
 
-    void consumeAllWithNode(const Invocable<void(T&&, Node*)> auto& func)
+    template<typename Functor>
+    void consumeAllWithNode(const Functor& func)
     {
         Node* node = m_head.exchange(nullptr);
         while (node) {

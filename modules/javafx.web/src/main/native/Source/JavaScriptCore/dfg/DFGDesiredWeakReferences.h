@@ -25,12 +25,9 @@
 
 #pragma once
 
-#if ENABLE(DFG_JIT)
-
-#include "StructureID.h"
-#include "WriteBarrier.h"
-#include <wtf/FixedVector.h>
 #include <wtf/HashSet.h>
+
+#if ENABLE(DFG_JIT)
 
 namespace JSC {
 
@@ -55,16 +52,11 @@ public:
 
     void reallyAdd(VM&, CommonData*);
 
-    void finalize();
-
     template<typename Visitor> void visitChildren(Visitor&);
 
 private:
     CodeBlock* m_codeBlock;
-    HashSet<JSCell*> m_cells;
-    HashSet<StructureID> m_structures;
-    FixedVector<WriteBarrier<JSCell>> m_finalizedCells;
-    FixedVector<StructureID> m_finalizedStructures;
+    HashSet<JSCell*> m_references;
 };
 
 } } // namespace JSC::DFG

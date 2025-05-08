@@ -24,19 +24,9 @@
 
 #pragma once
 
-#include "FrameLoaderTypes.h"
 #include <wtf/Noncopyable.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/WeakPtr.h>
-
-namespace WebCore {
-class CachedResourceClient;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::CachedResourceClient> : std::true_type { };
-}
 
 namespace WebCore {
 
@@ -57,7 +47,7 @@ public:
 
     virtual ~CachedResourceClient();
 
-    virtual void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess = LoadWillContinueInAnotherProcess::No);
+    virtual void notifyFinished(CachedResource&, const NetworkLoadMetrics&);
     virtual void deprecatedDidReceiveCachedResource(CachedResource&);
 
     static CachedResourceClientType expectedType();

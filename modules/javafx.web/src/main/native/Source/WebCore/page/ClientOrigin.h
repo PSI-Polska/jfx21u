@@ -30,7 +30,6 @@
 #include <wtf/HashTraits.h>
 #include <wtf/Hasher.h>
 #include <wtf/URL.h>
-#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -48,7 +47,7 @@ struct ClientOrigin {
     SecurityOriginData topOrigin;
     SecurityOriginData clientOrigin;
 
-    String loggingString() const { return makeString(topOrigin.toString(), '-', clientOrigin.toString()); }
+    String loggingString() const { return makeString(topOrigin.toString(), "-", clientOrigin.toString()); }
 };
 
 inline void add(Hasher& hasher, const ClientOrigin& origin)

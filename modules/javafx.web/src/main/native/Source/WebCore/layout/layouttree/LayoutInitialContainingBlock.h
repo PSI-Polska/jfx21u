@@ -26,14 +26,13 @@
 #pragma once
 
 #include "LayoutElementBox.h"
-#include <wtf/TZoneMalloc.h>
+#include <wtf/IsoMalloc.h>
 
 namespace WebCore {
 namespace Layout {
 
 class InitialContainingBlock final : public ElementBox {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(InitialContainingBlock);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(InitialContainingBlock);
+    WTF_MAKE_ISO_ALLOCATED(InitialContainingBlock);
 public:
     InitialContainingBlock(RenderStyle&&, std::unique_ptr<RenderStyle>&& firstLineStyle = nullptr);
     virtual ~InitialContainingBlock() = default;

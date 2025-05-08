@@ -43,7 +43,6 @@ class Element;
 class LocalFrame;
 class PlatformWheelEvent;
 class ScrollableArea;
-class WeakPtrImplWithEventTargetData;
 
 class ScrollLatchingController {
     WTF_MAKE_FAST_ALLOCATED;

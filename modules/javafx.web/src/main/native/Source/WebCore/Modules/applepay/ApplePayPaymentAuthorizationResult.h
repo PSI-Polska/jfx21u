@@ -47,7 +47,7 @@ struct ApplePayPaymentAuthorizationResult {
     static constexpr Status PINLockout = 7;
 
     Status status; // required
-    Vector<Ref<ApplePayError>> errors;
+    Vector<RefPtr<ApplePayError>> errors;
 
 #if ENABLE(APPLE_PAY_PAYMENT_ORDER_DETAILS)
     std::optional<ApplePayPaymentOrderDetails> orderDetails;

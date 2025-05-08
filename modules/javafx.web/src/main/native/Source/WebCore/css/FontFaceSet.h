@@ -38,10 +38,10 @@ template<typename IDLType> class DOMPromiseProxyWithResolveCallback;
 
 class DOMException;
 
-class FontFaceSet final : public RefCounted<FontFaceSet>, private FontEventClient, public EventTarget, public ActiveDOMObject {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(FontFaceSet);
+class FontFaceSet final : public RefCounted<FontFaceSet>, private CSSFontFaceSet::FontEventClient, public EventTarget, public ActiveDOMObject {
+    WTF_MAKE_ISO_ALLOCATED(FontFaceSet);
 public:
-    static Ref<FontFaceSet> create(ScriptExecutionContext&, const Vector<Ref<FontFace>>& initialFaces);
+    static Ref<FontFaceSet> create(ScriptExecutionContext&, const Vector<RefPtr<FontFace>>& initialFaces);
     static Ref<FontFaceSet> create(ScriptExecutionContext&, CSSFontFaceSet& backing);
     virtual ~FontFaceSet();
 
@@ -75,9 +75,8 @@ public:
     };
     Iterator createIterator(ScriptExecutionContext*) { return Iterator(*this); }
 
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
+    using RefCounted::ref;
+    using RefCounted::deref;
 
 private:
     struct PendingPromise : RefCounted<PendingPromise> {
@@ -96,16 +95,19 @@ private:
         bool hasReachedTerminalState { false };
     };
 
-    FontFaceSet(ScriptExecutionContext&, const Vector<Ref<FontFace>>&);
+    FontFaceSet(ScriptExecutionContext&, const Vector<RefPtr<FontFace>>&);
     FontFaceSet(ScriptExecutionContext&, CSSFontFaceSet&);
 
-    // FontEventClient
+    // CSSFontFaceSet::FontEventClient
     void faceFinished(CSSFontFace&, CSSFontFace::Status) final;
     void startedLoading() final;
     void completedLoading() final;
 
+    // ActiveDOMObject
+    const char* activeDOMObjectName() const final { return "FontFaceSet"; }
+
     // EventTarget
-    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::FontFaceSet; }
+    EventTargetInterface eventTargetInterface() const final { return FontFaceSetEventTargetInterfaceType; }
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }

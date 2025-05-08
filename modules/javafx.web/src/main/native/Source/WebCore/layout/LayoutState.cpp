@@ -35,18 +35,15 @@
 #include "LayoutInitialContainingBlock.h"
 #include "RenderBox.h"
 #include "TableFormattingState.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 namespace Layout {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(LayoutState);
+WTF_MAKE_ISO_ALLOCATED_IMPL(LayoutState);
 
-LayoutState::LayoutState(const Document& document, const ElementBox& rootContainer, Type type, FormattingContextLayoutFunction&& formattingContextLayoutFunction)
-    : m_type(type)
-    , m_rootContainer(rootContainer)
-    , m_securityOrigin(document.securityOrigin())
-    , m_formattingContextLayoutFunction(WTFMove(formattingContextLayoutFunction))
+LayoutState::LayoutState(const Document& document, const ElementBox& rootContainer)
+    : m_rootContainer(rootContainer)
 {
     // It makes absolutely no sense to construct a dedicated layout state for a non-formatting context root (layout would be a no-op).
     ASSERT(root().establishesFormattingContext());
@@ -75,14 +72,12 @@ BoxGeometry& LayoutState::geometryForRootBox()
 
 BoxGeometry& LayoutState::ensureGeometryForBoxSlow(const Box& layoutBox)
 {
-    if (LIKELY(m_type == Type::Primary)) {
-#if ASSERT_ENABLED
-        ASSERT(!layoutBox.m_cachedGeometryForPrimaryLayoutState);
-        ASSERT(!layoutBox.m_primaryLayoutState);
-        layoutBox.m_primaryLayoutState = this;
-#endif
-        layoutBox.m_cachedGeometryForPrimaryLayoutState = makeUnique<BoxGeometry>();
-        return *layoutBox.m_cachedGeometryForPrimaryLayoutState;
+    if (layoutBox.canCacheForLayoutState(*this)) {
+        ASSERT(!layoutBox.cachedGeometryForLayoutState(*this));
+        auto newBox = makeUnique<BoxGeometry>();
+        auto& newBoxPtr = *newBox;
+        layoutBox.setCachedGeometryForLayoutState(*this, WTFMove(newBox));
+        return newBoxPtr;
     }
 
     return *m_layoutBoxToBoxGeometry.ensure(&layoutBox, [] {
@@ -149,11 +144,6 @@ void LayoutState::destroyInlineContentCache(const ElementBox& formattingContextR
 {
     ASSERT(formattingContextRoot.establishesInlineFormattingContext());
     m_inlineContentCaches.remove(&formattingContextRoot);
-}
-
-void LayoutState::layoutWithFormattingContextForBox(const ElementBox& box, std::optional<LayoutUnit> widthConstraint)
-{
-    return m_formattingContextLayoutFunction(box, widthConstraint, *this);
 }
 
 }

@@ -31,11 +31,9 @@ namespace WebCore {
 class DOMTokenList;
 
 class SVGAElement final : public SVGGraphicsElement, public SVGURIReference {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGAElement);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGAElement);
+    WTF_MAKE_ISO_ALLOCATED(SVGAElement);
 public:
     static Ref<SVGAElement> create(const QualifiedName&, Document&);
-    ~SVGAElement();
 
     AtomString target() const final { return AtomString { m_target->currentValue() }; }
     Ref<SVGAnimatedString>& targetAnimated() { return m_target; }

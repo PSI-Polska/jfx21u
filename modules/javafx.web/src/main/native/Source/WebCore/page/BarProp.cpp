@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2007, 2010 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,11 +32,11 @@
 #include "Chrome.h"
 #include "LocalFrame.h"
 #include "Page.h"
-#include <wtf/TZoneMallocInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(BarProp);
+WTF_MAKE_ISO_ALLOCATED_IMPL(BarProp);
 
 BarProp::BarProp(LocalDOMWindow& window, Type type)
     : LocalDOMWindowProperty(&window)
@@ -44,12 +44,17 @@ BarProp::BarProp(LocalDOMWindow& window, Type type)
 {
 }
 
+BarProp::Type BarProp::type() const
+{
+    return m_type;
+}
+
 bool BarProp::visible() const
 {
     auto* frame = this->frame();
     if (!frame)
         return false;
-    RefPtr page = frame->page();
+    auto* page = frame->page();
     if (!page)
         return false;
 
