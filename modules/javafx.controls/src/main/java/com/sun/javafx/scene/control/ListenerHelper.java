@@ -24,7 +24,7 @@
  */
 // Original code is re-licensed to Oracle by the author.
 // https://github.com/andy-goryachev/FxTextEditor/blob/master/src/goryachev/fx/FxDisconnector.java
-// Copyright © 2021-2022 Andy Goryachev <andy@goryachev.com>
+// Copyright (C) 2021-2022 Andy Goryachev <andy@goryachev.com>
 package com.sun.javafx.scene.control;
 
 import java.lang.ref.WeakReference;
