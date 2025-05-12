@@ -666,8 +666,6 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         return children;
     }
 
-
-
     /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
@@ -764,7 +762,9 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         Event.fireEvent(this, evt);
     }
 
-
+    protected void markDirtyExpandedDescendantCount() {
+        expandedDescendentCountDirty = true;
+    }
 
 
     /* *************************************************************************
@@ -802,7 +802,6 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
     public <E extends Event> void removeEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
         eventHandlerManager.removeEventHandler(eventType, eventHandler);
     }
-
     /**
      * {@inheritDoc}
      * <p>
