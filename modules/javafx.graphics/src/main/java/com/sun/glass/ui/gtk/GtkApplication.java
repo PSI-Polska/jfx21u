@@ -176,8 +176,12 @@ final class GtkApplication extends Application implements
             }
             return null;
         });
+        boolean gtkNoFrameExtents =
+            AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
+                return Boolean.getBoolean("jdk.gtk.noFrameExtents");
+            });
 
-        _initGTK(gtkVersion, gtkVersionVerbose, overrideUIScale);
+        _initGTK(gtkVersion, gtkVersionVerbose, overrideUIScale, gtkNoFrameExtents);
 
         // Embedded in SWT, with shared event thread
         @SuppressWarnings("removal")
@@ -201,7 +205,8 @@ final class GtkApplication extends Application implements
      */
     private static native int _queryLibrary(int version, boolean verbose);
 
-    private static native void _initGTK(int version, boolean verbose, float overrideUIScale);
+    private static native void _initGTK(int version, boolean verbose, float overrideUIScale,
+                                        boolean noFrameExtentds);
 
     private void initDisplay() {
         Map ds = getDeviceDetails();
