@@ -149,11 +149,11 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
      *
      * @param control The control that this skin should be installed onto.
      */
-    public TreeViewSkin(final TreeView control) {
+    public TreeViewSkin(final TreeView< T > control) {
         super(control);
 
         // install default input map for the TreeView control
-        behavior = new TreeViewBehavior<>(control);
+        behavior = createBehavior( control );
 //        control.setInputMap(behavior.getInputMap());
 
         // init the VirtualFlow
@@ -191,6 +191,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
         behavior.setOnScrollPageUp(this::onScrollPageUp);
         behavior.setOnSelectPreviousRow(() -> { onSelectPreviousCell(); });
         behavior.setOnSelectNextRow(() -> { onSelectNextCell(); });
+        behavior.setOnSelectParent(() -> { onSelectParent(); });
 
         registerChangeListener(control.rootProperty(), e -> setRoot(getSkinnable().getRoot()));
         registerChangeListener(control.showRootProperty(), e -> {
@@ -209,6 +210,10 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
         updateItemCount();
     }
 
+    protected TreeViewBehavior< T > createBehavior( final TreeView< T > control )
+    {
+        return new TreeViewBehavior<>(control);
+    }
 
 
     /* *************************************************************************
@@ -316,6 +321,10 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
         }
     }
 
+    protected final TreeViewBehavior< T > getBehavior()
+    {
+        return behavior;
+    }
 
     /* *************************************************************************
      *                                                                         *
@@ -520,6 +529,11 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
     private void onMoveToLastCell() {
         flow.scrollTo(getItemCount());
         flow.setPosition(1);
+    }
+
+    private void onSelectParent() {
+        int row = getSkinnable().getSelectionModel().getSelectedIndex();
+        flow.scrollTo(row);
     }
 
     /**
