@@ -25,75 +25,136 @@
 
 package com.sun.javafx.collections;
 
+import java.util.Arrays;
+
 import com.sun.javafx.binding.ExpressionHelperBase;
 import javafx.beans.InvalidationListener;
 import javafx.collections.SetChangeListener;
+import javafx.collections.SetComplexChangeListener;
 import java.util.Arrays;
 
 /**
+ *
  */
-public abstract class SetListenerHelper<E> extends ExpressionHelperBase {
+public abstract class SetListenerHelper< E > extends ExpressionHelperBase
+{
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Static methods
 
-    public static <E> SetListenerHelper<E> addListener(SetListenerHelper<E> helper, InvalidationListener listener) {
-        if (listener == null) {
+    protected abstract SetListenerHelper< E > addListener( InvalidationListener listener );
+
+    protected abstract SetListenerHelper< E > removeListener( InvalidationListener listener );
+
+    protected abstract SetListenerHelper< E > addListener( SetChangeListener< ? super E > listener );
+
+    protected abstract SetListenerHelper< E > removeListener( SetChangeListener< ? super E > listener );
+
+    protected abstract void fireValueChangedEvent( SetChangeListener.Change< ? extends E > change );
+
+    protected abstract SetListenerHelper< E > addListener( SetComplexChangeListener< ? super E > listener );
+
+    protected abstract SetListenerHelper< E > removeListener(
+        SetComplexChangeListener< ? super E > listener );
+
+    protected abstract void fireValueChangedEvent( SetComplexChangeListener.Change< ? extends E > change );
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Common implementations
+
+
+    public static < E > SetListenerHelper< E > addListener( SetListenerHelper< E > helper,
+                                                            InvalidationListener listener )
+    {
+        if( listener == null )
+        {
             throw new NullPointerException();
         }
         return (helper == null)? new SingleInvalidation<>(listener) : helper.addListener(listener);
     }
 
-    public static <E> SetListenerHelper<E> removeListener(SetListenerHelper<E> helper, InvalidationListener listener) {
-        if (listener == null) {
+    public static < E > SetListenerHelper< E > addListener( SetListenerHelper< E > helper,
+        SetChangeListener< ? super E > listener )
+    {
+        if( listener == null )
+        {
             throw new NullPointerException();
         }
-        return (helper == null)? null : helper.removeListener(listener);
+        return ( helper == null ) ? new SingleChange< E >( listener ) : helper.addListener( listener );
     }
 
-    public static <E> SetListenerHelper<E> addListener(SetListenerHelper<E> helper, SetChangeListener<? super E> listener) {
-        if (listener == null) {
+    public static < E > SetListenerHelper< E > addListener( SetListenerHelper< E > helper,
+        SetComplexChangeListener< ? super E > listener )
+    {
+        if( listener == null )
+        {
             throw new NullPointerException();
         }
-        return (helper == null)? new SingleChange<>(listener) : helper.addListener(listener);
+        return ( helper == null ) ? new ComplexChange< E >( listener ) : helper.addListener( listener );
     }
 
-    public static <E> SetListenerHelper<E> removeListener(SetListenerHelper<E> helper, SetChangeListener<? super E> listener) {
-        if (listener == null) {
-            throw new NullPointerException();
-        }
-        return (helper == null)? null : helper.removeListener(listener);
-    }
-
-    public static <E> void fireValueChangedEvent(SetListenerHelper<E> helper, SetChangeListener.Change<? extends E> change) {
-        if (helper != null) {
-            helper.fireValueChangedEvent(change);
+    public static < E > void fireValueChangedEvent( SetListenerHelper< E > helper,
+        SetChangeListener.Change< ? extends E > change )
+    {
+        if( helper != null )
+        {
+            helper.fireValueChangedEvent( change );
         }
     }
 
-    public static <E> boolean hasListeners(SetListenerHelper<E> helper) {
+    public static < E > void fireValueChangedEvent( SetListenerHelper< E > helper,
+                                                    SetComplexChangeListener.Change< ? extends E > change )
+    {
+        if( helper != null )
+        {
+            helper.fireValueChangedEvent( change );
+        }
+    }
+
+    public static < E > boolean hasListeners( SetListenerHelper< E > helper )
+    {
         return helper != null;
     }
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // Common implementations
+    public static < E > SetListenerHelper< E > removeListener( SetListenerHelper< E > helper,
+        SetComplexChangeListener< ? super E > listener )
+    {
+        if( listener == null )
+        {
+            throw new NullPointerException();
+        }
+        return ( helper == null ) ? null : helper.removeListener( listener );
+    }
 
-    protected abstract SetListenerHelper<E> addListener(InvalidationListener listener);
-    protected abstract SetListenerHelper<E> removeListener(InvalidationListener listener);
+    public static < E > SetListenerHelper< E > removeListener( SetListenerHelper< E > helper,
+        InvalidationListener listener )
+    {
+        if( listener == null )
+        {
+            throw new NullPointerException();
+        }
+        return ( helper == null ) ? null : helper.removeListener( listener );
+    }
 
-    protected abstract SetListenerHelper<E> addListener(SetChangeListener<? super E> listener);
-    protected abstract SetListenerHelper<E> removeListener(SetChangeListener<? super E> listener);
-
-    protected abstract void fireValueChangedEvent(SetChangeListener.Change<? extends E> change);
-
+    public static < E > SetListenerHelper< E > removeListener( SetListenerHelper< E > helper,
+        SetChangeListener< ? super E > listener )
+    {
+        if( listener == null )
+        {
+            throw new NullPointerException();
+        }
+        return ( helper == null ) ? null : helper.removeListener( listener );
+    }
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Implementations
 
-    private static class SingleInvalidation<E> extends SetListenerHelper<E> {
+    private static class SingleInvalidation< E > extends SetListenerHelper< E >
+    {
 
         private final InvalidationListener listener;
 
-        private SingleInvalidation(InvalidationListener listener) {
+        private SingleInvalidation( InvalidationListener listener )
+        {
             this.listener = listener;
         }
 
@@ -103,8 +164,9 @@ public abstract class SetListenerHelper<E> extends ExpressionHelperBase {
         }
 
         @Override
-        protected SetListenerHelper<E> removeListener(InvalidationListener listener) {
-            return (listener.equals(this.listener))? null : this;
+        protected SetListenerHelper< E > removeListener( InvalidationListener listener )
+        {
+            return ( listener.equals( this.listener ) ) ? null : this;
         }
 
         @Override
@@ -113,101 +175,289 @@ public abstract class SetListenerHelper<E> extends ExpressionHelperBase {
         }
 
         @Override
-        protected SetListenerHelper<E> removeListener(SetChangeListener<? super E> listener) {
+        protected SetListenerHelper< E > removeListener( SetChangeListener< ? super E > listener )
+        {
             return this;
         }
 
         @Override
-        protected void fireValueChangedEvent(SetChangeListener.Change<? extends E> change) {
-            try {
-                listener.invalidated(change.getSet());
-            } catch (Exception e) {
-                Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+        protected SetListenerHelper< E > addListener( final SetComplexChangeListener< ? super E > listener )
+        {
+            return new Generic< E >( this.listener, listener );
+        }
+
+        @Override
+        protected SetListenerHelper< E > removeListener(
+                final SetComplexChangeListener< ? super E > listener )
+        {
+            return this;
+        }
+
+        @Override
+        protected void fireValueChangedEvent( SetChangeListener.Change< ? extends E > change )
+        {
+            try
+            {
+                listener.invalidated( change.getSet() );
+            }
+            catch( Exception e )
+            {
+                Thread.currentThread().getUncaughtExceptionHandler()
+                    .uncaughtException( Thread.currentThread(), e );
+            }
+        }
+
+        @Override
+        protected void fireValueChangedEvent( final SetComplexChangeListener.Change< ? extends E > change )
+        {
+            try
+            {
+                listener.invalidated( change.getSet() );
+            }
+            catch( Exception e )
+            {
+                Thread.currentThread().getUncaughtExceptionHandler()
+                        .uncaughtException( Thread.currentThread(), e );
             }
         }
     }
 
-    private static class SingleChange<E> extends SetListenerHelper<E> {
+    private static class SingleChange< E > extends SetListenerHelper< E >
+    {
 
-        private final SetChangeListener<? super E> listener;
+        private final SetChangeListener< ? super E > listener;
 
-        private SingleChange(SetChangeListener<? super E> listener) {
+        private SingleChange( SetChangeListener< ? super E > listener )
+        {
+            this.listener = listener;
+        }
+
+        @Override
+        protected SetListenerHelper< E > addListener( InvalidationListener listener )
+        {
+            return new Generic< E >( listener, this.listener );
+        }
+
+        @Override
+        protected SetListenerHelper< E > removeListener( InvalidationListener listener )
+        {
+            return this;
+        }
+
+        @Override
+        protected SetListenerHelper< E > addListener( SetChangeListener< ? super E > listener )
+        {
+            return new Generic< E >( this.listener, listener );
+        }
+
+        @Override
+        protected SetListenerHelper< E > removeListener( SetChangeListener< ? super E > listener )
+        {
+            return this;
+        }
+
+        @Override
+        protected void fireValueChangedEvent( SetChangeListener.Change< ? extends E > change )
+        {
+            try
+            {
+                listener.onChanged( change );
+            }
+            catch( Exception e )
+            {
+                Thread.currentThread().getUncaughtExceptionHandler()
+                    .uncaughtException( Thread.currentThread(), e );
+            }
+        }
+
+        @Override
+        protected SetListenerHelper< E > addListener( final SetComplexChangeListener< ? super E > listener )
+        {
+            return new Generic< E >( listener, this.listener );
+        }
+
+        @Override
+        protected SetListenerHelper< E > removeListener(
+            final SetComplexChangeListener< ? super E > listener )
+        {
+            return this;
+        }
+
+        @Override
+        protected void fireValueChangedEvent( final SetComplexChangeListener.Change< ? extends E > change )
+        {
+            try
+            {
+                change.getAsSingleChanges().forEach( listener::onChanged );
+            }
+            catch( Exception e )
+            {
+                Thread.currentThread().getUncaughtExceptionHandler()
+                        .uncaughtException( Thread.currentThread(), e );
+            }
+        }
+    }
+
+    private static class ComplexChange< E > extends SetListenerHelper< E >
+    {
+
+        private final SetComplexChangeListener< ? super E > listener;
+
+        private ComplexChange( SetComplexChangeListener< ? super E > listener )
+        {
             this.listener = listener;
         }
 
         @Override
         protected SetListenerHelper<E> addListener(InvalidationListener listener) {
-            return new Generic<>(listener, this.listener);
+            return new Generic<E>(listener, this.listener);
         }
 
         @Override
-        protected SetListenerHelper<E> removeListener(InvalidationListener listener) {
-            return this;
+        protected SetListenerHelper< E > removeListener( InvalidationListener listener )
+        {
+            return ( listener.equals( this.listener ) ) ? null : this;
         }
 
         @Override
         protected SetListenerHelper<E> addListener(SetChangeListener<? super E> listener) {
-            return new Generic<>(this.listener, listener);
+            return new Generic<E>(this.listener, listener);
         }
 
         @Override
-        protected SetListenerHelper<E> removeListener(SetChangeListener<? super E> listener) {
-            return (listener.equals(this.listener))? null : this;
+        protected SetListenerHelper< E > removeListener( SetChangeListener< ? super E > listener )
+        {
+            return this;
+        }
+
+
+        @Override
+        protected void fireValueChangedEvent( SetChangeListener.Change< ? extends E > change )
+        {
+            try
+            {
+                listener.onChanged( change.getAsComplex() );
+            }
+            catch( Exception e )
+            {
+                Thread.currentThread().getUncaughtExceptionHandler()
+                    .uncaughtException( Thread.currentThread(), e );
+            }
+        }
+
+
+        @Override
+        protected SetListenerHelper< E > addListener( final SetComplexChangeListener< ? super E > listener )
+        {
+            return new Generic< E >( this.listener, listener );
         }
 
         @Override
-        protected void fireValueChangedEvent(SetChangeListener.Change<? extends E> change) {
-            try {
-                listener.onChanged(change);
-            } catch (Exception e) {
-                Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+        protected SetListenerHelper< E > removeListener(
+            final SetComplexChangeListener< ? super E > listener )
+        {
+            return this;
+        }
+
+        @Override
+        protected void fireValueChangedEvent( final SetComplexChangeListener.Change< ? extends E > change )
+        {
+            try
+            {
+                listener.onChanged( change );
+            }
+            catch( Exception e )
+            {
+                Thread.currentThread().getUncaughtExceptionHandler()
+                    .uncaughtException( Thread.currentThread(), e );
             }
         }
     }
 
-    private static class Generic<E> extends SetListenerHelper<E> {
+    private static class Generic< E > extends SetListenerHelper< E >
+    {
 
         private InvalidationListener[] invalidationListeners;
-        private SetChangeListener<? super E>[] changeListeners;
+        private SetChangeListener< ? super E >[] changeListeners;
+        private SetComplexChangeListener< ? super E >[] complexChangeListeners;
         private int invalidationSize;
         private int changeSize;
+        private int complexChangeSize;
         private boolean locked;
 
-        private Generic(InvalidationListener listener0, InvalidationListener listener1) {
-            this.invalidationListeners = new InvalidationListener[] {listener0, listener1};
+        private Generic( InvalidationListener listener0, InvalidationListener listener1 )
+        {
+            this.invalidationListeners = new InvalidationListener[]{ listener0, listener1 };
             this.invalidationSize = 2;
         }
 
-        private Generic(SetChangeListener<? super E> listener0, SetChangeListener<? super E> listener1) {
-            this.changeListeners = new SetChangeListener[] {listener0, listener1};
+        private Generic( SetChangeListener< ? super E > listener0, SetChangeListener< ? super E > listener1 )
+        {
+            this.changeListeners = new SetChangeListener[]{ listener0, listener1 };
             this.changeSize = 2;
         }
 
-        private Generic(InvalidationListener invalidationListener, SetChangeListener<? super E> changeListener) {
-            this.invalidationListeners = new InvalidationListener[] {invalidationListener};
+        private Generic( SetComplexChangeListener< ? super E > listener0,
+            SetComplexChangeListener< ? super E > listener1 )
+        {
+            this.complexChangeListeners = new SetComplexChangeListener[]{ listener0, listener1 };
+            this.complexChangeSize = 2;
+        }
+
+        private Generic( SetComplexChangeListener< ? super E > listener0,
+            SetChangeListener< ? super E > listener1 )
+        {
+            this.complexChangeListeners = new SetComplexChangeListener[]{ listener0 };
+            this.complexChangeSize = 1;
+            this.changeListeners = new SetChangeListener[]{ listener1 };
+            this.changeSize = 1;
+        }
+
+        private Generic( InvalidationListener invalidationListener,
+            SetComplexChangeListener< ? super E > complexChangeListener )
+        {
+            this.invalidationListeners = new InvalidationListener[]{ invalidationListener };
             this.invalidationSize = 1;
-            this.changeListeners = new SetChangeListener[] {changeListener};
+            this.complexChangeListeners = new SetComplexChangeListener[]{ complexChangeListener };
+            this.complexChangeSize = 1;
+        }
+
+        private Generic( InvalidationListener invalidationListener,
+            SetChangeListener< ? super E > changeListener )
+        {
+            this.invalidationListeners = new InvalidationListener[]{ invalidationListener };
+            this.invalidationSize = 1;
+            this.changeListeners = new SetChangeListener[]{ changeListener };
             this.changeSize = 1;
         }
 
         @Override
-        protected Generic<E> addListener(InvalidationListener listener) {
-            if (invalidationListeners == null) {
-                invalidationListeners = new InvalidationListener[] {listener};
+        protected Generic< E > addListener( InvalidationListener listener )
+        {
+            if( invalidationListeners == null )
+            {
+                invalidationListeners = new InvalidationListener[]{ listener };
                 invalidationSize = 1;
-            } else {
+            }
+            else
+            {
                 final int oldCapacity = invalidationListeners.length;
-                if (locked) {
-                    final int newCapacity = (invalidationSize < oldCapacity)? oldCapacity : (oldCapacity * 3)/2 + 1;
-                    invalidationListeners = Arrays.copyOf(invalidationListeners, newCapacity);
-                } else if (invalidationSize == oldCapacity) {
-                    invalidationSize = trim(invalidationSize, invalidationListeners);
-                    if (invalidationSize == oldCapacity) {
-                        final int newCapacity = (oldCapacity * 3)/2 + 1;
-                        invalidationListeners = Arrays.copyOf(invalidationListeners, newCapacity);
+                if( locked )
+                {
+                    final int newCapacity =
+                        ( invalidationSize < oldCapacity ) ? oldCapacity : ( oldCapacity * 3 ) / 2 + 1;
+                    invalidationListeners = Arrays.copyOf( invalidationListeners, newCapacity );
+                }
+                else if( invalidationSize == oldCapacity )
+                {
+                    invalidationSize = trim( invalidationSize, invalidationListeners );
+                    if( invalidationSize == oldCapacity )
+                    {
+                        final int newCapacity = ( oldCapacity * 3 ) / 2 + 1;
+                        invalidationListeners = Arrays.copyOf( invalidationListeners, newCapacity );
                     }
                 }
-                invalidationListeners[invalidationSize++] = listener;
+                invalidationListeners[ invalidationSize++ ] = listener;
             }
             return this;
         }
@@ -221,6 +471,10 @@ public abstract class SetListenerHelper<E> extends ExpressionHelperBase {
                             if (changeSize == 1) {
                                 return new SingleChange<>(changeListeners[0]);
                             }
+                            if( changeSize == 0 && complexChangeSize == 1 )
+                            {
+                                return new ComplexChange<>( complexChangeListeners[ 0 ] );
+                            }
                             invalidationListeners = null;
                             invalidationSize = 0;
                         } else if ((invalidationSize == 2) && (changeSize == 0)) {
@@ -228,16 +482,21 @@ public abstract class SetListenerHelper<E> extends ExpressionHelperBase {
                         } else {
                             final int numMoved = invalidationSize - index - 1;
                             final InvalidationListener[] oldListeners = invalidationListeners;
-                            if (locked) {
-                                invalidationListeners = new InvalidationListener[invalidationListeners.length];
-                                System.arraycopy(oldListeners, 0, invalidationListeners, 0, index);
+                            if( locked )
+                            {
+                                invalidationListeners =
+                                    new InvalidationListener[ invalidationListeners.length ];
+                                System.arraycopy( oldListeners, 0, invalidationListeners, 0, index );
                             }
-                            if (numMoved > 0) {
-                                System.arraycopy(oldListeners, index+1, invalidationListeners, index, numMoved);
+                            if( numMoved > 0 )
+                            {
+                                System.arraycopy( oldListeners, index + 1, invalidationListeners, index,
+                                    numMoved );
                             }
                             invalidationSize--;
-                            if (!locked) {
-                                invalidationListeners[invalidationSize] = null; // Let gc do its work
+                            if( !locked )
+                            {
+                                invalidationListeners[ invalidationSize ] = null; // Let gc do its work
                             }
                         }
                         break;
@@ -248,23 +507,32 @@ public abstract class SetListenerHelper<E> extends ExpressionHelperBase {
         }
 
         @Override
-        protected SetListenerHelper<E> addListener(SetChangeListener<? super E> listener) {
-            if (changeListeners == null) {
-                changeListeners = new SetChangeListener[] {listener};
+        protected SetListenerHelper< E > addListener( SetChangeListener< ? super E > listener )
+        {
+            if( changeListeners == null )
+            {
+                changeListeners = new SetChangeListener[]{ listener };
                 changeSize = 1;
-            } else {
+            }
+            else
+            {
                 final int oldCapacity = changeListeners.length;
-                if (locked) {
-                    final int newCapacity = (changeSize < oldCapacity)? oldCapacity : (oldCapacity * 3)/2 + 1;
-                    changeListeners = Arrays.copyOf(changeListeners, newCapacity);
-                } else if (changeSize == oldCapacity) {
-                    changeSize = trim(changeSize, changeListeners);
-                    if (changeSize == oldCapacity) {
-                        final int newCapacity = (oldCapacity * 3)/2 + 1;
-                        changeListeners = Arrays.copyOf(changeListeners, newCapacity);
+                if( locked )
+                {
+                    final int newCapacity =
+                        ( changeSize < oldCapacity ) ? oldCapacity : ( oldCapacity * 3 ) / 2 + 1;
+                    changeListeners = Arrays.copyOf( changeListeners, newCapacity );
+                }
+                else if( changeSize == oldCapacity )
+                {
+                    changeSize = trim( changeSize, changeListeners );
+                    if( changeSize == oldCapacity )
+                    {
+                        final int newCapacity = ( oldCapacity * 3 ) / 2 + 1;
+                        changeListeners = Arrays.copyOf( changeListeners, newCapacity );
                     }
                 }
-                changeListeners[changeSize++] = listener;
+                changeListeners[ changeSize++ ] = listener;
             }
             return this;
         }
@@ -278,23 +546,30 @@ public abstract class SetListenerHelper<E> extends ExpressionHelperBase {
                             if (invalidationSize == 1) {
                                 return new SingleInvalidation<>(invalidationListeners[0]);
                             }
+                            if( invalidationSize == 0 && complexChangeSize == 1 )
+                            {
+                                return new ComplexChange<>( complexChangeListeners[ 0 ] );
+                            }
                             changeListeners = null;
                             changeSize = 0;
                         } else if ((changeSize == 2) && (invalidationSize == 0)) {
                             return new SingleChange<>(changeListeners[1-index]);
                         } else {
                             final int numMoved = changeSize - index - 1;
-                            final SetChangeListener<? super E>[] oldListeners = changeListeners;
-                            if (locked) {
-                                changeListeners = new SetChangeListener[changeListeners.length];
-                                System.arraycopy(oldListeners, 0, changeListeners, 0, index);
+                            final SetChangeListener< ? super E >[] oldListeners = changeListeners;
+                            if( locked )
+                            {
+                                changeListeners = new SetChangeListener[ changeListeners.length ];
+                                System.arraycopy( oldListeners, 0, changeListeners, 0, index );
                             }
-                            if (numMoved > 0) {
-                                System.arraycopy(oldListeners, index+1, changeListeners, index, numMoved);
+                            if( numMoved > 0 )
+                            {
+                                System.arraycopy( oldListeners, index + 1, changeListeners, index, numMoved );
                             }
                             changeSize--;
-                            if (!locked) {
-                                changeListeners[changeSize] = null; // Let gc do its work
+                            if( !locked )
+                            {
+                                changeListeners[ changeSize ] = null; // Let gc do its work
                             }
                         }
                         break;
@@ -305,29 +580,201 @@ public abstract class SetListenerHelper<E> extends ExpressionHelperBase {
         }
 
         @Override
-        protected void fireValueChangedEvent(SetChangeListener.Change<? extends E> change) {
+        protected void fireValueChangedEvent( SetChangeListener.Change< ? extends E > change )
+        {
             final InvalidationListener[] curInvalidationList = invalidationListeners;
             final int curInvalidationSize = invalidationSize;
-            final SetChangeListener<? super E>[] curChangeList = changeListeners;
+            final SetChangeListener< ? super E >[] curChangeList = changeListeners;
             final int curChangeSize = changeSize;
+            final SetComplexChangeListener< ? super E >[] curComplexChangeList = complexChangeListeners;
+            final int curComplexChangeSize = complexChangeSize;
 
-            try {
+            try
+            {
                 locked = true;
-                for (int i = 0; i < curInvalidationSize; i++) {
-                    try {
-                        curInvalidationList[i].invalidated(change.getSet());
-                    } catch (Exception e) {
-                        Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+                for( int i = 0; i < curInvalidationSize; i++ )
+                {
+                    try
+                    {
+                        curInvalidationList[ i ].invalidated( change.getSet() );
+                    }
+                    catch( Exception e )
+                    {
+                        Thread.currentThread().getUncaughtExceptionHandler()
+                                .uncaughtException( Thread.currentThread(), e );
                     }
                 }
-                for (int i = 0; i < curChangeSize; i++) {
-                    try {
-                        curChangeList[i].onChanged(change);
-                    } catch (Exception e) {
-                        Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+                for( int i = 0; i < curChangeSize; i++ )
+                {
+                    try
+                    {
+                        curChangeList[ i ].onChanged( change );
+                    }
+                    catch( Exception e )
+                    {
+                        Thread.currentThread().getUncaughtExceptionHandler()
+                            .uncaughtException( Thread.currentThread(), e );
                     }
                 }
-            } finally {
+                for( int i = 0; i < curComplexChangeSize; i++ )
+                {
+                    try
+                    {
+                        curComplexChangeList[ i ].onChanged( change.getAsComplex() );
+                    }
+                    catch( Exception e )
+                    {
+                        Thread.currentThread().getUncaughtExceptionHandler()
+                            .uncaughtException( Thread.currentThread(), e );
+                    }
+                }
+            }
+            finally
+            {
+                locked = false;
+            }
+        }
+
+        @Override
+        protected SetListenerHelper< E > addListener( final SetComplexChangeListener< ? super E > listener )
+        {
+            if( complexChangeListeners == null )
+            {
+                complexChangeListeners = new SetComplexChangeListener[]{ listener };
+                complexChangeSize = 1;
+            }
+            else
+            {
+                final int oldCapacity = complexChangeListeners.length;
+                if( locked )
+                {
+                    final int newCapacity =
+                        ( complexChangeSize < oldCapacity ) ? oldCapacity : ( oldCapacity * 3 ) / 2 + 1;
+                    complexChangeListeners = Arrays.copyOf( complexChangeListeners, newCapacity );
+                }
+                else if( complexChangeSize == oldCapacity )
+                {
+                    complexChangeSize = trim( complexChangeSize, complexChangeListeners );
+                    if( complexChangeSize == oldCapacity )
+                    {
+                        final int newCapacity = ( oldCapacity * 3 ) / 2 + 1;
+                        complexChangeListeners = Arrays.copyOf( complexChangeListeners, newCapacity );
+                    }
+                }
+                complexChangeListeners[ complexChangeSize++ ] = listener;
+            }
+            return this;
+        }
+
+        @Override
+        protected SetListenerHelper< E > removeListener(
+            final SetComplexChangeListener< ? super E > listener )
+        {
+            if( complexChangeListeners != null )
+            {
+                for( int index = 0; index < complexChangeSize; index++ )
+                {
+                    if( listener.equals( complexChangeListeners[ index ] ) )
+                    {
+                        if( complexChangeSize == 1 )
+                        {
+                            if( invalidationSize == 1 && changeSize == 0 )
+                            {
+                                return new SingleInvalidation< E >( invalidationListeners[ 0 ] );
+                            }
+                            if( invalidationSize == 0 && changeSize == 1 )
+                            {
+                                return new SingleChange<>( changeListeners[ 0 ] );
+                            }
+                            complexChangeListeners = null;
+                            complexChangeSize = 0;
+                        }
+                        else if( ( complexChangeSize == 2 ) && ( invalidationSize == 0 ) && ( changeSize
+                            == 1 ) )
+                        {
+                            return new ComplexChange<>( complexChangeListeners[ 1 - index ] );
+                        }
+                        else
+                        {
+                            final int numMoved = complexChangeSize - index - 1;
+                            final SetComplexChangeListener< ? super E >[] oldListeners =
+                                complexChangeListeners;
+                            if( locked )
+                            {
+                                complexChangeListeners =
+                                    new SetComplexChangeListener[ complexChangeListeners.length ];
+                                System.arraycopy( oldListeners, 0, complexChangeListeners, 0, index );
+                            }
+                            if( numMoved > 0 )
+                            {
+                                System.arraycopy( oldListeners, index + 1, complexChangeListeners, index,
+                                    numMoved );
+                            }
+                            complexChangeSize--;
+                            if( !locked )
+                            {
+                                complexChangeListeners[ complexChangeSize ] = null; // Let gc do its work
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+            return this;
+        }
+
+        @Override
+        protected void fireValueChangedEvent( final SetComplexChangeListener.Change< ? extends E > change )
+        {
+            final InvalidationListener[] curInvalidationList = invalidationListeners;
+            final int curInvalidationSize = invalidationSize;
+            final SetChangeListener< ? super E >[] curChangeList = changeListeners;
+            final int curChangeSize = changeSize;
+            final SetComplexChangeListener< ? super E >[] curComplexChangeList = complexChangeListeners;
+            final int curComplexChangeSize = complexChangeSize;
+
+            try
+            {
+                locked = true;
+                for( int i = 0; i < curInvalidationSize; i++ )
+                {
+                    try
+                    {
+                        curInvalidationList[ i ].invalidated( change.getSet() );
+                    }
+                    catch( Exception e )
+                    {
+                        Thread.currentThread().getUncaughtExceptionHandler()
+                            .uncaughtException( Thread.currentThread(), e );
+                    }
+                }
+                for( int i = 0; i < curChangeSize; i++ )
+                {
+                    try
+                    {
+                        change.getAsSingleChanges().forEach( curChangeList[ i ]::onChanged );
+                    }
+                    catch( Exception e )
+                    {
+                        Thread.currentThread().getUncaughtExceptionHandler()
+                            .uncaughtException( Thread.currentThread(), e );
+                    }
+                }
+                for( int i = 0; i < curComplexChangeSize; i++ )
+                {
+                    try
+                    {
+                        curComplexChangeList[ i ].onChanged( change );
+                    }
+                    catch( Exception e )
+                    {
+                        Thread.currentThread().getUncaughtExceptionHandler()
+                            .uncaughtException( Thread.currentThread(), e );
+                    }
+                }
+            }
+            finally
+            {
                 locked = false;
             }
         }
