@@ -110,7 +110,7 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
         super(control);
 
         // install default input map for the TreeCell control
-        behavior = createBehavior(control);
+        behavior = createBehavior( control );
 //        control.setInputMap(behavior.getInputMap());
 
         updateTreeItem();
@@ -253,7 +253,7 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
     @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         double fixedCellSize = getFixedCellSize();
         if (fixedCellSize > 0) {
-            return fixedCellSize;
+            return snapSizeY( fixedCellSize );
         }
 
         double pref = super.computeMinHeight(width, topInset, rightInset, bottomInset, leftInset);
@@ -265,7 +265,7 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         double fixedCellSize = getFixedCellSize();
         if (fixedCellSize > 0) {
-            return fixedCellSize;
+            return snapSizeY( fixedCellSize );
         }
 
         final TreeCell<T> cell = getSkinnable();
@@ -283,7 +283,7 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
     @Override protected double computeMaxHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         double fixedCellSize = getFixedCellSize();
         if (fixedCellSize > 0) {
-            return fixedCellSize;
+            return snapSizeY( fixedCellSize );
         }
 
         return super.computeMaxHeight(width, topInset, rightInset, bottomInset, leftInset);

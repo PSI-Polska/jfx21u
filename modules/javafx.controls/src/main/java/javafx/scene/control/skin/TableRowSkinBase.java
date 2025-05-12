@@ -344,7 +344,7 @@ public abstract class TableRowSkinBase<T,
                 isVisible = isColumnPartiallyOrFullyVisible(tableColumn);
 
                 y = 0;
-                height = fixedCellSize;
+                height = snapSizeY( fixedCellSize );
             } else {
                 height = h;
             }
@@ -568,7 +568,7 @@ public abstract class TableRowSkinBase<T,
     /** {@inheritDoc} */
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         if (fixedCellSizeEnabled) {
-            return fixedCellSize;
+            return snapSizeY( fixedCellSize );
         }
 
         // fix for RT-29080
@@ -601,7 +601,7 @@ public abstract class TableRowSkinBase<T,
     /** {@inheritDoc} */
     @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         if (fixedCellSizeEnabled) {
-            return fixedCellSize;
+            return snapSizeY( fixedCellSize );
         }
 
         // fix for RT-29080
@@ -631,7 +631,7 @@ public abstract class TableRowSkinBase<T,
     /** {@inheritDoc} */
     @Override protected double computeMaxHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         if (fixedCellSizeEnabled) {
-            return fixedCellSize;
+            return snapSizeY( fixedCellSize );
         }
         return super.computeMaxHeight(width, topInset, rightInset, bottomInset, leftInset);
     }
