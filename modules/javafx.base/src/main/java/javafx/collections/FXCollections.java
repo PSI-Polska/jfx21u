@@ -1654,6 +1654,7 @@ public class FXCollections {
         private final ObservableSet<E> backingSet;
         private SetListenerHelper<E> listenerHelper;
         private SetComplexChangeListener<E> complexListener;
+        private SetChangeListener<E> listener;
 
         public UnmodifiableObservableSet(ObservableSet<E> backingSet) {
             this.backingSet = backingSet;
@@ -1661,12 +1662,21 @@ public class FXCollections {
         }
 
         private void initListener() {
-            if (complexListener == null) {
-                complexListener = c -> {
-                    callObservers(new SetAdapterComplexChange<>(UnmodifiableObservableSet.this, c));
-                };
-                this.backingSet.addListener(new WeakSetComplexChangeListener<>(listener));
+            if (listener == null) {
+                listener = c -> callObservers(new SetAdapterChange<>(UnmodifiableObservableSet.this, c));
+                this.backingSet.addListener(new WeakSetChangeListener<E>(listener));
             }
+        }
+
+        private void initComplexListener() {
+            if (complexListener == null) {
+                complexListener = c -> callObservers(new SetAdapterComplexChange<>(UnmodifiableObservableSet.this, c));
+                this.backingSet.addListener(new WeakSetComplexChangeListener<>(complexListener));
+            }
+        }
+
+        private void callObservers(SetChangeListener.Change<? extends E> change) {
+            SetListenerHelper.fireValueChangedEvent(listenerHelper, change);
         }
 
         private void callObservers(SetComplexChangeListener.Change<? extends E> change) {
@@ -1730,7 +1740,7 @@ public class FXCollections {
         @Override
         public void addListener( final SetComplexChangeListener< ? super E > listener )
         {
-            initListener();
+            initComplexListener();
             listenerHelper = SetListenerHelper.addListener(listenerHelper, listener);
         }
 
