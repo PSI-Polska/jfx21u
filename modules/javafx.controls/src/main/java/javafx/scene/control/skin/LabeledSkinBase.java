@@ -327,7 +327,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
 
             String cleanText = getCleanText();
             boolean emptyText = cleanText == null || cleanText.isEmpty();
-            txWidth = emptyText ? 0.0 : Utils.computeTextWidth(text.getFont(), cleanText, 0);
+            txWidth = emptyText ? 0.0 : snapSizeX(Utils.computeTextWidth(text.getFont(), cleanText, 0));
         }
 
         double width;
@@ -336,14 +336,14 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
         } else {
             // Fix for RT-39889
             double graphicWidth = graphic == null ? 0.0 :
-                    Utils.boundedSize(graphic.prefWidth(-1), graphic.minWidth(-1), graphic.maxWidth(-1));
+                    snapSizeX(Utils.boundedSize(graphic.prefWidth(-1), graphic.minWidth(-1), graphic.maxWidth(-1)));
 
             if (isIgnoreText) {
                 width = graphicWidth;
             } else {
                 ContentDisplay contentDisplay = labeled.getContentDisplay();
                 if (contentDisplay == ContentDisplay.LEFT || contentDisplay == ContentDisplay.RIGHT) {
-                    width = txWidth + labeled.getGraphicTextGap() + graphicWidth;
+                    width = txWidth + snapSpaceX(labeled.getGraphicTextGap()) + graphicWidth;
                 } else {
                     width = Math.max(txWidth, graphicWidth);
                 }
@@ -398,9 +398,9 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             if (isIgnoreText) {
                 height = graphicHeight;
             } else if (contentDisplay == TOP || contentDisplay == BOTTOM) {
-                height = graphicHeight + gap + textHeight;
+                height = snapSizeY( graphicHeight + textHeight ) + snapSpaceY( gap );
             } else {
-                height = Math.max(textHeight, graphicHeight);
+                height = snapSizeY(Math.max(textHeight, graphicHeight));
             }
         }
 
@@ -825,13 +825,13 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
         final Node graphic = labeled.getGraphic();
         double width;
         if (isIgnoreGraphic()) {
-            width = minTextWidth;
+            width = snapSizeX( minTextWidth );
         } else if (isIgnoreText()) {
-            width = graphic.minWidth(-1);
+            width = snapSizeX(graphic.minWidth(-1));
         } else if (contentDisplay == LEFT || contentDisplay == RIGHT){
-            width = (minTextWidth + graphic.minWidth(-1) + gap);
+            width = snapSizeX(minTextWidth + graphic.minWidth(-1) ) + snapSpaceX( gap );
         } else {
-            width = Math.max(minTextWidth, graphic.minWidth(-1));
+            width = snapSizeX( Math.max(minTextWidth, graphic.minWidth(-1)) );
         }
 
         double padding = leftInset + rightInset;
@@ -866,10 +866,18 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             final Node graphic = labeled.getGraphic();
             if (labeled.getContentDisplay() == ContentDisplay.TOP
                     || labeled.getContentDisplay() == ContentDisplay.BOTTOM) {
-                h = graphic.minHeight(width) + labeled.getGraphicTextGap() + textHeight;
+                h = snapSizeY( graphic.minHeight(width) + textHeight ) + snapSpaceY( labeled.getGraphicTextGap() );
             } else {
-                h = Math.max(textHeight, graphic.minHeight(width));
+                h = snapSizeY( Math.max(textHeight, graphic.minHeight(width)) );
             }
+        }
+        else
+        {
+            h = snapSizeY( h );
+        }
+        else
+        {
+            h = snapSpaceY( h );
         }
 
         double padding = topInset + bottomInset;
