@@ -401,9 +401,9 @@ public class BorderPane extends Pane {
         }
 
         final Insets insets = getInsets();
-        return insets.getLeft() +
+        return snapSpaceX( insets.getLeft()  )+
                 Math.max(leftPrefWidth + centerMinWidth + rightPrefWidth, Math.max(topMinWidth,bottomMinWidth)) +
-                insets.getRight();
+            snapSpaceX( insets.getRight() );
     }
 
     @Override protected double computeMinHeight(double width) {
@@ -428,7 +428,8 @@ public class BorderPane extends Pane {
 
         double middleAreaMinHeigh = Math.max(centerMinHeight, Math.max(rightMinHeight, leftMinHeight));
 
-        return insets.getTop() + topPrefHeight + middleAreaMinHeigh + bottomPrefHeight + insets.getBottom();
+        return snapSpaceY( insets.getTop() ) + topPrefHeight + middleAreaMinHeigh + bottomPrefHeight +
+            snapSpaceY( insets.getBottom() );
     }
 
     @Override protected double computePrefWidth(double height) {
@@ -457,9 +458,8 @@ public class BorderPane extends Pane {
         }
 
         final Insets insets = getInsets();
-        return insets.getLeft() +
-                Math.max(leftPrefWidth + centerPrefWidth + rightPrefWidth, Math.max(topPrefWidth,bottomPrefWidth)) +
-                insets.getRight();
+        return snapSpaceX( insets.getLeft() ) + Math.max(leftPrefWidth + centerPrefWidth + rightPrefWidth,
+                    Math.max(topPrefWidth,bottomPrefWidth)) + snapSpaceX( insets.getRight() );
     }
 
     @Override protected double computePrefHeight(double width) {
@@ -482,7 +482,8 @@ public class BorderPane extends Pane {
 
         double middleAreaPrefHeigh = Math.max(centerPrefHeight, Math.max(rightPrefHeight, leftPrefHeight));
 
-        return insets.getTop() + topPrefHeight + middleAreaPrefHeigh + bottomPrefHeight + insets.getBottom();
+        return snapSpaceY( insets.getTop() ) + topPrefHeight + middleAreaPrefHeigh + bottomPrefHeight +
+            snapSpaceY( insets.getBottom() );
     }
 
     @Override protected void layoutChildren() {
