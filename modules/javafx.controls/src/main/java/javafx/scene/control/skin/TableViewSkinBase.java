@@ -539,26 +539,41 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
      * @return the {@code TableHeaderRow} for this {@code TableViewSkinBase}
      * @since 12
      */
-    protected TableHeaderRow getTableHeaderRow() {
+    protected final ObjectProperty<ObservableList<S>> itemsProperty()
+    {
+        return TableSkinUtils.itemsProperty(this);
+    }
+
+    protected final ObjectProperty< Node > placeholderProperty()
+    {
+        return TableSkinUtils.placeholderProperty( this );
+    }
+
+    protected final TableHeaderRow getTableHeaderRow() {
         return tableHeaderRow;
     }
 
-    private TableSelectionModel<S> getSelectionModel() {
+    protected final TableSelectionModel<S> getSelectionModel() {
         return TableSkinUtils.getSelectionModel(this);
     }
 
-    private TableFocusModel<M,?> getFocusModel() {
+    protected final TableFocusModel<M,?> getFocusModel() {
         return TableSkinUtils.getFocusModel(this);
     }
 
     // returns the currently focused cell in the focus model
-    private TablePositionBase<? extends TC> getFocusedCell() {
+    protected final TablePositionBase<? extends TC> getFocusedCell() {
         return TableSkinUtils.getFocusedCell(this);
     }
 
     // returns an ObservableList of the visible leaf columns of the control
-    private ObservableList<? extends TC> getVisibleLeafColumns() {
+    protected final ObservableList<? extends TC> getVisibleLeafColumns() {
         return TableSkinUtils.getVisibleLeafColumns(this);
+    }
+
+    // returns an ObservableList of the visible leaf columns of the control
+    protected final ObservableList<TableColumnBase< ?, ?>> getColumns() {
+        return TableSkinUtils.getColumns( this );
     }
 
     /** {@inheritDoc} */
@@ -597,7 +612,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
         }
     }
 
-    void horizontalScroll() {
+    protected void horizontalScroll() {
         tableHeaderRow.updateScrollX();
     }
 
@@ -729,8 +744,12 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
         getSkinnable().requestLayout();
     }
 
-    Region getColumnReorderLine() {
+    protected final Region getColumnReorderLine() {
         return columnReorderLine;
+    }
+
+    protected final Region getColumnReorderOverlay() {
+        return columnReorderOverlay;
     }
 
     /**
@@ -864,7 +883,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
         requestRebuildCells();
     }
 
-    final void updatePlaceholderRegionVisibility() {
+    protected final void updatePlaceholderRegionVisibility() {
         boolean visible = visibleColCount == 0 || getItemCount() == 0;
 
         if (visible) {

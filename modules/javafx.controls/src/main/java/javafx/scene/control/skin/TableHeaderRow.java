@@ -387,6 +387,17 @@ public class TableHeaderRow extends StackPane {
         updateCornerPadding();
     }
 
+    /***************************************************************************
+     *                                                                         *
+     * Public API                                                              *
+     *                                                                         *
+     **************************************************************************/
+
+    protected final StackPane getDragHeader()
+    {
+        return dragHeader;
+    }
+
     /** {@inheritDoc} */
     @Override protected double computePrefWidth(double height) {
         return getRootHeader().prefWidth(height);
@@ -426,6 +437,11 @@ public class TableHeaderRow extends StackPane {
         layout();
     }
 
+    protected final TableViewSkinBase< ?, ?, ?, ?, ? > getTableSkin()
+    {
+        return tableSkin;
+    }
+
 
     /**
      * Updates the table width when a resize operation occurs. This method is called continuously when the control width
@@ -461,7 +477,7 @@ public class TableHeaderRow extends StackPane {
      * @return A new NestedTableColumnHeader instance.
      */
     protected NestedTableColumnHeader createRootHeader() {
-        return new NestedTableColumnHeader(null);
+        return new NestedTableColumnHeader(tableSkin, null);
     }
 
     /**
@@ -521,11 +537,11 @@ public class TableHeaderRow extends StackPane {
         }
     }
 
-    void setDragHeaderX(double dragHeaderX) {
+    protected void setDragHeaderX(double dragHeaderX) {
         dragHeader.setTranslateX(dragHeaderX);
     }
 
-    TableColumnHeader getColumnHeaderFor(final TableColumnBase<?,?> col) {
+    protected final TableColumnHeader getColumnHeaderFor(final TableColumnBase<?,?> col) {
         if (col == null) return null;
         List<TableColumnBase<?,?>> columnChain = new ArrayList<>();
         columnChain.add(col);
