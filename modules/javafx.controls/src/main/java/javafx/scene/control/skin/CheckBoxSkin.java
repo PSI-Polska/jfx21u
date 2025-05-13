@@ -47,6 +47,7 @@ public class CheckBoxSkin extends LabeledSkinBase<CheckBox> {
      *                                                                         *
      **************************************************************************/
 
+
     private final StackPane box = new StackPane();
     private StackPane innerbox;
     private final ButtonBehavior< ? extends CheckBox > behavior;
