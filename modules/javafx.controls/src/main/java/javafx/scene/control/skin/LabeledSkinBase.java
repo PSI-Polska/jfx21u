@@ -874,19 +874,19 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
         return height + padding;
     }
 
-    double topLabelPadding() {
+    protected double topLabelPadding() {
         return snapSizeY(getSkinnable().getLabelPadding().getTop());
     }
 
-    double bottomLabelPadding() {
+    protected double bottomLabelPadding() {
         return snapSizeY(getSkinnable().getLabelPadding().getBottom());
     }
 
-    double leftLabelPadding() {
+    protected double leftLabelPadding() {
         return snapSizeX(getSkinnable().getLabelPadding().getLeft());
     }
 
-    double rightLabelPadding() {
+    protected double rightLabelPadding() {
         return snapSizeX(getSkinnable().getLabelPadding().getRight());
     }
 
