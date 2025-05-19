@@ -138,7 +138,7 @@ public class TreeTableCellSkin<S,T> extends TableCellSkinBase<TreeItem<S>, T, Tr
         return super.computePrefHeight(width, topInset, rightInset, bottomInset, leftInset);
     }
 
-    private double calculateIndentation() {
+    protected double calculateIndentation() {
         double indentation = 0;
 
         // RT-27167: we must take into account the disclosure node and the
